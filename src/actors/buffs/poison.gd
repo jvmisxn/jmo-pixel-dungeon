@@ -33,7 +33,8 @@ func on_turn() -> void:
 	var dmg: int = int(time_left / 3.0) + 1
 	target.take_damage(dmg, self)
 	if MessageLog:
-		MessageLog.add_negative("%s takes %d poison damage." % [target.mob_name, dmg])
+		var name: String = "You" if target.get("is_hero") else target.get("mob_name") if target.get("mob_name") else "Something"
+		MessageLog.add_negative("%s takes %d poison damage." % [name, dmg])
 
 func description() -> String:
 	return "Poisoned! Taking increasing damage each turn."

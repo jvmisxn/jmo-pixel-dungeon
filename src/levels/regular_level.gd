@@ -451,3 +451,141 @@ func _near_entrance(pos: int) -> bool:
 	if _entrance_fov.size() > pos and _entrance_fov[pos]:
 		return true
 	return false
+
+# ---------------------------------------------------------------------------
+# Item Placement
+# ---------------------------------------------------------------------------
+
+## Number of items to place on this level.
+## Original: 3 items per floor, +1 on LARGE levels.
+func item_count() -> int:
+	var count: int = 3
+	if feeling == Feeling.LARGE:
+		count += 1
+	return count
+
+## Returns positions suitable for item spawning. Avoids entrance/exit.
+func item_spawn_positions(count: int) -> Array[int]:
+	var positions: Array[int] = []
+	var attempts: int = 0
+	while positions.size() < count and attempts < count * 20:
+		attempts += 1
+		var p: int = random_passable_cell()
+		if p < 0:
+			continue
+		if p == entrance or p == exit_pos:
+			continue
+		if positions.has(p):
+			continue
+		positions.append(p)
+	return positions
+
+# ---------------------------------------------------------------------------
+# Shop Floor Check
+# ---------------------------------------------------------------------------
+
+## Returns true if this depth is a shop floor (6, 11, 16, 21).
+## Matches original Dungeon.shopOnLevel().
+func _is_shop_floor() -> bool:
+	return depth in [6, 11, 16, 21]
+
+# ---------------------------------------------------------------------------
+# Special Room Rotation (prevents repeated room types across floors)
+# ---------------------------------------------------------------------------
+
+## Static tracker for recently used special room types (rotates every 3 floors).
+static var _recent_specials: Array[String] = []
+
+## Filter out recently used special room types to ensure variety.
+func _filter_recent_specials(pool: Array[String]) -> Array[String]:
+	var filtered: Array[String] = []
+	for room_type: String in pool:
+		if room_type not in _recent_specials:
+			filtered.append(room_type)
+	# If everything is filtered, return the original pool
+	if filtered.is_empty():
+		_recent_specials.clear()
+		return pool
+	return filtered
+
+## Record which special room types were used on this floor.
+func _record_special_rooms(used_types: Array[String]) -> void:
+	_recent_specials.append_array(used_types)
+	# Keep only the last 4 entries to allow rotation
+	while _recent_specials.size() > 4:
+		_recent_specials.remove_at(0)
+
+# ---------------------------------------------------------------------------
+# Serialization
+# ---------------------------------------------------------------------------
+
+## Serialize the full level state for caching / save-load.
+func serialize() -> Dictionary:
+	var data: Dictionary = {
+		"depth": depth,
+		"entrance": entrance,
+		"exit_pos": exit_pos,
+		"feeling": feeling,
+		"map": map.duplicate(),
+		"visited": visited.duplicate(),
+		"mapped": mapped.duplicate(),
+	}
+	# Serialize heaps
+	var heaps_data: Array[Dictionary] = []
+	for heap: Dictionary in heaps:
+		var heap_copy: Dictionary = heap.duplicate()
+		var item: Variant = heap.get("item")
+		if item != null and item.has_method("serialize"):
+			heap_copy["item_data"] = item.serialize()
+			heap_copy.erase("item")
+		heaps_data.append(heap_copy)
+	data["heaps"] = heaps_data
+	# Serialize traps
+	var traps_data: Dictionary = {}
+	for trap_pos: int in traps.keys():
+		var trap: Variant = traps[trap_pos]
+		if trap != null and trap.has_method("serialize"):
+			traps_data[trap_pos] = trap.serialize()
+	data["traps"] = traps_data
+	return data
+
+## Deserialize level state from cached data.
+func deserialize(data: Dictionary) -> void:
+	depth = data.get("depth", 1)
+	entrance = data.get("entrance", -1)
+	exit_pos = data.get("exit_pos", -1)
+	feeling = data.get("feeling", Feeling.NONE) as Feeling
+	var saved_map: Variant = data.get("map")
+	if saved_map is Array:
+		map = saved_map as Array[int]
+	var saved_visited: Variant = data.get("visited")
+	if saved_visited is Array:
+		visited = saved_visited as Array[bool]
+	var saved_mapped: Variant = data.get("mapped")
+	if saved_mapped is Array:
+		mapped = saved_mapped as Array[bool]
+	# Rebuild flag maps from terrain
+	if map.size() == LEN:
+		build_flag_maps()
+	# Deserialize heaps
+	heaps.clear()
+	var heaps_data: Variant = data.get("heaps", [])
+	if heaps_data is Array:
+		for heap_entry: Variant in heaps_data:
+			if heap_entry is Dictionary:
+				var heap: Dictionary = heap_entry as Dictionary
+				var item_data: Variant = heap.get("item_data")
+				if item_data is Dictionary:
+					var item_id: String = (item_data as Dictionary).get("item_id", "")
+					if item_id != "":
+						var item: Item = Generator.create_item(item_id)
+						if item != null and item.has_method("deserialize"):
+							item.deserialize(item_data as Dictionary)
+						heap["item"] = item
+						heap.erase("item_data")
+				heaps.append(heap)
+	# Visible array must be re-initialized (recomputed via FOV each turn)
+	visible.resize(LEN)
+	visible.fill(false)
+	passable.resize(LEN)
+	los_blocking.resize(LEN)

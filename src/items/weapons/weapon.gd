@@ -160,6 +160,8 @@ func proc_enchantment(attacker: Variant, defender: Variant, damage: int) -> int:
 ## Set an enchantment on this weapon.
 func enchant(ench: WeaponEnchantment) -> Weapon:
 	enchantment = ench
+	if identified and enchantment != null and DiscoveryCatalog:
+		DiscoveryCatalog.record_enchantment(enchantment.enchant_name)
 	return self
 
 ## Remove the current enchantment.

@@ -29,6 +29,10 @@ var los_blocking: Array[bool] = []
 ## can be sensed. Matches original Level.discoverable[] computed in cleanWalls().
 var discoverable: Array[bool] = []
 
+# --- Godot AStar2D pathfinding graph (C++ optimized) ---
+var astar: AStar2D = AStar2D.new()
+var _astar_built: bool = false
+
 # --- Positions ---
 var entrance: int = -1
 var exit_pos: int = -1  # "exit" is a GDScript keyword-adjacent, use exit_pos
@@ -113,6 +117,90 @@ func build_flag_maps() -> void:
 		los_blocking[i + W - 1] = true
 	# Compute discoverable (original Level.cleanWalls())
 	_clean_walls()
+	# Build AStar2D graph from passable data (C++ pathfinding)
+	_build_astar()
+	_astar_built = true
+
+
+## Build the AStar2D graph from the passable[] array.
+## Uses Godot's C++ pathfinding engine — far faster than GDScript BFS/A*.
+func _build_astar() -> void:
+	astar.clear()
+	astar.reserve_space(LEN)
+	# Add all points; disable impassable ones
+	for i: int in range(LEN):
+		var x: int = i % W
+		@warning_ignore("integer_division")
+		var y: int = i / W
+		astar.add_point(i, Vector2(x, y))
+		if not passable[i]:
+			astar.set_point_disabled(i, true)
+	# Connect 8-directional neighbors (only right/down/diags to avoid duplicates)
+	for i: int in range(LEN):
+		if not passable[i]:
+			continue
+		var x: int = i % W
+		@warning_ignore("integer_division")
+		var y: int = i / W
+		for d: Array in [[1, 0], [0, 1], [1, 1], [1, -1]]:
+			var nx: int = x + d[0]
+			var ny: int = y + d[1]
+			if nx < 0 or nx >= W or ny < 0 or ny >= H:
+				continue
+			var ni: int = ny * W + nx
+			if not passable[ni]:
+				continue
+			# Diagonal: prevent corner-cutting through walls
+			if d[0] != 0 and d[1] != 0:
+				var adj_h: int = y * W + nx
+				var adj_v: int = ny * W + x
+				if not passable[adj_h] or not passable[adj_v]:
+					continue
+			astar.connect_points(i, ni)
+
+
+## Update a single cell in the AStar2D graph after terrain changes.
+## Skipped during level generation — _build_astar() creates the full graph afterwards.
+func _update_astar_cell(cell_pos: int) -> void:
+	if not _astar_built or cell_pos < 0 or cell_pos >= LEN:
+		return
+	astar.set_point_disabled(cell_pos, not passable[cell_pos])
+	# Rebuild connections for this cell and immediate neighbors
+	var cx: int = cell_pos % W
+	@warning_ignore("integer_division")
+	var cy: int = cell_pos / W
+	for dy: int in range(-1, 2):
+		for dx: int in range(-1, 2):
+			var nx: int = cx + dx
+			var ny: int = cy + dy
+			if nx < 0 or nx >= W or ny < 0 or ny >= H:
+				continue
+			var ni: int = ny * W + nx
+			if not passable[ni]:
+				continue
+			# Check each neighbor pair for ni
+			for d2y: int in range(-1, 2):
+				for d2x: int in range(-1, 2):
+					if d2x == 0 and d2y == 0:
+						continue
+					var nnx: int = nx + d2x
+					var nny: int = ny + d2y
+					if nnx < 0 or nnx >= W or nny < 0 or nny >= H:
+						continue
+					var nni: int = nny * W + nnx
+					var should_connect: bool = passable[ni] and passable[nni]
+					if d2x != 0 and d2y != 0 and should_connect:
+						var adj_h: int = ny * W + nnx
+						var adj_v: int = nny * W + nx
+						if not passable[adj_h] or not passable[adj_v]:
+							should_connect = false
+					if should_connect:
+						if not astar.are_points_connected(ni, nni):
+							astar.connect_points(ni, nni)
+					else:
+						if astar.are_points_connected(ni, nni):
+							astar.disconnect_points(ni, nni)
+
 
 ## Compute discoverable[] — a cell is discoverable if any of its 9 neighbors
 ## (including itself) is a non-wall cell. This allows blinded/sensed heroes
@@ -346,6 +434,7 @@ func set_terrain(pos: int, terrain: int) -> void:
 	map[pos] = terrain
 	passable[pos] = ConstantsData.terrain_is_passable(terrain)
 	los_blocking[pos] = ConstantsData.terrain_blocks_vision(terrain)
+	_update_astar_cell(pos)
 
 func is_passable(pos: int) -> bool:
 	if pos < 0 or pos >= LEN:
@@ -448,9 +537,16 @@ func find_char_at(pos: int) -> Variant:
 
 ## Get all hero characters on this level (multiplayer-ready).
 func get_heroes() -> Array[Char]:
+	var result: Array[Char] = []
 	if GameManager:
-		return GameManager.heroes.duplicate()
-	return [] as Array[Char]
+		for h: Node in GameManager.heroes:
+			if h is Char:
+				result.append(h as Char)
+	return result
+
+## Alias for Actor.can_see() compatibility.
+func has_los(origin: int, target: int) -> bool:
+	return is_visible_from(origin, target)
 
 ## Returns true if pos is visible from origin (uses ShadowCaster LOS check).
 func is_visible_from(origin: int, target: int) -> bool:
@@ -478,9 +574,6 @@ func trigger_trap(pos: int, victim: Variant) -> void:
 		trap.activate(victim, self)
 	# Mark terrain as inactive
 	set_terrain(pos, ConstantsData.Terrain.INACTIVE_TRAP)
-	if EventBus:
-		var trap_name: String = trap.get("trap_name") if trap.get("trap_name") else "trap"
-		EventBus.trap_triggered.emit(pos, trap_name)
 	if GameManager:
 		GameManager.record_stat("traps_triggered")
 
@@ -515,6 +608,43 @@ func distance(a: int, b: int) -> int:
 ## Return an array of valid cell indices adjacent to the given cell.
 func get_neighbors(cell: int) -> Array[int]:
 	return Pathfinder.get_neighbors(cell, W, LEN)
+
+## Find the shortest path between two cells using Godot's AStar2D (C++).
+## Returns Array[int] of cell indices from start (exclusive) to goal (inclusive),
+## or empty array if no path exists. Temporarily enables goal cell if disabled
+## (e.g. occupied by an enemy the hero wants to attack).
+func find_path(from_pos: int, to_pos: int) -> Array[int]:
+	if from_pos < 0 or from_pos >= LEN or to_pos < 0 or to_pos >= LEN:
+		return []
+	if from_pos == to_pos:
+		return []
+	# Temporarily enable endpoints in case they're disabled (occupied cells)
+	var from_was_disabled: bool = astar.is_point_disabled(from_pos)
+	var to_was_disabled: bool = astar.is_point_disabled(to_pos)
+	if from_was_disabled:
+		astar.set_point_disabled(from_pos, false)
+	if to_was_disabled:
+		astar.set_point_disabled(to_pos, false)
+	var id_path: PackedInt64Array = astar.get_id_path(from_pos, to_pos)
+	# Restore disabled state
+	if from_was_disabled:
+		astar.set_point_disabled(from_pos, true)
+	if to_was_disabled:
+		astar.set_point_disabled(to_pos, true)
+	if id_path.is_empty():
+		return []
+	# Convert to Array[int], skip the first element (start pos)
+	var result: Array[int] = []
+	for i: int in range(1, id_path.size()):
+		result.append(id_path[i] as int)
+	return result
+
+## Find just the next step toward a goal cell. Returns -1 if no path.
+func find_step(from_pos: int, to_pos: int) -> int:
+	var path: Array[int] = find_path(from_pos, to_pos)
+	if path.is_empty():
+		return -1
+	return path[0]
 
 ## Alias for terrain_at (used by actor system).
 func get_terrain(pos: int) -> int:

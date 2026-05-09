@@ -26,7 +26,6 @@ const COLOR_TRAP: Color = Color(0.8, 0.5, 0.1)
 var _image: Image = null
 var _image_texture: ImageTexture = null
 var _is_visible: bool = true
-var _blink_timer: float = 0.0
 var _hero_blink_on: bool = true
 
 # --- Cached level data references ---
@@ -50,26 +49,27 @@ func _ready() -> void:
 	texture = _image_texture
 
 	_connect_signals()
+	# Use a Timer node for hero blink instead of manual delta tracking
+	var blink_timer: Timer = Timer.new()
+	blink_timer.wait_time = 0.4
+	blink_timer.autostart = true
+	blink_timer.timeout.connect(_on_blink_timeout)
+	add_child(blink_timer)
 
 
 func _connect_signals() -> void:
-	var event_bus: Node = UIUtils.get_event_bus()
+	var event_bus: Node = EventBus
 	if event_bus:
 		event_bus.hero_moved.connect(_on_hero_moved)
 		event_bus.level_changed.connect(_on_level_changed)
 
 
-func _process(delta: float) -> void:
+func _on_blink_timeout() -> void:
 	if not _is_visible:
 		return
-
-	# Blink the hero position
-	_blink_timer += delta
-	if _blink_timer >= 0.4:
-		_blink_timer = 0.0
-		_hero_blink_on = not _hero_blink_on
-		_draw_hero()
-		_image_texture.update(_image)
+	_hero_blink_on = not _hero_blink_on
+	_draw_hero()
+	_image_texture.update(_image)
 
 
 # --- Public API ---
@@ -208,7 +208,7 @@ func _terrain_to_color(terrain: int) -> Color:
 
 func _on_hero_moved(new_pos: int) -> void:
 	# Pull current level data from GameManager and refresh the minimap
-	var gm: Node = UIUtils.get_game_manager()
+	var gm: Node = GameManager
 	if gm == null:
 		return
 	var level: Variant = gm.get("current_level")
@@ -231,7 +231,7 @@ func _on_hero_moved(new_pos: int) -> void:
 	_redraw()
 
 
-func _on_level_changed() -> void:
+func _on_level_changed(_new_depth: int = 0) -> void:
 	_level_map.clear()
 	_visited.clear()
 	_visible_cells.clear()

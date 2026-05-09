@@ -71,6 +71,9 @@ func _ready() -> void:
 
 ## Start a fresh run with the given hero class and optional seed.
 func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: int = -1) -> void:
+	# Clean up previous run state
+	_cleanup_previous_run()
+
 	hero_class = chosen_class
 	hero_subclass = ConstantsData.HeroSubclass.NONE
 	depth = 0
@@ -78,6 +81,7 @@ func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: i
 	score = 0
 	run_active = true
 	_level_cache.clear()
+	quest_flags.clear()
 
 	if seed_value < 0:
 		run_seed = randi()
@@ -85,10 +89,41 @@ func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: i
 		run_seed = seed_value
 
 	_reset_stats()
+	if ItemAppearance:
+		ItemAppearance.reset_for_new_run(run_seed)
 	game_started.emit()
 
 	# Immediately descend to depth 1.
 	descend()
+
+
+## Free stale Nodes from the previous run so nothing holds a freed-instance ref.
+func _cleanup_previous_run() -> void:
+	# Free hero nodes from the previous run
+	for h: Variant in heroes:
+		if h is Node and is_instance_valid(h):
+			(h as Node).free()
+	heroes.clear()
+	hero = null
+
+	# Free mobs cached in the level cache
+	if current_level != null and current_level.get("mobs") != null:
+		for mob: Variant in current_level.mobs:
+			if mob is Node and is_instance_valid(mob):
+				(mob as Node).free()
+		current_level.mobs.clear()
+	current_level = null
+
+	# Free mobs in cached levels
+	for cached_depth: int in _level_cache.keys():
+		var cached_data: Dictionary = _level_cache[cached_depth]
+		if cached_data.has("mobs"):
+			var cached_mobs: Variant = cached_data["mobs"]
+			if cached_mobs is Array:
+				for mob_data: Variant in cached_mobs:
+					if mob_data is Node and is_instance_valid(mob_data):
+						(mob_data as Node).free()
+	_level_cache.clear()
 
 # ---------------------------------------------------------------------------
 # Depth Navigation
@@ -131,9 +166,9 @@ func _cache_current_level() -> void:
 	# Free mob Nodes from the departing level to prevent memory leak.
 	# The serialized data is in the cache; these Node instances are no longer needed.
 	if current_level.get("mobs") != null:
-		for mob: Node in current_level.mobs:
+		for mob: Variant in current_level.mobs:
 			if mob is Node and is_instance_valid(mob):
-				mob.free()
+				(mob as Node).free()
 		current_level.mobs.clear()
 
 ## Check if a cached version of a level exists at the given depth.
@@ -244,6 +279,7 @@ func _to_save_dict() -> Dictionary:
 		"hero_subclass": hero_subclass,
 		"stats": stats.duplicate(),
 		"run_active": run_active,
+		"item_appearance": ItemAppearance.serialize() if ItemAppearance else {},
 		"level_cache_keys": _level_cache.keys(),
 		# Hero and level data would be serialized by their own systems.
 	}
@@ -285,6 +321,12 @@ func load_game() -> bool:
 	hero_subclass = save.get("hero_subclass", ConstantsData.HeroSubclass.NONE)
 	stats = save.get("stats", {})
 	run_active = save.get("run_active", false)
+	if ItemAppearance:
+		var appearance_data: Dictionary = save.get("item_appearance", {})
+		if appearance_data.is_empty():
+			ItemAppearance.reset_for_new_run(run_seed)
+		else:
+			ItemAppearance.deserialize(appearance_data)
 
 	if EventBus:
 		EventBus.game_loaded.emit()
@@ -294,7 +336,8 @@ func load_game() -> bool:
 func end_game(victory: bool) -> void:
 	run_active = false
 	if victory:
-		add_score(compute_final_score())
+		score = compute_final_score()
+		score_changed.emit(score)
 	game_ended.emit(victory)
 
 ## Delete the save file (permadeath).

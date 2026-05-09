@@ -93,3 +93,4 @@ func _on_death(source: Variant) -> void:
 		MessageLog.add_positive("The King of Dwarves is slain! The throne room falls silent.")
 	if level and level.has_method("unlock_exit"):
 		level.unlock_exit()
+	super._on_death(source)

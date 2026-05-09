@@ -47,6 +47,14 @@ func _build_content() -> Control:
 
 	for i: int in range(_items.size()):
 		var item: Variant = _items[i]
+		var row: HBoxContainer = HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+		var icon_slot: ItemSlot = ItemSlot.new()
+		icon_slot.item = item
+		icon_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icon_slot)
+
 		var btn: Button = Button.new()
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -72,7 +80,8 @@ func _build_content() -> Control:
 		# Capture the item for the callback
 		var item_ref: Variant = item
 		btn.pressed.connect(func() -> void: _on_item_selected(item_ref))
-		list.add_child(btn)
+		row.add_child(btn)
+		list.add_child(row)
 
 	return main
 

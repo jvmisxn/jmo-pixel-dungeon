@@ -246,3 +246,98 @@ func _build_ui() -> void:
 	close_btn.custom_minimum_size = Vector2(120, 40)
 	close_btn.pressed.connect(func() -> void: _about_panel.visible = false)
 	about_vbox.add_child(close_btn)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+func _load_texture(path: String) -> Texture2D:
+	if ResourceLoader.exists(path):
+		return load(path) as Texture2D
+	return null
+
+
+func _check_has_save() -> bool:
+	if GameManager and GameManager.has_method("has_save"):
+		return GameManager.has_save()
+	if SaveManager and SaveManager.has_method("has_save"):
+		return SaveManager.has_save()
+	return false
+
+
+func _create_spd_button(text: String) -> Button:
+	var btn: Button = Button.new()
+	btn.text = text
+	btn.custom_minimum_size = Vector2(400, 44)
+	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
+	btn.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.8))
+	btn.add_theme_color_override("font_pressed_color", Color(0.7, 0.65, 0.5))
+
+	var normal: StyleBoxFlat = StyleBoxFlat.new()
+	normal.bg_color = Color(0.15, 0.14, 0.12, 0.9)
+	normal.border_color = Color(0.4, 0.36, 0.30)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(2)
+	normal.content_margin_left = 16.0
+	normal.content_margin_right = 16.0
+	normal.content_margin_top = 8.0
+	normal.content_margin_bottom = 8.0
+	btn.add_theme_stylebox_override("normal", normal)
+
+	var hover: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.22, 0.20, 0.16, 0.95)
+	hover.border_color = Color(0.55, 0.50, 0.40)
+	btn.add_theme_stylebox_override("hover", hover)
+
+	var pressed: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.10, 0.09, 0.07)
+	btn.add_theme_stylebox_override("pressed", pressed)
+
+	var focus: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	focus.border_color = Color(1.0, 0.85, 0.3)
+	focus.set_border_width_all(2)
+	btn.add_theme_stylebox_override("focus", focus)
+
+	return btn
+
+
+func _update_button_focus() -> void:
+	for i: int in range(_buttons.size()):
+		if i == _selected_index:
+			_buttons[i].grab_focus()
+		else:
+			_buttons[i].release_focus()
+
+
+# ---------------------------------------------------------------------------
+# Button Callbacks
+# ---------------------------------------------------------------------------
+
+func _on_new_game_pressed() -> void:
+	SceneManager.go_to(_hero_select_scene, "HeroSelectScene")
+
+
+func _on_continue_pressed() -> void:
+	if GameManager and GameManager.has_method("load_game"):
+		var success: bool = GameManager.load_game()
+		if success:
+			var game_scene: GameScene = GameScene.new()
+			game_scene.name = "GameScene"
+			game_scene._pending_level = GameManager.current_level
+			game_scene._pending_region = ConstantsData.region_for_depth(GameManager.depth)
+			SceneManager.go_to_node(game_scene)
+			return
+	# Load failed — disable the button
+	if _btn_continue:
+		_btn_continue.disabled = true
+
+
+func _on_rankings_pressed() -> void:
+	SceneManager.go_to(_rankings_scene, "RankingsScene")
+
+
+func _on_about_pressed() -> void:
+	if _about_panel:
+		_about_panel.visible = true

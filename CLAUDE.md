@@ -43,3 +43,10 @@ A recreation of Shattered Pixel Dungeon in Godot 4.5 using GDScript. The project
 ## Testing
 
 To verify the game launches: Open in Godot 4.5, press F5 (or Run). The main scene is `res://src/scenes/main_scene.gd`. If you see "Could not parse global class X", it means file X or one of its dependencies has a syntax error — check the dependency chain.
+
+## Working Memory
+
+- Use `docs/memory/` as the canonical lightweight context store for ongoing work.
+- Prefer reading `docs/memory/active-context.md` and `docs/memory/change-log.md` before diving into large historical logs.
+- Use `scripts/search_memory.ps1` to search concise memory files first; only fall back to `docs/history/` when needed.
+- Record durable decisions, lessons, and session-level change summaries in `docs/memory/` rather than expanding the large historical logs.

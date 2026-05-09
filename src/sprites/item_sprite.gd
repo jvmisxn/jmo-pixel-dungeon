@@ -14,6 +14,10 @@ const SHEET_COLUMNS: int = 16
 static var _item_sheet: Texture2D = null
 static var _item_sheet_loaded: bool = false
 
+## Cache for procedurally generated textures, keyed by "category:color_hex".
+## Avoids regenerating the same 16x16 image every time an item spawns.
+static var _procedural_cache: Dictionary = {}
+
 # --- Category Colors ---
 static var CATEGORY_COLORS: Dictionary = {
 	ConstantsData.ItemCategory.WEAPON: Color(0.6, 0.6, 0.65),
@@ -135,7 +139,15 @@ func _generate_sprite() -> void:
 				_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			return
 
-	# Fallback: procedural generation
+	# Fallback: procedural generation with caching
+	var cache_key: String = str(item_category) + ":" + item_color.to_html()
+	var cached_tex: Variant = _procedural_cache.get(cache_key)
+	if cached_tex is ImageTexture:
+		if _sprite:
+			_sprite.texture = cached_tex
+			_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		return
+
 	var img: Image = Image.create(SPRITE_SIZE, SPRITE_SIZE, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 
@@ -166,6 +178,7 @@ func _generate_sprite() -> void:
 			_draw_misc(img)
 
 	var tex: ImageTexture = ImageTexture.create_from_image(img)
+	_procedural_cache[cache_key] = tex
 	if _sprite:
 		_sprite.texture = tex
 		_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

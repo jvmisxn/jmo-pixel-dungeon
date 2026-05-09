@@ -42,7 +42,7 @@ func paint(level: Level) -> void:
 	# All doors to this room are secret doors
 	# Clear bookshelf at door positions so entry is possible
 	for other: Variant in connected:
-		var door_pos: int = door(other)
+		var door_pos: int = door_to(other)
 		if door_pos >= 0:
 			level.set_terrain(door_pos, ConstantsData.Terrain.SECRET_DOOR)
 	painted = true

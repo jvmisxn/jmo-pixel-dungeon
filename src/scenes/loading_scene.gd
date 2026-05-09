@@ -311,13 +311,6 @@ func _transition_to_game() -> void:
 	if game_script:
 		var game_scene: Variant = game_script.new()
 		game_scene.name = "GameScene"
-		get_tree().root.add_child(game_scene)
-
-		# Load level visuals
-		var region: int = ConstantsData.region_for_depth(GameManager.depth)
-		game_scene.load_level(level, region)
-
-		# Start the turn loop
-		TurnManager.process_until_hero()
-
-	queue_free()
+		game_scene._pending_level = level
+		game_scene._pending_region = ConstantsData.region_for_depth(GameManager.depth)
+		SceneManager.go_to_node(game_scene)

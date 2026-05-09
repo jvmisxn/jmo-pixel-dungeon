@@ -18,6 +18,8 @@ var hero_subclass: int = ConstantsData.HeroSubclass.NONE
 var hero_level: int = 1
 var xp: int = 0
 var xp_to_next: int = 10  # 5 + level * 5
+var talent_points_available: int = 0
+var talent_levels: Dictionary[String, int] = {}
 var belongings: Belongings = null
 
 ## Multiplayer peer ID (0 = local/host, >0 = remote player).
@@ -28,8 +30,12 @@ var hero_name: String = "Hero"
 
 ## Action queue for the command pattern. Each action is a Dictionary with
 ## "type" (String), "target" (int), and optional extra keys.
-var _pending_action: Dictionary[String, Variant] = {}
+var _pending_action: Dictionary = {}
 var _action_ready: bool = false
+var _pending_surprise_attack: bool = false
+var _patient_strike_ready: bool = false
+var _backup_barrier_ready: bool = true
+var _followup_strike_ready: bool = false
 
 ## Resting state — when true, hero automatically waits each turn until full HP
 ## or interrupted by a visible enemy or damage. Matches original Hero.java.
@@ -60,6 +66,12 @@ func init_class(chosen_class: int) -> void:
 	hero_level = 1
 	xp = 0
 	xp_to_next = ConstantsData.xp_for_level(1)
+	talent_points_available = 0
+	talent_levels.clear()
+	_pending_surprise_attack = false
+	_patient_strike_ready = false
+	_backup_barrier_ready = true
+	_followup_strike_ready = false
 	hero_name = HeroClassData.get_class_name_str(chosen_class)
 	name = hero_name
 
@@ -138,7 +150,7 @@ func give_starting_items() -> void:
 				belongings.equip_weapon(gloves)
 			var bow: Item = Generator.create_item("spirit_bow")
 			if bow:
-				belongings.add_item(bow)
+				belongings.equip_spirit_bow(bow)
 			var cloth: Item = Generator.create_item("cloth_armor")
 			if cloth:
 				belongings.equip_armor(cloth)
@@ -228,16 +240,27 @@ func execute_action() -> void:
 
 	var action: Dictionary = _pending_action
 	_pending_action = {}
+	var action_type: String = action.get("type", "")
 
 	# Any non-wait action interrupts resting (original: Hero.java act() sets resting=false)
-	if action.get("type", "") != "wait":
+	if action_type != "wait":
 		resting = false
+	if action_type != "wait" and action_type != "attack":
+		_patient_strike_ready = false
+	if action_type != "wait" and action_type != "attack" and action_type != "throw_item":
+		_followup_strike_ready = false
 
-	match action.get("type", ""):
+	match action_type:
 		"move":
 			_do_move(action.get("target_pos", -1))
 		"attack":
 			_do_attack(action.get("target"), action.get("target_pos", -1))
+		"search":
+			_do_search()
+		"throw_item":
+			_do_throw_item(action.get("item"), action.get("target_pos", -1))
+		"zap_wand":
+			_do_zap_wand(action.get("item"), action.get("target_pos", -1))
 		"wait":
 			_do_wait()
 		"use_item":
@@ -253,15 +276,20 @@ func execute_action() -> void:
 
 	hero_acted.emit(action)
 
-	# Spend time based on action type. Original: movement costs 1/speed(),
-	# attacks cost attackDelay()/speed(), wait costs 1.
-	var action_type: String = action.get("type", "")
+	# Spend time based on action type. spend_turn() passes the value
+	# to TurnManager.spend_energy() which already divides by cached speed,
+	# so we pass the RAW action cost here (not pre-divided by speed).
 	match action_type:
 		"move":
-			spend_turn(1.0 / get_speed())
+			spend_turn(1.0)
 		"attack":
 			var atk_delay: float = _get_attack_delay()
-			spend_turn(atk_delay / get_speed())
+			spend_turn(atk_delay)
+		"throw_item":
+			var throw_delay: float = _get_throw_delay(action.get("item"))
+			spend_turn(throw_delay)
+		"zap_wand":
+			spend_turn(1.0)
 		_:
 			spend_turn(1.0)
 
@@ -315,58 +343,13 @@ func _is_adjacent_pos(a: int, b: int) -> bool:
 	var by: int = ConstantsData.pos_to_y(b)
 	return absi(ax - bx) <= 1 and absi(ay - by) <= 1
 
-## Find the next step toward target_pos using BFS pathfinding.
+## Find the next step toward target_pos using Godot's AStar2D (C++ optimized).
 ## Returns the first cell on the shortest path, or -1 if no path exists.
-## BFS guarantees the shortest path and handles concave rooms, corridors, etc.
 func _step_toward(target_pos: int) -> int:
 	if not level:
 		return -1
+	return level.find_step(pos, target_pos)
 
-	# BFS from hero's current position to target_pos.
-	# We track the "came_from" predecessor so we can trace back to the first step.
-	var queue: Array[int] = [pos]
-	var came_from: Dictionary[int, int] = {pos: -1}  # pos -> predecessor pos
-	var head: int = 0
-
-	while head < queue.size():
-		var current: int = queue[head]
-		head += 1
-
-		if current == target_pos:
-			break
-
-		for dir: int in ConstantsData.DIRS_8:
-			var next_pos: int = current + dir
-			if came_from.has(next_pos):
-				continue
-			if not ConstantsData.is_valid_pos(next_pos):
-				continue
-			# Check passability — allow doors (hero auto-opens them)
-			if not level.is_passable(next_pos):
-				if level.has_method("get_terrain"):
-					var terrain: int = level.get_terrain(next_pos)
-					if terrain != ConstantsData.Terrain.DOOR:
-						continue
-				else:
-					continue
-			# Don't path through occupied cells (except the target itself,
-			# which may have an enemy the hero wants to walk toward)
-			if next_pos != target_pos and level.find_char_at(next_pos) != null:
-				continue
-			came_from[next_pos] = current
-			queue.append(next_pos)
-
-	# No path found
-	if not came_from.has(target_pos):
-		return -1
-
-	# Trace back from target to find the first step after hero's pos
-	var step: int = target_pos
-	while came_from.get(step, -1) != pos:
-		step = came_from[step]
-		if step < 0:
-			return -1
-	return step
 
 func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1) -> void:
 	var atk_target: Char = null
@@ -380,19 +363,185 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1) -> void:
 				atk_target = c as Char
 	if atk_target == null:
 		return
-	# Break invisibility on attack
-	if has_buff("Invisibility"):
-		var invis: Node = get_buff("Invisibility")
-		if invis is Invisibility:
-			(invis as Invisibility).dispel()
+	_pending_surprise_attack = invisible > 0 and can_surprise_attack()
 	# Check if target is a disguised mimic — reveal it
 	if atk_target is Mimic and (atk_target as Mimic).disguised:
 		(atk_target as Mimic).reveal()
 	attack(atk_target)
+	if has_buff("Invisibility"):
+		var invis: Node = get_buff("Invisibility")
+		if invis is Invisibility:
+			(invis as Invisibility).dispel()
+	_pending_surprise_attack = false
+	_patient_strike_ready = false
+	_followup_strike_ready = false
+
+func _do_search() -> void:
+	if level == null:
+		return
+	var found: int = Door.search(level, pos)
+	if found <= 0 and MessageLog:
+		MessageLog.add("You search, but find nothing.")
+	_patient_strike_ready = false
+	_followup_strike_ready = false
+
+func _do_throw_item(item: Variant, target_pos: int) -> void:
+	if item == null or target_pos < 0 or level == null or belongings == null:
+		return
+	if item != belongings.weapon and item != belongings.get_equipped_spirit_bow() and not belongings.has_item(item):
+		return
+
+	if item is Bomb:
+		var bomb: Bomb = item as Bomb
+		if MessageLog:
+			MessageLog.add("You throw the %s." % bomb.item_name)
+		if EventBus:
+			EventBus.item_used.emit(bomb.get_display_name())
+		bomb._start_fuse(_projectile_collision_pos(target_pos), self)
+		_consume_thrown_stack_item(item)
+		_patient_strike_ready = false
+		_followup_strike_ready = false
+		return
+
+	var collision_pos: int = _projectile_collision_pos(target_pos)
+	var collision_target: Variant = level.find_char_at(collision_pos) if collision_pos >= 0 else null
+	var hit_target: Char = collision_target as Char if collision_target is Char and collision_target != self else null
+	var hit_landed: bool = false
+	if EventBus:
+		EventBus.item_used.emit(ConstantsData.get_prop(item, "item_name", "item"))
+
+	if hit_target != null:
+		hit_landed = _resolve_ranged_attack(hit_target, item)
+	else:
+		if MessageLog:
+			MessageLog.add("The %s misses." % ConstantsData.get_prop(item, "item_name", "projectile"))
+
+	if item is MissileWeapon and hit_landed:
+		var missile: MissileWeapon = item as MissileWeapon
+		if missile.has_special_effect():
+			missile.apply_special_effect(hit_target)
+
+	if item is MissileWeapon and _should_consume_thrown_item(item):
+		_consume_thrown_stack_item(item)
+
+	if item is SpiritBow and hit_landed:
+		var followup_level: int = get_talent_level("huntress_followup_strike")
+		if hero_class == ConstantsData.HeroClass.HUNTRESS and followup_level > 0:
+			_followup_strike_ready = true
+	else:
+		_followup_strike_ready = false
+
+	_patient_strike_ready = false
+
+func _do_zap_wand(item: Variant, target_pos: int) -> void:
+	if item == null or target_pos < 0 or belongings == null:
+		return
+	if item != belongings.misc and not belongings.has_item(item):
+		return
+	if item is Wand:
+		(item as Wand).zap(self, target_pos)
+	_patient_strike_ready = false
+	_followup_strike_ready = false
+
+func _projectile_collision_pos(target_pos: int) -> int:
+	if level == null:
+		return target_pos
+	var occupied: Array[bool] = []
+	occupied.resize(level.passable.size())
+	occupied.fill(false)
+	for hero_ref: Char in level.get_heroes():
+		if hero_ref != null and hero_ref != self and hero_ref.is_alive:
+			occupied[hero_ref.pos] = true
+	for mob_ref: Node in level.mobs:
+		if mob_ref is Char and mob_ref != self and (mob_ref as Char).is_alive:
+			occupied[(mob_ref as Char).pos] = true
+	var path: Ballistica = Ballistica.new()
+	path.cast(pos, target_pos, level.passable, Ballistica.PROJECTILE, occupied, ConstantsData.WIDTH)
+	return path.collision_pos
+
+func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
+	if target == null or item == null:
+		return false
+	var acc_multi: float = 1.0
+	if item.has_method("accuracy_factor"):
+		acc_multi = item.accuracy_factor(self)
+	if not Char.hit(self, target, acc_multi):
+		on_attack_miss(target)
+		return false
+
+	var damage: int = 1
+	if item.has_method("damage_roll"):
+		damage = item.damage_roll(self)
+	for b: Node in _buffs:
+		if b.has_method("modify_damage"):
+			damage = b.modify_damage(damage)
+
+	var effective_damage: int = target.defense_proc(self, damage)
+	if effective_damage >= 0:
+		effective_damage = maxi(effective_damage - target.dr_roll(), 0)
+		if target.has_buff("Vulnerable"):
+			effective_damage = int(effective_damage * 1.33)
+		if item.has_method("proc_enchantment"):
+			effective_damage = item.proc_enchantment(self, target, effective_damage)
+
+	target.take_damage(effective_damage, self)
+	on_attack_hit(target, effective_damage)
+	return true
+
+func _get_throw_delay(item: Variant) -> float:
+	if item != null and item.has_method("speed_factor"):
+		return item.speed_factor(self)
+	return 1.0
+
+func _should_consume_thrown_item(item: Variant) -> bool:
+	if item is MissileWeapon and (item as MissileWeapon).does_return():
+		return false
+	return item is MissileWeapon or item is Bomb
+
+func _consume_thrown_stack_item(item: Variant) -> void:
+	if item == null:
+		return
+	if item.get("quantity") != null:
+		item.quantity -= 1
+		if item.quantity <= 0:
+			belongings.remove_item(item)
+
+func get_auto_ranged_action(target_pos: int) -> Dictionary:
+	var ranged_item: Variant = _get_auto_ranged_item(target_pos)
+	if ranged_item == null:
+		return {}
+	return {"type": "throw_item", "item": ranged_item, "target_pos": target_pos}
+
+func _get_auto_ranged_item(target_pos: int) -> Variant:
+	if hero_class != ConstantsData.HeroClass.HUNTRESS or belongings == null or level == null:
+		return null
+	if target_pos < 0 or distance_to(target_pos) > 8:
+		return null
+	var bow: Item = belongings.get_equipped_spirit_bow()
+	if bow == null:
+		return null
+	if _projectile_collision_pos(target_pos) != target_pos:
+		return null
+	return bow
+
+## Emit damage signal so game_scene shows floating damage number on the mob.
+func on_attack_hit(target_char: Char, damage: int) -> void:
+	if EventBus and target_char != null:
+		EventBus.mob_damaged.emit(target_char.pos, damage)
+	if AudioManager:
+		AudioManager.play_sfx("hit")
+
+
+## Emit miss signal so game_scene shows "0" floating text on the mob.
+func on_attack_miss(target_char: Char) -> void:
+	if EventBus and target_char != null:
+		EventBus.hero_attack_missed.emit(target_char.pos)
+
 
 func _do_wait() -> void:
 	# Silent single-turn wait — hero does not show a message
-	pass
+	if hero_class == ConstantsData.HeroClass.DUELIST and get_talent_level("duelist_patient_strike") > 0:
+		_patient_strike_ready = true
 
 
 ## Rest until full HP or interrupted. Matches original Hero.rest(boolean).
@@ -428,23 +577,8 @@ func _do_interact(target_pos: int) -> void:
 	if level.has_method("get_terrain"):
 		var terrain: int = level.get_terrain(target_pos)
 		match terrain:
-			ConstantsData.Terrain.DOOR:
-				level.set_terrain(target_pos, ConstantsData.Terrain.OPEN_DOOR)
-				if EventBus:
-					EventBus.door_opened.emit(target_pos)
-				if MessageLog:
-					MessageLog.add("You open the door.")
-			ConstantsData.Terrain.LOCKED_DOOR:
-				# Check for key in inventory
-				var key: Variant = belongings.find_item_by_id("iron_key")
-				if key:
-					belongings.remove_item(key)
-					level.set_terrain(target_pos, ConstantsData.Terrain.OPEN_DOOR)
-					if MessageLog:
-						MessageLog.add("You unlock the door.")
-				else:
-					if MessageLog:
-						MessageLog.add_warning("The door is locked.")
+			ConstantsData.Terrain.DOOR, ConstantsData.Terrain.LOCKED_DOOR, ConstantsData.Terrain.CRYSTAL_DOOR:
+				Door.open(level, target_pos, self)
 
 func _do_ascend() -> void:
 	# Level transitions are handled by GameScene._handle_ascend().
@@ -496,6 +630,7 @@ func _check_terrain_effects() -> void:
 			# Seed/dew drop handled by level or loot system
 			if EventBus:
 				EventBus.hero_trampled_grass.emit(pos)
+			on_trampled_grass()
 
 		ConstantsData.Terrain.GRASS:
 			# Warden subclass gains barkskin from grass
@@ -589,6 +724,7 @@ func earn_xp(amount: int) -> void:
 		xp -= xp_to_next
 		hero_level += 1
 		xp_to_next = ConstantsData.xp_for_level(hero_level)
+		talent_points_available += 1
 
 		# Level up bonuses: +5 HP, +1 attack, +1 defense
 		# Original updateHT(true): HP += max(newHT - oldHT, 0); HP = min(HP, HT)
@@ -610,6 +746,267 @@ func earn_xp(amount: int) -> void:
 			EventBus.hero_stats_changed.emit()
 		if GameManager:
 			GameManager.add_score(hero_level * 50)
+
+func get_talents() -> Array[TalentData.TalentInfo]:
+	return TalentData.get_talents_for(hero_class, hero_subclass)
+
+func get_talent_level(talent_id: String) -> int:
+	return talent_levels.get(talent_id, 0)
+
+func can_upgrade_talent(talent_id: String) -> bool:
+	if talent_points_available <= 0:
+		return false
+	var talent: TalentData.TalentInfo = TalentData.get_talent(hero_class, talent_id, hero_subclass)
+	if talent == null:
+		return false
+	return get_talent_level(talent_id) < talent.max_points
+
+func upgrade_talent(talent_id: String) -> bool:
+	if not can_upgrade_talent(talent_id):
+		return false
+	talent_levels[talent_id] = get_talent_level(talent_id) + 1
+	talent_points_available -= 1
+	if EventBus:
+		EventBus.hero_stats_changed.emit()
+	if MessageLog:
+		var talent: TalentData.TalentInfo = TalentData.get_talent(hero_class, talent_id, hero_subclass)
+		if talent != null:
+			MessageLog.add_positive("%s improved to %d." % [talent.name, talent_levels[talent_id]])
+	return true
+
+
+func on_item_picked_up(item: Item) -> void:
+	if item == null:
+		return
+
+	var warrior_hypothesis: int = get_talent_level("warrior_tested_hypothesis")
+	if hero_class == ConstantsData.HeroClass.WARRIOR and warrior_hypothesis > 0:
+		if item.item_id == "healing" or item.item_id == "identify":
+			_maybe_identify_pickup(item, 0.50 * warrior_hypothesis, "Your practical instincts reveal the %s.")
+
+	var mage_intuition: int = get_talent_level("mage_scholars_intuition")
+	if hero_class == ConstantsData.HeroClass.MAGE and mage_intuition > 0:
+		if item.category == ConstantsData.ItemCategory.SCROLL or item.category == ConstantsData.ItemCategory.WAND:
+			_maybe_identify_pickup(item, 0.30 * mage_intuition, "Arcane intuition reveals the %s.")
+
+	var rogue_intuition: int = get_talent_level("rogue_thiefs_intuition")
+	if hero_class == ConstantsData.HeroClass.ROGUE and rogue_intuition > 0:
+		if item.category == ConstantsData.ItemCategory.RING:
+			_maybe_identify_pickup(item, 0.35 * rogue_intuition, "Your thief's intuition reveals the %s.")
+
+	var huntress_intuition: int = get_talent_level("huntress_survivalists_intuition")
+	if hero_class == ConstantsData.HeroClass.HUNTRESS and huntress_intuition > 0:
+		if item is MissileWeapon or item is SpiritBow:
+			_maybe_identify_pickup(item, 0.35 * huntress_intuition, "Your survival instincts reveal the %s.")
+
+	var duelist_intuition: int = get_talent_level("duelist_adventurers_intuition")
+	if hero_class == ConstantsData.HeroClass.DUELIST and duelist_intuition > 0:
+		if item.category == ConstantsData.ItemCategory.WEAPON or item.category == ConstantsData.ItemCategory.ARMOR:
+			_maybe_identify_pickup(item, 0.25 * duelist_intuition, "Your intuition reveals the %s.")
+
+
+func on_food_eaten(_food: Food, hunger_before: float, hp_before: int, hp_max_before: int) -> void:
+	var changed_state: bool = false
+
+	var warrior_meal: int = get_talent_level("warrior_hearty_meal")
+	if hero_class == ConstantsData.HeroClass.WARRIOR and warrior_meal > 0:
+		if hp_max_before > 0 and float(hp_before) >= float(hp_max_before) * 0.75:
+			var barrier: Barrier = add_buff(Barrier.new()) as Barrier
+			if barrier != null:
+				barrier.set_shield(2 + warrior_meal * 2)
+				changed_state = true
+			if MessageLog and barrier != null:
+				MessageLog.add_positive("A hearty meal fortifies you.")
+
+	var mage_meal: int = get_talent_level("mage_empowering_meal")
+	if hero_class == ConstantsData.HeroClass.MAGE and mage_meal > 0:
+		var recharge: Recharging = Recharging.new()
+		recharge.set_duration(4.0 + 4.0 * mage_meal)
+		add_buff(recharge)
+		changed_state = true
+
+	var rogue_rations: int = get_talent_level("rogue_cached_rations")
+	if hero_class == ConstantsData.HeroClass.ROGUE and rogue_rations > 0:
+		var hunger_buff: Variant = get_buff("Hunger")
+		if hunger_buff != null and hunger_buff.has_method("satisfy"):
+			var bonus_food: float = 50.0 * rogue_rations
+			hunger_buff.satisfy(bonus_food)
+			changed_state = true
+			if hunger_before > 0.0 and MessageLog:
+				MessageLog.add_positive("You make the meal last longer.")
+
+	if changed_state and EventBus:
+		EventBus.hero_stats_changed.emit()
+
+
+func on_trampled_grass() -> void:
+	var bounty_level: int = get_talent_level("huntress_natures_bounty")
+	if hero_class != ConstantsData.HeroClass.HUNTRESS or bounty_level <= 0 or level == null:
+		return
+
+	var dew_chance: float = 0.20 * bounty_level
+	var seed_chance: float = 0.10 * bounty_level
+
+	if randf() < dew_chance:
+		var dew: Dewdrop = Generator.create_item("dewdrop") as Dewdrop
+		if dew != null:
+			dew.on_pickup(self)
+		return
+
+	if randf() < seed_chance and not Generator.SEEDS.is_empty():
+		var seed_id: String = Generator.SEEDS[randi_range(0, Generator.SEEDS.size() - 1)]
+		var seed: Item = Generator.create_item(seed_id)
+		if seed != null and level.has_method("drop_item"):
+			level.drop_item(pos, seed)
+			if MessageLog:
+				MessageLog.add_positive("You find %s in the grass." % seed.get_display_name())
+
+
+func _maybe_identify_pickup(item: Item, chance: float, message_template: String) -> void:
+	if item == null or item.is_identified():
+		return
+	if randf() >= clampf(chance, 0.0, 1.0):
+		return
+	item.identify()
+	if MessageLog:
+		MessageLog.add_positive(message_template % item.get_display_name())
+
+func can_surprise_attack() -> bool:
+	if belongings != null:
+		var weapon: Variant = belongings.get_equipped_weapon()
+		if weapon != null and weapon.has_method("can_surprise_attack"):
+			return weapon.can_surprise_attack(self)
+	return super.can_surprise_attack()
+
+func attack_proc(enemy: Char, damage: int) -> int:
+	var result: int = super.attack_proc(enemy, damage)
+
+	var sucker_punch_level: int = get_talent_level("rogue_sucker_punch")
+	if hero_class == ConstantsData.HeroClass.ROGUE and sucker_punch_level > 0 and _pending_surprise_attack:
+		result = roundi(float(result) * (1.15 + 0.15 * sucker_punch_level))
+
+	var patient_strike_level: int = get_talent_level("duelist_patient_strike")
+	if hero_class == ConstantsData.HeroClass.DUELIST and patient_strike_level > 0 and _patient_strike_ready:
+		result = roundi(float(result) * (1.10 + 0.15 * patient_strike_level))
+
+	var followup_strike_level: int = get_talent_level("huntress_followup_strike")
+	if hero_class == ConstantsData.HeroClass.HUNTRESS and followup_strike_level > 0 and _followup_strike_ready:
+		result = roundi(float(result) * (1.10 + 0.15 * followup_strike_level))
+
+	if belongings != null:
+		var weapon: Variant = belongings.get_equipped_weapon()
+		if weapon != null and weapon.has_method("proc_enchantment"):
+			result = weapon.proc_enchantment(self, enemy, result)
+
+	_followup_strike_ready = false
+	return maxi(0, result)
+
+func defense_proc(enemy: Char, damage: int) -> int:
+	var result: int = super.defense_proc(enemy, damage)
+	if result < 0:
+		return result
+	if belongings != null:
+		var armor: Variant = belongings.get_equipped_armor()
+		if armor != null and armor.has_method("proc_glyph"):
+			result = armor.proc_glyph(enemy, self, result)
+	return result
+
+func serialize() -> Dictionary:
+	var data: Dictionary = serialize_actor()
+	data["hero_class"] = hero_class
+	data["hero_subclass"] = hero_subclass
+	data["hero_level"] = hero_level
+	data["xp"] = xp
+	data["xp_to_next"] = xp_to_next
+	data["talent_points_available"] = talent_points_available
+	data["talent_levels"] = talent_levels.duplicate(true)
+	data["hp"] = hp
+	data["hp_max"] = hp_max
+	data["ht"] = ht
+	data["str_val"] = str_val
+	data["attack_skill"] = attack_skill
+	data["defense_skill"] = defense_skill
+	data["damage_roll_min"] = damage_roll_min
+	data["damage_roll_max"] = damage_roll_max
+	data["armor_value"] = armor_value
+	data["is_alive"] = is_alive
+	data["base_speed"] = base_speed
+	data["hero_name"] = hero_name
+	data["patient_strike_ready"] = _patient_strike_ready
+	data["backup_barrier_ready"] = _backup_barrier_ready
+	data["followup_strike_ready"] = _followup_strike_ready
+	data["belongings"] = belongings.serialize() if belongings != null else {}
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	deserialize_actor(data)
+	hero_class = data.get("hero_class", ConstantsData.HeroClass.WARRIOR)
+	hero_subclass = data.get("hero_subclass", ConstantsData.HeroSubclass.NONE)
+	hero_level = data.get("hero_level", 1)
+	xp = data.get("xp", 0)
+	xp_to_next = data.get("xp_to_next", ConstantsData.xp_for_level(hero_level))
+	talent_points_available = data.get("talent_points_available", 0)
+	talent_levels = data.get("talent_levels", {}).duplicate(true)
+	hp = data.get("hp", 1)
+	hp_max = data.get("hp_max", hp)
+	ht = data.get("ht", hp_max)
+	str_val = data.get("str_val", 10)
+	attack_skill = data.get("attack_skill", 10)
+	defense_skill = data.get("defense_skill", 5)
+	damage_roll_min = data.get("damage_roll_min", 1)
+	damage_roll_max = data.get("damage_roll_max", 4)
+	armor_value = data.get("armor_value", 0)
+	is_alive = data.get("is_alive", true)
+	base_speed = data.get("base_speed", 1.0)
+	hero_name = data.get("hero_name", HeroClassData.get_class_name_str(hero_class))
+	_pending_surprise_attack = false
+	_patient_strike_ready = data.get("patient_strike_ready", false)
+	_backup_barrier_ready = data.get("backup_barrier_ready", true)
+	_followup_strike_ready = data.get("followup_strike_ready", false)
+	name = hero_name
+	if belongings == null:
+		belongings = Belongings.new(self)
+	var belongings_data: Dictionary = data.get("belongings", {})
+	if not belongings_data.is_empty():
+		belongings.deserialize(belongings_data)
+
+# ---------------------------------------------------------------------------
+# Damage & Death Overrides
+# ---------------------------------------------------------------------------
+
+## Override take_damage to emit hero_stats_changed so the HP bar updates.
+func take_damage(amount: int, source: Variant = null) -> int:
+	var hp_before: int = hp
+	var actual: int = super.take_damage(amount, source)
+	if actual > 0:
+		var backup_barrier: int = get_talent_level("mage_backup_barrier")
+		if hero_class == ConstantsData.HeroClass.MAGE and backup_barrier > 0 and _backup_barrier_ready:
+			var threshold: int = int(ceil(float(hp_max) * 0.5))
+			if hp_before > threshold and hp <= threshold:
+				var barrier: Barrier = add_buff(Barrier.new()) as Barrier
+				if barrier != null:
+					barrier.set_shield(2 + backup_barrier * 2)
+					_backup_barrier_ready = false
+					if MessageLog:
+						MessageLog.add_positive("A backup barrier springs into place.")
+	if actual > 0 and EventBus:
+		EventBus.hero_stats_changed.emit()
+	return actual
+
+## Override heal to emit hero_stats_changed so the HP bar updates.
+func heal(amount: int) -> void:
+	super.heal(amount)
+	if hp > int(ceil(float(hp_max) * 0.5)):
+		_backup_barrier_ready = true
+	if EventBus:
+		EventBus.hero_stats_changed.emit()
+
+## Override _on_death to emit the EventBus.hero_died signal so the game
+## transitions to the death screen.
+func _on_death(source: Variant) -> void:
+	super._on_death(source)
+	if EventBus:
+		EventBus.hero_died.emit()
 
 # ---------------------------------------------------------------------------
 # View Distance
@@ -639,8 +1036,58 @@ func is_sighted() -> bool:
 	return not has_buff("Blindness") and is_alive
 
 # ---------------------------------------------------------------------------
+# Attack Delay
+# ---------------------------------------------------------------------------
+
+## Return the hero's attack delay based on equipped weapon.
+## Original: Hero.attackDelay() = weapon.speedFactor(hero), default 1.0.
+## Fast weapons like dagger have < 1.0, slow weapons like glaive > 1.0.
+func _get_attack_delay() -> float:
+	if belongings:
+		var equipped_weapon: Variant = belongings.get_equipped_weapon()
+		if equipped_weapon and equipped_weapon.has_method("speed_factor"):
+			return equipped_weapon.speed_factor(self)
+	return 1.0
+
+# ---------------------------------------------------------------------------
 # Damage / Heal Overrides (emit HUD update signals)
 # ---------------------------------------------------------------------------
+
+## Override damage_roll to use equipped weapon's damage calculation.
+## Original SPD: Hero.damageRoll() delegates to weapon.damageRoll(this).
+func damage_roll() -> int:
+	if belongings:
+		var weapon: Variant = belongings.get_equipped_weapon()
+		if weapon and weapon.has_method("damage_roll"):
+			var dmg: int = weapon.damage_roll(self)
+			# Apply buff modifiers (same as base Char.damage_roll)
+			for b: Node in _buffs:
+				if b.has_method("modify_damage"):
+					dmg = b.modify_damage(dmg)
+			return maxi(0, dmg)
+	return super.damage_roll()
+
+## Override dr_roll to use equipped armor's DR calculation.
+## Original SPD: Hero.drRoll() delegates to armor.DRRoll() + barkskin.
+func dr_roll() -> int:
+	var dr: int = 0
+	# Barkskin bonus (Warden subclass, Earthroot plant)
+	var bark_lvl: int = Barkskin.current_level(self)
+	if bark_lvl > 0:
+		@warning_ignore("integer_division")
+		dr += (randi_range(0, bark_lvl) + randi_range(0, bark_lvl)) / 2
+	# Use equipped armor's dr_roll if available
+	if belongings:
+		var equipped_armor: Variant = belongings.get_equipped_armor()
+		if equipped_armor and equipped_armor.has_method("dr_roll"):
+			dr += equipped_armor.dr_roll()
+			return dr
+	# Fallback to base armor_value
+	var armor: int = effective_armor()
+	if armor > 0:
+		@warning_ignore("integer_division")
+		dr += (randi_range(0, armor) + randi_range(0, armor)) / 2
+	return dr
 
 ## Override get_speed to include armor speed penalty/bonus.
 ## Original: Hero.speed() calls super.speed() then multiplies by armor.speedFactor(hero).

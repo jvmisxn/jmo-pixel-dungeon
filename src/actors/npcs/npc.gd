@@ -43,6 +43,8 @@ func act() -> void:
 func interact(hero: Variant) -> void:
 	if hero == null:
 		return
+	if EventBus:
+		EventBus.npc_interacted.emit(npc_name)
 	var line: String = get_dialogue()
 	if line != "" and MessageLog:
 		MessageLog.add_info(line)
@@ -96,4 +98,3 @@ func _on_death(source: Variant) -> void:
 		level.remove_mob(self)
 
 # ---------------------------------------------
-

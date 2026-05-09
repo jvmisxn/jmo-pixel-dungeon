@@ -33,7 +33,7 @@ static func paint_level(level: Level) -> void:
 # ---------------------------------------------------------------------------
 
 static func _carve_tunnels(level: Level) -> void:
-	var carved: Dictionary[String, bool] = {}  # Track which pairs we've already tunneled
+	var carved: Dictionary[int, bool] = {}  # Track which pairs we've already tunneled
 
 	for room: Room in level.rooms:
 		if room == null:
@@ -57,17 +57,10 @@ static func _carve_tunnels(level: Level) -> void:
 
 			Builder.build_tunnel(level, from_pos, to_pos)
 
-			# Place doors at tunnel entrances — but only when:
-			# 1. Position is on the room border
-			# 2. Room is not a CONNECTION (small hallway)
-			# 3. No adjacent door already exists
-			# 4. Position forms a valid doorframe (walls on two opposite sides)
-			if room.on_border(from_pos) and room.type != Room.Type.CONNECTION:
-				if not _has_adjacent_door(level, from_pos) and _is_valid_doorframe(level, from_pos):
-					level.set_terrain(from_pos, ConstantsData.Terrain.DOOR)
-			if neighbor.on_border(to_pos) and neighbor.type != Room.Type.CONNECTION:
-				if not _has_adjacent_door(level, to_pos) and _is_valid_doorframe(level, to_pos):
-					level.set_terrain(to_pos, ConstantsData.Terrain.DOOR)
+			# NOTE: Doors are placed by each Room's paint() method using its
+			# `connected` dictionary. The tunnel just carves empty space between
+			# rooms. Do NOT place extra doors here — doing so creates orphan
+			# doors in walls that lead nowhere.
 
 ## Check if the position forms a valid doorframe — walls on two opposite sides
 ## (N+S or E+W). A door with open space on 3 sides is pointless.

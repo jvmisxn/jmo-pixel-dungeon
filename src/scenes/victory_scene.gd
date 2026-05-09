@@ -83,10 +83,7 @@ func _process(delta: float) -> void:
 
 func _on_continue() -> void:
 	var title_script: GDScript = preload("res://src/scenes/title_scene.gd")
-	var title_node: Control = title_script.new()
-	title_node.name = "TitleScene"
-	get_tree().root.add_child(title_node)
-	queue_free()
+	SceneManager.go_to(title_script, "TitleScene")
 
 func _save_ranking() -> void:
 	var ranking: Dictionary = {

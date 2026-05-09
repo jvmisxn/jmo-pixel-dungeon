@@ -166,12 +166,13 @@ func _build_layout() -> void:
 
 
 func _connect_signals() -> void:
-	var event_bus: Node = UIUtils.get_event_bus()
+	var event_bus: Node = EventBus
 	if event_bus:
 		event_bus.hero_stats_changed.connect(_on_stats_changed)
 		event_bus.level_changed.connect(_on_level_changed)
 		event_bus.gold_collected.connect(_on_gold_collected)
 		event_bus.hero_moved.connect(_on_hero_moved)
+		event_bus.show_window.connect(_on_show_window_requested)
 		# Boss fight signals (now defined in EventBus)
 		event_bus.boss_fight_started.connect(_on_boss_fight_started)
 		event_bus.boss_damaged.connect(_on_boss_damaged)
@@ -180,9 +181,7 @@ func _connect_signals() -> void:
 	if _toolbar_bar:
 		_toolbar_bar.inventory_pressed.connect(_on_inventory_pressed)
 		_toolbar_bar.map_pressed.connect(_on_map_pressed)
-		_toolbar_bar.wait_pressed.connect(_on_wait_pressed)
 		_toolbar_bar.rest_pressed.connect(_on_rest_pressed)
-		_toolbar_bar.search_pressed.connect(_on_search_pressed)
 		_toolbar_bar.settings_pressed.connect(_on_settings_pressed)
 		_toolbar_bar.quickslot_used.connect(_on_quickslot_used)
 
@@ -196,7 +195,10 @@ func show_window(window_node: Control) -> void:
 	_sub_windows.clear()
 	# Listen for sub-window requests ("signal up" pattern — avoids get_parent())
 	if window_node is WndBase:
-		(window_node as WndBase).open_sub_window.connect(_on_sub_window_requested)
+		var wnd: WndBase = window_node as WndBase
+		wnd.open_sub_window.connect(_on_sub_window_requested)
+		# Listen for the window closing itself (X button, Escape) so HUD can clean up
+		wnd.window_closed.connect(_on_active_window_self_closed)
 	window_layer.add_child(window_node)
 	window_node.set_anchors_preset(Control.PRESET_CENTER)
 	window_layer.visible = true
@@ -210,6 +212,20 @@ func _on_sub_window_requested(wnd: WndBase) -> void:
 	_sub_windows.append(wnd)
 	window_layer.add_child(wnd)
 	wnd.set_anchors_preset(Control.PRESET_CENTER)
+
+
+## Called when the active window closes itself (X button, Escape key).
+## Cleans up HUD state so input isn't permanently blocked.
+func _on_active_window_self_closed() -> void:
+	# The window will queue_free itself and its overlay via _finish_close().
+	# We just need to reset HUD tracking state.
+	for sub_wnd: WndBase in _sub_windows:
+		if is_instance_valid(sub_wnd):
+			sub_wnd.queue_free()
+	_sub_windows.clear()
+	_active_window = null
+	window_layer.visible = false
+	window_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 ## Close the active popup window and all sub-windows.
@@ -238,5 +254,144 @@ func update_all() -> void:
 # --- Info Row Updates ---
 
 func _update_info_row() -> void:
+	var root_node: Node = get_node_or_null("HUDRoot")
+	if not root_node:
+		return
+	var depth_label: Label = root_node.get_node_or_null("InfoRow/DepthLabel") as Label
+	var gold_label: Label = root_node.get_node_or_null("InfoRow/GoldLabel") as Label
+	if depth_label and GameManager:
+		depth_label.text = "Depth: %d" % GameManager.depth
+	if gold_label and GameManager:
+		gold_label.text = "Gold: %d" % GameManager.gold
+
+
+func _get_viewport_size() -> Vector2:
+	var vp: Viewport = get_viewport()
+	if vp:
+		return vp.get_visible_rect().size
+	return Vector2(1280, 720)
+
+
+func _on_viewport_resized() -> void:
+	_vp_size = _get_viewport_size()
+	var root_node: Node = get_node_or_null("HUDRoot")
+	if not root_node:
+		return
+	# Reposition toolbar at bottom
+	if toolbar:
+		toolbar.position = Vector2(0, _vp_size.y - TOOLBAR_HEIGHT)
+		toolbar.custom_minimum_size = Vector2(_vp_size.x, TOOLBAR_HEIGHT)
+		toolbar.size = Vector2(_vp_size.x, TOOLBAR_HEIGHT)
+	# Reposition game log above toolbar
+	var log_container: Node = root_node.get_node_or_null("GameLog")
+	if log_container and log_container is Control:
+		(log_container as Control).position = Vector2(4, _vp_size.y - TOOLBAR_HEIGHT - 200)
+	# Reposition info row and minimap (top-right)
+	var info_row: Node = root_node.get_node_or_null("InfoRow")
+	if info_row and info_row is Control:
+		(info_row as Control).position = Vector2(_vp_size.x - 260, 6)
+	if _minimap:
+		_minimap.position = Vector2(_vp_size.x - 74, 28)
+
+
+# --- EventBus Signal Handlers ---
+
+func _on_stats_changed() -> void:
+	if _status_pane:
+		_status_pane.update_all()
+
+
+func _on_level_changed(_new_depth: int) -> void:
+	_update_info_row()
+	if _status_pane:
+		_status_pane.update_all()
+	if _minimap and GameManager and GameManager.current_level:
+		var lvl: Variant = GameManager.current_level
+		var level_map: Array[int] = lvl.map if lvl.get("map") != null else []
+		var visited: Array[bool] = lvl.visited if lvl.get("visited") != null else []
+		var visible: Array[bool] = lvl.visible if lvl.get("visible") != null else []
+		var hero_pos: int = GameManager.hero.pos if GameManager.get("hero") != null else -1
+		_minimap.update_map(level_map, visited, visible, hero_pos)
+
+
+func _on_gold_collected(_amount: int, _total: int) -> void:
+	_update_info_row()
+
+
+func _on_hero_moved(_new_pos: int) -> void:
+	# Minimap handles hero_moved via its own EventBus connection
 	pass
-	
+
+
+func _on_boss_fight_started(boss_name: String, boss_hp: int) -> void:
+	if _boss_hp_bar:
+		_boss_hp_bar.show_boss(boss_name, boss_hp, boss_hp)
+
+
+func _on_boss_damaged(current_hp: int, _max_hp: int) -> void:
+	if _boss_hp_bar:
+		_boss_hp_bar.update_hp(current_hp)
+
+
+func _on_boss_defeated() -> void:
+	if _boss_hp_bar:
+		_boss_hp_bar.hide_boss()
+
+func _on_show_window_requested(window: Variant) -> void:
+	if window is Control:
+		show_window(window as Control)
+
+
+# --- Toolbar Signal Handlers ---
+
+func _on_inventory_pressed() -> void:
+	var wnd: WndBase = WndInventory.new()
+	show_window(wnd)
+
+
+func _on_map_pressed() -> void:
+	# Toggle minimap visibility
+	if _minimap:
+		_minimap.visible = not _minimap.visible
+
+
+func _on_wait_pressed() -> void:
+	# Gameplay wait input is owned by GameScene so it only fires while hero input is active.
+	pass
+
+
+func _on_rest_pressed() -> void:
+	# Rest is currently a single-turn wait shortcut.
+	if GameManager and GameManager.hero and GameManager.hero.has_method("submit_action"):
+		GameManager.hero.submit_action({"type": "wait"})
+
+
+func _on_search_pressed() -> void:
+	# Gameplay search input is owned by GameScene so it only fires while hero input is active.
+	pass
+
+
+func _on_settings_pressed() -> void:
+	var wnd: WndBase = WndSettings.new()
+	show_window(wnd)
+
+
+func _on_quickslot_used(slot_index: int, item: RefCounted) -> void:
+	if GameManager == null or GameManager.hero == null or item == null:
+		return
+	if item is Wand:
+		var wand: Wand = item as Wand
+		if ConstantsData.get_prop(wand, "charges", 0) <= 0:
+			if MessageLog:
+				MessageLog.add_warning("The %s has no charges left!" % ConstantsData.get_prop(wand, "item_name", "wand"))
+			return
+		var hero_ref: Hero = GameManager.hero as Hero
+		var zap_callback: Callable = func(cell: int) -> void:
+			if hero_ref != null and hero_ref.has_method("submit_action"):
+				hero_ref.submit_action({"type": "zap_wand", "item": wand, "target_pos": cell})
+		if EventBus:
+			var max_range: int = ConstantsData.get_prop(wand, "zap_range", 8) if ConstantsData.get_prop(wand, "zap_range") else 8
+			EventBus.enter_targeting.emit(wand, max_range, zap_callback)
+		return
+	if item.has_method("execute"):
+		item.execute(GameManager.hero)

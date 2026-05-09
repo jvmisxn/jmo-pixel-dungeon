@@ -6,6 +6,8 @@ extends Item
 # --- Potion-Specific Properties ---
 ## Whether the player has identified this potion color as this potion type.
 var known: bool = false
+## Display label for unidentified appearance in this run.
+var appearance_name: String = ""
 ## Visual color for unidentified display (randomized per run via generator).
 var potion_color: Color = Color.WHITE
 
@@ -33,6 +35,7 @@ func execute(hero: Char) -> void:
 	if hero.has_method("spend"):
 		hero.spend(TIME_TO_DRINK)
 	drink(hero)
+	identify()
 	_consume(hero)
 
 ## Virtual — override in each potion type for the drinking effect.
@@ -67,6 +70,7 @@ func duplicate_item() -> Item:
 	var copy: Potion = Potion.new()
 	_copy_base_properties(copy)
 	copy.known = known
+	copy.appearance_name = appearance_name
 	copy.potion_color = potion_color
 	return copy
 
@@ -86,7 +90,7 @@ func value() -> int:
 func get_display_name() -> String:
 	if identified or known:
 		return super.get_display_name()
-	var color_label: String = _color_label(potion_color)
+	var color_label: String = appearance_name if not appearance_name.is_empty() else _color_label(potion_color)
 	var display: String = "%s Potion" % color_label
 	if stackable and quantity > 1:
 		display = "%s (%d)" % [display, quantity]
@@ -130,6 +134,7 @@ static func _color_label(c: Color) -> String:
 func serialize() -> Dictionary:
 	var data: Dictionary = super.serialize()
 	data["known"] = known
+	data["appearance_name"] = appearance_name
 	data["potion_color"] = [potion_color.r, potion_color.g, potion_color.b, potion_color.a]
 	data["potion_type"] = item_id
 	return data
@@ -137,6 +142,7 @@ func serialize() -> Dictionary:
 func deserialize(data: Dictionary) -> void:
 	super.deserialize(data)
 	known = data.get("known", false)
+	appearance_name = data.get("appearance_name", "")
 	var pc: Variant = data.get("potion_color", [1.0, 1.0, 1.0, 1.0])
 	if pc is Array and pc.size() >= 4:
 		potion_color = Color(pc[0], pc[1], pc[2], pc[3])

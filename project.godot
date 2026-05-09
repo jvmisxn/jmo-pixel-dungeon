@@ -25,6 +25,10 @@ GameManager="*res://src/autoloads/game_manager.gd"
 SaveManager="*res://src/autoloads/save_manager.gd"
 AudioManager="*res://src/autoloads/audio_manager.gd"
 Badges="*res://src/autoloads/badges.gd"
+ItemCatalog="*res://src/autoloads/item_catalog.gd"
+ItemAppearance="*res://src/autoloads/item_appearance.gd"
+DiscoveryCatalog="*res://src/autoloads/discovery_catalog.gd"
+SceneManager="*res://src/autoloads/scene_manager.gd"
 
 [display]
 

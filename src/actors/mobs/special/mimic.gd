@@ -57,11 +57,13 @@ func reveal() -> void:
 func _act_sleeping() -> void:
 	# While disguised, do nothing — wait to be triggered
 	if disguised:
+		spend_turn()
 		return
 	# If woken up (e.g. by AoE), start hunting
 	_find_nearest_hero()
 	if target != null:
 		state = AIState.HUNTING
+	spend_turn()
 
 func _act_hunting() -> void:
 	if disguised:
@@ -76,10 +78,12 @@ func _act_hunting() -> void:
 	# If adjacent, attack
 	if is_adjacent(target.pos):
 		attack(target)
+		spend_attack()
 		return
 
 	# Move toward target
 	_step_toward(target.pos)
+	spend_move()
 
 func _act_wandering() -> void:
 	_find_nearest_hero()
@@ -93,7 +97,10 @@ func _act_wandering() -> void:
 		var next: int = pos + dir
 		if level and level.is_passable(next) and level.find_char_at(next) == null:
 			move_to(next)
+			spend_move()
 			return
+	# Couldn't move anywhere
+	spend_turn()
 
 func _find_nearest_hero() -> void:
 	_acquire_nearest_hero_target()

@@ -12,8 +12,7 @@ var _from: Vector2 = Vector2.ZERO
 var _to: Vector2 = Vector2.ZERO
 var _color: Color = Color(0.7, 0.8, 1.0)
 var _segments: Array[Vector2] = []
-var _timer: float = 0.0
-var _flash_timer: float = 0.0
+var _progress: float = 0.0
 var _visible_state: bool = true
 
 # ---------------------------------------------------------------------------
@@ -34,31 +33,38 @@ func setup(from: Vector2, to: Vector2, color: Color = Color(0.7, 0.8, 1.0)) -> v
 
 func _ready() -> void:
 	z_index = 60
+	_start_animation()
 
-func _process(delta: float) -> void:
-	_timer += delta
-	_flash_timer += delta
 
-	# Flicker effect
+func _start_animation() -> void:
+	# Main progress tween drives alpha fade via _progress
+	var tween: Tween = create_tween()
+	tween.tween_method(_set_progress, 0.0, 1.0, DURATION)
+	tween.tween_callback(queue_free)
+
+	# Flash timer toggles visibility at regular intervals
 	var flash_interval: float = DURATION / float(FLASH_COUNT * 2)
-	if _flash_timer >= flash_interval:
-		_flash_timer = 0.0
-		_visible_state = not _visible_state
-		# Regenerate segments on each flash for jitter
-		if _visible_state:
-			_generate_segments()
+	var flash_tween: Tween = create_tween()
+	flash_tween.set_loops(FLASH_COUNT * 2)
+	flash_tween.tween_callback(_toggle_flash).set_delay(flash_interval)
 
-	if _timer >= DURATION:
-		queue_free()
-		return
 
+func _set_progress(p: float) -> void:
+	_progress = p
+	queue_redraw()
+
+
+func _toggle_flash() -> void:
+	_visible_state = not _visible_state
+	if _visible_state:
+		_generate_segments()
 	queue_redraw()
 
 func _draw() -> void:
 	if not _visible_state:
 		return
 
-	var alpha: float = 1.0 - (_timer / DURATION)
+	var alpha: float = 1.0 - _progress
 	var col: Color = _color
 	col.a = alpha
 

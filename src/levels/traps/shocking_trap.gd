@@ -22,13 +22,13 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 	affected.append(pos)
 
 	# Scan a 5x5 area for chain targets
-	var width: int = Level.WIDTH if Level.get("WIDTH") != null else 48
+	var width: int = ConstantsData.WIDTH
 	for dy: int in range(-2, 3):
 		for dx: int in range(-2, 3):
 			if dy == 0 and dx == 0:
 				continue
 			var cell: int = pos + dx + dy * width
-			if cell < 0 or cell >= Level.LEN:
+			if cell < 0 or cell >= ConstantsData.LENGTH:
 				continue
 			if cell in affected:
 				continue

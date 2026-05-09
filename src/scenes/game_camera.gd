@@ -19,8 +19,7 @@ extends Camera2D
 # --- State ---
 var _target_position: Vector2 = Vector2.ZERO
 var _shake_intensity: float = 0.0
-var _shake_timer: float = 0.0
-var _shake_decay: float = 5.0
+var _shake_tween: Tween = null
 var _target_zoom: float = 3.0
 
 # --- Bounds ---
@@ -51,20 +50,12 @@ func _process(delta: float) -> void:
 		var new_zoom: float = lerpf(current_zoom, _target_zoom, 8.0 * delta)
 		zoom = Vector2(new_zoom, new_zoom)
 
-	# Screen shake
-	if _shake_timer > 0.0:
-		_shake_timer -= delta
-		_shake_intensity *= (1.0 - _shake_decay * delta)
-		var shake_offset: Vector2 = Vector2(
+	# Screen shake offset is applied by the shake tween (see shake())
+	if _shake_intensity > 0.0:
+		offset = Vector2(
 			randf_range(-_shake_intensity, _shake_intensity),
 			randf_range(-_shake_intensity, _shake_intensity)
 		)
-		offset = shake_offset
-		if _shake_timer <= 0.0:
-			offset = Vector2.ZERO
-			_shake_intensity = 0.0
-	else:
-		offset = Vector2.ZERO
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Mouse wheel zoom
@@ -111,8 +102,13 @@ func clear_bounds() -> void:
 
 ## Trigger screen shake.
 func shake(intensity: float = 4.0, duration: float = 0.3) -> void:
+	if _shake_tween != null:
+		_shake_tween.kill()
 	_shake_intensity = intensity
-	_shake_timer = duration
+	_shake_tween = create_tween()
+	_shake_tween.tween_property(self, "_shake_intensity", 0.0, duration)\
+		.set_ease(Tween.EASE_IN)
+	_shake_tween.tween_callback(_on_shake_done)
 
 ## Zoom in one step.
 func zoom_in() -> void:
@@ -144,6 +140,11 @@ func get_cell_under_mouse() -> int:
 # ---------------------------------------------------------------------------
 # Internal
 # ---------------------------------------------------------------------------
+
+func _on_shake_done() -> void:
+	_shake_intensity = 0.0
+	offset = Vector2.ZERO
+
 
 func _clamp_to_bounds(pos: Vector2) -> Vector2:
 	# Always center on the hero — no clamping. The fog of war fills any

@@ -38,6 +38,7 @@ func execute(hero: Char) -> void:
 	if hero.has_method("spend"):
 		hero.spend(TIME_TO_READ)
 	read_scroll(hero)
+	identify()
 	_consume(hero)
 
 ## Virtual — override in each scroll type for the reading effect.

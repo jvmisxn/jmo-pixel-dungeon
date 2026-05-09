@@ -196,6 +196,19 @@ static func reset_artifacts() -> void:
 ## Uses known-ID sets for dispatch to avoid false matches from factories
 ## that always return non-null objects.
 static func create_item(item_id: String) -> Item:
+	var result: Item = _create_item_internal(item_id)
+	# Apply SPD sprite sheet index if available
+	if result != null and SPRITE_INDICES.has(result.item_id):
+		result.sprite_index = SPRITE_INDICES[result.item_id]
+	if result != null and ItemAppearance:
+		ItemAppearance.apply_appearance(result)
+	if result != null and ItemCatalog:
+		ItemCatalog.apply_knowledge(result)
+	return result
+
+
+## Internal factory dispatch — returns the item without sprite_index applied.
+static func _create_item_internal(item_id: String) -> Item:
 	# --- Gold ---
 	if item_id == "gold":
 		return Gold.new()
@@ -360,6 +373,19 @@ static func _make_seed(id: String) -> Item:
 # Random Generation — Public API
 # ---------------------------------------------------------------------------
 
+## Weighted random category selection using CATEGORY_WEIGHTS.
+static func _weighted_category() -> ConstantsData.ItemCategory:
+	var total_weight: float = 0.0
+	for w: int in CATEGORY_WEIGHTS.values():
+		total_weight += w
+	var roll: float = randf() * total_weight
+	for cat: ConstantsData.ItemCategory in CATEGORY_WEIGHTS:
+		roll -= CATEGORY_WEIGHTS[cat]
+		if roll <= 0.0:
+			return cat
+	# Fallback (should not reach here)
+	return ConstantsData.ItemCategory.GOLD
+
 ## Generate a random item appropriate for the given dungeon depth.
 static func random_item(depth: int) -> Item:
 	var category: ConstantsData.ItemCategory = _weighted_category()
@@ -495,4 +521,258 @@ static func random_seed() -> Item:
 ## Generate a random gold pile scaled to depth.
 static func random_gold(depth: int) -> Gold:
 	var amount: int = randi_range(5, 10 + depth * 5)
+	var gold: Gold = create_item("gold") as Gold
+	if gold != null:
+		gold.quantity = amount
+		return gold
 	return Gold.new(amount)
+
+# ---------------------------------------------------------------------------
+# Internal Helpers
+# ---------------------------------------------------------------------------
+
+## Roll an equipment tier (1-5) based on dungeon depth using FLOOR_SET_TIER_PROBS.
+static func _roll_tier_for_depth(depth: int) -> int:
+	var floor_set: int = clampi((depth - 1) / 5, 0, FLOOR_SET_TIER_PROBS.size() - 1)
+	var probs: Array = FLOOR_SET_TIER_PROBS[floor_set]
+	var total: int = 0
+	for p: int in probs:
+		total += p
+	var roll: int = randi() % maxi(total, 1)
+	for i: int in range(probs.size()):
+		roll -= probs[i]
+		if roll < 0:
+			return i + 1  # Tiers are 1-indexed
+	return 1
+
+## Return the melee weapon table for a given tier.
+static func _weapon_table_for_tier(tier: int) -> Array[String]:
+	match tier:
+		1: return WEAPONS_T1
+		2: return WEAPONS_T2
+		3: return WEAPONS_T3
+		4: return WEAPONS_T4
+		5: return WEAPONS_T5
+	return WEAPONS_T1
+
+## Return the armor table for a given tier.
+static func _armor_table_for_tier(tier: int) -> Array[String]:
+	match tier:
+		1: return ARMORS_T1
+		2: return ARMORS_T2
+		3: return ARMORS_T3
+		4: return ARMORS_T4
+		5: return ARMORS_T5
+	return ARMORS_T1
+
+## Return the missile weapon table for a given tier.
+static func _missile_table_for_tier(tier: int) -> Array[String]:
+	match tier:
+		1: return MISSILES_T1
+		2: return MISSILES_T2
+		3: return MISSILES_T3
+		4: return MISSILES_T4
+		5: return MISSILES_T5
+	return MISSILES_T1
+
+## Pick a random item from a string table and create it via create_item().
+static func _random_from_table(table: Array[String]) -> Item:
+	if table.is_empty():
+		return Item.new()
+	var idx: int = randi_range(0, table.size() - 1)
+	return create_item(table[idx])
+
+## Pick a weighted random item from a table using parallel weight array.
+static func _weighted_random_from_table(table: Array[String], weights: Array[int]) -> Item:
+	if table.is_empty():
+		return Item.new()
+	var total: int = 0
+	for w: int in weights:
+		total += w
+	var roll: int = randi() % maxi(total, 1)
+	for i: int in range(mini(table.size(), weights.size())):
+		roll -= weights[i]
+		if roll < 0:
+			return create_item(table[i])
+	return create_item(table[0])
+
+# ---------------------------------------------------------------------------
+# SPD items.png Sprite Sheet Indices (from ItemSpriteSheet.java)
+# ---------------------------------------------------------------------------
+# 16-column grid of 16x16 tiles. Index = row * 16 + col.
+
+const SPRITE_INDICES: Dictionary = {
+	# SPD ItemSpriteSheet.java: xy(x,y) = (x-1) + (y-1)*16
+	# --- Uncollectible / Misc (row 2+) ---
+	"gold": 18,
+	"dewdrop": 21,
+	"ankh": 48,
+	"torch": 51,
+	"amulet_of_yendor": 61,
+	# --- Keys (row 4) ---
+	"iron_key": 55,
+	"golden_key": 56,
+	"crystal_key": 57,
+	"skeleton_key": 58,
+	# --- Bombs (row 6) ---
+	"bomb": 80,
+	"fire_bomb": 82,
+	"frost_bomb": 83,
+	"holy_bomb": 87,
+	"wooly_bomb": 88,
+	"noisemaker": 89,
+	"flashbang": 86,
+	"shock_bomb": 91,
+	"regrowth_bomb": 84,
+	"arcane_bomb": 90,
+	# --- Melee weapons tier 1 (row 7) ---
+	"worn_shortsword": 96,
+	"cudgel": 97,
+	"gloves": 98,
+	"rapier": 99,
+	"dagger": 100,
+	# --- Melee weapons tier 2 (row 7.5) ---
+	"shortsword": 104,
+	"hand_axe": 105,
+	"spear": 106,
+	"quarterstaff": 107,
+	"dirk": 108,
+	# --- Melee weapons tier 3 (row 8) ---
+	"sword": 112,
+	"mace": 113,
+	"scimitar": 114,
+	"round_shield": 115,
+	"sai": 116,
+	# --- Melee weapons tier 4 (row 8.5) ---
+	"longsword": 120,
+	"battle_axe": 121,
+	"flail": 122,
+	"runic_blade": 123,
+	"assassins_blade": 124,
+	# --- Melee weapons tier 5 (row 9) ---
+	"greatsword": 128,
+	"war_hammer": 129,
+	"glaive": 130,
+	"greataxe": 131,
+	"greatshield": 132,
+	# --- Missile/thrown weapons (row 10) ---
+	"spirit_bow": 144,
+	"throwing_knife": 146,
+	"throwing_stone": 147,
+	"shuriken": 149,
+	"throwing_club": 150,
+	"bolas": 152,
+	"kunai": 153,
+	"javelin": 154,
+	"tomahawk": 155,
+	"boomerang": 156,
+	"trident": 157,
+	"heavy_boomerang": 158,
+	"force_cudgel": 159,
+	# --- Armor (row 12) ---
+	"cloth_armor": 176,
+	"leather_armor": 177,
+	"mail_armor": 178,
+	"scale_armor": 179,
+	"plate_armor": 180,
+	# --- Wands (row 14) ---
+	"wand_of_magic_missile": 208,
+	"wand_of_fire_bolt": 209,
+	"wand_of_frost": 210,
+	"wand_of_lightning": 211,
+	"wand_of_disintegration": 212,
+	"wand_of_prismatic_light": 213,
+	"wand_of_corrosion": 214,
+	"wand_of_living_earth": 215,
+	"wand_of_blast_wave": 216,
+	"wand_of_corruption": 217,
+	"wand_of_warding": 218,
+	"wand_of_regrowth": 219,
+	"wand_of_transfusion": 220,
+	# --- Rings (row 15) ---
+	"ring_of_accuracy": 224,
+	"ring_of_elements": 226,
+	"ring_of_energy": 227,
+	"ring_of_evasion": 228,
+	"ring_of_force": 229,
+	"ring_of_furor": 230,
+	"ring_of_haste": 231,
+	"ring_of_might": 232,
+	"ring_of_sharpshooting": 233,
+	"ring_of_tenacity": 234,
+	"ring_of_wealth": 235,
+	# --- Artifacts (row 16) ---
+	"cloak_of_shadows": 240,
+	"master_thieves_armband": 241,
+	"cape_of_thorns": 242,
+	"talisman_of_foresight": 243,
+	"timekeeper_hourglass": 244,
+	"alchemists_toolkit": 245,
+	"unstable_spellbook": 246,
+	"ethereal_chains": 248,
+	"horn_of_plenty": 249,
+	"chalice_of_blood": 253,
+	"sandals_of_nature": 256,
+	"dried_rose": 260,
+	# --- Scrolls (row 20) ---
+	"upgrade": 304,
+	"identify": 305,
+	"remove_curse": 306,
+	"mirror_image": 307,
+	"recharging": 308,
+	"teleportation": 309,
+	"lullaby": 310,
+	"magic_mapping": 311,
+	"rage": 312,
+	"retribution": 313,
+	"terror": 314,
+	"transmutation": 315,
+	# --- Stones (row 22) ---
+	"enchantment": 344,
+	"augmentation": 337,
+	"intuition": 346,
+	"blast": 339,
+	"blink": 340,
+	"clairvoyance": 341,
+	"deepened_sleep": 342,
+	"disarming": 343,
+	"fear": 338,
+	"flock": 345,
+	"shock": 347,
+	# --- Potions (row 23) ---
+	"strength": 352,
+	"healing": 353,
+	"mind_vision": 354,
+	"frost": 355,
+	"liquid_flame": 356,
+	"toxic_gas": 357,
+	"haste": 358,
+	"invisibility": 359,
+	"levitation": 360,
+	"paralytic_gas": 361,
+	"purity": 362,
+	"experience": 363,
+	# --- Seeds (row 25) ---
+	"seed_of_rotberry": 384,
+	"seed_of_firebloom": 385,
+	"seed_of_swiftthistle": 386,
+	"seed_of_sungrass": 387,
+	"seed_of_icecap": 388,
+	"seed_of_stormvine": 389,
+	"seed_of_sorrowmoss": 390,
+	"seed_of_dreamfoil": 391,
+	"seed_of_earthroot": 392,
+	"seed_of_starflower": 393,
+	"seed_of_fadeleaf": 394,
+	"seed_of_blindweed": 395,
+	# --- Food (row 28) ---
+	"mystery_meat": 432,
+	"ration": 437,
+	"pasty": 438,
+	"meat_pie": 439,
+	# --- Bags (row 31) ---
+	"velvet_pouch": 482,
+	"scroll_holder": 483,
+	"potion_bandolier": 484,
+	"magical_holster": 485,
+}

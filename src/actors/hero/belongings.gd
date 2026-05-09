@@ -17,6 +17,8 @@ var armor: Item = null
 var artifact: Item = null
 ## Currently equipped misc item (Item subclass or null).
 var misc: Item = null
+## Huntress spirit bow slot. Separate from melee weapon so ranged combat is explicit.
+var spirit_bow: Item = null
 ## Currently equipped ring (left hand).
 var ring_left: Item = null
 ## Currently equipped ring (right hand).
@@ -84,7 +86,7 @@ func find_item_by_id(search_id: String) -> Item:
 		if item.item_id == search_id:
 			return item
 	# Also check equipped items
-	var slots: Array[Item] = [weapon, armor, artifact, misc, ring_left, ring_right]
+	var slots: Array[Item] = [weapon, armor, artifact, misc, spirit_bow, ring_left, ring_right]
 	for slot: Item in slots:
 		if slot != null and slot.item_id == search_id:
 			return slot
@@ -136,6 +138,26 @@ func equip_artifact(new_artifact: Item) -> Item:
 		old.on_unequip(owner)
 	return old
 
+## Equip a misc item such as a wand. Returns the previously equipped misc item.
+func equip_misc(new_misc: Item) -> Item:
+	var old: Item = misc
+	misc = new_misc
+	if new_misc and new_misc.has_method("on_equip"):
+		new_misc.on_equip(owner)
+	if old and old.has_method("on_unequip"):
+		old.on_unequip(owner)
+	return old
+
+## Equip the Huntress spirit bow. Returns the previously slotted bow, if any.
+func equip_spirit_bow(new_bow: Item) -> Item:
+	var old: Item = spirit_bow
+	spirit_bow = new_bow
+	if new_bow and new_bow.has_method("on_equip"):
+		new_bow.on_equip(owner)
+	if old and old.has_method("on_unequip"):
+		old.on_unequip(owner)
+	return old
+
 ## Equip ring to left or right hand. Returns the old ring.
 func equip_ring(new_ring: Item, left: bool = true) -> Item:
 	var old: Item
@@ -167,6 +189,9 @@ func unequip(slot: String) -> Item:
 		"misc":
 			item = misc
 			misc = null
+		"spirit_bow":
+			item = spirit_bow
+			spirit_bow = null
 		"ring_left":
 			item = ring_left
 			ring_left = null
@@ -218,7 +243,7 @@ func find_item(search_name: String) -> Item:
 			return item
 		if item.item_id == search_name:
 			return item
-	var slots: Array[Item] = [weapon, armor, artifact, misc, ring_left, ring_right]
+	var slots: Array[Item] = [weapon, armor, artifact, misc, spirit_bow, ring_left, ring_right]
 	for slot: Item in slots:
 		if slot != null:
 			if slot.item_name == search_name or slot.item_id == search_name:
@@ -237,11 +262,15 @@ func get_equipped_armor() -> Item:
 func get_equipped_artifact() -> Item:
 	return artifact
 
+## Return the equipped spirit bow, if any.
+func get_equipped_spirit_bow() -> Item:
+	return spirit_bow
+
 ## Return all items (backpack + equipped). Useful for NPC quests scanning inventory.
 func get_items() -> Array[Item]:
 	var result: Array[Item] = []
 	result.append_array(backpack)
-	for slot in [weapon, armor, artifact, misc, ring_left, ring_right]:
+	for slot in [weapon, armor, artifact, misc, spirit_bow, ring_left, ring_right]:
 		if slot != null:
 			result.append(slot)
 	return result
@@ -286,8 +315,8 @@ func serialize() -> Dictionary:
 	data["backpack"] = items_data
 
 	# Serialize equipped items
-	var slot_names: Array[String] = ["weapon", "armor", "artifact", "misc", "ring_left", "ring_right"]
-	var slot_values: Array[Item] = [weapon, armor, artifact, misc, ring_left, ring_right]
+	var slot_names: Array[String] = ["weapon", "armor", "artifact", "misc", "spirit_bow", "ring_left", "ring_right"]
+	var slot_values: Array[Item] = [weapon, armor, artifact, misc, spirit_bow, ring_left, ring_right]
 	for i: int in range(slot_names.size()):
 		var slot_item: Item = slot_values[i]
 		if slot_item != null and slot_item.has_method("serialize"):
@@ -313,7 +342,7 @@ func deserialize(data: Dictionary) -> void:
 						backpack.append(item)
 
 	# Restore equipped items — assign directly to avoid triggering gameplay effects
-	var slot_names: Array[String] = ["weapon", "armor", "artifact", "misc", "ring_left", "ring_right"]
+	var slot_names: Array[String] = ["weapon", "armor", "artifact", "misc", "spirit_bow", "ring_left", "ring_right"]
 	for slot_name: String in slot_names:
 		var slot_data: Variant = data.get(slot_name, null)
 		if slot_data is Dictionary:

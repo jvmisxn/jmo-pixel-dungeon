@@ -144,3 +144,48 @@ func cast(from_pos: int, to_pos: int, passable: Array[bool], params: int,
 	if collision_pos < 0 and not path.is_empty():
 		collision_pos = path[path.size() - 1]
 		collision_index = path.size() - 1
+
+	# Build subpath: source through collision (inclusive)
+	subpath.clear()
+	if collision_index >= 0:
+		for i: int in range(collision_index + 1):
+			subpath.append(path[i])
+	elif not path.is_empty():
+		subpath = path.duplicate()
+
+	return self
+
+
+## Check if a flat-index cell is inside the map bounds.
+func _inside_map(cell: int, width: int, height: int) -> bool:
+	var x: int = cell % width
+	@warning_ignore("integer_division")
+	var y: int = cell / width
+	return x >= 0 and x < width and y >= 0 and y < height
+
+
+# ---------------------------------------------------------------------------
+# Static Helpers
+# ---------------------------------------------------------------------------
+
+## Convenience: cast a line and return the subpath (array of cell positions).
+## Creates a temporary Ballistica instance, casts the ray, and returns the
+## subpath from source to collision point.
+static func cast_line(from_pos: int, to_pos: int, passable: Array[bool],
+		params: int, occupied: Array[bool] = [],
+		width: int = ConstantsData.WIDTH) -> Array[int]:
+	var b: Ballistica = Ballistica.new()
+	b.cast(from_pos, to_pos, passable, params, occupied, width)
+	return b.subpath
+
+
+## Chebyshev (king-move) distance between two flat-index cells.
+## Matches original SPD Level.distance(a, b).
+static func distance(a: int, b: int, width: int = ConstantsData.WIDTH) -> int:
+	var ax: int = a % width
+	@warning_ignore("integer_division")
+	var ay: int = a / width
+	var bx: int = b % width
+	@warning_ignore("integer_division")
+	var by: int = b / width
+	return maxi(absi(ax - bx), absi(ay - by))

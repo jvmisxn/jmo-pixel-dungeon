@@ -22,13 +22,14 @@ var _buffs_container: HFlowContainer = null
 var _hunger_bar: ProgressBar = null
 var _hunger_label: Label = null
 
-# Equipment slot references
-var _slot_weapon: Panel = null
-var _slot_armor: Panel = null
-var _slot_artifact: Panel = null
-var _slot_ring_left: Panel = null
-var _slot_ring_right: Panel = null
-var _slot_misc: Panel = null
+# Equipment slot references (ItemSlot components for proper sprite rendering)
+var _slot_weapon: ItemSlot = null
+var _slot_spirit_bow: ItemSlot = null
+var _slot_armor: ItemSlot = null
+var _slot_artifact: ItemSlot = null
+var _slot_ring_left: ItemSlot = null
+var _slot_ring_right: ItemSlot = null
+var _slot_misc: ItemSlot = null
 
 # --- Constants ---
 const SLOT_SIZE: Vector2 = Vector2(28, 28)
@@ -37,6 +38,18 @@ const BUFF_ICON_SIZE: Vector2 = Vector2(16, 16)
 const STATUS_PANE_PATH: String = "res://assets/spd/interfaces/status_pane.png"
 const HERO_ICONS_PATH: String = "res://assets/spd/interfaces/hero_icons.png"
 const BUFFS_PATH: String = "res://assets/spd/interfaces/buffs.png"
+
+## Hero class sprite sheet paths — matches the in-game character sprites.
+const HERO_SPRITE_PATHS: Array[String] = [
+	"res://assets/spd/sprites/warrior.png",
+	"res://assets/spd/sprites/mage.png",
+	"res://assets/spd/sprites/rogue.png",
+	"res://assets/spd/sprites/huntress.png",
+	"res://assets/spd/sprites/duelist.png",
+]
+## Hero sprite frame size (12x15 per frame in the sprite sheet).
+const HERO_FRAME_W: int = 12
+const HERO_FRAME_H: int = 15
 
 ## Low HP warning flash state — matches original StatusPane.java warning colors.
 ## Original uses warningColors = [0x660000, 0xCC0000, 0x660000] and cycles
@@ -61,12 +74,12 @@ func _ready() -> void:
 ## Per-frame update for the low-HP warning flash on the hero portrait.
 ## Matches original StatusPane.java update() warning interpolation.
 func _process(delta: float) -> void:
-	var hero: Node = _get_hero()
+	var hero: Variant = _get_hero()
 	if not hero:
 		return
-	var hp: int = hero.get("hp") if hero.get("hp") != null else 1
-	var hp_max: int = hero.get("hp_max") if hero.get("hp_max") != null else 1
-	var is_alive: bool = hero.get("is_alive") if hero.get("is_alive") != null else true
+	var hp: int = hero.hp
+	var hp_max: int = hero.hp_max
+	var is_alive: bool = hero.is_alive
 
 	if not is_alive:
 		# Dead — tint portrait dark
@@ -104,10 +117,6 @@ func _build_ui() -> void:
 
 	# --- Hero Portrait ---
 	var portrait_container := CenterContainer.new()
-	# Try loading hero icon from sprite sheet
-	_portrait_fallback = ColorRect.new()
-	_portrait_fallback.custom_minimum_size = Vector2(48, 48)
-	_portrait_fallback.color = Color(0.3, 0.5, 0.8)
 	# Stone border around portrait
 	var portrait_panel := PanelContainer.new()
 	var portrait_style := StyleBoxFlat.new()
@@ -120,10 +129,24 @@ func _build_ui() -> void:
 	portrait_style.content_margin_top = 2.0
 	portrait_style.content_margin_bottom = 2.0
 	portrait_panel.add_theme_stylebox_override("panel", portrait_style)
+
+	# ColorRect background for warning flash tinting
+	_portrait_fallback = ColorRect.new()
+	_portrait_fallback.custom_minimum_size = Vector2(48, 60)
+	_portrait_fallback.color = Color(0.1, 0.09, 0.08)
 	portrait_panel.add_child(_portrait_fallback)
 
+	# Hero sprite from class sprite sheet (12x15 scaled up with nearest filter)
+	_portrait_rect = TextureRect.new()
+	_portrait_rect.custom_minimum_size = Vector2(48, 60)
+	_portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_portrait_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_portrait_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_portrait_fallback.add_child(_portrait_rect)
+
+	# Fallback class name label (shown only if sprite sheet is missing)
 	_class_label = Label.new()
-	_class_label.text = "Warrior"
+	_class_label.text = ""
 	_class_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_class_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_class_label.add_theme_font_size_override("font_size", 11)
@@ -181,18 +204,20 @@ func _build_ui() -> void:
 	add_child(equip_label)
 
 	_equip_grid = GridContainer.new()
-	_equip_grid.columns = 3
+	_equip_grid.columns = 4
 	_equip_grid.add_theme_constant_override("h_separation", 4)
 	_equip_grid.add_theme_constant_override("v_separation", 4)
 
-	_slot_weapon = _create_equip_slot("Wpn")
-	_slot_armor = _create_equip_slot("Arm")
-	_slot_artifact = _create_equip_slot("Art")
-	_slot_ring_left = _create_equip_slot("R-L")
-	_slot_ring_right = _create_equip_slot("R-R")
-	_slot_misc = _create_equip_slot("Msc")
+	_slot_weapon = _create_item_slot("Weapon")
+	_slot_spirit_bow = _create_item_slot("Bow")
+	_slot_armor = _create_item_slot("Armor")
+	_slot_artifact = _create_item_slot("Artifact")
+	_slot_ring_left = _create_item_slot("Ring L")
+	_slot_ring_right = _create_item_slot("Ring R")
+	_slot_misc = _create_item_slot("Misc")
 
 	_equip_grid.add_child(_slot_weapon)
+	_equip_grid.add_child(_slot_spirit_bow)
 	_equip_grid.add_child(_slot_armor)
 	_equip_grid.add_child(_slot_artifact)
 	_equip_grid.add_child(_slot_ring_left)
@@ -349,3 +374,197 @@ func _build_hunger_section() -> void:
 	_hunger_label.add_theme_color_override("font_color", Color(0.5, 0.7, 0.4))
 	hunger_section.add_child(_hunger_label)
 	add_child(hunger_section)
+
+
+# ---------------------------------------------------------------------------
+# Missing Methods
+# ---------------------------------------------------------------------------
+
+func _connect_signals() -> void:
+	var event_bus: Node = EventBus
+	if event_bus:
+		event_bus.hero_stats_changed.connect(_on_hero_stats_changed)
+		event_bus.item_equipped.connect(_on_item_equipped)
+		event_bus.item_unequipped.connect(_on_item_unequipped)
+
+
+func _on_hero_stats_changed() -> void:
+	update_all()
+
+
+func _on_item_equipped(_item_name: String, _slot: String) -> void:
+	_update_equipment()
+
+
+func _on_item_unequipped(_item_name: String, _slot: String) -> void:
+	_update_equipment()
+
+
+func _get_hero() -> Variant:
+	return GameManager.hero if GameManager else null
+
+
+func _create_item_slot(tooltip: String) -> ItemSlot:
+	var slot: ItemSlot = ItemSlot.new()
+	slot.custom_minimum_size = SLOT_SIZE
+	slot.size = SLOT_SIZE
+	slot.tooltip_text = tooltip
+	return slot
+
+
+## Refresh all status pane elements from current hero state.
+func update_all() -> void:
+	var hero: Variant = _get_hero()
+	if not hero:
+		return
+
+	# HP
+	var hp: int = hero.hp
+	var hp_max: int = hero.hp_max
+	if _hp_bar:
+		_hp_bar.max_value = hp_max
+		_hp_bar.value = hp
+	if _hp_label:
+		_hp_label.text = "%d / %d" % [hp, hp_max]
+
+	# Shielding (barrier buff)
+	var shield: int = hero.shielding
+	if _shield_bar:
+		_shield_bar.max_value = hp_max
+		_shield_bar.value = hp + shield
+
+	# XP
+	var xp: int = hero.xp
+	var xp_max: int = hero.xp_to_next
+	var hero_level: int = hero.hero_level
+	if _xp_bar:
+		_xp_bar.max_value = xp_max
+		_xp_bar.value = xp
+	if _xp_label:
+		_xp_label.text = "%d / %d" % [xp, xp_max]
+	if _level_label:
+		_level_label.text = "Lv. %d" % hero_level
+
+	# STR
+	var hero_str: int = hero.str_val
+	if _str_label:
+		_str_label.text = "STR: %d" % hero_str
+
+	# Depth
+	if _depth_label and GameManager:
+		_depth_label.text = "Depth: %d" % GameManager.depth
+
+	# Hero portrait sprite
+	_update_portrait()
+
+	# Hunger
+	_update_hunger(hero)
+
+	# Buffs
+	_update_buffs(hero)
+
+	# Equipment
+	_update_equipment()
+
+
+func _update_hunger(hero: Variant) -> void:
+	var hunger_val: float = 0.0
+	var hunger_level_name: String = "Satisfied"
+	var hunger_buff: Variant = hero.get_buff("Hunger") if hero.has_method("get_buff") else null
+	if hunger_buff and hunger_buff.get("hunger_value") != null:
+		hunger_val = float(hunger_buff.hunger_value)
+
+	if hunger_val <= 0.0:
+		hunger_level_name = "Satisfied"
+	elif hunger_val < ConstantsData.MAX_HUNGER * 0.5:
+		hunger_level_name = "Normal"
+	elif hunger_val < ConstantsData.MAX_HUNGER * 0.8:
+		hunger_level_name = "Hungry"
+	else:
+		hunger_level_name = "Starving"
+
+	if _hunger_bar:
+		_hunger_bar.value = ConstantsData.MAX_HUNGER - hunger_val
+	if _hunger_label:
+		_hunger_label.text = hunger_level_name
+		if hunger_level_name == "Starving":
+			_hunger_label.add_theme_color_override("font_color", Color(0.9, 0.3, 0.3))
+		elif hunger_level_name == "Hungry":
+			_hunger_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.3))
+		else:
+			_hunger_label.add_theme_color_override("font_color", Color(0.5, 0.7, 0.4))
+
+
+func _update_buffs(hero: Variant) -> void:
+	if not _buffs_container:
+		return
+	# Clear existing buff icons
+	for child: Node in _buffs_container.get_children():
+		child.queue_free()
+	# Add current buffs
+	var buffs: Array = hero.get_buffs() if hero.has_method("get_buffs") else []
+	for buff: Variant in buffs:
+		var icon: ColorRect = ColorRect.new()
+		icon.custom_minimum_size = BUFF_ICON_SIZE
+		var buff_color: Color = Color(0.4, 0.6, 0.8)
+		if buff and buff.get("icon_color") != null:
+			buff_color = buff.get("icon_color")
+		elif buff and buff.get("positive") == false:
+			buff_color = Color(0.8, 0.3, 0.3)
+		icon.color = buff_color
+		icon.tooltip_text = str(buff.get("buff_name")) if buff and buff.get("buff_name") != null else "Buff"
+		_buffs_container.add_child(icon)
+
+
+func _update_equipment() -> void:
+	var hero: Variant = _get_hero()
+	if not hero:
+		return
+	var belongings: Variant = hero.belongings
+	if not belongings:
+		return
+
+	# Access equipment properties directly (weapon, armor, artifact, ring_left, ring_right, misc)
+	_set_slot_item(_slot_weapon, belongings.weapon if "weapon" in belongings else null)
+	_set_slot_item(_slot_spirit_bow, belongings.spirit_bow if "spirit_bow" in belongings else null)
+	_set_slot_item(_slot_armor, belongings.armor if "armor" in belongings else null)
+	_set_slot_item(_slot_artifact, belongings.artifact if "artifact" in belongings else null)
+	_set_slot_item(_slot_ring_left, belongings.ring_left if "ring_left" in belongings else null)
+	_set_slot_item(_slot_ring_right, belongings.ring_right if "ring_right" in belongings else null)
+	_set_slot_item(_slot_misc, belongings.misc if "misc" in belongings else null)
+
+
+func _set_slot_item(slot: ItemSlot, item: Variant) -> void:
+	if not slot:
+		return
+	slot.item = item  # null clears the slot, valid item draws the icon
+
+
+## Extract the hero's idle frame from the class sprite sheet and display it.
+func _update_portrait() -> void:
+	if not _portrait_rect:
+		return
+	var class_idx: int = GameManager.hero_class if GameManager else 0
+	if class_idx < 0 or class_idx >= HERO_SPRITE_PATHS.size():
+		# Fallback: show class name text
+		if _class_label:
+			_class_label.text = HeroClassData.get_class_name_str(class_idx).left(3) if GameManager else "???"
+		return
+	var path: String = HERO_SPRITE_PATHS[class_idx]
+	if not ResourceLoader.exists(path):
+		if _class_label:
+			_class_label.text = HeroClassData.get_class_name_str(class_idx).left(3)
+		return
+	var sheet: Texture2D = load(path) as Texture2D
+	if sheet == null:
+		if _class_label:
+			_class_label.text = HeroClassData.get_class_name_str(class_idx).left(3)
+		return
+	# Extract first idle frame (12x15 at origin)
+	var atlas: AtlasTexture = AtlasTexture.new()
+	atlas.atlas = sheet
+	atlas.region = Rect2(0, 0, HERO_FRAME_W, HERO_FRAME_H)
+	_portrait_rect.texture = atlas
+	# Hide fallback text since we have a real sprite
+	if _class_label:
+		_class_label.text = ""

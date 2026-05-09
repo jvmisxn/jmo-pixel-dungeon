@@ -237,6 +237,4 @@ func _add_score_line(parent: VBoxContainer, label_text: String, value: int, colo
 
 func _on_continue_pressed() -> void:
 	var title_script: GDScript = preload("res://src/scenes/title_scene.gd")
-	var title_node: Control = title_script.new()
-	get_tree().root.add_child(title_node)
-	queue_free()
+	SceneManager.go_to(title_script, "TitleScene")

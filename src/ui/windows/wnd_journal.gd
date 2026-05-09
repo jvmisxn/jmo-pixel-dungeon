@@ -168,12 +168,11 @@ func _build_notes_tab() -> void:
 
 func _build_catalog_tab() -> void:
 	var cat_title: Label = Label.new()
-	cat_title.text = "Discovered Items"
+	cat_title.text = "Discovered Things"
 	cat_title.add_theme_font_size_override("font_size", 16)
 	_journal_content.add_child(cat_title)
 
-	# Group by category
-	var categories: Array[Dictionary] = [
+	var item_categories: Array[Dictionary] = [
 		{"name": "Weapons", "cat": ConstantsData.ItemCategory.WEAPON},
 		{"name": "Armor", "cat": ConstantsData.ItemCategory.ARMOR},
 		{"name": "Wands", "cat": ConstantsData.ItemCategory.WAND},
@@ -185,7 +184,7 @@ func _build_catalog_tab() -> void:
 
 	var catalog: Dictionary = _get_catalog_data()
 
-	for cat_info: Dictionary in categories:
+	for cat_info: Dictionary in item_categories:
 		var cat_name: String = cat_info["name"]
 		var cat_id: int = cat_info["cat"]
 
@@ -213,6 +212,45 @@ func _build_catalog_tab() -> void:
 					name_lbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 				row.add_child(name_lbl)
 				_journal_content.add_child(row)
+
+	var discovery_sections: Dictionary = _get_discovery_sections()
+	_add_discovery_section("Bestiary", discovery_sections.get("bestiary", []))
+	_add_discovery_section("Allies", discovery_sections.get("allies", []))
+	_add_discovery_section("Traps", discovery_sections.get("traps", []))
+	_add_discovery_section("Plants", discovery_sections.get("plants", []))
+	_add_discovery_section("Enchantments", discovery_sections.get("enchantments", []))
+	_add_discovery_section("Glyphs", discovery_sections.get("glyphs", []))
+
+func _add_discovery_section(section_name: String, entries: Array) -> void:
+	var header: Label = Label.new()
+	header.text = section_name
+	header.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
+	_journal_content.add_child(header)
+
+	if entries.is_empty():
+		var none_lbl: Label = Label.new()
+		none_lbl.text = "  None discovered yet."
+		none_lbl.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
+		_journal_content.add_child(none_lbl)
+		return
+
+	for entry: Dictionary in entries:
+		var row: HBoxContainer = HBoxContainer.new()
+		var seen_lbl: Label = Label.new()
+		seen_lbl.text = "  [x] "
+		row.add_child(seen_lbl)
+
+		var name_lbl: Label = Label.new()
+		name_lbl.text = entry.get("name", "???")
+		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_lbl)
+
+		var count_lbl: Label = Label.new()
+		count_lbl.text = str(entry.get("count", 0))
+		count_lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+		row.add_child(count_lbl)
+
+		_journal_content.add_child(row)
 
 
 # ---------------------------------------------------------------------------
@@ -280,6 +318,13 @@ func _get_landmarks() -> Array:
 
 
 func _get_catalog_data() -> Dictionary:
-	# Pull discovered items from GameManager or a catalog singleton
+	if ItemCatalog:
+		return ItemCatalog.get_catalog_data()
 	var stats: Dictionary = GameManager.stats if GameManager and GameManager.get("stats") else {}
 	return stats.get("catalog", {})
+
+
+func _get_discovery_sections() -> Dictionary:
+	if DiscoveryCatalog:
+		return DiscoveryCatalog.get_sections()
+	return {}

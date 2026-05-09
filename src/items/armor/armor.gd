@@ -183,6 +183,8 @@ func proc_glyph(attacker: Variant, defender: Variant, damage: int) -> int:
 ## Inscribe a glyph onto this armor, replacing any existing one.
 func inscribe(new_glyph: ArmorGlyph) -> Armor:
 	glyph = new_glyph
+	if identified and glyph != null and DiscoveryCatalog:
+		DiscoveryCatalog.record_glyph(glyph.glyph_name)
 	return self
 
 ## Remove the current glyph.

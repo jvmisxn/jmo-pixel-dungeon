@@ -44,8 +44,7 @@ var is_animating: bool = false
 var _sprite: Sprite2D = null
 var _hp_bar_bg: ColorRect = null
 var _hp_bar_fill: ColorRect = null
-var _flash_timer: float = 0.0
-var _flash_color: Color = Color.WHITE
+var _flash_tween: Tween = null
 var _anim_state: AnimState = AnimState.IDLE
 var _move_tween: Tween = null
 
@@ -93,13 +92,6 @@ func _ready() -> void:
 	_create_hp_bar()
 
 func _process(delta: float) -> void:
-	# Flash effect (damage taken)
-	if _flash_timer > 0.0:
-		_flash_timer -= delta
-		_sprite.modulate = _flash_color.lerp(Color.WHITE, 1.0 - (_flash_timer / 0.2))
-		if _flash_timer <= 0.0:
-			_sprite.modulate = Color.WHITE
-
 	# Update sleeping state for emote icon
 	if sleeping:
 		show_sleep()
@@ -167,9 +159,11 @@ func play_attack(target: int, duration: float = 0.2) -> void:
 
 ## Flash the sprite (damage taken visual feedback).
 func flash(color: Color = Color.RED, duration: float = 0.2) -> void:
-	_flash_color = color
-	_flash_timer = duration
+	if _flash_tween != null:
+		_flash_tween.kill()
 	_sprite.modulate = color
+	_flash_tween = create_tween()
+	_flash_tween.tween_property(_sprite, "modulate", Color.WHITE, duration)
 
 ## Play death animation (fade out and shrink).
 func play_death(duration: float = 0.5) -> void:

@@ -10,6 +10,12 @@ func _init() -> void:
 	custom_minimum_size = Vector2(380, 440)
 
 
+func _ready() -> void:
+	super._ready()
+	if EventBus and not EventBus.hero_stats_changed.is_connected(_on_hero_stats_changed):
+		EventBus.hero_stats_changed.connect(_on_hero_stats_changed)
+
+
 func _build_content() -> Control:
 	_hero = GameManager.hero if GameManager else null
 
@@ -63,6 +69,7 @@ func _build_content() -> Control:
 
 	_add_stat_row(stats_grid, "Level", "%d" % _hero.hero_level)
 	_add_stat_row(stats_grid, "Experience", "%d / %d" % [_hero.xp, _hero.xp_to_next])
+	_add_stat_row(stats_grid, "Talent Points", "%d" % _hero.talent_points_available)
 	_add_stat_row(stats_grid, "HP", "%d / %d" % [_hero.hp, _hero.hp_max])
 	_add_stat_row(stats_grid, "Max HP (HT)", "%d" % _hero.ht)
 	_add_stat_row(stats_grid, "Strength", "%d" % _hero.str_val)
@@ -74,6 +81,9 @@ func _build_content() -> Control:
 	if _hero.belongings and _hero.belongings.weapon:
 		dmg_range = _hero.belongings.weapon_damage_range()
 	_add_stat_row(stats_grid, "Damage", "%d-%d" % [dmg_range[0], dmg_range[1]])
+	if _hero.belongings and _hero.belongings.spirit_bow and _hero.belongings.spirit_bow.has_method("get_damage_range_for_level"):
+		var bow_range: Array[int] = _hero.belongings.spirit_bow.get_damage_range_for_level(_hero.hero_level)
+		_add_stat_row(stats_grid, "Bow Damage", "%d-%d" % [bow_range[0], bow_range[1]])
 
 	# Effective armor
 	var armor_val: int = _hero.effective_armor() if _hero.has_method("effective_armor") else 0
@@ -82,6 +92,42 @@ func _build_content() -> Control:
 	# --- Active Buffs ---
 	var sep2: HSeparator = HSeparator.new()
 	main.add_child(sep2)
+
+	var talents_button: Button = WndBase.create_spd_button("Manage Talents")
+	talents_button.disabled = _hero == null or not _hero.has_method("get_talents") or _hero.get_talents().is_empty()
+	talents_button.pressed.connect(_on_manage_talents_pressed)
+	main.add_child(talents_button)
+
+	var talents_title: Label = Label.new()
+	talents_title.text = "Talents"
+	talents_title.add_theme_font_size_override("font_size", 16)
+	main.add_child(talents_title)
+
+	var talents: Array[TalentData.TalentInfo] = _hero.get_talents() if _hero.has_method("get_talents") else []
+	if talents.is_empty():
+		var no_talents: Label = Label.new()
+		no_talents.text = "No talents available."
+		no_talents.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+		main.add_child(no_talents)
+	else:
+		for talent: TalentData.TalentInfo in talents:
+			var talent_box: VBoxContainer = VBoxContainer.new()
+			var talent_header: Label = Label.new()
+			var current_points: int = _hero.get_talent_level(talent.id) if _hero.has_method("get_talent_level") else 0
+			talent_header.text = "T%d  %s  %d/%d" % [talent.tier, talent.name, current_points, talent.max_points]
+			talent_header.add_theme_color_override("font_color", Color(0.95, 0.82, 0.45))
+			talent_box.add_child(talent_header)
+
+			var talent_desc: Label = Label.new()
+			talent_desc.text = talent.description
+			talent_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			talent_desc.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
+			talent_box.add_child(talent_desc)
+			main.add_child(talent_box)
+
+	# --- Active Buffs ---
+	var sep2b: HSeparator = HSeparator.new()
+	main.add_child(sep2b)
 
 	var buffs_title: Label = Label.new()
 	buffs_title.text = "Active Effects"
@@ -144,6 +190,20 @@ func _build_content() -> Control:
 	_add_stat_row(stats_grid2, "Deepest Floor", "%d" % run_stats.get("deepest_floor", 0))
 
 	return scroll
+
+
+func _on_manage_talents_pressed() -> void:
+	open_sub_window.emit(WndTalents.new())
+
+
+func _on_hero_stats_changed() -> void:
+	if is_inside_tree():
+		refresh_content()
+
+
+func _on_close() -> void:
+	if EventBus and EventBus.hero_stats_changed.is_connected(_on_hero_stats_changed):
+		EventBus.hero_stats_changed.disconnect(_on_hero_stats_changed)
 
 
 func _add_stat_row(grid: GridContainer, label_text: String, value_text: String) -> void:

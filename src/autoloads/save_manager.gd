@@ -132,6 +132,7 @@ func _serialize_game_manager() -> Dictionary:
 		"hero_subclass": GameManager.hero_subclass,
 		"run_active": GameManager.run_active,
 		"stats": GameManager.stats.duplicate(true),
+		"item_appearance": ItemAppearance.serialize() if ItemAppearance else {},
 	}
 
 
@@ -146,6 +147,12 @@ func _deserialize_game_manager(data: Dictionary) -> void:
 	GameManager.hero_subclass = data.get("hero_subclass", ConstantsData.HeroSubclass.NONE)
 	GameManager.run_active = data.get("run_active", false)
 	GameManager.stats = data.get("stats", {})
+	if ItemAppearance:
+		var appearance_data: Dictionary = data.get("item_appearance", {})
+		if appearance_data.is_empty():
+			ItemAppearance.reset_for_new_run(GameManager.run_seed)
+		else:
+			ItemAppearance.deserialize(appearance_data)
 
 
 # ---------------------------------------------------------------------------

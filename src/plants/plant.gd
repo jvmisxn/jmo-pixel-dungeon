@@ -24,6 +24,8 @@ func activate(char: Variant, level: Variant) -> void:
 	# Revert terrain to grass
 	if level and level.has_method("set_terrain") and pos >= 0:
 		level.set_terrain(pos, ConstantsData.Terrain.GRASS)
+	if EventBus:
+		EventBus.plant_activated.emit(pos, plant_name)
 	if MessageLog:
 		MessageLog.add("The %s activates!" % plant_name)
 

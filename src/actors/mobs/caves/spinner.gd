@@ -43,16 +43,21 @@ func _act_hunting() -> void:
 	# Shoot web ahead of enemy if cooldown ready
 	if web_cooldown <= 0 and dist <= 6 and can_see(target.pos):
 		_shoot_web()
+		spend_attack()
+		return
 
 	# If adjacent, attack and possibly flee after poisoning
 	if is_adjacent(target.pos):
 		attack(target)
+		spend_attack()
 		# After poisoning, flee
 		if target and target.has_method("has_buff") and target.has_buff("Poison"):
 			state = AIState.FLEEING
-			return
+		return
 	else:
 		_move_toward(target.pos)
+		spend_move()
+		return
 
 func on_attack_hit(target_char: Char, _damage: int) -> void:
 	super.on_attack_hit(target_char, _damage)

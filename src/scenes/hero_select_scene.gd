@@ -46,6 +46,7 @@ const CHROME_PATH: String = "res://assets/spd/interfaces/chrome.png"
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	size = get_viewport().get_visible_rect().size
 	RenderingServer.set_default_clear_color(Color.BLACK)
 	_build_ui()
 	_update_selection()
@@ -281,5 +282,104 @@ func _create_chrome_button(text: String) -> Button:
 
 	return btn
 
-# -
 
+# ---------------------------------------------------------------------------
+# Selection Logic
+# ---------------------------------------------------------------------------
+
+func _update_selection() -> void:
+	# Update splash art background
+	if _selected_class >= 0 and _selected_class < SPLASH_PATHS.size():
+		var splash_path: String = SPLASH_PATHS[_selected_class]
+		if _bg_sprite and ResourceLoader.exists(splash_path):
+			_bg_sprite.texture = load(splash_path) as Texture2D
+			_bg_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		elif _bg_sprite:
+			_bg_sprite.texture = null
+
+	# Update hero name and description labels
+	if _hero_name_label:
+		_hero_name_label.text = HeroClassData.get_class_name_str(_selected_class)
+	if _hero_desc_label:
+		_hero_desc_label.text = HeroClassData.get_class_description(_selected_class)
+
+	# Update stats label
+	var stats_node: Label = get_node_or_null("StatsLabel") as Label
+	if stats_node:
+		var starting: Variant = HeroClassData.get_starting_stats(_selected_class)
+		if starting:
+			stats_node.text = "HP: %d  STR: %d" % [starting.hp, starting.str_val]
+
+	# Highlight the selected button with a gold border
+	for i: int in range(_hero_buttons.size()):
+		var btn: Button = _hero_buttons[i]
+		if i == _selected_class:
+			var sel_style: StyleBoxFlat = StyleBoxFlat.new()
+			sel_style.bg_color = Color(0.18, 0.16, 0.14, 0.9)
+			sel_style.border_color = Color(1.0, 0.85, 0.3)
+			sel_style.set_border_width_all(2)
+			sel_style.set_corner_radius_all(2)
+			sel_style.content_margin_left = 4.0
+			sel_style.content_margin_right = 4.0
+			sel_style.content_margin_top = 4.0
+			sel_style.content_margin_bottom = 4.0
+			btn.add_theme_stylebox_override("normal", sel_style)
+		else:
+			var norm_style: StyleBoxFlat = StyleBoxFlat.new()
+			norm_style.bg_color = Color(0.12, 0.11, 0.10, 0.85)
+			norm_style.border_color = Color(0.3, 0.28, 0.25)
+			norm_style.set_border_width_all(1)
+			norm_style.set_corner_radius_all(2)
+			norm_style.content_margin_left = 4.0
+			norm_style.content_margin_right = 4.0
+			norm_style.content_margin_top = 4.0
+			norm_style.content_margin_bottom = 4.0
+			btn.add_theme_stylebox_override("normal", norm_style)
+
+
+func _on_hero_button_pressed(class_index: int) -> void:
+	_selected_class = class_index
+	_update_selection()
+
+
+# ---------------------------------------------------------------------------
+# Action Callbacks
+# ---------------------------------------------------------------------------
+
+func _on_start_pressed() -> void:
+	# Initialize the game with the selected hero class
+	GameManager.new_game(_selected_class)
+
+	# Create hero
+	var hero: Hero = Hero.new()
+	hero.init_class(GameManager.hero_class)
+	hero.give_starting_items()
+	hero.pos = -1  # Will be set by level load
+	GameManager.hero = hero
+	GameManager.heroes = [hero]
+
+	# Generate the first level
+	var level: Level = LevelFactory.create_for_depth(GameManager.depth)
+	GameManager.current_level = level
+	hero.pos = level.entrance
+
+	# Register with turn manager
+	TurnManager.clear_actors()
+	hero.active = false
+	hero.activate()
+	for mob: Variant in level.mobs:
+		if mob is Node:
+			mob.active = false
+			mob.activate()
+
+	# Create and set up game scene (deferred add — queue level for _ready)
+	var game_scene: GameScene = GameScene.new()
+	game_scene.name = "GameScene"
+	game_scene._pending_level = level
+	game_scene._pending_region = ConstantsData.region_for_depth(GameManager.depth)
+	SceneManager.go_to_node(game_scene)
+
+
+func _on_back_pressed() -> void:
+	var title_script: GDScript = preload("res://src/scenes/title_scene.gd")
+	SceneManager.go_to(title_script, "TitleScene")

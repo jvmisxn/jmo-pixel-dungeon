@@ -375,8 +375,16 @@ func _load() -> void:
 	var data: Variant = file.get_var(true)
 	file.close()
 	if data is Dictionary:
-		_unlocked = data.get("unlocked", {})
-		_class_wins = data.get("class_wins", {})
+		var raw_unlocked: Variant = data.get("unlocked", {})
+		if raw_unlocked is Dictionary:
+			_unlocked.clear()
+			for key: Variant in raw_unlocked.keys():
+				_unlocked[str(key)] = raw_unlocked[key]
+		var raw_wins: Variant = data.get("class_wins", {})
+		if raw_wins is Dictionary:
+			_class_wins.clear()
+			for key: Variant in raw_wins.keys():
+				_class_wins[str(key)] = true
 	else:
 		push_warning("BadgesManager: Badge data is corrupt, starting fresh.")
 

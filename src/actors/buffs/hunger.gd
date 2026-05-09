@@ -60,4 +60,61 @@ func _update_level() -> void:
 		hunger_level = HungerLevel.SATISFIED
 	elif hunger_value < HUNGRY_THRESHOLD:
 		hunger_level = HungerLevel.NORMAL
-	pass
+	elif hunger_value < STARVING_THRESHOLD:
+		hunger_level = HungerLevel.HUNGRY
+	else:
+		hunger_level = HungerLevel.STARVING
+
+## Whether the hero is currently starving.
+func is_starving() -> bool:
+	return hunger_value >= STARVING_THRESHOLD
+
+## Whether the hero is hungry (but not yet starving).
+func is_hungry() -> bool:
+	return hunger_value >= HUNGRY_THRESHOLD
+
+## Reduce hunger by the given amount. Clamps to 0.
+func satisfy(amount: float) -> void:
+	hunger_value = maxf(0.0, hunger_value - amount)
+	partial_damage = 0.0
+	_update_level()
+
+## Fully satisfy hunger (set to 0).
+func fully_satisfy() -> void:
+	hunger_value = 0.0
+	partial_damage = 0.0
+	_update_level()
+	if MessageLog:
+		MessageLog.add_positive("You feel full!")
+
+## Get the current hunger ratio (0.0 = full, 1.0 = starving).
+func hunger_ratio() -> float:
+	return clampf(hunger_value / STARVING_THRESHOLD, 0.0, 1.0)
+
+## Get display text for the current hunger state.
+func status_text() -> String:
+	match hunger_level:
+		HungerLevel.SATISFIED:
+			return "Satisfied"
+		HungerLevel.NORMAL:
+			return ""
+		HungerLevel.HUNGRY:
+			return "Hungry"
+		HungerLevel.STARVING:
+			return "Starving"
+	return ""
+
+func icon_text() -> String:
+	return status_text()
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["hunger_value"] = hunger_value
+	data["partial_damage"] = partial_damage
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	hunger_value = data.get("hunger_value", 0.0)
+	partial_damage = data.get("partial_damage", 0.0)
+	_update_level()

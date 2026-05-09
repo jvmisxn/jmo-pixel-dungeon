@@ -98,4 +98,5 @@ func _on_death(source: Variant) -> void:
 	if MessageLog:
 		MessageLog.add_positive("DM-300 collapses! The caves shake as a path opens.")
 	if level and level.has_method("unlock_exit"):
-		pass
+		level.unlock_exit()
+	super._on_death(source)

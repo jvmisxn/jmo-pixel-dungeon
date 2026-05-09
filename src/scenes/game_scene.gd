@@ -35,6 +35,9 @@ var _auto_walk_target: int = -1
 var _auto_walk_known_mobs: Dictionary[int, bool] = {}
 ## Hero HP before the last auto-walk step (to detect taking damage).
 var _auto_walk_prev_hp: int = -1
+## Cooldown timer to pace auto-walk steps so movement animation is visible.
+var _auto_walk_cooldown: float = 0.0
+const AUTO_WALK_STEP_DELAY: float = 0.15
 
 # --- Targeting Mode State ---
 ## True when in targeting mode (throw, zap, etc.)
@@ -52,6 +55,10 @@ var _hud: HUD = null
 # --- Level Reference ---
 var _current_level: Level = null
 
+# --- Pending level load (set before _ready, consumed in _ready) ---
+var _pending_level: Level = null
+var _pending_region: int = -1
+
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
@@ -61,6 +68,12 @@ func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color.BLACK)
 	_create_layers()
 	_connect_signals()
+	# If a level was queued before we entered the tree, load it now
+	if _pending_level:
+		load_level(_pending_level, _pending_region)
+		_pending_level = null
+		_pending_region = -1
+		TurnManager.process_until_hero()
 
 func _process(_delta: float) -> void:
 	# Update hover cell
@@ -88,7 +101,11 @@ func _process(_delta: float) -> void:
 
 	# --- Auto-walk: if hero's turn and auto-walking, take the next step ---
 	if _awaiting_hero_input and _auto_walk_target >= 0 and GameManager.hero:
-		_process_auto_walk()
+		# Wait for the step animation to finish before taking the next step
+		if _auto_walk_cooldown > 0.0:
+			_auto_walk_cooldown -= _delta
+		else:
+			_process_auto_walk()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _awaiting_hero_input:
@@ -126,6 +143,13 @@ func load_level(level: Level, region: int) -> void:
 	_cancel_auto_walk()
 	_current_level = level
 	GameManager.current_level = level
+
+	# Assign level reference to hero(es) so Actor.level is set for collision checks
+	if GameManager.hero:
+		GameManager.hero.level = level
+	for h: Variant in GameManager.heroes:
+		if h is Node and is_instance_valid(h):
+			(h as Node).level = level
 
 	# Set up tile map
 	tile_map.setup(level, region)
@@ -225,6 +249,37 @@ func refresh_after_turn() -> void:
 	# Refresh item sprites
 	_refresh_item_sprites()
 
+## Called by TurnManager after each visible mob action (move, attack) so the
+## player can see the mob act in real time. Updates the mob's sprite position,
+## plays attack animation if it attacked the hero, and refreshes FOV/visibility.
+func on_mob_action(actor: Node) -> void:
+	if actor == null or not is_instance_valid(actor):
+		return
+	var actor_id: int = actor.get("actor_id") if actor.get("actor_id") != null else -1
+	var sprite: MobSprite = _mob_sprites.get(actor_id) as MobSprite if actor_id >= 0 else null
+
+	if sprite and is_instance_valid(sprite):
+		var mob_pos: int = actor.get("pos") if actor.get("pos") != null else -1
+		# Sync sprite to mob's current logical position (animate move)
+		if mob_pos >= 0 and mob_pos != sprite.cell_pos:
+			sprite.move_to(mob_pos)
+		# If the mob just attacked the hero, play attack animation toward hero
+		if actor.get("target") != null and actor.get("target") is Char:
+			var target_char: Variant = actor.get("target")
+			if target_char.get("is_hero") == true and actor.is_adjacent(target_char.pos):
+				sprite.play_attack(target_char.pos)
+		# Update HP bar
+		if actor.get("hp") != null and actor.get("ht") != null:
+			sprite.update_hp_bar(actor.hp, actor.ht)
+
+	# Refresh FOV and visibility so the player sees the mob and terrain updates
+	if _current_level and GameManager.hero:
+		var _vd: int = GameManager.hero.get_view_distance() if GameManager.hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
+		_current_level.update_fov(GameManager.hero.pos, _vd)
+		fog_of_war.update_visibility()
+		_update_entity_visibility()
+
+
 ## Get the EffectManager for external systems to trigger effects.
 func get_effects() -> EffectManager:
 	return effect_manager
@@ -321,6 +376,11 @@ func _spawn_hero_sprites() -> void:
 			continue
 		var sprite: HeroSprite = HeroSprite.new()
 		sprite.setup_for_class(hero.hero_class)
+		# Update armor visuals to match equipped armor tier
+		if hero.belongings != null:
+			var equipped_armor: Variant = hero.belongings.get_equipped_armor()
+			if equipped_armor != null and equipped_armor.get("tier") != null:
+				sprite.update_armor(equipped_armor.tier)
 		sprite.place_at(hero.pos)
 		sprite.character = hero
 		_entity_layer.add_child(sprite)
@@ -496,9 +556,13 @@ func _handle_cell_click(cell: int) -> void:
 		if _current_level.adjacent(hero_pos, cell):
 			_submit_hero_action({"type": "attack", "target": char_at, "target_pos": cell})
 		else:
-			# Auto-walk toward enemy (will stop when adjacent)
-			_start_auto_walk(cell)
-			_submit_hero_action({"type": "move", "target_pos": cell})
+			var ranged_action: Dictionary = hero.get_auto_ranged_action(cell) if hero.has_method("get_auto_ranged_action") else {}
+			if not ranged_action.is_empty():
+				_submit_hero_action(ranged_action)
+			else:
+				# Auto-walk toward enemy (will stop when adjacent)
+				_start_auto_walk(cell)
+				_submit_hero_action({"type": "move", "target_pos": cell})
 	elif cell == hero_pos:
 		# Click on self: if on stairs, use them; otherwise wait
 		var self_terrain: int = _current_level.terrain_at(cell) if _current_level else ConstantsData.Terrain.WALL
@@ -511,7 +575,13 @@ func _handle_cell_click(cell: int) -> void:
 	else:
 		# Move to cell — if adjacent, just move; if distant, auto-walk
 		if _current_level and _current_level.adjacent(hero_pos, cell):
-			_submit_hero_action({"type": "move", "target_pos": cell})
+			var terrain: int = _current_level.terrain_at(cell)
+			if terrain == ConstantsData.Terrain.DOOR or terrain == ConstantsData.Terrain.LOCKED_DOOR or terrain == ConstantsData.Terrain.CRYSTAL_DOOR:
+				_submit_hero_action({"type": "interact", "target_pos": cell})
+			elif not _current_level.passable[cell]:
+				_submit_hero_action({"type": "search"})
+			else:
+				_submit_hero_action({"type": "move", "target_pos": cell})
 		else:
 			_start_auto_walk(cell)
 			_submit_hero_action({"type": "move", "target_pos": cell})
@@ -530,6 +600,9 @@ func _handle_key_input(keycode: int) -> bool:
 			return true
 		KEY_PERIOD:
 			_submit_hero_action({"type": "wait"})
+			return true
+		KEY_S:
+			_submit_hero_action({"type": "search"})
 			return true
 		# Numpad / Vi keys for movement
 		KEY_KP_8, KEY_K, KEY_UP:
@@ -576,7 +649,13 @@ func _move_direction(dir_offset: int) -> void:
 	if char_at != null and char_at != GameManager.hero:
 		_submit_hero_action({"type": "attack", "target": char_at, "target_pos": target})
 	else:
-		_submit_hero_action({"type": "move", "target_pos": target})
+		var terrain: int = _current_level.terrain_at(target)
+		if terrain == ConstantsData.Terrain.DOOR or terrain == ConstantsData.Terrain.LOCKED_DOOR or terrain == ConstantsData.Terrain.CRYSTAL_DOOR:
+			_submit_hero_action({"type": "interact", "target_pos": target})
+		elif not _current_level.passable[target]:
+			_submit_hero_action({"type": "search"})
+		else:
+			_submit_hero_action({"type": "move", "target_pos": target})
 
 func _submit_hero_action(action: Dictionary) -> void:
 	if GameManager.hero == null:
@@ -625,6 +704,18 @@ func _animate_hero_action(action: Dictionary) -> void:
 			if GameManager.hero:
 				hero_sprite.move_to(GameManager.hero.pos)
 		"attack":
+			var target: int = action.get("target_pos", -1)
+			if target >= 0:
+				hero_sprite.play_attack(target)
+		"search":
+			if GameManager.hero and effect_manager:
+				effect_manager.show_status(GameManager.hero.pos, "Search", Color(0.85, 0.9, 0.65))
+				effect_manager.particle_burst(GameManager.hero.pos, Color(0.85, 0.9, 0.65), 5)
+		"throw_item":
+			var target: int = action.get("target_pos", -1)
+			if target >= 0:
+				hero_sprite.play_attack(target)
+		"zap_wand":
 			var target: int = action.get("target_pos", -1)
 			if target >= 0:
 				hero_sprite.play_attack(target)
@@ -753,9 +844,6 @@ func _transition_to_death() -> void:
 	_detach_persistent_actors()
 	var death_script: GDScript = load("res://src/scenes/death_scene.gd") as GDScript
 	if death_script:
-		var death_scene: Control = death_script.new()
-		death_scene.name = "DeathScene"
-		# Pass cause of death metadata
 		var cause: String = "the dungeon"
 		if GameManager.hero and GameManager.hero.get("last_damage_source") != null:
 			var src: Variant = GameManager.hero.last_damage_source
@@ -765,9 +853,7 @@ func _transition_to_death() -> void:
 				cause = src
 			else:
 				cause = str(src)
-		death_scene.set_meta("cause_of_death", cause)
-		get_tree().root.add_child(death_scene)
-	queue_free()
+		SceneManager.go_to(death_script, "DeathScene", {"cause_of_death": cause})
 
 func _on_mob_revealed(mob: Variant) -> void:
 	# A previously hidden mob (mimic, sleeping mob) was revealed — add its sprite
@@ -780,9 +866,9 @@ func _on_mob_damaged(mob_pos: int, amount: int) -> void:
 		effect_manager.show_damage(mob_pos, amount)
 
 func _on_hero_attack_missed(mob_pos: int) -> void:
-	# Show "miss" text over the mob
-	if effect_manager and effect_manager.has_method("show_status"):
-		effect_manager.show_status(mob_pos, "Miss", Color(0.7, 0.7, 0.7))
+	# Show "0" over the mob when attack does no damage (dodge or absorbed)
+	if effect_manager:
+		effect_manager.show_status(mob_pos, "0", Color(0.7, 0.7, 0.7))
 	# Miss whoosh sound
 	if AudioManager:
 		AudioManager.play_sfx("miss")
@@ -952,13 +1038,10 @@ func _transition_to_loading(transition_type: String = "descend") -> void:
 
 	var loading_script: GDScript = load("res://src/scenes/loading_scene.gd") as GDScript
 	if loading_script:
-		var loading_scene: Control = loading_script.new()
-		loading_scene.name = "LoadingScene"
-		loading_scene.set_meta("is_continue", true)
-		loading_scene.set_meta("transition_type", transition_type)
-		get_tree().root.add_child(loading_scene)
-
-	queue_free()
+		SceneManager.go_to(loading_script, "LoadingScene", {
+			"is_continue": true,
+			"transition_type": transition_type,
+		})
 
 ## Transition to the victory scene (Amulet of Yendor).
 func _transition_to_victory() -> void:
@@ -973,23 +1056,15 @@ func _transition_to_victory() -> void:
 	# Try to load a victory scene; fall back to a simple message
 	var victory_script: GDScript = load("res://src/scenes/victory_scene.gd") as GDScript
 	if victory_script:
-		var victory_scene: Control = victory_script.new()
-		victory_scene.name = "VictoryScene"
-		get_tree().root.add_child(victory_scene)
-		queue_free()
+		SceneManager.go_to(victory_script, "VictoryScene")
 	else:
-		# No victory scene exists yet - show a message and return to title
 		if MessageLog:
 			MessageLog.add_positive("You obtained the Amulet of Yendor! You win!")
-		# Delay then return to title
 		var timer: SceneTreeTimer = get_tree().create_timer(3.0)
 		timer.timeout.connect(func() -> void:
 			var title_script: GDScript = load("res://src/scenes/title_scene.gd") as GDScript
 			if title_script:
-				var title_scene: Control = title_script.new()
-				title_scene.name = "TitleScene"
-				get_tree().root.add_child(title_scene)
-			queue_free()
+				SceneManager.go_to(title_script, "TitleScene")
 		)
 
 # ---------------------------------------------------------------------------
@@ -1004,10 +1079,10 @@ func _detach_persistent_actors() -> void:
 	if GameManager.hero is Node and is_instance_valid(GameManager.hero):
 		if GameManager.hero.get_parent() == self:
 			remove_child(GameManager.hero)
-	for h in GameManager.heroes:
+	for h: Variant in GameManager.heroes:
 		if h is Node and h != GameManager.hero and is_instance_valid(h):
-			if h.get_parent() == self:
-				remove_child(h)
+			if (h as Node).get_parent() == self:
+				remove_child(h as Node)
 	# Mobs don't need detaching - GameManager._cache_current_level() frees them
 
 # ---------------------------------------------------------------------------
@@ -1026,6 +1101,7 @@ func _cancel_auto_walk() -> void:
 	_auto_walk_target = -1
 	_auto_walk_known_mobs.clear()
 	_auto_walk_prev_hp = -1
+	_auto_walk_cooldown = 0.0
 
 ## Process one auto-walk step. Called from _process when it's the hero's turn
 ## and auto-walk is active.
@@ -1087,6 +1163,9 @@ func _process_auto_walk() -> void:
 	# If hero didn't move (blocked or no path), cancel auto-walk
 	if hero.pos == pre_move_pos:
 		_cancel_auto_walk()
+	else:
+		# Pace auto-walk so the movement tween is visible
+		_auto_walk_cooldown = AUTO_WALK_STEP_DELAY
 
 ## Return a dictionary of currently visible mob positions (for interrupt detection).
 func _get_visible_mob_positions() -> Dictionary[int, bool]:
@@ -1166,5 +1245,10 @@ func _resolve_targeting(cell: int) -> void:
 	_targeting_callback = Callable()
 
 	# Execute the callback
+	if item is MissileWeapon or item is SpiritBow or item is Bomb or item is Wand:
+		var hero_sprite: HeroSprite = _hero_sprites.get(GameManager.hero.actor_id) if GameManager.hero else null
+		if hero_sprite != null:
+			hero_sprite.play_attack(cell)
 	if callback.is_valid():
 		callback.call(cell)
+	call_deferred("refresh_after_turn")

@@ -35,6 +35,7 @@ var is_alive: bool = true
 var enemy: Char = null  # current target
 var sprite: Node = null  # visual representation
 var last_damage_source: Variant = null  # tracks what last dealt damage (for death cause)
+var flying: bool = false  # can fly over chasms/water without penalty
 
 # --- Buffs ---
 var _buffs: Array[Node] = []

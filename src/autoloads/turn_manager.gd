@@ -154,13 +154,16 @@ func process_turn() -> Node:
 			entry["cooldown"] -= min_cd
 
 	var acting_entry: Dictionary = _actors[next_idx]
-	var actor_node: Node = acting_entry["node"]
 
 	# Safety: skip freed actors (mob died from deferred free on prior frame)
-	if not is_instance_valid(actor_node):
+	# Check validity BEFORE assigning to a typed variable to avoid the
+	# "invalid previously freed instance" error.
+	var actor_ref: Variant = acting_entry.get("node")
+	if not is_instance_valid(actor_ref):
 		_actors.remove_at(next_idx)
 		_processing = false
 		return null
+	var actor_node: Node = actor_ref as Node
 
 	# If this is the hero, pause for player input.
 	if actor_node.get("is_hero") == true:

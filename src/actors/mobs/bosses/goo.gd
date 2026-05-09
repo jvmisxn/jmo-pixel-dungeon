@@ -133,3 +133,4 @@ func _on_death(source: Variant) -> void:
 		MessageLog.add_positive("Goo is vanquished! The way forward opens.")
 	if level and level.has_method("unlock_exit"):
 		level.unlock_exit()
+	super._on_death(source)

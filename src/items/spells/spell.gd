@@ -158,7 +158,9 @@ func _cast_recycle(hero: Char) -> void:
 
 ## Open the alchemy pot interface anywhere.
 func _cast_alchemize(hero: Char) -> void:
-	# Would open the alchemy UI. Placeholder: log a message.
+	var wnd: WndAlchemy = WndAlchemy.new()
+	if EventBus:
+		EventBus.show_window.emit(wnd)
 	if MessageLog:
 		MessageLog.add_info("The alchemy pot materializes before you!")
 

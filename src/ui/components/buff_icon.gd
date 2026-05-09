@@ -10,13 +10,16 @@ var buff_ref: Node = null:
 		buff_ref = value
 		queue_redraw()
 
-var _flash_timer: float = 0.0
 var _flash_visible: bool = true
 var _tooltip_visible: bool = false
+var _flash_tween: Tween = null
+var _is_flashing: bool = false
 
 const ICON_SIZE: float = 20.0
 const FLASH_THRESHOLD: float = 3.0
-const FLASH_SPEED: float = 4.0
+## Flash cycle: 0.15s visible, 0.10s hidden = 0.25s total cycle (~FLASH_SPEED=4 equivalent)
+const FLASH_ON_TIME: float = 0.15
+const FLASH_OFF_TIME: float = 0.10
 
 
 func _ready() -> void:
@@ -35,22 +38,46 @@ func _notification(what: int) -> void:
 			_tooltip_visible = false
 
 
-func _process(delta: float) -> void:
+## Called externally (e.g. by status_pane) when buff state may have changed.
+func update_flash_state() -> void:
 	if buff_ref == null:
+		_stop_flashing()
 		return
-
 	var time_left: float = _get_time_left()
 	if time_left > 0.0 and time_left < FLASH_THRESHOLD:
-		_flash_timer += delta * FLASH_SPEED
-		var new_visible: bool = fmod(_flash_timer, 1.0) < 0.6
-		if new_visible != _flash_visible:
-			_flash_visible = new_visible
-			queue_redraw()
+		_start_flashing()
 	else:
-		if not _flash_visible:
-			_flash_visible = true
-			queue_redraw()
-		_flash_timer = 0.0
+		_stop_flashing()
+
+
+func _start_flashing() -> void:
+	if _is_flashing:
+		return
+	_is_flashing = true
+	_flash_tween = create_tween()
+	_flash_tween.set_loops()
+	_flash_tween.tween_callback(_set_flash.bind(true))
+	_flash_tween.tween_interval(FLASH_ON_TIME)
+	_flash_tween.tween_callback(_set_flash.bind(false))
+	_flash_tween.tween_interval(FLASH_OFF_TIME)
+
+
+func _stop_flashing() -> void:
+	if not _is_flashing:
+		return
+	_is_flashing = false
+	if _flash_tween != null:
+		_flash_tween.kill()
+		_flash_tween = null
+	if not _flash_visible:
+		_flash_visible = true
+		queue_redraw()
+
+
+func _set_flash(vis: bool) -> void:
+	if vis != _flash_visible:
+		_flash_visible = vis
+		queue_redraw()
 
 
 func _draw() -> void:

@@ -35,9 +35,14 @@ func eat(hero: Char) -> void:
 	if hero == null:
 		return
 
+	var hunger_before: float = 0.0
+	var hp_before: int = hero.hp
+	var hp_max_before: int = hero.hp_max
+
 	# Satisfy hunger
 	var hunger_buff: Variant = hero.get_buff("Hunger") if hero.has_method("get_buff") else null
 	if hunger_buff != null and hunger_buff.has_method("satisfy"):
+		hunger_before = hunger_buff.hunger_value
 		if hunger_satisfy >= ConstantsData.MAX_HUNGER:
 			hunger_buff.fully_satisfy()
 		else:
@@ -54,6 +59,9 @@ func eat(hero: Char) -> void:
 	# Frozen carpaccio grants a random positive buff
 	if _is_carpaccio():
 		_apply_carpaccio_buff(hero)
+
+	if hero.has_method("on_food_eaten"):
+		hero.on_food_eaten(self, hunger_before, hp_before, hp_max_before)
 
 	# Message
 	if MessageLog:
@@ -248,5 +256,6 @@ static func create(food_id: String) -> Food:
 
 	return food
 
-## Override eat for frozen
-
+## Whether this food item is frozen carpaccio (grants a random positive buff).
+func _is_carpaccio() -> bool:
+	return item_id == "frozen_carpaccio"

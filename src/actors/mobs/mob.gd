@@ -26,6 +26,11 @@ var xp_value: int = 1
 var loot_table: Array[Dictionary] = []  # [{item_id: String, chance: float}]
 var max_level: int = 30  # Hero level at which this mob gives 0 XP
 
+# --- Properties (e.g. "UNDEAD", "BOSS", "DEMONIC") and resistances ---
+var _properties: Array[String] = []
+var _resistances: Array[String] = []
+var _immunities: Array[String] = []
+
 # --- Movement ---
 var _path: Array[int] = []
 
@@ -66,9 +71,10 @@ func attack_delay() -> float:
 		delay /= 1.5
 	return delay
 
-## Spend time for a movement action: cost = 1 / speed().
+## Spend time for a movement action. TurnManager.spend_energy already
+## divides by the actor's cached speed, so pass raw cost of 1.0.
 func spend_move() -> void:
-	spend_turn(1.0 / get_speed())
+	spend_turn(1.0)
 
 ## Spend time for an attack action: cost = attack_delay().
 func spend_attack() -> void:
@@ -290,48 +296,12 @@ func _move_toward(target_position: int) -> void:
 	if step >= 0 and step != pos:
 		move_to(step)
 
-## BFS pathfinding: returns the first step on the shortest path to target,
-## or -1 if no path exists. Capped at 32 steps to limit CPU cost.
+## Pathfinding using Godot's AStar2D (C++ optimized).
+## Returns the first step on the shortest path to target, or -1 if no path.
 func _bfs_step_toward(target_position: int) -> int:
 	if level == null:
 		return -1
-	var queue: Array[int] = [pos]
-	var came_from: Dictionary[int, int] = {pos: -1}
-	var head: int = 0
-	var max_steps: int = 512  # enough for a 32x32 map
-
-	while head < queue.size() and head < max_steps:
-		var current: int = queue[head]
-		head += 1
-		if current == target_position:
-			break
-		for dir: int in ConstantsData.DIRS_8:
-			var next_pos: int = current + dir
-			if came_from.has(next_pos):
-				continue
-			if not ConstantsData.is_valid_pos(next_pos):
-				continue
-			# Check passability — allow doors (mob auto-opens them)
-			if not level.is_passable(next_pos):
-				if level.get_terrain(next_pos) == ConstantsData.Terrain.DOOR:
-					pass  # doors are passable anyway, but keep the pattern
-				else:
-					continue
-			# Don't path through occupied cells (except target — might attack)
-			if next_pos != target_position and level.find_char_at(next_pos) != null:
-				continue
-			came_from[next_pos] = current
-			queue.append(next_pos)
-
-	if not came_from.has(target_position):
-		return -1
-	# Trace back to find first step
-	var step: int = target_position
-	while came_from.get(step, -1) != pos:
-		step = came_from[step]
-		if step < 0:
-			return -1
-	return step
+	return level.find_step(pos, target_position)
 
 func _move_away_from(threat_pos: int) -> void:
 	# Flee by picking the passable adjacent cell that maximises distance
@@ -437,9 +407,10 @@ func _on_death(source: Variant) -> void:
 			pass  # No XP when hero is over-leveled
 		elif hero_ref.has_method("earn_xp"):
 			hero_ref.earn_xp(xp_value)
-	# Emit death signal
+	# Emit death signals
 	if EventBus:
 		EventBus.mob_died.emit(self)
+		EventBus.mob_defeated.emit(pos, mob_name)
 	# Log death
 	if MessageLog:
 		MessageLog.add("The %s dies." % mob_name)

@@ -203,7 +203,7 @@ func _get_badges_manager() -> Node:
 		return tree.root.get_node("Badges")
 	return null
 
-# _get_autoload() inherited from WndBase
+# Autoloads are accessed directly by name (e.g., GameManager, AudioManager)
 
 
 # ---------------------------------------------------------------------------

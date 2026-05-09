@@ -6,10 +6,9 @@ extends Node2D
 var _game_scene: GameScene = null
 
 func _ready() -> void:
-	# Launch the title screen
+	# Launch the title screen via SceneManager
 	var title_script: GDScript = preload("res://src/scenes/title_scene.gd")
-	var title_node: Control = title_script.new()
-	add_child(title_node)
+	SceneManager.go_to(title_script, "TitleScene")
 
 func _start_new_game() -> void:
 	# Initialize game state

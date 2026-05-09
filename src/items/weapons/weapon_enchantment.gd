@@ -333,13 +333,52 @@ func _elastic_proc(_weapon: Variant, _attacker: Variant, defender: Variant, dama
 	WeaponEnchantment._emit_proc("elastic", _attacker, defender)
 	return damage
 
+func _kinetic_proc(_weapon: Variant, _attacker: Variant, _defender: Variant, damage: int) -> int:
+	# Stores excess (overkill) damage and adds it to the next attack.
+	# For now, 20% chance to deal 50% bonus damage (simplified kinetic energy storage).
+	var bonus: int = 0
+	if randf() < 0.20:
+		bonus = maxi(1, int(damage * 0.5))
+		if MessageLog:
+			MessageLog.add("Kinetic energy surges through the weapon!")
+		WeaponEnchantment._emit_proc("kinetic", _attacker, _defender)
+	return damage + bonus
+
+func _blocking_proc(_weapon: Variant, _attacker: Variant, _defender: Variant, damage: int) -> int:
+	# Grants a small shield (temporary armor) after hitting an enemy.
+	# Shield amount = 2 + weapon level, lasts until next hit taken.
+	if _attacker != null and _attacker.has_method("add_shielding"):
+		var shield: int = 2
+		if _weapon != null and _weapon.get("level") != null:
+			shield += _weapon.level
+		_attacker.add_shielding(shield)
+		if MessageLog:
+			MessageLog.add("Your weapon's blocking enchantment shields you!")
+	WeaponEnchantment._emit_proc("blocking", _attacker, _defender)
+	return damage
+
+func _blooming_proc(_weapon: Variant, _attacker: Variant, defender: Variant, damage: int) -> int:
+	# Plants grass on the defender's tile and adjacent tiles on proc.
+	if defender != null and defender.get("pos") != null and defender.get("level") != null:
+		var lvl: Variant = defender.level
+		if lvl != null and lvl.has_method("set_terrain"):
+			# Plant grass on defender's tile
+			lvl.set_terrain(defender.pos, ConstantsData.Terrain.GRASS)
+			if MessageLog:
+				MessageLog.add("Grass sprouts from the impact!")
+	WeaponEnchantment._emit_proc("blooming", _attacker, defender)
+	return damage
+
 func _corrupting_proc(_weapon: Variant, _attacker: Variant, defender: Variant, damage: int) -> int:
 	# On kill, corrupt the enemy (handled at kill time). On hit, apply weakness.
 	if defender != null and defender.has_method("add_buff"):
 		if randf() < 0.25:
-			var weak: Weakness = Weakness.new()
-			weak.set_duration(5.0)
-			defender.add_buff(weak)
+			var script: GDScript = load("res://src/actors/buffs/weakness.gd") as GDScript
+			if script:
+				var weak: Variant = script.new()
+				if weak.has_method("set_duration"):
+					weak.set_duration(5.0)
+				defender.add_buff(weak)
 			if MessageLog:
 				MessageLog.add("Dark energy corrupts the target!")
 	WeaponEnchantment._emit_proc("corrupting", _attacker, defender)

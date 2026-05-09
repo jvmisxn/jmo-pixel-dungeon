@@ -39,6 +39,8 @@ var str_requirement: int = 0
 var icon_color: Color = Color.WHITE
 ## Whether only one instance of this item can exist in a run.
 var unique: bool = false
+## SPD items.png sprite sheet index. -1 = use procedural icon.
+var sprite_index: int = -1
 
 # ---------------------------------------------------------------------------
 # Equipment Interface (virtual)
@@ -60,6 +62,8 @@ func on_unequip(_hero: Char) -> void:
 
 ## Called when the item is picked up by a hero.
 func on_pickup(_hero: Char) -> void:
+	if _hero != null and _hero.has_method("on_item_picked_up"):
+		_hero.on_item_picked_up(self)
 	if EventBus:
 		EventBus.item_picked_up.emit(get_display_name())
 	if GameManager:
@@ -185,6 +189,8 @@ func identify() -> Item:
 	level_known = true
 	cursed_known = true
 	identified = true
+	if ItemCatalog:
+		ItemCatalog.identify_item(self)
 	return self
 
 ## Returns the visible upgrade level (0 if level not known).
@@ -285,6 +291,7 @@ func serialize() -> Dictionary:
 		"description": description,
 		"category": category,
 		"level": level,
+		"level_known": level_known,
 		"cursed": cursed,
 		"cursed_known": cursed_known,
 		"identified": identified,
@@ -292,3 +299,20 @@ func serialize() -> Dictionary:
 		"stackable": stackable,
 		"unique": unique,
 	}
+
+## Deserialize this item from a saved dictionary.
+func deserialize(data: Dictionary) -> void:
+	item_id = data.get("item_id", "")
+	item_name = data.get("item_name", "Item")
+	description = data.get("description", "")
+	category = data.get("category", ConstantsData.ItemCategory.MISC)
+	level = data.get("level", 0)
+	level_known = data.get("level_known", data.get("identified", false))
+	cursed = data.get("cursed", false)
+	cursed_known = data.get("cursed_known", false)
+	identified = data.get("identified", false)
+	quantity = data.get("quantity", 1)
+	stackable = data.get("stackable", false)
+	unique = data.get("unique", false)
+	if identified and ItemCatalog:
+		ItemCatalog.identify_item(self)

@@ -26,12 +26,18 @@ func _act_hunting() -> void:
 	var dist: int = distance_to(target.pos)
 	if bolt_cooldown <= 0 and dist >= 2 and dist <= 8 and can_see(target.pos):
 		_dark_bolt()
+		spend_attack()
 		return
 	if dist <= 1:
 		_move_away_from(target.pos)
+		spend_move()
 		return
 	if dist > 8:
 		_move_toward(target.pos)
+		spend_move()
+		return
+	# In range but bolt on cooldown — wait
+	spend_turn()
 
 func _dark_bolt() -> void:
 	did_visible_action = true

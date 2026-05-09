@@ -112,7 +112,7 @@ static func random() -> ArmorGlyph:
 # Chance to become invisible when hit.
 
 static func _create_obfuscation() -> ArmorGlyph:
-	var g: ObfuscationGlyph = ObfuscationGlyph.new()
+	var g: ArmorGlyph = ObfuscationGlyph.new()
 	g.glyph_id = "obfuscation"
 	g.glyph_name = "Obfuscation"
 	g.color = Color(0.6, 0.6, 0.8, 1.0)  # pale blue-gray
@@ -122,7 +122,7 @@ static func _create_obfuscation() -> ArmorGlyph:
 # Grants bonus movement speed.
 
 static func _create_swiftness() -> ArmorGlyph:
-	var g: SwiftnessGlyph = SwiftnessGlyph.new()
+	var g: ArmorGlyph = SwiftnessGlyph.new()
 	g.glyph_id = "swiftness"
 	g.glyph_name = "Swiftness"
 	g.color = Color(1.0, 0.95, 0.4, 1.0)  # yellow
@@ -132,7 +132,7 @@ static func _create_swiftness() -> ArmorGlyph:
 # Defers a portion of damage over subsequent turns.
 
 static func _create_viscosity() -> ArmorGlyph:
-	var g: ViscosityGlyph = ViscosityGlyph.new()
+	var g: ArmorGlyph = ViscosityGlyph.new()
 	g.glyph_id = "viscosity"
 	g.glyph_name = "Viscosity"
 	g.color = Color(0.5, 0.2, 0.6, 1.0)  # purple
@@ -142,7 +142,7 @@ static func _create_viscosity() -> ArmorGlyph:
 # Reduces incoming damage significantly but slows movement.
 
 static func _create_stone() -> ArmorGlyph:
-	var g: StoneGlyph = StoneGlyph.new()
+	var g: ArmorGlyph = StoneGlyph.new()
 	g.glyph_id = "stone"
 	g.glyph_name = "Stone"
 	g.color = Color(0.6, 0.6, 0.6, 1.0)  # gray
@@ -152,7 +152,7 @@ static func _create_stone() -> ArmorGlyph:
 # Knocks the attacker back one tile on proc.
 
 static func _create_repulsion() -> ArmorGlyph:
-	var g: RepulsionGlyph = RepulsionGlyph.new()
+	var g: ArmorGlyph = RepulsionGlyph.new()
 	g.glyph_id = "repulsion"
 	g.glyph_name = "Repulsion"
 	g.color = Color(0.4, 0.9, 1.0, 1.0)  # cyan
@@ -162,7 +162,7 @@ static func _create_repulsion() -> ArmorGlyph:
 # Chance to charm the attacker.
 
 static func _create_affection() -> ArmorGlyph:
-	var g: AffectionGlyph = AffectionGlyph.new()
+	var g: ArmorGlyph = AffectionGlyph.new()
 	g.glyph_id = "affection"
 	g.glyph_name = "Affection"
 	g.color = Color(1.0, 0.4, 0.6, 1.0)  # pink
@@ -172,7 +172,7 @@ static func _create_affection() -> ArmorGlyph:
 # Reduces incoming magic damage.
 
 static func _create_anti_magic() -> ArmorGlyph:
-	var g: AntiMagicGlyph = AntiMagicGlyph.new()
+	var g: ArmorGlyph = AntiMagicGlyph.new()
 	g.glyph_id = "anti_magic"
 	g.glyph_name = "Anti-Magic"
 	g.color = Color(0.3, 0.8, 0.3, 1.0)  # green
@@ -182,7 +182,7 @@ static func _create_anti_magic() -> ArmorGlyph:
 # Reflects a portion of damage back to the attacker.
 
 static func _create_thorns() -> ArmorGlyph:
-	var g: ThornsGlyph = ThornsGlyph.new()
+	var g: ArmorGlyph = ThornsGlyph.new()
 	g.glyph_id = "thorns"
 	g.glyph_name = "Thorns"
 	g.color = Color(0.8, 0.2, 0.2, 1.0)  # red
@@ -192,7 +192,7 @@ static func _create_thorns() -> ArmorGlyph:
 # Recharges equipped wands when the wearer is hit.
 
 static func _create_potential() -> ArmorGlyph:
-	var g: PotentialGlyph = PotentialGlyph.new()
+	var g: ArmorGlyph = PotentialGlyph.new()
 	g.glyph_id = "potential"
 	g.glyph_name = "Potential"
 	g.color = Color(0.3, 0.5, 1.0, 1.0)  # electric blue
@@ -202,7 +202,7 @@ static func _create_potential() -> ArmorGlyph:
 # Grants fire immunity and heals from fire damage.
 
 static func _create_brimstone() -> ArmorGlyph:
-	var g: BrimstoneGlyph = BrimstoneGlyph.new()
+	var g: ArmorGlyph = BrimstoneGlyph.new()
 	g.glyph_id = "brimstone"
 	g.glyph_name = "Brimstone"
 	g.color = Color(1.0, 0.4, 0.0, 1.0)  # orange
@@ -212,7 +212,7 @@ static func _create_brimstone() -> ArmorGlyph:
 # Move faster when standing in or moving through water.
 
 static func _create_flow() -> ArmorGlyph:
-	var g: FlowGlyph = FlowGlyph.new()
+	var g: ArmorGlyph = FlowGlyph.new()
 	g.glyph_id = "flow"
 	g.glyph_name = "Flow"
 	g.color = Color(0.2, 0.5, 0.9, 1.0)  # water blue
@@ -222,7 +222,7 @@ static func _create_flow() -> ArmorGlyph:
 # Roots the wearer in place but grants bonus armor from grass.
 
 static func _create_entanglement() -> ArmorGlyph:
-	var g: EntanglementGlyph = EntanglementGlyph.new()
+	var g: ArmorGlyph = EntanglementGlyph.new()
 	g.glyph_id = "entanglement"
 	g.glyph_name = "Entanglement"
 	g.color = Color(0.2, 0.7, 0.2, 1.0)  # green

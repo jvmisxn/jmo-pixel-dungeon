@@ -260,3 +260,102 @@ func _make_separator_style() -> StyleBoxFlat:
 	s.content_margin_top = 1.0
 	s.content_margin_bottom = 1.0
 	return s
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+func _get_death_region() -> int:
+	if GameManager:
+		return ConstantsData.region_for_depth(GameManager.depth)
+	return ConstantsData.Region.SEWERS
+
+
+func _get_hero_avatar() -> Texture2D:
+	var class_idx: int = GameManager.hero_class if GameManager else 0
+	if class_idx < 0 or class_idx >= SPRITE_PATHS.size():
+		return null
+	var path: String = SPRITE_PATHS[class_idx]
+	if not ResourceLoader.exists(path):
+		return null
+	var sheet: Texture2D = load(path) as Texture2D
+	if sheet == null:
+		return null
+	# Extract 12x15 icon from y=0 (front-facing idle frame)
+	var atlas: AtlasTexture = AtlasTexture.new()
+	atlas.atlas = sheet
+	atlas.region = Rect2(0, 0, 12, 15)
+	return atlas
+
+
+func _add_stat_line(parent_vbox: VBoxContainer, label_text: String, value_text: String, value_color: Color = Color(0.8, 0.8, 0.85)) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var lbl: Label = Label.new()
+	lbl.text = label_text
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lbl.add_theme_font_size_override("font_size", 14)
+	lbl.add_theme_color_override("font_color", Color(0.6, 0.58, 0.55))
+	row.add_child(lbl)
+
+	var val: Label = Label.new()
+	val.text = value_text
+	val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	val.add_theme_font_size_override("font_size", 14)
+	val.add_theme_color_override("font_color", value_color)
+	row.add_child(val)
+
+	parent_vbox.add_child(row)
+
+
+func _create_chrome_button(text: String) -> Button:
+	var btn: Button = Button.new()
+	btn.text = text
+	btn.custom_minimum_size = Vector2(130, 38)
+	btn.add_theme_font_size_override("font_size", 16)
+	btn.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
+	btn.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.8))
+	btn.add_theme_color_override("font_pressed_color", Color(0.7, 0.65, 0.5))
+
+	var normal: StyleBoxFlat = StyleBoxFlat.new()
+	normal.bg_color = Color(0.15, 0.14, 0.12, 0.9)
+	normal.border_color = Color(0.4, 0.36, 0.30)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(2)
+	normal.content_margin_left = 12.0
+	normal.content_margin_right = 12.0
+	normal.content_margin_top = 6.0
+	normal.content_margin_bottom = 6.0
+	btn.add_theme_stylebox_override("normal", normal)
+
+	var hover: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.22, 0.20, 0.16, 0.95)
+	hover.border_color = Color(0.55, 0.50, 0.40)
+	btn.add_theme_stylebox_override("hover", hover)
+
+	var pressed: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.10, 0.09, 0.07)
+	btn.add_theme_stylebox_override("pressed", pressed)
+
+	return btn
+
+
+# ---------------------------------------------------------------------------
+# Button Callbacks
+# ---------------------------------------------------------------------------
+
+func _on_menu_pressed() -> void:
+	var title_script: GDScript = preload("res://src/scenes/title_scene.gd")
+	SceneManager.go_to(title_script, "TitleScene")
+
+
+func _on_try_again_pressed() -> void:
+	var hero_select_script: GDScript = preload("res://src/scenes/hero_select_scene.gd")
+	SceneManager.go_to(hero_select_script, "HeroSelectScene")
+
+
+func _on_rankings_pressed() -> void:
+	var rankings_script: GDScript = preload("res://src/scenes/rankings_scene.gd")
+	SceneManager.go_to(rankings_script, "RankingsScene")

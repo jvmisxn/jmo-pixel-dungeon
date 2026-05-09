@@ -132,6 +132,21 @@ func _build_content() -> Control:
 	return null
 
 
+## Rebuild the subclass-owned content area without recreating the window shell.
+func refresh_content() -> void:
+	if _content_container == null:
+		return
+	while _content_container.get_child_count() > 2:
+		var child: Node = _content_container.get_child(2)
+		_content_container.remove_child(child)
+		child.queue_free()
+	var content: Control = _build_content()
+	if content:
+		content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_content_container.add_child(content)
+
+
 ## Override in subclass for close cleanup.
 func _on_close() -> void:
 	pass
@@ -148,4 +163,90 @@ static func create_spd_button(text: String) -> Button:
 	btn.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
 	btn.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.8))
 	btn.add_theme_color_override("font_pressed_color", Color(0.7, 0.65, 0.5))
+
+	var normal_style := StyleBoxFlat.new()
+	normal_style.bg_color = Color(0.15, 0.14, 0.12, 0.9)
+	normal_style.border_color = Color(0.4, 0.36, 0.30)
+	normal_style.set_border_width_all(2)
+	normal_style.set_corner_radius_all(2)
+	normal_style.content_margin_left = 12.0
+	normal_style.content_margin_right = 12.0
+	normal_style.content_margin_top = 6.0
+	normal_style.content_margin_bottom = 6.0
+	btn.add_theme_stylebox_override("normal", normal_style)
+
+	var hover_style := normal_style.duplicate() as StyleBoxFlat
+	hover_style.bg_color = Color(0.22, 0.20, 0.16, 0.95)
+	hover_style.border_color = Color(0.55, 0.50, 0.40)
+	btn.add_theme_stylebox_override("hover", hover_style)
+
+	var pressed_style := normal_style.duplicate() as StyleBoxFlat
+	pressed_style.bg_color = Color(0.10, 0.09, 0.07)
+	btn.add_theme_stylebox_override("pressed", pressed_style)
+
 	return btn
+
+
+# --- Close / Escape / Drag ---
+
+func _on_close_pressed() -> void:
+	close_window()
+
+
+## Close this window with animation. Removes overlay and frees self.
+func close_window() -> void:
+	if _is_closing:
+		return
+	_is_closing = true
+	_on_close()
+	window_closed.emit()
+	_play_close_animation()
+
+
+func _play_open_animation() -> void:
+	modulate = Color(1, 1, 1, 0)
+	scale = Vector2(0.8, 0.8)
+	pivot_offset = size * 0.5
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(self, "modulate", Color(1, 1, 1, 1), ANIM_DURATION)
+	tw.tween_property(self, "scale", Vector2.ONE, ANIM_DURATION).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	if _background_overlay:
+		_background_overlay.modulate = Color(1, 1, 1, 0)
+		tw.tween_property(_background_overlay, "modulate", Color.WHITE, ANIM_DURATION)
+
+
+func _play_close_animation() -> void:
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(self, "modulate", Color(1, 1, 1, 0), ANIM_DURATION)
+	tw.tween_property(self, "scale", Vector2(0.8, 0.8), ANIM_DURATION).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK)
+	if _background_overlay:
+		tw.tween_property(_background_overlay, "modulate", Color(1, 1, 1, 0), ANIM_DURATION)
+	tw.chain().tween_callback(_finish_close)
+
+
+func _finish_close() -> void:
+	if _background_overlay and is_instance_valid(_background_overlay):
+		_background_overlay.queue_free()
+		_background_overlay = null
+	queue_free()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if close_on_escape and event is InputEventKey and event.pressed:
+		if event.keycode == KEY_ESCAPE:
+			close_window()
+			get_viewport().set_input_as_handled()
+
+
+func _gui_input(event: InputEvent) -> void:
+	if not allow_drag:
+		return
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				_dragging = true
+				_drag_offset = event.position
+			else:
+				_dragging = false
+	elif event is InputEventMouseMotion and _dragging:
+		position += event.position - _drag_offset

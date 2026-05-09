@@ -1,223 +1,146 @@
 class_name Recipe
 extends RefCounted
 ## Represents a single alchemy recipe. Ingredients are consumed to produce a
-## result item, costing a certain amount of alchemical energy.
-##
-## The static method get_all_recipes() returns the master list of known recipes
-## mirroring Shattered Pixel Dungeon's alchemy system.
+## result item. The static helpers expose the compact recipe list used by the
+## current alchemy window.
 
-## Item IDs of the required ingredients (order does not matter).
 var ingredients: Array[String] = []
-## Item ID of the crafted result.
 var result_id: String = ""
-## Alchemical energy cost to perform the craft.
 var energy_cost: int = 0
 
-# ---------------------------------------------------------------------------
-# Construction Helper
-# ---------------------------------------------------------------------------
-
-## Convenience initializer.
 static func make(p_ingredients: Array[String], p_result: String, p_energy: int) -> Recipe:
-	var r: Recipe = Recipe.new()
-	r.ingredients = p_ingredients
-	r.result_id = p_result
-	r.energy_cost = p_energy
-	return r
+	var recipe: Recipe = Recipe.new()
+	recipe.ingredients = p_ingredients
+	recipe.result_id = p_result
+	recipe.energy_cost = p_energy
+	return recipe
 
-# ---------------------------------------------------------------------------
-# Crafting Logic
-# ---------------------------------------------------------------------------
-
-## Check whether this recipe can be crafted from the available items.
-## Each ingredient must match exactly one available item (consumed on craft).
-func can_craft(available_items: Array[Item]) -> bool:
-	# Build a frequency map of required ingredient IDs
+func can_craft(available_items: Array) -> bool:
 	var needed: Dictionary[String, int] = {}
 	for ing_id: String in ingredients:
 		needed[ing_id] = needed.get(ing_id, 0) + 1
 
-	# Build a frequency map of available item IDs
 	var have: Dictionary[String, int] = {}
-	for item: Item in available_items:
+	for item: Variant in available_items:
 		if item == null:
 			continue
-		if item.item_id != "":
-			have[item.item_id] = have.get(item.item_id, 0) + 1
+		var item_id: String = item.item_id if item.get("item_id") != null else ""
+		if item_id == "":
+			continue
+		var count: int = item.quantity if item.get("quantity") != null else 1
+		have[item_id] = have.get(item_id, 0) + maxi(1, count)
 
-	# Check that we have enough of each ingredient
-	for ing_id: String in needed:
+	for ing_id: String in needed.keys():
 		if have.get(ing_id, 0) < needed[ing_id]:
 			return false
 	return true
 
-## Perform the craft: consume ingredients from available_items and return the
-## result item. Returns null if crafting is not possible.
-## This mutates available_items by removing consumed ingredients.
-func craft(available_items: Array[Item]) -> Item:
-	if not can_craft(available_items):
+func craft(hero: Hero, available_items: Array) -> Item:
+	if hero == null or hero.belongings == null or not can_craft(available_items):
 		return null
 
-	# Consume ingredients — remove one matching item per ingredient entry
-	var to_consume: Array[String] = ingredients.duplicate()
-	for ing_id: String in to_consume:
-		var consumed: bool = false
-		for i: int in range(available_items.size()):
-			var item: Item = available_items[i]
-			if item == null:
-				continue
-			if item.item_id == ing_id:
-				# If stackable with quantity > 1, decrement quantity instead of removing
-				if item.is_stackable() and item.quantity > 1:
-					item.quantity -= 1
-				else:
-					available_items.remove_at(i)
-				consumed = true
+	var needed: Dictionary[String, int] = {}
+	for ing_id: String in ingredients:
+		needed[ing_id] = needed.get(ing_id, 0) + 1
+
+	for ing_id: String in needed.keys():
+		var remaining: int = needed[ing_id]
+		for item: Variant in available_items:
+			if remaining <= 0:
 				break
-		if not consumed:
+			if item == null or item.item_id != ing_id:
+				continue
+			while remaining > 0 and item.quantity > 1:
+				item.quantity -= 1
+				remaining -= 1
+			if remaining > 0:
+				hero.belongings.remove_item(item)
+				remaining -= 1
+		if remaining > 0:
 			push_error("Recipe.craft: failed to consume ingredient '%s'." % ing_id)
 			return null
 
-	# Create result
 	var result: Item = Generator.create_item(result_id)
-	if MessageLog:
-		MessageLog.add_positive("You crafted %s!" % result.get_display_name())
-	if EventBus:
-		EventBus.item_used.emit(result.get_display_name())
+	if result == null:
+		push_error("Recipe.craft: failed to create result '%s'." % result_id)
+		return null
 	return result
 
-# ---------------------------------------------------------------------------
-# Display
-# ---------------------------------------------------------------------------
-
-## Human-readable description of the recipe for the alchemy UI.
-func get_description() -> String:
-	var parts: Array[String] = []
+func get_input_names() -> Array[String]:
+	var names: Array[String] = []
 	for ing_id: String in ingredients:
-		parts.append(ing_id.replace("_", " ").capitalize())
-	var result_name: String = result_id.replace("_", " ").capitalize()
-	return "%s -> %s (energy: %d)" % [" + ".join(parts), result_name, energy_cost]
+		names.append(_display_name_for_id(ing_id))
+	return names
 
-# ---------------------------------------------------------------------------
-# Master Recipe List
-# ---------------------------------------------------------------------------
+func get_output_name() -> String:
+	return _display_name_for_id(result_id)
 
-## Returns an array of all known alchemy recipes.
+func get_description() -> String:
+	return "%s -> %s" % [", ".join(get_input_names()), get_output_name()]
+
 static func get_all_recipes() -> Array[Recipe]:
 	var recipes: Array[Recipe] = []
 
-	# --- Potions from Seeds (2 seeds of the same type -> 1 potion) ---
-	recipes.append(Recipe.make(
-		["seed_of_firebloom", "seed_of_firebloom", "seed_of_firebloom"],
-		"potion_of_liquid_flame", 0))
-	recipes.append(Recipe.make(
-		["seed_of_icecap", "seed_of_icecap", "seed_of_icecap"],
-		"potion_of_frost", 0))
-	recipes.append(Recipe.make(
-		["seed_of_sorrowmoss", "seed_of_sorrowmoss", "seed_of_sorrowmoss"],
-		"potion_of_toxic_gas", 0))
-	recipes.append(Recipe.make(
-		["seed_of_stormvine", "seed_of_stormvine", "seed_of_stormvine"],
-		"potion_of_levitation", 0))
-	recipes.append(Recipe.make(
-		["seed_of_sungrass", "seed_of_sungrass", "seed_of_sungrass"],
-		"potion_of_healing", 0))
-	recipes.append(Recipe.make(
-		["seed_of_earthroot", "seed_of_earthroot", "seed_of_earthroot"],
-		"potion_of_paralytic_gas", 0))
-	recipes.append(Recipe.make(
-		["seed_of_fadeleaf", "seed_of_fadeleaf", "seed_of_fadeleaf"],
-		"potion_of_mind_vision", 0))
-	recipes.append(Recipe.make(
-		["seed_of_blindweed", "seed_of_blindweed", "seed_of_blindweed"],
-		"potion_of_invisibility", 0))
-	recipes.append(Recipe.make(
-		["seed_of_dreamfoil", "seed_of_dreamfoil", "seed_of_dreamfoil"],
-		"potion_of_purity", 0))
-	recipes.append(Recipe.make(
-		["seed_of_swiftthistle", "seed_of_swiftthistle", "seed_of_swiftthistle"],
-		"potion_of_haste", 0))
-	recipes.append(Recipe.make(
-		["seed_of_starflower", "seed_of_starflower", "seed_of_starflower"],
-		"potion_of_experience", 0))
+	# Seeds -> potions
+	recipes.append(Recipe.make(["seed_of_firebloom", "seed_of_firebloom", "seed_of_firebloom"], "liquid_flame", 0))
+	recipes.append(Recipe.make(["seed_of_icecap", "seed_of_icecap", "seed_of_icecap"], "frost", 0))
+	recipes.append(Recipe.make(["seed_of_sorrowmoss", "seed_of_sorrowmoss", "seed_of_sorrowmoss"], "toxic_gas", 0))
+	recipes.append(Recipe.make(["seed_of_stormvine", "seed_of_stormvine", "seed_of_stormvine"], "levitation", 0))
+	recipes.append(Recipe.make(["seed_of_sungrass", "seed_of_sungrass", "seed_of_sungrass"], "healing", 0))
+	recipes.append(Recipe.make(["seed_of_earthroot", "seed_of_earthroot", "seed_of_earthroot"], "paralytic_gas", 0))
+	recipes.append(Recipe.make(["seed_of_fadeleaf", "seed_of_fadeleaf", "seed_of_fadeleaf"], "mind_vision", 0))
+	recipes.append(Recipe.make(["seed_of_blindweed", "seed_of_blindweed", "seed_of_blindweed"], "invisibility", 0))
+	recipes.append(Recipe.make(["seed_of_dreamfoil", "seed_of_dreamfoil", "seed_of_dreamfoil"], "purity", 0))
+	recipes.append(Recipe.make(["seed_of_swiftthistle", "seed_of_swiftthistle", "seed_of_swiftthistle"], "haste", 0))
+	recipes.append(Recipe.make(["seed_of_starflower", "seed_of_starflower", "seed_of_starflower"], "experience", 0))
 
-	# --- Scrolls from Stones (2 stones of the same type -> 1 scroll) ---
-	recipes.append(Recipe.make(
-		["stone_of_augmentation", "stone_of_augmentation"],
-		"scroll_of_upgrade", 2))
-	recipes.append(Recipe.make(
-		["stone_of_intuition", "stone_of_intuition"],
-		"scroll_of_identify", 0))
-	recipes.append(Recipe.make(
-		["stone_of_enchantment", "stone_of_enchantment"],
-		"scroll_of_transmutation", 2))
-	recipes.append(Recipe.make(
-		["stone_of_flock", "stone_of_flock"],
-		"scroll_of_mirror_image", 0))
-	recipes.append(Recipe.make(
-		["stone_of_shock", "stone_of_shock"],
-		"scroll_of_recharging", 0))
-	recipes.append(Recipe.make(
-		["stone_of_blink", "stone_of_blink"],
-		"scroll_of_teleportation", 0))
-	recipes.append(Recipe.make(
-		["stone_of_clairvoyance", "stone_of_clairvoyance"],
-		"scroll_of_magic_mapping", 0))
-	recipes.append(Recipe.make(
-		["stone_of_aggression", "stone_of_aggression"],
-		"scroll_of_rage", 0))
-	recipes.append(Recipe.make(
-		["stone_of_blast", "stone_of_blast"],
-		"scroll_of_retribution", 0))
-	recipes.append(Recipe.make(
-		["stone_of_fear", "stone_of_fear"],
-		"scroll_of_terror", 0))
-	recipes.append(Recipe.make(
-		["stone_of_deepened_sleep", "stone_of_deepened_sleep"],
-		"scroll_of_lullaby", 0))
-	recipes.append(Recipe.make(
-		["stone_of_disarming", "stone_of_disarming"],
-		"scroll_of_remove_curse", 0))
+	# Stones -> scrolls
+	recipes.append(Recipe.make(["augmentation", "augmentation"], "upgrade", 2))
+	recipes.append(Recipe.make(["intuition", "intuition"], "identify", 0))
+	recipes.append(Recipe.make(["enchantment", "enchantment"], "transmutation", 2))
+	recipes.append(Recipe.make(["flock", "flock"], "mirror_image", 0))
+	recipes.append(Recipe.make(["shock", "shock"], "recharging", 0))
+	recipes.append(Recipe.make(["blink", "blink"], "teleportation", 0))
+	recipes.append(Recipe.make(["clairvoyance", "clairvoyance"], "magic_mapping", 0))
+	recipes.append(Recipe.make(["blast", "blast"], "retribution", 0))
+	recipes.append(Recipe.make(["fear", "fear"], "terror", 0))
+	recipes.append(Recipe.make(["deepened_sleep", "deepened_sleep"], "lullaby", 0))
+	recipes.append(Recipe.make(["disarming", "disarming"], "remove_curse", 0))
 
 	return recipes
 
-## Find all recipes that can be crafted with the given available items.
 static func find_craftable(available_items: Array) -> Array[Recipe]:
-	var all: Array[Recipe] = get_all_recipes()
 	var craftable: Array[Recipe] = []
-	for recipe: Recipe in all:
+	for recipe: Recipe in get_all_recipes():
 		if recipe.can_craft(available_items):
 			craftable.append(recipe)
 	return craftable
 
-## Find the first recipe whose result matches the given item_id.
 static func find_recipe_for(result_item_id: String) -> Recipe:
-	var all: Array[Recipe] = get_all_recipes()
-	for recipe: Recipe in all:
+	for recipe: Recipe in get_all_recipes():
 		if recipe.result_id == result_item_id:
 			return recipe
 	return null
 
-## Find the first recipe that can be crafted from the given ingredient items.
-## Called by WndAlchemy to check if a valid recipe exists for selected ingredients.
-static func find_recipe(ingredients: Array[Item]) -> Recipe:
-	var recipes: Array[Recipe] = get_all_recipes()
-	for recipe: Recipe in recipes:
-		if recipe.can_craft(ingredients):
+static func find_recipe(ingredients_list: Array) -> Recipe:
+	for recipe: Recipe in get_all_recipes():
+		if recipe.can_craft(ingredients_list):
 			return recipe
 	return null
 
-
-## Get a list of all known (previously discovered) recipes as dictionaries.
-## Returns an array of {ingredients: Array, result: String} entries.
 static func get_known_recipes() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	for recipe: Recipe in ALL_RECIPES:
-		if recipe == null:
-			continue
+	for recipe: Recipe in get_all_recipes():
 		result.append({
-			"ingredients": recipe.ingredient_ids.duplicate(),
-			"result": recipe.result_id,
+			"input_names": recipe.get_input_names(),
+			"output_name": recipe.get_output_name(),
 			"energy_cost": recipe.energy_cost,
+			"result_id": recipe.result_id,
 		})
 	return result
+
+static func _display_name_for_id(item_id: String) -> String:
+	var item: Item = Generator.create_item(item_id)
+	if item != null:
+		return item.item_name
+	return item_id.replace("_", " ").capitalize()

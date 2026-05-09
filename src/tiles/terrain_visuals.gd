@@ -59,8 +59,8 @@ static var _palettes: Dictionary = {
 		"wall_highlight": Color(0.38, 0.42, 0.34),
 		"floor": Color(0.42, 0.40, 0.35),
 		"floor_alt": Color(0.38, 0.36, 0.32),
-		"water": Color(0.20, 0.35, 0.55),
-		"water_light": Color(0.30, 0.50, 0.70),
+		"water": Color(0.25, 0.45, 0.70),
+		"water_light": Color(0.35, 0.55, 0.80),
 		"grass": Color(0.25, 0.50, 0.20),
 		"grass_tall": Color(0.20, 0.60, 0.15),
 		"door": Color(0.55, 0.35, 0.15),
@@ -73,8 +73,8 @@ static var _palettes: Dictionary = {
 		"wall_highlight": Color(0.45, 0.40, 0.38),
 		"floor": Color(0.50, 0.45, 0.40),
 		"floor_alt": Color(0.45, 0.40, 0.36),
-		"water": Color(0.20, 0.30, 0.50),
-		"water_light": Color(0.28, 0.42, 0.62),
+		"water": Color(0.22, 0.40, 0.65),
+		"water_light": Color(0.32, 0.50, 0.75),
 		"grass": Color(0.30, 0.45, 0.20),
 		"grass_tall": Color(0.25, 0.55, 0.15),
 		"door": Color(0.50, 0.35, 0.20),
@@ -87,8 +87,8 @@ static var _palettes: Dictionary = {
 		"wall_highlight": Color(0.48, 0.38, 0.30),
 		"floor": Color(0.45, 0.38, 0.30),
 		"floor_alt": Color(0.40, 0.34, 0.26),
-		"water": Color(0.15, 0.30, 0.45),
-		"water_light": Color(0.25, 0.45, 0.60),
+		"water": Color(0.20, 0.40, 0.60),
+		"water_light": Color(0.30, 0.50, 0.70),
 		"grass": Color(0.30, 0.42, 0.18),
 		"grass_tall": Color(0.28, 0.55, 0.15),
 		"door": Color(0.50, 0.30, 0.15),
@@ -101,8 +101,8 @@ static var _palettes: Dictionary = {
 		"wall_highlight": Color(0.52, 0.47, 0.55),
 		"floor": Color(0.50, 0.48, 0.52),
 		"floor_alt": Color(0.45, 0.43, 0.48),
-		"water": Color(0.18, 0.28, 0.55),
-		"water_light": Color(0.28, 0.40, 0.68),
+		"water": Color(0.22, 0.38, 0.65),
+		"water_light": Color(0.32, 0.48, 0.75),
 		"grass": Color(0.22, 0.40, 0.22),
 		"grass_tall": Color(0.18, 0.50, 0.18),
 		"door": Color(0.55, 0.40, 0.25),
@@ -115,8 +115,8 @@ static var _palettes: Dictionary = {
 		"wall_highlight": Color(0.45, 0.30, 0.38),
 		"floor": Color(0.40, 0.30, 0.35),
 		"floor_alt": Color(0.36, 0.26, 0.32),
-		"water": Color(0.30, 0.15, 0.40),
-		"water_light": Color(0.45, 0.25, 0.55),
+		"water": Color(0.40, 0.22, 0.55),
+		"water_light": Color(0.50, 0.32, 0.65),
 		"grass": Color(0.35, 0.20, 0.15),
 		"grass_tall": Color(0.45, 0.15, 0.10),
 		"door": Color(0.50, 0.25, 0.20),
@@ -229,14 +229,22 @@ static func _create_fallback(terrain: int, region: int) -> Texture2D:
 	img.fill(color)
 	return ImageTexture.create_from_image(img)
 
-## Get the water background texture for a region (32x32 tileable pattern).
+## Get the water background texture for a region.
+## The source water PNGs are 32x32 tileable patterns. We crop a 16x16 region
+## from the center so each cell sprite fills exactly one tile without overlap.
 static func get_water_bg_texture(region: int) -> Texture2D:
 	if _water_cache.has(region):
 		return _water_cache[region]
 	var path: String = _water_region_file.get(region, _water_region_file[ConstantsData.Region.SEWERS])
 	var tex: Texture2D = null
 	if ResourceLoader.exists(path):
-		tex = load(path) as Texture2D
+		var full_tex: Texture2D = load(path) as Texture2D
+		if full_tex:
+			# Crop to 16x16 from center of the 32x32 texture
+			var atlas: AtlasTexture = AtlasTexture.new()
+			atlas.atlas = full_tex
+			atlas.region = Rect2(8, 8, TILE_SIZE, TILE_SIZE)
+			tex = atlas
 	if tex == null:
 		var palette: Dictionary = get_palette(region)
 		var water_color: Color = palette.get("water", Color(0.2, 0.3, 0.5))

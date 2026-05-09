@@ -144,26 +144,26 @@ func _create_slider_section(title: String) -> Dictionary:
 
 func _on_music_changed(value: float) -> void:
 	_music_val_label.text = "%d%%" % int(value)
-	var audio: Node = _get_autoload("AudioManager")
+	var audio: Node = AudioManager
 	if audio and audio.has_method("set_music_volume"):
 		audio.set_music_volume(value / 100.0)
 
 
 func _on_sfx_changed(value: float) -> void:
 	_sfx_val_label.text = "%d%%" % int(value)
-	var audio: Node = _get_autoload("AudioManager")
+	var audio: Node = AudioManager
 	if audio and audio.has_method("set_sfx_volume"):
 		audio.set_sfx_volume(value / 100.0)
 
 
 func _on_music_mute_toggled(pressed: bool) -> void:
-	var audio: Node = _get_autoload("AudioManager")
+	var audio: Node = AudioManager
 	if audio and audio.has_method("set_music_muted"):
 		audio.set_music_muted(pressed)
 
 
 func _on_sfx_mute_toggled(pressed: bool) -> void:
-	var audio: Node = _get_autoload("AudioManager")
+	var audio: Node = AudioManager
 	if audio and audio.has_method("set_sfx_muted"):
 		audio.set_sfx_muted(pressed)
 
@@ -172,7 +172,7 @@ func _on_zoom_changed(index: int) -> void:
 	var zoom_values: Array[float] = [1.0, 1.5, 2.0, 3.0]
 	if index >= 0 and index < zoom_values.size():
 		var zoom_val: float = zoom_values[index]
-		var game_manager: Node = _get_autoload("GameManager")
+		var game_manager: Node = GameManager
 		if game_manager:
 			game_manager.set("zoom_level", zoom_val)
 		# Also try to apply directly to the camera
@@ -205,7 +205,7 @@ func _on_brightness_changed(value: float) -> void:
 
 func _on_save_close() -> void:
 	# Persist settings via GameManager if available
-	var game_manager: Node = _get_autoload("GameManager")
+	var game_manager: Node = GameManager
 	if game_manager:
 		game_manager.set("setting_music_volume", _music_slider.value / 100.0)
 		game_manager.set("setting_sfx_volume", _sfx_slider.value / 100.0)
@@ -223,7 +223,7 @@ func _on_save_close() -> void:
 # --- Helpers ---
 
 func _get_music_volume_percent() -> float:
-	var audio: Node = _get_autoload("AudioManager")
+	var audio: Node = AudioManager
 	if audio:
 		var vol: Variant = audio.get("music_volume")
 		if vol is float:
@@ -232,7 +232,7 @@ func _get_music_volume_percent() -> float:
 
 
 func _get_sfx_volume_percent() -> float:
-	var audio: Node = _get_autoload("AudioManager")
+	var audio: Node = AudioManager
 	if audio:
 		var vol: Variant = audio.get("sfx_volume")
 		if vol is float:
@@ -241,7 +241,7 @@ func _get_sfx_volume_percent() -> float:
 
 
 func _get_music_muted() -> bool:
-	var audio: Node = _get_autoload("AudioManager")
+	var audio: Node = AudioManager
 	if audio:
 		var m: Variant = audio.get("music_muted")
 		if m is bool:
@@ -250,7 +250,7 @@ func _get_music_muted() -> bool:
 
 
 func _get_sfx_muted() -> bool:
-	var audio: Node = _get_autoload("AudioManager")
+	var audio: Node = AudioManager
 	if audio:
 		var m: Variant = audio.get("sfx_muted")
 		if m is bool:
@@ -259,7 +259,7 @@ func _get_sfx_muted() -> bool:
 
 
 func _get_current_zoom_index() -> int:
-	var game_manager: Node = _get_autoload("GameManager")
+	var game_manager: Node = GameManager
 	if game_manager:
 		var zoom: Variant = game_manager.get("zoom_level")
 		if zoom is float:
@@ -271,12 +271,13 @@ func _get_current_zoom_index() -> int:
 
 
 func _get_brightness_percent() -> float:
-	var game_manager: Node = _get_autoload("GameManager")
+	var game_manager: Node = GameManager
 	if game_manager:
 		var b: Variant = game_manager.get("setting_brightness")
 		if b is float:
 			return b * 100.0
 	return 50.0
+
 
 
 func _find_world_environment() -> WorldEnvironment:

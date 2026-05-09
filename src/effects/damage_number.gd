@@ -1,17 +1,14 @@
 class_name DamageNumber
 extends Node2D
 ## Floating damage/heal/status number that rises and fades out.
-## Self-destructs after animation completes.
+## Uses Godot Tweens instead of manual _process delta tracking.
 
 const RISE_SPEED: float = 30.0
 const DURATION: float = 0.8
 const CRIT_SCALE: float = 1.5
 
 var _label: Label = null
-var _timer: float = 0.0
-var _duration: float = DURATION
 var _rise_speed: float = RISE_SPEED
-var _initial_y: float = 0.0
 
 # ---------------------------------------------------------------------------
 # Setup Methods
@@ -45,25 +42,21 @@ func setup_text(text: String, color: Color) -> void:
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
-	_initial_y = position.y
 	# Slight random horizontal offset to avoid stacking
 	position.x += randf_range(-4.0, 4.0)
+	_start_animation()
 
-func _process(delta: float) -> void:
-	_timer += delta
-	var progress: float = _timer / _duration
 
-	# Rise
-	position.y = _initial_y - _rise_speed * progress
-
-	# Fade out in second half
-	if progress > 0.5 and _label:
-		var fade: float = 1.0 - (progress - 0.5) * 2.0
-		_label.modulate.a = maxf(fade, 0.0)
-
-	# Self destruct
-	if progress >= 1.0:
-		queue_free()
+func _start_animation() -> void:
+	var start_y: float = position.y
+	var end_y: float = start_y - _rise_speed
+	var tween: Tween = create_tween()
+	# Rise over full duration
+	tween.tween_property(self, "position:y", end_y, DURATION).set_ease(Tween.EASE_OUT)
+	# Fade out in second half (delay 0.4s, then fade over 0.4s)
+	tween.parallel().tween_property(self, "modulate:a", 0.0, DURATION * 0.5).set_delay(DURATION * 0.5)
+	# Self destruct when done
+	tween.tween_callback(queue_free)
 
 # ---------------------------------------------------------------------------
 # Internal
@@ -74,7 +67,6 @@ func _create_label() -> void:
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_label.add_theme_font_size_override("font_size", 10)
-	# Center the label on the node position
 	_label.position = Vector2(-20, -8)
 	_label.size = Vector2(40, 16)
 	add_child(_label)

@@ -17,11 +17,17 @@ const SCALING_CHARGE_ADDITION: float = 40.0
 const NORMAL_SCALE_FACTOR: float = 0.875
 ## Whether the wand produces a cursed (harmful to user) effect when zapped.
 var cursed_effect: bool = false
+## Use-based identification tracking. Wands identify through repeated zaps.
+var _uses_left_to_id: float = 10.0
+var _available_uses_to_id: float = 5.0
 
 func _init() -> void:
 	category = ConstantsData.ItemCategory.WAND
 	default_action = "ZAP"
 	stackable = false
+
+func is_equippable() -> bool:
+	return true
 
 # ---------------------------------------------------------------------------
 # Charges
@@ -80,6 +86,7 @@ func zap(hero: Char, target_pos: int) -> void:
 	if cursed_effect or (cursed and randf() < 0.35):
 		_cursed_zap(hero)
 		spend_charge()
+		_use_for_identification()
 		return
 	# Build trajectory via Ballistica
 	var path: Array[int] = _build_zap_path(hero, target_pos)
@@ -89,10 +96,23 @@ func zap(hero: Char, target_pos: int) -> void:
 		return
 	spend_charge()
 	on_zap(hero, path)
+	_use_for_identification()
 	if MessageLog:
 		MessageLog.add("You zap the %s." % item_name)
 	if EventBus:
 		EventBus.item_used.emit(get_display_name())
+
+func _use_for_identification() -> void:
+	if identified or is_identified():
+		return
+	if _available_uses_to_id <= 0.0:
+		return
+	_available_uses_to_id -= 1.0
+	_uses_left_to_id -= 1.0
+	if _uses_left_to_id <= 0.0:
+		identify()
+		if MessageLog:
+			MessageLog.add_positive("You have identified the %s." % item_name)
 
 ## Build the zap trajectory using Ballistica. Returns the subpath.
 func _build_zap_path(hero: Char, target_pos: int) -> Array[int]:
@@ -241,6 +261,8 @@ func serialize() -> Dictionary:
 	data["charges"] = charges
 	data["_recharge_progress"] = _recharge_progress
 	data["cursed_effect"] = cursed_effect
+	data["_uses_left_to_id"] = _uses_left_to_id
+	data["_available_uses_to_id"] = _available_uses_to_id
 	return data
 
 func deserialize(data: Dictionary) -> void:
@@ -249,6 +271,8 @@ func deserialize(data: Dictionary) -> void:
 	charges = data.get("charges", 2)
 	_recharge_progress = data.get("_recharge_progress", 0.0)
 	cursed_effect = data.get("cursed_effect", false)
+	_uses_left_to_id = data.get("_uses_left_to_id", 10.0)
+	_available_uses_to_id = data.get("_available_uses_to_id", 5.0)
 
 # ---------------------------------------------------------------------------
 # Factory

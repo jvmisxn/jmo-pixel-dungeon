@@ -33,7 +33,7 @@ func _ready() -> void:
 
 
 func _connect_signals() -> void:
-	var message_log: Node = UIUtils.get_autoload("MessageLog")
+	var message_log: Node = MessageLog
 	if message_log:
 		message_log.message_added.connect(_on_message_added)
 		if message_log.has_signal("log_cleared"):
@@ -47,7 +47,7 @@ func refresh() -> void:
 	_clear_display()
 	_last_turn_shown = -1
 
-	var message_log: Node = UIUtils.get_autoload("MessageLog")
+	var message_log: Node = MessageLog
 	if not message_log:
 		return
 
@@ -127,4 +127,4 @@ func _scroll_to_bottom() -> void:
 
 
 # --- Utilities ---
-# _get_autoload removed — use UIUtils.get_autoload() instead
+# Autoloads are accessed directly by name (e.g., MessageLog, GameManager)

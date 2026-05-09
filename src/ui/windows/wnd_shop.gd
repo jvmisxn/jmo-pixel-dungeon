@@ -109,13 +109,26 @@ func _populate_shop_grid() -> void:
 		slot_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 		var item_btn: Button = Button.new()
-		item_btn.custom_minimum_size = Vector2(72, 56)
+		item_btn.custom_minimum_size = Vector2(72, 72)
 		if item:
-			item_btn.text = ConstantsData.get_prop(item, "item_name", "?").substr(0, 7)
-			if item.get("icon_color"):
-				item_btn.modulate = item.icon_color
+			item_btn.tooltip_text = ConstantsData.get_prop(item, "item_name", "?")
+			var icon_holder: CenterContainer = CenterContainer.new()
+			icon_holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+			icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var icon_slot: ItemSlot = ItemSlot.new()
+			icon_slot.item = item
+			icon_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			icon_holder.add_child(icon_slot)
+			item_btn.add_child(icon_holder)
 		item_btn.pressed.connect(_on_shop_item_pressed.bind(i))
 		slot_container.add_child(item_btn)
+
+		var name_label: Label = Label.new()
+		name_label.text = ConstantsData.get_prop(item, "item_name", "?").substr(0, 10) if item else "?"
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		name_label.add_theme_font_size_override("font_size", 10)
+		slot_container.add_child(name_label)
 
 		var price_label: Label = Label.new()
 		price_label.text = "%d g" % price
@@ -242,6 +255,11 @@ class WndSellPicker:
 
 			var row: HBoxContainer = HBoxContainer.new()
 			row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+			var icon_slot: ItemSlot = ItemSlot.new()
+			icon_slot.item = item
+			icon_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(icon_slot)
 
 			var name_lbl: Label = Label.new()
 			name_lbl.text = ConstantsData.get_prop(item, "item_name", "Unknown")

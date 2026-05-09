@@ -25,6 +25,9 @@ var _hovered: bool = false
 
 const SLOT_SIZE: float = 40.0
 const ICON_SIZE: float = 24.0
+const SPRITE_SIZE: int = 16  ## SPD items.png tile size
+const SHEET_COLUMNS: int = 16  ## items.png columns
+const SHEET_PATH: String = "res://assets/spd/sprites/items.png"
 const BG_COLOR := Color(0.12, 0.12, 0.15, 0.9)
 const EMPTY_BORDER_COLOR := Color(0.3, 0.3, 0.35, 0.5)
 const SELECTED_BORDER_COLOR := Color(1.0, 0.84, 0.0, 1.0)
@@ -103,7 +106,43 @@ func _draw() -> void:
 			lvl_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.4, 1.0, 0.4))
 
 
+## Static cache for the items.png sprite sheet texture.
+static var _sheet_texture: Texture2D = null
+## Static cache of cropped per-index textures (avoids re-cropping every frame).
+static var _sprite_cache: Dictionary = {}
+
+func _get_sprite_texture(idx: int) -> Texture2D:
+	if _sprite_cache.has(idx):
+		return _sprite_cache[idx] as Texture2D
+	if _sheet_texture == null:
+		if ResourceLoader.exists(SHEET_PATH):
+			_sheet_texture = load(SHEET_PATH) as Texture2D
+		if _sheet_texture == null:
+			return null
+	var col: int = idx % SHEET_COLUMNS
+	var row: int = idx / SHEET_COLUMNS
+	var region: Rect2 = Rect2(col * SPRITE_SIZE, row * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE)
+	var atlas: AtlasTexture = AtlasTexture.new()
+	atlas.atlas = _sheet_texture
+	atlas.region = region
+	atlas.filter_clip = true
+	_sprite_cache[idx] = atlas
+	return atlas
+
+
 func _draw_item_icon(offset: Vector2, color: Color) -> void:
+	# Try SPD sprite sheet first
+	var idx: int = _get_sprite_index()
+	if idx >= 0:
+		var tex: Texture2D = _get_sprite_texture(idx)
+		if tex:
+			# Scale 16x16 sprite to fit ICON_SIZE (24x24)
+			var scale_factor: float = ICON_SIZE / float(SPRITE_SIZE)
+			draw_set_transform(offset, 0.0, Vector2(scale_factor, scale_factor))
+			draw_texture(tex, Vector2.ZERO)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			return
+
 	var center: Vector2 = offset + Vector2(ICON_SIZE / 2.0, ICON_SIZE / 2.0)
 	var category: int = _get_category()
 
@@ -200,3 +239,9 @@ func _is_cursed() -> bool:
 	if item and "cursed" in item:
 		return item.cursed
 	return false
+
+
+func _get_sprite_index() -> int:
+	if item and "sprite_index" in item:
+		return item.sprite_index
+	return -1

@@ -98,6 +98,9 @@ signal quest_updated(quest_id: String, state: String)
 ## Emitted when the hero tramples grass (for Sandals of Nature / seed drops).
 @warning_ignore("unused_signal")
 signal hero_trampled_grass(pos: int)
+## Emitted when a plant activates. payload: pos (int), plant_name (String)
+@warning_ignore("unused_signal")
+signal plant_activated(pos: int, plant_name: String)
 
 # --- Targeting ---
 ## Emitted to enter targeting mode (throw, zap). payload: item, max_range, callback
@@ -120,5 +123,7 @@ signal boss_defeated
 
 @warning_ignore("unused_signal")
 signal npc_face_hero(npc: Variant)
+@warning_ignore("unused_signal")
+signal npc_interacted(npc_name: String)
 @warning_ignore("unused_signal")
 signal show_window(window: Variant)

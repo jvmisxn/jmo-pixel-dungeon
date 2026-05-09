@@ -33,28 +33,33 @@ func setup(color: Color, count: int = 8, speed: float = DEFAULT_SPEED, duration:
 			"life": 1.0,
 		})
 
-## Set up as an expanding ring effect.
+## Set up as an expanding ring effect (uses Tween for clean animation).
 func setup_ring(color: Color, max_radius: float = 48.0, duration: float = 0.5) -> void:
 	_is_ring = true
 	_ring_color = color
 	_ring_max_radius = max_radius
 	_duration = duration
+	# Use a Tween to drive ring expansion and fade
+	var tween: Tween = create_tween()
+	tween.tween_method(_set_ring_progress, 0.0, 1.0, duration)
+	tween.tween_callback(queue_free)
 
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
 
+func _set_ring_progress(progress: float) -> void:
+	_ring_radius = _ring_max_radius * progress
+	_timer = progress * _duration
+	queue_redraw()
+
 func _process(delta: float) -> void:
+	# Ring effect is driven by a Tween — skip manual update
+	if _is_ring:
+		return
+
 	_timer += delta
 	var progress: float = _timer / _duration
-
-	if _is_ring:
-		_ring_radius = _ring_max_radius * progress
-		if progress >= 1.0:
-			queue_free()
-			return
-		queue_redraw()
-		return
 
 	# Update particles
 	var all_dead: bool = true

@@ -38,12 +38,14 @@ func _build_content() -> Control:
 	name_label.add_theme_color_override("font_color", _get_name_color())
 	main.add_child(name_label)
 
-	# --- Icon (large colored rect placeholder) ---
+	# --- Icon ---
 	var icon_container: CenterContainer = CenterContainer.new()
-	var icon_rect: ColorRect = ColorRect.new()
-	icon_rect.custom_minimum_size = Vector2(48, 48)
-	icon_rect.color = ConstantsData.get_prop(_item, "icon_color", Color.WHITE) if ConstantsData.get_prop(_item, "icon_color") else Color.GRAY
-	icon_container.add_child(icon_rect)
+	var icon_slot: ItemSlot = ItemSlot.new()
+	icon_slot.item = _item
+	icon_slot.custom_minimum_size = Vector2(48, 48)
+	icon_slot.size = Vector2(48, 48)
+	icon_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon_container.add_child(icon_slot)
 	main.add_child(icon_container)
 
 	# --- Description ---
@@ -126,6 +128,8 @@ func _add_action_buttons(container: HBoxContainer) -> void:
 
 	# Use / Drink / Read / Eat based on category
 	var cat: int = ConstantsData.get_prop(_item, "category", -1)
+	if _item is SpiritBow:
+		_add_button(container, "Shoot", _action_shoot)
 	match cat:
 		ConstantsData.ItemCategory.POTION:
 			_add_button(container, "Drink", _action_use)
@@ -170,11 +174,16 @@ func _action_equip() -> void:
 	var old_item: Variant = null
 	match cat:
 		ConstantsData.ItemCategory.WEAPON:
-			old_item = _hero.belongings.equip_weapon(_item)
+			if _item is SpiritBow:
+				old_item = _hero.belongings.equip_spirit_bow(_item)
+			else:
+				old_item = _hero.belongings.equip_weapon(_item)
 		ConstantsData.ItemCategory.ARMOR:
 			old_item = _hero.belongings.equip_armor(_item)
 		ConstantsData.ItemCategory.ARTIFACT:
 			old_item = _hero.belongings.equip_artifact(_item)
+		ConstantsData.ItemCategory.WAND:
+			old_item = _hero.belongings.equip_misc(_item)
 		ConstantsData.ItemCategory.RING:
 			# Default to left ring, use right if left is occupied
 			if _hero.belongings.ring_left == null:
@@ -211,6 +220,8 @@ func _action_unequip() -> void:
 	var slot: String = ""
 	if _hero.belongings.weapon == _item:
 		slot = "weapon"
+	elif _hero.belongings.spirit_bow == _item:
+		slot = "spirit_bow"
 	elif _hero.belongings.armor == _item:
 		slot = "armor"
 	elif _hero.belongings.artifact == _item:
@@ -246,8 +257,8 @@ func _action_use() -> void:
 		var wand_ref: Variant = _item
 		var hero_ref: Hero = _hero
 		var zap_callback: Callable = func(cell: int) -> void:
-			if wand_ref and hero_ref and wand_ref.has_method("zap"):
-				wand_ref.zap(hero_ref, cell)
+			if wand_ref and hero_ref and hero_ref.has_method("submit_action"):
+				hero_ref.submit_action({"type": "zap_wand", "item": wand_ref, "target_pos": cell})
 		close_window()
 		if EventBus and EventBus.has_signal("enter_targeting"):
 			var max_range: int = ConstantsData.get_prop(wand_ref, "zap_range", 8) if ConstantsData.get_prop(wand_ref, "zap_range") else 8
@@ -282,6 +293,8 @@ func _action_drop() -> void:
 		var slot: String = ""
 		if _hero.belongings.weapon == _item:
 			slot = "weapon"
+		elif _hero.belongings.spirit_bow == _item:
+			slot = "spirit_bow"
 		elif _hero.belongings.armor == _item:
 			slot = "armor"
 		elif _hero.belongings.artifact == _item:
@@ -311,7 +324,16 @@ func _action_throw() -> void:
 	close_window()
 
 func _execute_throw_callback(target_cell: int) -> void:
-	pass  # Handled by GameScene._execute_throw()
+	if _hero != null and _hero.has_method("submit_action"):
+		_hero.submit_action({"type": "throw_item", "item": _item, "target_pos": target_cell})
+
+func _action_shoot() -> void:
+	var item_name_str: String = ConstantsData.get_prop(_item, "item_name", "item")
+	if MessageLog:
+		MessageLog.add("Select a target for the %s." % item_name_str)
+	if EventBus:
+		EventBus.enter_targeting.emit(_item, 8, _execute_throw_callback)
+	close_window()
 
 func _action_quickslot() -> void:
 	if _hero and _hero.belongings.has_method("set_quickslot"):

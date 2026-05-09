@@ -40,31 +40,19 @@ func _build_content() -> Control:
 	equip_row.add_theme_constant_override("separation", 4)
 	main.add_child(equip_row)
 
-	var slot_names: Array[String] = ["weapon", "armor", "artifact", "ring_left", "ring_right", "misc"]
-	var slot_labels: Array[String] = ["Weapon", "Armor", "Artifact", "Ring L", "Ring R", "Misc"]
+	var slot_names: Array[String] = ["weapon", "spirit_bow", "armor", "artifact", "ring_left", "ring_right", "misc"]
+	var slot_labels: Array[String] = ["Weapon", "Bow", "Armor", "Artifact", "Ring L", "Ring R", "Misc"]
 	for i: int in range(slot_names.size()):
-		var slot_btn: Button = Button.new()
-		slot_btn.custom_minimum_size = Vector2(56, 56)
-		slot_btn.tooltip_text = slot_labels[i]
-		slot_btn.text = _get_equip_slot_text(slot_names[i])
-		slot_btn.add_theme_font_size_override("font_size", 10)
-		slot_btn.add_theme_color_override("font_color", Color(0.8, 0.75, 0.6))
-		# SPD stone slot style
-		var slot_style := StyleBoxFlat.new()
-		slot_style.bg_color = Color(0.12, 0.1, 0.08)
-		slot_style.border_color = Color(0.45, 0.38, 0.28)
-		slot_style.set_border_width_all(1)
-		slot_style.set_corner_radius_all(2)
-		slot_btn.add_theme_stylebox_override("normal", slot_style)
-		var slot_hover := StyleBoxFlat.new()
-		slot_hover.bg_color = Color(0.18, 0.15, 0.12)
-		slot_hover.border_color = Color(0.6, 0.5, 0.35)
-		slot_hover.set_border_width_all(1)
-		slot_hover.set_corner_radius_all(2)
-		slot_btn.add_theme_stylebox_override("hover", slot_hover)
-		slot_btn.pressed.connect(_on_equip_slot_pressed.bind(slot_names[i]))
-		equip_row.add_child(slot_btn)
-		_equip_slots[slot_names[i]] = slot_btn
+		var equip_slot: ItemSlot = ItemSlot.new()
+		equip_slot.custom_minimum_size = Vector2(56, 56)
+		equip_slot.tooltip_text = slot_labels[i]
+		# Set the equipped item on the slot
+		var equipped_item: Variant = _get_equipped_item(slot_names[i])
+		if equipped_item:
+			equip_slot.item = equipped_item
+		equip_slot.slot_clicked.connect(_on_equip_slot_item_clicked.bind(slot_names[i]))
+		equip_row.add_child(equip_slot)
+		_equip_slots[slot_names[i]] = equip_slot
 
 	# --- Gold Display ---
 	_gold_label = Label.new()
@@ -111,20 +99,23 @@ func _build_content() -> Control:
 	return main
 
 
-func _get_equip_slot_text(slot_name: String) -> String:
+func _get_equipped_item(slot_name: String) -> Variant:
 	if not _hero or not _hero.belongings:
-		return "---"
-	var item: Variant = null
+		return null
 	match slot_name:
-		"weapon": item = _hero.belongings.weapon
-		"armor": item = _hero.belongings.armor
-		"artifact": item = _hero.belongings.artifact
-		"ring_left": item = _hero.belongings.ring_left
-		"ring_right": item = _hero.belongings.ring_right
-		"misc": item = _hero.belongings.misc
-	if item and item.get("item_name"):
-		return item.item_name.substr(0, 6)
-	return "---"
+		"weapon": return _hero.belongings.weapon
+		"spirit_bow": return _hero.belongings.spirit_bow
+		"armor": return _hero.belongings.armor
+		"artifact": return _hero.belongings.artifact
+		"ring_left": return _hero.belongings.ring_left
+		"ring_right": return _hero.belongings.ring_right
+		"misc": return _hero.belongings.misc
+	return null
+
+
+## Called when an equipment slot's ItemSlot is clicked.
+func _on_equip_slot_item_clicked(_clicked_item: RefCounted, slot_name: String) -> void:
+	_on_equip_slot_pressed(slot_name)
 
 
 func _update_gold_display() -> void:
@@ -142,21 +133,15 @@ func _refresh_grid() -> void:
 
 	var items: Array = _get_filtered_items()
 
-	# Fill grid up to 20 slots
+	# Fill grid up to 20 slots using ItemSlot for proper item icons
 	for i: int in range(Belongings.MAX_INVENTORY):
-		var slot_btn: Button = Button.new()
-		slot_btn.custom_minimum_size = Vector2(56, 56)
+		var slot: ItemSlot = ItemSlot.new()
 		if i < items.size():
-			var item: Variant = items[i]
-			slot_btn.text = _get_item_display_text(item)
-			if item.get("icon_color"):
-				slot_btn.modulate = item.icon_color
-			slot_btn.pressed.connect(_on_item_pressed.bind(item))
-			slot_btn.tooltip_text = ConstantsData.get_prop(item, "item_name", "")
-		else:
-			slot_btn.text = ""
-			slot_btn.disabled = false  # Keep interactive for future drag targets
-		_item_grid.add_child(slot_btn)
+			var itm: Variant = items[i]
+			slot.item = itm
+			slot.slot_clicked.connect(_on_item_pressed)
+			slot.tooltip_text = ConstantsData.get_prop(itm, "item_name", "")
+		_item_grid.add_child(slot)
 
 
 func _get_item_display_text(item: Variant) -> String:
@@ -225,9 +210,41 @@ func _on_sort_pressed() -> void:
 	_refresh_grid()
 
 
+func _on_equip_slot_pressed(slot_name: String) -> void:
+	if not _hero or not _hero.belongings:
+		return
+	var item: Variant = null
+	match slot_name:
+		"weapon": item = _hero.belongings.weapon
+		"spirit_bow": item = _hero.belongings.spirit_bow
+		"armor": item = _hero.belongings.armor
+		"artifact": item = _hero.belongings.artifact
+		"ring_left": item = _hero.belongings.ring_left
+		"ring_right": item = _hero.belongings.ring_right
+		"misc": item = _hero.belongings.misc
+	if item == null:
+		return
+	# Open item detail sub-window for the equipped item
+	var wnd_item: WndItem = WndItem.new()
+	wnd_item.setup(item, _hero, true)
+	wnd_item.window_closed.connect(_on_sub_window_closed)
+	open_sub_window.emit(wnd_item)
+
+
 func _on_item_pressed(item: Variant) -> void:
 	# Signal up to parent (HUD) to open sub-window — avoids get_parent()
 	var wnd_item: WndItem = WndItem.new()
 	wnd_item.setup(item, _hero)
 	wnd_item.window_closed.connect(_on_sub_window_closed)
 	open_sub_window.emit(wnd_item)
+
+
+func _on_sub_window_closed() -> void:
+	# Refresh inventory display after a sub-window (item detail) closes
+	_refresh_grid()
+	_update_gold_display()
+	# Update equipment slot icons in case something was equipped/unequipped
+	for slot_name: String in _equip_slots:
+		var slot: ItemSlot = _equip_slots[slot_name] as ItemSlot
+		if slot:
+			slot.item = _get_equipped_item(slot_name)

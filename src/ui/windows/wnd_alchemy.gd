@@ -4,9 +4,10 @@ extends WndBase
 
 var _hero: Hero = null
 var _ingredient_slots: Array[Button] = []
+var _ingredient_icons: Array[ItemSlot] = []
 var _ingredients: Array = [null, null, null]  # Up to 3 ingredient items
 var _result_label: Label = null
-var _result_preview: ColorRect = null
+var _result_preview: ItemSlot = null
 var _brew_button: Button = null
 var _recipe_list: VBoxContainer = null
 
@@ -40,8 +41,16 @@ func _build_content() -> Control:
 		slot_btn.text = "+"
 		slot_btn.tooltip_text = "Click to add ingredient"
 		slot_btn.pressed.connect(_on_ingredient_slot_pressed.bind(i))
+		var icon_holder: CenterContainer = CenterContainer.new()
+		icon_holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+		icon_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var icon_slot: ItemSlot = ItemSlot.new()
+		icon_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon_holder.add_child(icon_slot)
+		slot_btn.add_child(icon_holder)
 		ing_row.add_child(slot_btn)
 		_ingredient_slots.append(slot_btn)
+		_ingredient_icons.append(icon_slot)
 
 	# --- Arrow + Result Preview ---
 	var result_row: HBoxContainer = HBoxContainer.new()
@@ -54,9 +63,9 @@ func _build_content() -> Control:
 	arrow_label.add_theme_font_size_override("font_size", 20)
 	result_row.add_child(arrow_label)
 
-	_result_preview = ColorRect.new()
+	_result_preview = ItemSlot.new()
 	_result_preview.custom_minimum_size = Vector2(64, 64)
-	_result_preview.color = Color(0.2, 0.2, 0.2)
+	_result_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	result_row.add_child(_result_preview)
 
 	_result_label = Label.new()
@@ -102,7 +111,9 @@ func _on_ingredient_slot_pressed(slot_idx: int) -> void:
 		# Remove ingredient
 		_ingredients[slot_idx] = null
 		_ingredient_slots[slot_idx].text = "+"
-		_ingredient_slots[slot_idx].modulate = Color.WHITE
+		_ingredient_slots[slot_idx].tooltip_text = "Click to add ingredient"
+		if slot_idx < _ingredient_icons.size():
+			_ingredient_icons[slot_idx].item = null
 		_check_recipe()
 		return
 
@@ -117,9 +128,10 @@ func _on_ingredient_selected(item: Variant, slot_idx: int) -> void:
 	if item == null:
 		return
 	_ingredients[slot_idx] = item
-	_ingredient_slots[slot_idx].text = ConstantsData.get_prop(item, "item_name", "?").substr(0, 6)
-	if item.get("icon_color"):
-		_ingredient_slots[slot_idx].modulate = item.icon_color
+	_ingredient_slots[slot_idx].text = ""
+	_ingredient_slots[slot_idx].tooltip_text = ConstantsData.get_prop(item, "item_name", "?")
+	if slot_idx < _ingredient_icons.size():
+		_ingredient_icons[slot_idx].item = item
 	_check_recipe()
 
 
@@ -133,40 +145,29 @@ func _check_recipe() -> void:
 	if active_ingredients.is_empty():
 		_result_label.text = "No recipe found"
 		_result_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
-		_result_preview.color = Color(0.2, 0.2, 0.2)
+		_result_preview.item = null
 		_brew_button.disabled = true
 		return
 
 	# Try to find a matching recipe via Recipe.find_recipe()
-	var result: Variant = null
-	if ClassDB.class_exists("Recipe"):
-		# Use the recipe system if available
-		result = _find_recipe_static(active_ingredients)
-	else:
-		# Fallback: check via script-based lookup
-		result = _find_recipe_static(active_ingredients)
-
-	if result:
-		_result_label.text = ConstantsData.get_prop(result, "item_name", "Unknown Result")
+	var recipe: Recipe = _find_recipe_static(active_ingredients)
+	if recipe != null:
+		var result: Item = Generator.create_item(recipe.result_id)
+		_result_label.text = recipe.get_output_name()
 		_result_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.5))
-		if result.get("icon_color"):
-			_result_preview.color = result.icon_color
-		else:
-			_result_preview.color = Color(0.3, 0.7, 0.3)
+		_result_preview.item = result
 		_brew_button.disabled = false
 	else:
 		_result_label.text = "No recipe found"
 		_result_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
-		_result_preview.color = Color(0.2, 0.2, 0.2)
+		_result_preview.item = null
 		_brew_button.disabled = true
 
 
-func _find_recipe_static(ingredients: Array) -> Variant:
-	# Attempt to call Recipe.find_recipe if the class exists
+func _find_recipe_static(ingredients: Array) -> Recipe:
 	var recipe_script: GDScript = load("res://src/items/recipe.gd") as GDScript
 	if recipe_script and recipe_script.has_method("find_recipe"):
 		return recipe_script.find_recipe(ingredients)
-	# Fallback: no recipe system available yet
 	return null
 
 
@@ -179,30 +180,33 @@ func _on_brew_pressed() -> void:
 		if ing != null:
 			active_ingredients.append(ing)
 
-	var result: Variant = _find_recipe_static(active_ingredients)
-	if not result:
+	var recipe: Recipe = _find_recipe_static(active_ingredients)
+	if recipe == null:
 		return
 
-	# Remove ingredients from inventory
-	for ing: Variant in active_ingredients:
-		if ConstantsData.get_prop(ing, "stackable", false) and ConstantsData.get_prop(ing, "quantity", 1) > 1:
-			ing.quantity -= 1
-		else:
-			_hero.belongings.remove_item(ing)
-
-	# Add result to inventory
+	var result: Item = recipe.craft(_hero, active_ingredients)
+	if result == null:
+		return
 	_hero.belongings.add_item(result)
+	var toolkit: Variant = _hero.belongings.get_equipped_artifact() if _hero.belongings.has_method("get_equipped_artifact") else null
+	if toolkit != null and toolkit.item_id == "alchemists_toolkit" and toolkit.has_method("on_craft"):
+		toolkit.on_craft(recipe.energy_cost)
 
 	if MessageLog:
-		MessageLog.add("You brewed a %s!" % ConstantsData.get_prop(result, "item_name", "potion"))
+		var craft_msg: String = "You brewed a %s!" % result.item_name
+		if recipe.energy_cost > 0:
+			craft_msg += " (%d energy)" % recipe.energy_cost
+		MessageLog.add(craft_msg)
 	if EventBus:
-		EventBus.item_picked_up.emit(ConstantsData.get_prop(result, "item_name", ""))
+		EventBus.item_picked_up.emit(result.item_name)
 
 	# Reset slots
 	_ingredients = [null, null, null]
 	for i: int in range(MAX_INGREDIENTS):
 		_ingredient_slots[i].text = "+"
-		_ingredient_slots[i].modulate = Color.WHITE
+		_ingredient_slots[i].tooltip_text = "Click to add ingredient"
+		if i < _ingredient_icons.size():
+			_ingredient_icons[i].item = null
 	_check_recipe()
 
 
@@ -218,7 +222,8 @@ func _populate_known_recipes() -> void:
 			var row: Label = Label.new()
 			var inputs_str: String = ", ".join(recipe.get("input_names", []))
 			var output_str: String = recipe.get("output_name", "?")
-			row.text = "%s  ->  %s" % [inputs_str, output_str]
+			var energy_cost: int = recipe.get("energy_cost", 0)
+			row.text = "%s  ->  %s%s" % [inputs_str, output_str, "" if energy_cost <= 0 else "  (%d energy)" % energy_cost]
 			row.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
 			_recipe_list.add_child(row)
 	else:
@@ -274,6 +279,11 @@ class IngredientPicker:
 
 			var row: HBoxContainer = HBoxContainer.new()
 			row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+			var icon_slot: ItemSlot = ItemSlot.new()
+			icon_slot.item = item
+			icon_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(icon_slot)
 
 			var name_lbl: Label = Label.new()
 			name_lbl.text = ConstantsData.get_prop(item, "item_name", "Unknown")

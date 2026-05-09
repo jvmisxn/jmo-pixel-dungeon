@@ -27,9 +27,11 @@ func _act_hunting() -> void:
 	# Fire beam at range if on same row/col/diagonal
 	if beam_cooldown <= 0 and dist >= 2 and can_see(target.pos) and _is_aligned(target.pos):
 		_fire_beam()
+		spend_attack()
 		return
 	# Move to get alignment
 	_move_toward(target.pos)
+	spend_move()
 
 func _is_aligned(target_position: int) -> bool:
 	var x1: int = ConstantsData.pos_to_x(pos)

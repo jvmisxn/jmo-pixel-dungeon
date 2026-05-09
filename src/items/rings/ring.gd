@@ -6,6 +6,8 @@ extends Item
 # --- Ring Properties ---
 ## Gem color used for unidentified display.
 var gem_color: Color = Color.WHITE
+## Gem descriptor used for unidentified display.
+var gem_name: String = ""
 ## Whether this ring type has been globally identified (any ring of same type).
 var ring_known: bool = false
 
@@ -67,6 +69,8 @@ func _create_passive_buff() -> Node:
 
 func get_display_name() -> String:
 	if not identified and not ring_known:
+		if not gem_name.is_empty():
+			return "%s ring" % gem_name.capitalize()
 		return "ring"
 	return super.get_display_name()
 
@@ -117,6 +121,7 @@ func value() -> int:
 func serialize() -> Dictionary:
 	var data: Dictionary = super.serialize()
 	data["gem_color"] = [gem_color.r, gem_color.g, gem_color.b, gem_color.a]
+	data["gem_name"] = gem_name
 	data["ring_known"] = ring_known
 	return data
 
@@ -125,6 +130,7 @@ func deserialize(data: Dictionary) -> void:
 	var gc: Variant = data.get("gem_color", [1.0, 1.0, 1.0, 1.0])
 	if gc is Array and gc.size() >= 4:
 		gem_color = Color(gc[0], gc[1], gc[2], gc[3])
+	gem_name = data.get("gem_name", "")
 	ring_known = data.get("ring_known", false)
 
 # ---------------------------------------------------------------------------

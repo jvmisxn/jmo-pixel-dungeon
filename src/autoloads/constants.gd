@@ -74,6 +74,7 @@ enum Terrain {
 	STATUE_SP,
 	BOOKSHELF,
 	ALCHEMY,
+	WEB,
 }
 
 ## Returns true if the terrain type is "solid" — blocks knockback and
@@ -107,7 +108,9 @@ static func terrain_is_passable(terrain: Terrain) -> bool:
 		Terrain.EMPTY, Terrain.GRASS, Terrain.EMPTY_WELL, Terrain.WATER, \
 		Terrain.DOOR, Terrain.OPEN_DOOR, Terrain.ENTRANCE, Terrain.EXIT, \
 		Terrain.EMBERS, Terrain.PEDESTAL, Terrain.EMPTY_SP, \
-		Terrain.HIGH_GRASS, Terrain.FURROWED_GRASS, Terrain.INACTIVE_TRAP:
+		Terrain.HIGH_GRASS, Terrain.FURROWED_GRASS, Terrain.INACTIVE_TRAP, \
+		Terrain.TRAP, Terrain.SECRET_TRAP, Terrain.SIGN, Terrain.WELL, \
+		Terrain.ALCHEMY, Terrain.WEB:
 			return true
 	return false
 
