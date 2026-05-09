@@ -76,6 +76,16 @@ func apply_special_effect(target: Variant) -> void:
 					target.add_buff(cripple)
 				if MessageLog:
 					MessageLog.add("The bolas entangle the enemy!")
+		"poison":
+			if target.has_method("add_buff"):
+				target.add_buff(Poison.create(4.0))
+				if MessageLog:
+					MessageLog.add("The dart poisons its target!")
+		"paralysis":
+			if target.has_method("add_buff"):
+				target.add_buff(Paralysis.new())
+				if MessageLog:
+					MessageLog.add("The dart leaves its target paralyzed!")
 
 # ---------------------------------------------------------------------------
 # Speed
@@ -92,6 +102,7 @@ func speed_factor(hero: Char) -> float:
 
 ## All valid missile weapon IDs.
 static var ALL_IDS: Array[String] = [
+	"dart", "curare_dart", "paralytic_dart",
 	"throwing_knife", "throwing_club", "throwing_stone",
 	"shuriken", "kunai", "bolas",
 	"javelin", "tomahawk", "boomerang",
@@ -106,6 +117,26 @@ static func create(weapon_id: String) -> MissileWeapon:
 
 	match weapon_id:
 		# ===== TIER 1 =====
+		"dart":
+			w.item_name = "Dart"
+			w.description = "A light throwing dart. Cheap, accurate, and easy to carry in bundles."
+			w.tier = 1
+			w.base_uses = 8
+			w.icon_color = Color(0.7, 0.7, 0.65)
+		"curare_dart":
+			w.item_name = "Curare Dart"
+			w.description = "A dart tipped with curare. It deals little damage but poisons on hit."
+			w.tier = 1
+			w.base_uses = 6
+			w.special_effect = "poison"
+			w.icon_color = Color(0.45, 0.8, 0.35)
+		"paralytic_dart":
+			w.item_name = "Paralytic Dart"
+			w.description = "A dart coated with a numbing agent that can briefly paralyze its victim."
+			w.tier = 1
+			w.base_uses = 4
+			w.special_effect = "paralysis"
+			w.icon_color = Color(0.9, 0.85, 0.35)
 		"throwing_knife":
 			w.item_name = "Throwing Knife"
 			w.description = "A small balanced knife designed for throwing. Cheap and disposable."

@@ -233,9 +233,25 @@ func _use_fear(hero: Char) -> void:
 
 ## Summon blocking sheep at adjacent positions.
 func _use_flock(hero: Char) -> void:
-	# TODO: Spawn sheep mob entities at adjacent cells
+	var dungeon_level: Variant = hero.get("level")
+	if dungeon_level == null:
+		return
+	var spawned: int = 0
+	for dir: int in ConstantsData.DIRS_8:
+		var cell: int = hero.pos + dir
+		if not ConstantsData.is_valid_pos(cell):
+			continue
+		if dungeon_level.has_method("is_passable") and not dungeon_level.is_passable(cell):
+			continue
+		if dungeon_level.has_method("find_char_at") and dungeon_level.find_char_at(cell) != null:
+			continue
+		Sheep.spawn_at(cell, dungeon_level, 8)
+		spawned += 1
 	if MessageLog:
-		MessageLog.add("A flock of magical sheep appears!")
+		if spawned > 0:
+			MessageLog.add("A flock of magical sheep appears!")
+		else:
+			MessageLog.add("There is no space for the flock to appear.")
 
 ## Chain lightning from the thrown position.
 func _use_shock(hero: Char) -> void:

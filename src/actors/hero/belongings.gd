@@ -6,7 +6,7 @@ extends RefCounted
 ## Maximum inventory capacity.
 const MAX_INVENTORY: int = 20
 ## Number of quickslot positions.
-const QUICKSLOT_COUNT: int = 4
+const QUICKSLOT_COUNT: int = 6
 
 # --- Equipment Slots ---
 ## Currently equipped weapon (Item subclass or null).
@@ -224,13 +224,31 @@ func weapon_damage_range() -> Array[int]:
 func set_quickslot(slot_idx: int, item: Item) -> void:
 	if slot_idx < 0 or slot_idx >= QUICKSLOT_COUNT:
 		return
+	for i: int in range(QUICKSLOT_COUNT):
+		if i != slot_idx and quickslots[i] == item:
+			quickslots[i] = null
 	quickslots[slot_idx] = item
+	if EventBus:
+		EventBus.hero_stats_changed.emit()
 
 ## Get item in a quickslot.
 func get_quickslot(slot_idx: int) -> Item:
 	if slot_idx < 0 or slot_idx >= QUICKSLOT_COUNT:
 		return null
 	return quickslots[slot_idx]
+
+func clear_quickslot(slot_idx: int) -> void:
+	if slot_idx < 0 or slot_idx >= QUICKSLOT_COUNT:
+		return
+	quickslots[slot_idx] = null
+	if EventBus:
+		EventBus.hero_stats_changed.emit()
+
+func get_quickslot_index(item: Item) -> int:
+	for i: int in range(QUICKSLOT_COUNT):
+		if quickslots[i] == item:
+			return i
+	return -1
 
 # ---------------------------------------------------------------------------
 # Lookup Helpers
@@ -322,6 +340,11 @@ func serialize() -> Dictionary:
 		if slot_item != null and slot_item.has_method("serialize"):
 			data[slot_names[i]] = slot_item.serialize()
 
+	var quickslot_ids: Array[String] = []
+	for item: Item in quickslots:
+		quickslot_ids.append(item.item_id if item != null else "")
+	data["quickslots"] = quickslot_ids
+
 	return data
 
 func deserialize(data: Dictionary) -> void:
@@ -353,3 +376,15 @@ func deserialize(data: Dictionary) -> void:
 					if item.has_method("deserialize"):
 						item.deserialize(slot_data)
 					set(slot_name, item)
+
+	quickslots.resize(QUICKSLOT_COUNT)
+	quickslots.fill(null)
+	var quickslot_ids: Variant = data.get("quickslots", [])
+	if quickslot_ids is Array:
+		for i: int in range(mini(QUICKSLOT_COUNT, quickslot_ids.size())):
+			var item_id: String = str(quickslot_ids[i])
+			if item_id == "":
+				continue
+			var resolved: Item = find_item_by_id(item_id)
+			if resolved != null:
+				quickslots[i] = resolved

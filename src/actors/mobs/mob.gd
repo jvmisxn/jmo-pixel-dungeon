@@ -162,8 +162,12 @@ func _act_wandering() -> void:
 func _act_hunting() -> void:
 	# Validate target
 	if target == null or not target.is_alive:
-		_set_state(AIState.WANDERING)
 		target = null
+		if target_pos >= 0 and pos != target_pos:
+			_move_toward(target_pos)
+			spend_move()
+			return
+		_set_state(AIState.WANDERING)
 		spend_turn()
 		return
 
@@ -192,6 +196,7 @@ func _act_hunting() -> void:
 		# Reached last known position, lost the target
 		_set_state(AIState.WANDERING)
 		target = null
+		target_pos = -1
 		spend_turn()
 		return
 
@@ -425,9 +430,22 @@ func _on_death(source: Variant) -> void:
 # ---------------------------------------------------------------------------
 
 ## Alert this mob — wake it up and set to hunting state.
-func alert() -> void:
+func alert(alert_pos: int = -1) -> void:
+	if not is_alive:
+		return
+	if alert_pos >= 0:
+		target_pos = alert_pos
+	var heroes: Array[Char] = _find_visible_heroes()
+	if not heroes.is_empty():
+		target = heroes[0]
+		target_pos = target.pos
+	else:
+		target = null
 	if state == AIState.SLEEPING or state == AIState.PASSIVE or state == AIState.WANDERING:
 		_set_state(AIState.HUNTING)
+	var sprite_ref: Variant = get("sprite")
+	if sprite_ref != null and is_instance_valid(sprite_ref) and sprite_ref.has_method("show_alert"):
+		sprite_ref.show_alert()
 
 ## Set mob state by string name (for traps and external callers).
 func set_mob_state(state_name: String) -> void:

@@ -45,11 +45,15 @@ func scale_to_depth(p_depth: int) -> void:
 func _generate_weapon(tier: int) -> void:
 	if not Generator:
 		return
-	weapon = Generator.create_item("melee_weapon")
-	if weapon and weapon.has_method("set_level"):
-		weapon.set_level(tier)
-	if weapon and weapon.has_method("enchant_random"):
-		weapon.enchant_random()
+	weapon = Generator.random_weapon_for_tier(tier)
+	if weapon == null:
+		return
+	if "level" in weapon:
+		weapon.level = tier
+	if weapon.has_method("enchant"):
+		weapon.enchant(WeaponEnchantment.random())
+	if "cursed" in weapon:
+		weapon.cursed = false
 
 ## Override damage roll to use weapon if available.
 func damage_roll() -> int:

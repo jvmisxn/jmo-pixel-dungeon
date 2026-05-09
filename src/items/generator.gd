@@ -186,6 +186,23 @@ static var _generated_artifacts: Array[String] = []
 static func reset_artifacts() -> void:
 	_generated_artifacts.clear()
 
+const ITEM_ID_ALIASES: Dictionary = {
+	"potion_of_healing": "healing",
+	"scroll_of_identify": "identify",
+	"scroll_of_upgrade": "upgrade",
+	"scroll_of_remove_curse": "remove_curse",
+	"scroll_of_teleportation": "teleportation",
+	"scroll_of_lullaby": "lullaby",
+	"scroll_of_rage": "rage",
+	"scroll_of_terror": "terror",
+	"scroll_of_magic_mapping": "magic_mapping",
+	"scroll_of_retribution": "retribution",
+	"scroll_of_mirror_image": "mirror_image",
+	"scroll_of_transmutation": "transmutation",
+	"scroll_of_recharging": "recharging",
+	"rotberry_seed": "seed_of_rotberry",
+}
+
 # ---------------------------------------------------------------------------
 # Factory — create_item
 # ---------------------------------------------------------------------------
@@ -196,7 +213,8 @@ static func reset_artifacts() -> void:
 ## Uses known-ID sets for dispatch to avoid false matches from factories
 ## that always return non-null objects.
 static func create_item(item_id: String) -> Item:
-	var result: Item = _create_item_internal(item_id)
+	var normalized_id: String = ITEM_ID_ALIASES.get(item_id, item_id)
+	var result: Item = _create_item_internal(normalized_id)
 	# Apply SPD sprite sheet index if available
 	if result != null and SPRITE_INDICES.has(result.item_id):
 		result.sprite_index = SPRITE_INDICES[result.item_id]
@@ -225,6 +243,10 @@ static func _create_item_internal(item_id: String) -> Item:
 			return Torch.new()
 		"amulet_of_yendor":
 			return AmuletOfYendor.new()
+		"corpse_dust":
+			return _make_misc_item("corpse_dust", "Corpse Dust", "Fine powdery remains gathered for the wandmaker.", ConstantsData.ItemCategory.MISC)
+		"elemental_embers":
+			return _make_misc_item("elemental_embers", "Elemental Embers", "Warm embers harvested for the wandmaker.", ConstantsData.ItemCategory.MISC)
 
 	# --- Melee Weapons (known IDs) ---
 	if item_id in _MELEE_IDS:
@@ -306,6 +328,7 @@ const _MELEE_IDS: Array[String] = [
 ]
 
 const _MISSILE_IDS: Array[String] = [
+	"dart", "curare_dart", "paralytic_dart",
 	"throwing_knife", "throwing_club", "throwing_stone",
 	"shuriken", "kunai", "bolas",
 	"javelin", "tomahawk", "boomerang",
@@ -369,6 +392,17 @@ static func _make_seed(id: String) -> Item:
 	item.cursed_known = true
 	return item
 
+static func _make_misc_item(id: String, display_name: String, desc: String, category: int) -> Item:
+	var item: Item = Item.new()
+	item.item_id = id
+	item.item_name = display_name
+	item.description = desc
+	item.category = category
+	item.identified = true
+	item.cursed_known = true
+	item.unique = true
+	return item
+
 # ---------------------------------------------------------------------------
 # Random Generation — Public API
 # ---------------------------------------------------------------------------
@@ -428,11 +462,15 @@ static func random_item(depth: int) -> Item:
 ## Uses floorSetTierProbs for tier selection and calls random() for upgrades/curses.
 static func random_weapon(depth: int) -> Item:
 	var tier: int = _roll_tier_for_depth(depth)
-	var table: Array[String] = _weapon_table_for_tier(tier)
-	var weapon: Item = _random_from_table(table)
+	var weapon: Item = random_weapon_for_tier(tier)
 	if weapon is Weapon and weapon.has_method("random"):
 		weapon.random()
 	return weapon
+
+## Generate a random melee weapon from a specific tier table.
+static func random_weapon_for_tier(tier: int) -> Item:
+	var table: Array[String] = _weapon_table_for_tier(tier)
+	return _random_from_table(table)
 
 ## Generate a random armor whose tier is based on depth.
 ## Uses floorSetTierProbs for tier selection and calls random() for upgrades/curses.
@@ -657,10 +695,13 @@ const SPRITE_INDICES: Dictionary = {
 	"greatshield": 132,
 	# --- Missile/thrown weapons (row 10) ---
 	"spirit_bow": 144,
+	"dart": 145,
 	"throwing_knife": 146,
 	"throwing_stone": 147,
+	"curare_dart": 148,
 	"shuriken": 149,
 	"throwing_club": 150,
+	"paralytic_dart": 151,
 	"bolas": 152,
 	"kunai": 153,
 	"javelin": 154,

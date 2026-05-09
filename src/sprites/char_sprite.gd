@@ -169,12 +169,17 @@ func flash(color: Color = Color.RED, duration: float = 0.2) -> void:
 func play_death(duration: float = 0.5) -> void:
 	_anim_state = AnimState.DIE
 	is_animating = true
+	if _hp_bar_bg:
+		_hp_bar_bg.visible = false
+	hide_emo()
 	if _move_tween != null:
 		_move_tween.kill()
 	_move_tween = create_tween()
 	_move_tween.set_parallel(true)
 	_move_tween.tween_property(_sprite, "modulate:a", 0.0, duration)
-	_move_tween.tween_property(_sprite, "scale", Vector2(0.5, 0.5), duration)
+	_move_tween.tween_property(_sprite, "scale", Vector2(0.85, 0.85), duration)
+	_move_tween.tween_property(self, "position:y", position.y + 3.0, duration)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
 	_move_tween.set_parallel(false)
 	_move_tween.tween_callback(_on_death_complete)
 

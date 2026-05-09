@@ -68,39 +68,39 @@ func stock_shop(depth: int) -> void:
 	var region: int = ConstantsData.region_for_depth(depth)
 
 	# Healing potions (always available)
-	_add_shop_item(_make_item("potion_healing", "Potion of Healing", ConstantsData.ItemCategory.POTION), 50)
+	_add_shop_item(_make_item("healing", "Potion of Healing", ConstantsData.ItemCategory.POTION), 50)
 
 	# Identify scroll (always available)
-	_add_shop_item(_make_item("scroll_identify", "Scroll of Identify", ConstantsData.ItemCategory.SCROLL), 30)
+	_add_shop_item(_make_item("identify", "Scroll of Identify", ConstantsData.ItemCategory.SCROLL), 30)
 
 	# Remove curse scroll
-	_add_shop_item(_make_item("scroll_remove_curse", "Scroll of Remove Curse", ConstantsData.ItemCategory.SCROLL), 40)
+	_add_shop_item(_make_item("remove_curse", "Scroll of Remove Curse", ConstantsData.ItemCategory.SCROLL), 40)
 
 	# Region-specific items
 	match region:
 		ConstantsData.Region.SEWERS:
-			_add_shop_item(_make_item("potion_mind_vision", "Potion of Mind Vision", ConstantsData.ItemCategory.POTION), 50)
-			_add_shop_item(_make_item("scroll_magic_mapping", "Scroll of Magic Mapping", ConstantsData.ItemCategory.SCROLL), 70)
-			_add_shop_item(_make_item("stone_augmentation", "Stone of Augmentation", ConstantsData.ItemCategory.STONE), 30)
+			_add_shop_item(_make_item("mind_vision", "Potion of Mind Vision", ConstantsData.ItemCategory.POTION), 50)
+			_add_shop_item(_make_item("magic_mapping", "Scroll of Magic Mapping", ConstantsData.ItemCategory.SCROLL), 70)
+			_add_shop_item(_make_item("augmentation", "Stone of Augmentation", ConstantsData.ItemCategory.STONE), 30)
 		ConstantsData.Region.PRISON:
-			_add_shop_item(_make_item("potion_invisibility", "Potion of Invisibility", ConstantsData.ItemCategory.POTION), 50)
-			_add_shop_item(_make_item("potion_haste", "Potion of Haste", ConstantsData.ItemCategory.POTION), 50)
-			_add_shop_item(_make_item("scroll_teleportation", "Scroll of Teleportation", ConstantsData.ItemCategory.SCROLL), 60)
+			_add_shop_item(_make_item("invisibility", "Potion of Invisibility", ConstantsData.ItemCategory.POTION), 50)
+			_add_shop_item(_make_item("haste", "Potion of Haste", ConstantsData.ItemCategory.POTION), 50)
+			_add_shop_item(_make_item("teleportation", "Scroll of Teleportation", ConstantsData.ItemCategory.SCROLL), 60)
 			_add_shop_item(_make_item("torch", "Torch", ConstantsData.ItemCategory.MISC), 20)
 		ConstantsData.Region.CAVES:
-			_add_shop_item(_make_item("potion_healing", "Potion of Healing", ConstantsData.ItemCategory.POTION), 50)
-			_add_shop_item(_make_item("potion_experience", "Potion of Experience", ConstantsData.ItemCategory.POTION), 100)
-			_add_shop_item(_make_item("scroll_mirror_image", "Scroll of Mirror Image", ConstantsData.ItemCategory.SCROLL), 80)
-			_add_shop_item(_make_item("scroll_lullaby", "Scroll of Lullaby", ConstantsData.ItemCategory.SCROLL), 60)
+			_add_shop_item(_make_item("healing", "Potion of Healing", ConstantsData.ItemCategory.POTION), 50)
+			_add_shop_item(_make_item("experience", "Potion of Experience", ConstantsData.ItemCategory.POTION), 100)
+			_add_shop_item(_make_item("mirror_image", "Scroll of Mirror Image", ConstantsData.ItemCategory.SCROLL), 80)
+			_add_shop_item(_make_item("lullaby", "Scroll of Lullaby", ConstantsData.ItemCategory.SCROLL), 60)
 		ConstantsData.Region.CITY:
-			_add_shop_item(_make_item("potion_healing", "Potion of Healing", ConstantsData.ItemCategory.POTION), 50)
-			_add_shop_item(_make_item("potion_mind_vision", "Potion of Mind Vision", ConstantsData.ItemCategory.POTION), 80)
-			_add_shop_item(_make_item("scroll_teleportation", "Scroll of Teleportation", ConstantsData.ItemCategory.SCROLL), 80)
+			_add_shop_item(_make_item("healing", "Potion of Healing", ConstantsData.ItemCategory.POTION), 50)
+			_add_shop_item(_make_item("mind_vision", "Potion of Mind Vision", ConstantsData.ItemCategory.POTION), 80)
+			_add_shop_item(_make_item("teleportation", "Scroll of Teleportation", ConstantsData.ItemCategory.SCROLL), 80)
 			_add_shop_item(_make_item("ankh", "Ankh", ConstantsData.ItemCategory.MISC), 250)
 		ConstantsData.Region.HALLS:
-			_add_shop_item(_make_item("potion_healing", "Potion of Healing", ConstantsData.ItemCategory.POTION), 50)
-			_add_shop_item(_make_item("potion_haste", "Potion of Haste", ConstantsData.ItemCategory.POTION), 80)
-			_add_shop_item(_make_item("scroll_rage", "Scroll of Rage", ConstantsData.ItemCategory.SCROLL), 80)
+			_add_shop_item(_make_item("healing", "Potion of Healing", ConstantsData.ItemCategory.POTION), 50)
+			_add_shop_item(_make_item("haste", "Potion of Haste", ConstantsData.ItemCategory.POTION), 80)
+			_add_shop_item(_make_item("rage", "Scroll of Rage", ConstantsData.ItemCategory.SCROLL), 80)
 			_add_shop_item(_make_item("ankh", "Ankh", ConstantsData.ItemCategory.MISC), 300)
 
 	# Add some food
@@ -111,11 +111,14 @@ func stock_shop(depth: int) -> void:
 		_add_shop_item(_make_item("torch", "Torch", ConstantsData.ItemCategory.MISC), 20)
 
 func _make_item(id: String, display_name: String, cat: int) -> Variant:
-	var item: Variant = load("res://src/items/item.gd").new()
-	item.item_id = id
-	item.item_name = display_name
-	item.category = cat
+	var item: Variant = Generator.create_item(id) if Generator else null
+	if item == null:
+		item = load("res://src/items/item.gd").new()
+		item.item_id = id
+		item.item_name = display_name
+		item.category = cat
 	item.identified = true
+	item.cursed_known = true
 	return item
 
 func _add_shop_item(item: Variant, price: int) -> void:

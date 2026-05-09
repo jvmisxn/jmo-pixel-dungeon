@@ -110,6 +110,28 @@ func read() -> void:
 	is_animating = true
 	play_operate(cell_pos, 0.5)
 
+
+## Hero death should read as a distinct collapse, not just the generic mob fade.
+func play_hero_death(duration: float = 0.9) -> void:
+	_anim_state = AnimState.DIE
+	is_animating = true
+	if _hp_bar_bg:
+		_hp_bar_bg.visible = false
+	hide_emo()
+	if _flash_tween != null:
+		_flash_tween.kill()
+	_sprite.modulate = Color(1.0, 0.45, 0.45, 1.0)
+	if _move_tween != null:
+		_move_tween.kill()
+	_move_tween = create_tween()
+	_move_tween.set_parallel(true)
+	_move_tween.tween_property(_sprite, "modulate", Color(0.35, 0.15, 0.15, 0.0), duration)
+	_move_tween.tween_property(_sprite, "rotation", deg_to_rad(90.0), duration * 0.8)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_move_tween.tween_property(_sprite, "scale", Vector2(0.9, 0.7), duration)
+	_move_tween.tween_property(self, "position:y", position.y + 5.0, duration)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+
 ## Override: Hero characters do NOT show blood bursts.
 ## Original HeroSprite.bloodBurstA() is intentionally empty for content rating.
 func blood_burst_a(_from_pos: Vector2, _damage: int) -> void:

@@ -10,9 +10,6 @@ func _do_effect(_triggerer: Variant, level: Level) -> void:
 	if MessageLog:
 		MessageLog.add("An alarm sounds!")
 
-	# Wake up and alert all mobs on the level
-	for mob: Variant in level.mobs:
-		if mob != null and mob.has_method("alert"):
-			mob.alert()
-		elif mob != null and mob.has_method("set_state"):
-			mob.set_mob_state("hunting")
+	var alert_pos: int = _triggerer.pos if _triggerer != null and _triggerer.get("pos") != null else -1
+	if level.has_method("alert_all_mobs"):
+		level.alert_all_mobs(alert_pos)

@@ -46,7 +46,6 @@ const CHROME_PATH: String = "res://assets/spd/interfaces/chrome.png"
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	size = get_viewport().get_visible_rect().size
 	RenderingServer.set_default_clear_color(Color.BLACK)
 	_build_ui()
 	_update_selection()

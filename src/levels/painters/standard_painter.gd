@@ -57,6 +57,14 @@ static func _carve_tunnels(level: Level) -> void:
 
 			Builder.build_tunnel(level, from_pos, to_pos)
 
+			# Secret rooms need an actual hidden entrance tile, not just a carved opening.
+			# Direct `connected` rooms already paint their own doors, but `neighbors`
+			# only get tunnel carving, so without this secret rooms become open passages.
+			if room.type == Room.Type.SECRET:
+				level.set_terrain(from_pos, ConstantsData.Terrain.SECRET_DOOR)
+			if neighbor.type == Room.Type.SECRET:
+				level.set_terrain(to_pos, ConstantsData.Terrain.SECRET_DOOR)
+
 			# NOTE: Doors are placed by each Room's paint() method using its
 			# `connected` dictionary. The tunnel just carves empty space between
 			# rooms. Do NOT place extra doors here — doing so creates orphan

@@ -336,9 +336,10 @@ func _action_shoot() -> void:
 	close_window()
 
 func _action_quickslot() -> void:
-	if _hero and _hero.belongings.has_method("set_quickslot"):
-		_hero.belongings.set_quickslot(0, _item)
-		if MessageLog:
-			var item_name_str: String = ConstantsData.get_prop(_item, "item_name", "item")
-			MessageLog.add("Set %s to quickslot." % item_name_str)
+	if _hero == null or _hero.belongings == null or _item == null:
+		close_window()
+		return
+	var wnd: WndQuickslotSelect = WndQuickslotSelect.new()
+	wnd.setup(_hero, _item)
+	open_sub_window.emit(wnd)
 	close_window()

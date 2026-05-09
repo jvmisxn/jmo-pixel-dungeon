@@ -227,6 +227,8 @@ func refresh_after_turn() -> void:
 	if _current_level == null or GameManager.hero == null:
 		return
 
+	_ensure_mob_sprites()
+
 	# Update FOV (use hero's actual view distance for Huntress bonus, MindVision, etc.)
 	var _vd: int = GameManager.hero.get_view_distance() if GameManager.hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
 	_current_level.update_fov(GameManager.hero.pos, _vd)
@@ -248,6 +250,7 @@ func refresh_after_turn() -> void:
 
 	# Refresh item sprites
 	_refresh_item_sprites()
+	_interrupt_rest_if_needed()
 
 ## Called by TurnManager after each visible mob action (move, attack) so the
 ## player can see the mob act in real time. Updates the mob's sprite position,
@@ -278,6 +281,7 @@ func on_mob_action(actor: Node) -> void:
 		_current_level.update_fov(GameManager.hero.pos, _vd)
 		fog_of_war.update_visibility()
 		_update_entity_visibility()
+		_interrupt_rest_if_needed()
 
 
 ## Get the EffectManager for external systems to trigger effects.
@@ -394,11 +398,23 @@ func _spawn_mob_sprites() -> void:
 		if mob is Object and mob.get("is_alive") == true:
 			_spawn_single_mob_sprite(mob)
 
+func _ensure_mob_sprites() -> void:
+	if _current_level == null:
+		return
+	for mob: Variant in _current_level.mobs:
+		if not (mob is Object) or mob.get("is_alive") != true:
+			continue
+		var key: int = mob.get("actor_id") if mob.get("actor_id") != null else mob.get_instance_id()
+		if _mob_sprites.has(key):
+			continue
+		_spawn_single_mob_sprite(mob)
+
 func _spawn_single_mob_sprite(mob: Variant) -> void:
 	# Disguised mimics render as item sprites until revealed
 	if mob.get("disguised") == true and mob.get("mob_id") == "mimic":
 		var item_sprite: ItemSprite = ItemSprite.new()
-		var fake_item: Variant = Generator.create_item(str(mob.get("fake_item_id", "")))
+		var fake_item_id: String = str(mob.get("fake_item_id")) if mob.get("fake_item_id") != null else ""
+		var fake_item: Variant = Generator.create_item(fake_item_id)
 		if fake_item != null:
 			item_sprite.setup_from_item(fake_item)
 		else:
@@ -812,6 +828,8 @@ func _on_door_opened(pos: int) -> void:
 func _on_hero_damaged(amount: int, _source: Variant) -> void:
 	# Interrupt auto-walk on damage
 	_cancel_auto_walk()
+	if GameManager.hero and GameManager.hero.has_method("interrupt"):
+		GameManager.hero.interrupt()
 	# Camera shake on damage
 	if game_camera:
 		var intensity: float = clampf(float(amount) / 10.0, 1.0, 5.0)
@@ -836,12 +854,17 @@ func _on_hero_damaged(amount: int, _source: Variant) -> void:
 func _on_hero_died() -> void:
 	_game_ended = true
 	_cancel_auto_walk()
+	if GameManager.hero != null:
+		var hero_key: int = GameManager.hero.get("actor_id") if GameManager.hero.get("actor_id") != null else -1
+		var hero_sprite: Variant = _hero_sprites.get(hero_key) if hero_key >= 0 else null
+		if hero_sprite is HeroSprite and is_instance_valid(hero_sprite):
+			hero_sprite.play_hero_death()
 	# Play death sound
 	if AudioManager:
 		AudioManager.play_sfx("death")
 		AudioManager.stop_music()
 	# Transition to DeathScene after a brief delay
-	var timer: SceneTreeTimer = get_tree().create_timer(1.0)
+	var timer: SceneTreeTimer = get_tree().create_timer(1.15)
 	timer.timeout.connect(_transition_to_death)
 
 func _transition_to_death() -> void:
@@ -1183,6 +1206,13 @@ func _get_visible_mob_positions() -> Dictionary[int, bool]:
 				if _current_level.visible[mob_pos]:
 					result[mob_pos] = true
 	return result
+
+func _interrupt_rest_if_needed() -> void:
+	if GameManager.hero == null or not GameManager.hero.get("resting"):
+		return
+	var visible_mobs: Dictionary[int, bool] = _get_visible_mob_positions()
+	if not visible_mobs.is_empty() and GameManager.hero.has_method("interrupt"):
+		GameManager.hero.interrupt()
 
 # ---------------------------------------------------------------------------
 # Targeting Mode

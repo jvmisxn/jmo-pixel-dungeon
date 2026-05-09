@@ -125,9 +125,20 @@ func _apply_area_effect(bomb_pos: int, cells: Array[int], dungeon_level: Variant
 
 		BombType.WOOLY:
 			# Summon sheep that block movement at each affected cell
+			var spawned: int = 0
+			if dungeon_level != null:
+				for cell: int in cells:
+					if dungeon_level.has_method("is_passable") and not dungeon_level.is_passable(cell):
+						continue
+					if dungeon_level.has_method("find_char_at") and dungeon_level.find_char_at(cell) != null:
+						continue
+					Sheep.spawn_at(cell, dungeon_level, 10)
+					spawned += 1
 			if MessageLog:
-				MessageLog.add("Sheep appear everywhere!")
-			# TODO: Spawn sheep mob entities at each cell
+				if spawned > 0:
+					MessageLog.add("Sheep appear everywhere!")
+				else:
+					MessageLog.add("The wooly magic fizzles without room to form sheep.")
 
 		BombType.NOISEMAKER:
 			# Alert all enemies on the level

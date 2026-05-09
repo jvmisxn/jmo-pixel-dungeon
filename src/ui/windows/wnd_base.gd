@@ -28,11 +28,17 @@ var _is_closing: bool = false
 
 # --- Animation ---
 const ANIM_DURATION: float = 0.2
+const VIEWPORT_MARGIN: Vector2 = Vector2(24, 24)
+const MIN_WINDOW_SIZE: Vector2 = Vector2(260, 180)
 
 
 func _ready() -> void:
 	_setup_overlay()
 	_setup_window()
+	call_deferred("_fit_and_center_window")
+	var vp: Viewport = get_viewport()
+	if vp and not vp.size_changed.is_connected(_on_viewport_resized):
+		vp.size_changed.connect(_on_viewport_resized)
 	_play_open_animation()
 
 
@@ -58,7 +64,7 @@ func _insert_overlay_behind() -> void:
 func _setup_window() -> void:
 	# SPD chrome-style panel: dark stone background with warm border
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	set_anchors_preset(Control.PRESET_CENTER)
+	set_anchors_preset(Control.PRESET_TOP_LEFT)
 	custom_minimum_size = Vector2(300, 200)
 
 	var panel_style := StyleBoxFlat.new()
@@ -125,6 +131,7 @@ func _setup_window() -> void:
 		content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_content_container.add_child(content)
+	call_deferred("_fit_and_center_window")
 
 
 ## Override in subclass to provide window content.
@@ -228,6 +235,9 @@ func _finish_close() -> void:
 	if _background_overlay and is_instance_valid(_background_overlay):
 		_background_overlay.queue_free()
 		_background_overlay = null
+	var vp: Viewport = get_viewport()
+	if vp and vp.size_changed.is_connected(_on_viewport_resized):
+		vp.size_changed.disconnect(_on_viewport_resized)
 	queue_free()
 
 
@@ -250,3 +260,29 @@ func _gui_input(event: InputEvent) -> void:
 				_dragging = false
 	elif event is InputEventMouseMotion and _dragging:
 		position += event.position - _drag_offset
+
+
+func _on_viewport_resized() -> void:
+	_fit_and_center_window()
+
+
+func _fit_and_center_window() -> void:
+	var parent_control: Control = get_parent() as Control
+	if parent_control == null:
+		return
+	var available_size: Vector2 = parent_control.size - (VIEWPORT_MARGIN * 2.0)
+	available_size.x = max(available_size.x, MIN_WINDOW_SIZE.x)
+	available_size.y = max(available_size.y, MIN_WINDOW_SIZE.y)
+
+	var target_size: Vector2 = custom_minimum_size
+	if target_size.x <= 0.0:
+		target_size.x = size.x
+	if target_size.y <= 0.0:
+		target_size.y = size.y
+	target_size.x = clampf(target_size.x, MIN_WINDOW_SIZE.x, available_size.x)
+	target_size.y = clampf(target_size.y, MIN_WINDOW_SIZE.y, available_size.y)
+	size = target_size
+	custom_minimum_size = target_size
+	var centered_pos: Vector2 = (parent_control.size - size) * 0.5
+	position = Vector2(maxf(0.0, centered_pos.x), maxf(0.0, centered_pos.y))
+	pivot_offset = size * 0.5

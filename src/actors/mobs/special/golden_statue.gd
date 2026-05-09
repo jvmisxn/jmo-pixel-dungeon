@@ -36,16 +36,17 @@ func _generate_golden_weapon(tier: int) -> void:
 	if not Generator:
 		return
 	# Golden statues always wield high-tier weapons
-	weapon = Generator.create_item("melee_weapon")
-	if weapon:
-		# Upgrade it significantly
-		if weapon.has_method("set_level"):
-			weapon.set_level(tier + 2)  # Extra upgrades beyond normal
-		if weapon.has_method("enchant_random"):
-			weapon.enchant_random()
-		# Ensure it's not cursed
-		if "cursed" in weapon:
-			weapon.cursed = false
+	weapon = Generator.random_weapon_for_tier(tier)
+	if weapon == null:
+		return
+	# Upgrade it significantly
+	if "level" in weapon:
+		weapon.level = tier + 2
+	if weapon.has_method("enchant"):
+		weapon.enchant(WeaponEnchantment.random())
+	# Ensure it's not cursed
+	if "cursed" in weapon:
+		weapon.cursed = false
 
 ## Golden statues take reduced damage (stone resilience).
 func take_damage(dmg: int, source: Variant = null) -> int:

@@ -101,7 +101,7 @@ func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: i
 func _cleanup_previous_run() -> void:
 	# Free hero nodes from the previous run
 	for h: Variant in heroes:
-		if h is Node and is_instance_valid(h):
+		if is_instance_valid(h) and h is Node:
 			(h as Node).free()
 	heroes.clear()
 	hero = null
@@ -109,7 +109,7 @@ func _cleanup_previous_run() -> void:
 	# Free mobs cached in the level cache
 	if current_level != null and current_level.get("mobs") != null:
 		for mob: Variant in current_level.mobs:
-			if mob is Node and is_instance_valid(mob):
+			if is_instance_valid(mob) and mob is Node:
 				(mob as Node).free()
 		current_level.mobs.clear()
 	current_level = null
@@ -121,7 +121,7 @@ func _cleanup_previous_run() -> void:
 			var cached_mobs: Variant = cached_data["mobs"]
 			if cached_mobs is Array:
 				for mob_data: Variant in cached_mobs:
-					if mob_data is Node and is_instance_valid(mob_data):
+					if is_instance_valid(mob_data) and mob_data is Node:
 						(mob_data as Node).free()
 	_level_cache.clear()
 
@@ -167,7 +167,7 @@ func _cache_current_level() -> void:
 	# The serialized data is in the cache; these Node instances are no longer needed.
 	if current_level.get("mobs") != null:
 		for mob: Variant in current_level.mobs:
-			if mob is Node and is_instance_valid(mob):
+			if is_instance_valid(mob) and mob is Node:
 				(mob as Node).free()
 		current_level.mobs.clear()
 

@@ -126,7 +126,7 @@ func give_starting_items() -> void:
 			var food: Item = Generator.create_item("ration")
 			if food:
 				belongings.add_item(food)
-			var scroll: Item = Generator.create_item("scroll_of_identify")
+			var scroll: Item = Generator.create_item("identify")
 			if scroll:
 				belongings.add_item(scroll)
 

@@ -25,22 +25,33 @@ signal quickslot_used(slot_index: int, item: RefCounted)
 var _btn_inventory: Button = null
 var _btn_map: Button = null
 var _btn_wait: Button = null
+var _btn_rest: Button = null
 var _btn_search: Button = null
 var _btn_settings: Button = null
 
 # --- Quickslot references ---
 var _quickslots: Array[Button] = []
 var _quickslot_items: Array[RefCounted] = [null, null, null, null, null, null]
+var _quickslot_icons: Array[TextureRect] = []
+var _quickslot_labels: Array[Label] = []
 
 const QUICKSLOT_COUNT: int = 6
 const QUICKSLOT_SIZE: Vector2 = Vector2(44, 36)
+const QUICKSLOT_ICON_SIZE: Vector2 = Vector2(24, 24)
 
 # --- Constants ---
 const BUTTON_MIN_SIZE: Vector2 = Vector2(80, 36)
 const TOOLBAR_PATH: String = "res://assets/spd/interfaces/toolbar.png"
+const ITEM_SHEET_PATH: String = "res://assets/spd/sprites/items.png"
+const ITEM_SPRITE_SIZE: int = 16
+const ITEM_SHEET_COLUMNS: int = 16
 
 ## Tracks last known enabled state to avoid re-applying every frame.
 var _last_enabled: bool = true
+var _compact_mode: bool = false
+
+static var _item_sheet_texture: Texture2D = null
+static var _item_sprite_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -52,11 +63,13 @@ func _ready() -> void:
 	_btn_inventory = _create_spd_button("Inventory", "I")
 	_btn_map = _create_spd_button("Map", "M")
 	_btn_wait = _create_spd_button("Wait", "Space")
+	_btn_rest = _create_spd_button("Rest", "R")
 	_btn_search = _create_spd_button("Search", "S")
 
 	add_child(_btn_inventory)
 	add_child(_btn_map)
 	add_child(_btn_wait)
+	add_child(_btn_rest)
 	add_child(_btn_search)
 
 	# --- Quickslot separator ---
@@ -83,8 +96,10 @@ func _ready() -> void:
 	_btn_inventory.pressed.connect(_on_inventory)
 	_btn_map.pressed.connect(_on_map)
 	_btn_wait.pressed.connect(_on_wait)
+	_btn_rest.pressed.connect(_on_rest)
 	_btn_search.pressed.connect(_on_search)
 	_btn_settings.pressed.connect(_on_settings)
+	_apply_button_labels()
 
 
 ## Create an SPD-styled button matching the stone/chrome aesthetic.
@@ -144,10 +159,8 @@ func _create_spd_button(label: String, shortcut_key: String) -> Button:
 func _create_quickslot_button(index: int) -> Button:
 	var btn := Button.new()
 	btn.name = "Quickslot%d" % index
-	btn.text = "%d" % (index + 1)
 	btn.custom_minimum_size = QUICKSLOT_SIZE
-	btn.add_theme_font_size_override("font_size", 12)
-	btn.add_theme_color_override("font_color", Color(0.8, 0.75, 0.6))
+	btn.clip_text = false
 
 	var normal := StyleBoxFlat.new()
 	normal.bg_color = Color(0.14, 0.12, 0.1)
@@ -165,6 +178,30 @@ func _create_quickslot_button(index: int) -> Button:
 	hover.set_content_margin_all(4)
 	btn.add_theme_stylebox_override("hover", hover)
 
+	var icon := TextureRect.new()
+	icon.name = "Icon"
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.custom_minimum_size = QUICKSLOT_ICON_SIZE
+	icon.size = QUICKSLOT_ICON_SIZE
+	icon.position = Vector2((QUICKSLOT_SIZE.x - QUICKSLOT_ICON_SIZE.x) * 0.5, 4)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(icon)
+	_quickslot_icons.append(icon)
+
+	var slot_label := Label.new()
+	slot_label.name = "SlotLabel"
+	slot_label.text = str(index + 1)
+	slot_label.position = Vector2(4, QUICKSLOT_SIZE.y - 16)
+	slot_label.add_theme_font_size_override("font_size", 11)
+	slot_label.add_theme_color_override("font_color", Color(0.8, 0.75, 0.6))
+	slot_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.8))
+	slot_label.add_theme_constant_override("shadow_offset_x", 1)
+	slot_label.add_theme_constant_override("shadow_offset_y", 1)
+	slot_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(slot_label)
+	_quickslot_labels.append(slot_label)
+
 	btn.pressed.connect(_on_quickslot_pressed.bind(index))
 	return btn
 
@@ -176,9 +213,64 @@ func set_quickslot_item(index: int, item: RefCounted) -> void:
 	_quickslot_items[index] = item
 	if index < _quickslots.size():
 		if item and item.get("item_name") != null:
-			_quickslots[index].text = str(item.item_name).left(4)
+			_quickslots[index].tooltip_text = str(item.item_name)
 		else:
-			_quickslots[index].text = "%d" % (index + 1)
+			_quickslots[index].tooltip_text = "Empty quickslot"
+	if index < _quickslot_icons.size():
+		_quickslot_icons[index].texture = _get_item_texture(item)
+		_quickslot_icons[index].visible = _quickslot_icons[index].texture != null
+
+
+func _get_item_texture(item: RefCounted) -> Texture2D:
+	if item == null or item.get("sprite_index") == null:
+		return null
+	var sprite_index: int = int(item.sprite_index)
+	if sprite_index < 0:
+		return null
+	if _item_sprite_cache.has(sprite_index):
+		return _item_sprite_cache[sprite_index] as Texture2D
+	if _item_sheet_texture == null:
+		if ResourceLoader.exists(ITEM_SHEET_PATH):
+			_item_sheet_texture = load(ITEM_SHEET_PATH) as Texture2D
+		if _item_sheet_texture == null:
+			return null
+	var col: int = sprite_index % ITEM_SHEET_COLUMNS
+	var row: int = sprite_index / ITEM_SHEET_COLUMNS
+	var region := Rect2(col * ITEM_SPRITE_SIZE, row * ITEM_SPRITE_SIZE, ITEM_SPRITE_SIZE, ITEM_SPRITE_SIZE)
+	var atlas := AtlasTexture.new()
+	atlas.atlas = _item_sheet_texture
+	atlas.region = region
+	atlas.filter_clip = true
+	_item_sprite_cache[sprite_index] = atlas
+	return atlas
+
+
+func set_compact_mode(is_compact: bool) -> void:
+	if _compact_mode == is_compact:
+		return
+	_compact_mode = is_compact
+	_apply_button_labels()
+
+
+func _apply_button_labels() -> void:
+	if _btn_inventory:
+		_btn_inventory.text = "Inv [I]" if _compact_mode else "Inventory [I]"
+		_btn_inventory.custom_minimum_size.x = 64 if _compact_mode else BUTTON_MIN_SIZE.x
+	if _btn_map:
+		_btn_map.text = "Map [M]"
+		_btn_map.custom_minimum_size.x = 56 if _compact_mode else BUTTON_MIN_SIZE.x
+	if _btn_wait:
+		_btn_wait.text = "Wait" if _compact_mode else "Wait [Space]"
+		_btn_wait.custom_minimum_size.x = 56 if _compact_mode else BUTTON_MIN_SIZE.x
+	if _btn_rest:
+		_btn_rest.text = "Rest [R]"
+		_btn_rest.custom_minimum_size.x = 56 if _compact_mode else BUTTON_MIN_SIZE.x
+	if _btn_search:
+		_btn_search.text = "Find [S]" if _compact_mode else "Search [S]"
+		_btn_search.custom_minimum_size.x = 56 if _compact_mode else BUTTON_MIN_SIZE.x
+	if _btn_settings:
+		_btn_settings.text = "Menu" if _compact_mode else "Settings [Esc]"
+		_btn_settings.custom_minimum_size.x = 60 if _compact_mode else BUTTON_MIN_SIZE.x
 
 
 ## Enable or disable all toolbar buttons.
@@ -192,6 +284,8 @@ func set_enabled(is_enabled: bool) -> void:
 		_btn_map.disabled = not is_enabled
 	if _btn_wait:
 		_btn_wait.disabled = not is_enabled
+	if _btn_rest:
+		_btn_rest.disabled = not is_enabled
 	if _btn_search:
 		_btn_search.disabled = not is_enabled
 	if _btn_settings:
@@ -210,6 +304,9 @@ func _on_map() -> void:
 
 func _on_wait() -> void:
 	wait_pressed.emit()
+
+func _on_rest() -> void:
+	rest_pressed.emit()
 
 func _on_search() -> void:
 	search_pressed.emit()

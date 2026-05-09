@@ -7,7 +7,7 @@ extends Mob
 ## Whether this mimic is still disguised as an item heap.
 var disguised: bool = true
 ## The fake item this mimic appears as (for visual purposes).
-var fake_item_id: String = "potion_of_healing"
+var fake_item_id: String = "healing"
 ## Items stored inside the mimic (dropped on death).
 var stored_items: Array = []
 
@@ -37,7 +37,7 @@ func scale_to_depth(p_depth: int) -> void:
 	armor_value = 2 + tier * 2
 	xp_value = 4 + tier * 2
 	# Generate appropriate fake loot appearance
-	var possible_fakes: Array[String] = ["potion_of_healing", "scroll_of_upgrade", "iron_key", "gold"]
+	var possible_fakes: Array[String] = ["healing", "upgrade", "iron_key", "gold"]
 	fake_item_id = possible_fakes[randi_range(0, possible_fakes.size() - 1)]
 
 ## Reveal the mimic — called when hero tries to interact with or step on it.

@@ -1231,18 +1231,18 @@ class UnstableSpellbook extends Artifact:
 
 	## All possible scroll effect IDs that can be cast.
 	const SCROLL_EFFECTS: Array[String] = [
-		"scroll_of_identify",
-		"scroll_of_upgrade",
-		"scroll_of_remove_curse",
-		"scroll_of_teleportation",
-		"scroll_of_lullaby",
-		"scroll_of_rage",
-		"scroll_of_terror",
-		"scroll_of_magic_mapping",
-		"scroll_of_retribution",
-		"scroll_of_mirror_image",
-		"scroll_of_transmutation",
-		"scroll_of_recharging",
+		"identify",
+		"upgrade",
+		"remove_curse",
+		"teleportation",
+		"lullaby",
+		"rage",
+		"terror",
+		"magic_mapping",
+		"retribution",
+		"mirror_image",
+		"transmutation",
+		"recharging",
 	]
 
 	## Scrolls that have been fed to the book (can't get those as random results).

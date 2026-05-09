@@ -715,12 +715,10 @@ func add_blob(blob: Variant, cell: int) -> void:
 func alert_all_mobs(alert_pos: int) -> void:
 	for mob: Variant in mobs:
 		if mob != null and is_instance_valid(mob):
-			mob.state = Mob.AIState.HUNTING
-			if mob.has_method("_wake_up"):
-				# Find the hero to set as target
-				var heroes: Array = get_heroes()
-				if not heroes.is_empty():
-					mob._wake_up(heroes[0])
+			if mob.has_method("alert"):
+				mob.alert(alert_pos)
+			else:
+				mob.state = Mob.AIState.HUNTING
 
 ## Get sign text for a cell position. Signs are decoration; return flavor text.
 func get_sign_text(sign_pos: int) -> String:

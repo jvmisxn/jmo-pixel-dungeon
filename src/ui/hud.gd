@@ -9,6 +9,8 @@ extends CanvasLayer
 
 # --- Constants ---
 const TOOLBAR_HEIGHT: int = 40
+const MOBILE_BREAKPOINT: float = 720.0
+const HUD_MARGIN: float = 6.0
 
 # --- Child panels ---
 var toolbar: MarginContainer = null
@@ -36,6 +38,7 @@ func _ready() -> void:
 	_build_layout()
 	_connect_signals()
 	update_all()
+	_apply_responsive_layout()
 	# Re-layout when viewport resizes
 	get_viewport().size_changed.connect(_on_viewport_resized)
 
@@ -51,7 +54,7 @@ func _build_layout() -> void:
 	# --- Status Pane (top-left, like original SPD) ---
 	var status_container: PanelContainer = PanelContainer.new()
 	status_container.name = "StatusContainer"
-	status_container.position = Vector2(0, 0)
+	status_container.position = Vector2(HUD_MARGIN, HUD_MARGIN)
 	status_container.custom_minimum_size = Vector2(220, 140)
 	var status_style: StyleBoxFlat = StyleBoxFlat.new()
 	status_style.bg_color = Color(0.08, 0.07, 0.06, 0.92)
@@ -71,7 +74,7 @@ func _build_layout() -> void:
 	# --- Game Log (bottom-left, floating over game world) ---
 	var log_container: MarginContainer = MarginContainer.new()
 	log_container.name = "GameLog"
-	log_container.position = Vector2(4, _vp_size.y - TOOLBAR_HEIGHT - 200)
+	log_container.position = Vector2(HUD_MARGIN, _vp_size.y - TOOLBAR_HEIGHT - 200)
 	log_container.custom_minimum_size = Vector2(300, 195)
 	log_container.size = Vector2(300, 195)
 	log_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -118,7 +121,7 @@ func _build_layout() -> void:
 	var info_row: HBoxContainer = HBoxContainer.new()
 	info_row.name = "InfoRow"
 	info_row.add_theme_constant_override("separation", 16)
-	info_row.position = Vector2(_vp_size.x - 260, 6)
+	info_row.position = Vector2(_vp_size.x - 260, HUD_MARGIN)
 	info_row.custom_minimum_size = Vector2(180, 20)
 	info_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -200,7 +203,6 @@ func show_window(window_node: Control) -> void:
 		# Listen for the window closing itself (X button, Escape) so HUD can clean up
 		wnd.window_closed.connect(_on_active_window_self_closed)
 	window_layer.add_child(window_node)
-	window_node.set_anchors_preset(Control.PRESET_CENTER)
 	window_layer.visible = true
 	window_layer.mouse_filter = Control.MOUSE_FILTER_STOP
 
@@ -211,7 +213,6 @@ func _on_sub_window_requested(wnd: WndBase) -> void:
 	wnd.open_sub_window.connect(_on_sub_window_requested)
 	_sub_windows.append(wnd)
 	window_layer.add_child(wnd)
-	wnd.set_anchors_preset(Control.PRESET_CENTER)
 
 
 ## Called when the active window closes itself (X button, Escape key).
@@ -245,6 +246,7 @@ func close_window() -> void:
 ## Force update all HUD elements.
 func update_all() -> void:
 	_update_info_row()
+	_refresh_quickslots()
 	if _status_pane:
 		_status_pane.update_all()
 	if _game_log_display:
@@ -282,21 +284,13 @@ func _on_viewport_resized() -> void:
 		toolbar.position = Vector2(0, _vp_size.y - TOOLBAR_HEIGHT)
 		toolbar.custom_minimum_size = Vector2(_vp_size.x, TOOLBAR_HEIGHT)
 		toolbar.size = Vector2(_vp_size.x, TOOLBAR_HEIGHT)
-	# Reposition game log above toolbar
-	var log_container: Node = root_node.get_node_or_null("GameLog")
-	if log_container and log_container is Control:
-		(log_container as Control).position = Vector2(4, _vp_size.y - TOOLBAR_HEIGHT - 200)
-	# Reposition info row and minimap (top-right)
-	var info_row: Node = root_node.get_node_or_null("InfoRow")
-	if info_row and info_row is Control:
-		(info_row as Control).position = Vector2(_vp_size.x - 260, 6)
-	if _minimap:
-		_minimap.position = Vector2(_vp_size.x - 74, 28)
+	_apply_responsive_layout()
 
 
 # --- EventBus Signal Handlers ---
 
 func _on_stats_changed() -> void:
+	_refresh_quickslots()
 	if _status_pane:
 		_status_pane.update_all()
 
@@ -361,14 +355,35 @@ func _on_wait_pressed() -> void:
 
 
 func _on_rest_pressed() -> void:
-	# Rest is currently a single-turn wait shortcut.
-	if GameManager and GameManager.hero and GameManager.hero.has_method("submit_action"):
-		GameManager.hero.submit_action({"type": "wait"})
+	if GameManager == null or GameManager.hero == null or TurnManager == null:
+		return
+	if not TurnManager.waiting_for_input or TurnManager.processing_mobs:
+		return
+	if _visible_enemy_present():
+		if MessageLog:
+			MessageLog.add_warning("You can't rest while enemies are in view.")
+		return
+	if GameManager.hero.has_method("rest"):
+		GameManager.hero.rest(true)
 
 
 func _on_search_pressed() -> void:
 	# Gameplay search input is owned by GameScene so it only fires while hero input is active.
 	pass
+
+func _visible_enemy_present() -> bool:
+	var level_ref: Variant = GameManager.current_level if GameManager else null
+	if level_ref == null or level_ref.get("mobs") == null or level_ref.get("visible") == null:
+		return false
+	for mob: Variant in level_ref.mobs:
+		if not is_instance_valid(mob):
+			continue
+		if mob.get("is_alive") != true:
+			continue
+		var mob_pos: int = mob.get("pos") as int
+		if mob_pos >= 0 and mob_pos < level_ref.visible.size() and level_ref.visible[mob_pos]:
+			return true
+	return false
 
 
 func _on_settings_pressed() -> void:
@@ -395,3 +410,46 @@ func _on_quickslot_used(slot_index: int, item: RefCounted) -> void:
 		return
 	if item.has_method("execute"):
 		item.execute(GameManager.hero)
+
+func _refresh_quickslots() -> void:
+	if _toolbar_bar == null or GameManager == null or GameManager.hero == null:
+		return
+	var belongings: Variant = GameManager.hero.get("belongings")
+	if belongings == null or not belongings.has_method("get_quickslot"):
+		return
+	for i: int in range(Belongings.QUICKSLOT_COUNT):
+		_toolbar_bar.set_quickslot_item(i, belongings.get_quickslot(i))
+
+
+func _apply_responsive_layout() -> void:
+	var root_node: Control = get_node_or_null("HUDRoot") as Control
+	if root_node == null:
+		return
+
+	var is_mobile_layout: bool = _vp_size.x <= MOBILE_BREAKPOINT or _vp_size.y > _vp_size.x
+	var status_container: Control = root_node.get_node_or_null("StatusContainer") as Control
+	var log_container: Control = root_node.get_node_or_null("GameLog") as Control
+	var info_row: Control = root_node.get_node_or_null("InfoRow") as Control
+
+	if status_container:
+		status_container.position = Vector2(HUD_MARGIN, HUD_MARGIN)
+		status_container.custom_minimum_size = Vector2(180 if is_mobile_layout else 220, 140)
+
+	if log_container:
+		var log_width: float = minf(300.0, _vp_size.x - (HUD_MARGIN * 2.0))
+		var log_height: float = 132.0 if is_mobile_layout else 195.0
+		log_container.custom_minimum_size = Vector2(log_width, log_height)
+		log_container.size = Vector2(log_width, log_height)
+		log_container.position = Vector2(HUD_MARGIN, _vp_size.y - TOOLBAR_HEIGHT - log_height - HUD_MARGIN)
+
+	if info_row:
+		var info_width: float = 180.0
+		info_row.position = Vector2(maxf(HUD_MARGIN, _vp_size.x - info_width - HUD_MARGIN), HUD_MARGIN)
+
+	if _minimap:
+		_minimap.visible = not is_mobile_layout
+		if _minimap.visible:
+			_minimap.position = Vector2(_vp_size.x - _minimap.size.x - 10.0, 28.0)
+
+	if _toolbar_bar:
+		_toolbar_bar.set_compact_mode(is_mobile_layout)
