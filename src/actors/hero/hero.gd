@@ -844,20 +844,24 @@ func on_food_eaten(_food: Food, hunger_before: float, hp_before: int, hp_max_bef
 
 
 func on_trampled_grass() -> void:
-	var bounty_level: int = get_talent_level("huntress_natures_bounty")
-	if hero_class != ConstantsData.HeroClass.HUNTRESS or bounty_level <= 0 or level == null:
+	if level == null:
 		return
 
-	var dew_chance: float = 0.20 * bounty_level
-	var seed_chance: float = 0.10 * bounty_level
+	var bounty_level: int = get_talent_level("huntress_natures_bounty")
+	var dew_chance: float = 0.18
+	var seed_chance: float = 0.0
 
-	if randf() < dew_chance:
+	if hero_class == ConstantsData.HeroClass.HUNTRESS and bounty_level > 0:
+		dew_chance += 0.12 * bounty_level
+		seed_chance = 0.10 * bounty_level
+
+	if randf() < clampf(dew_chance, 0.0, 1.0):
 		var dew: Dewdrop = Generator.create_item("dewdrop") as Dewdrop
 		if dew != null:
 			dew.on_pickup(self)
 		return
 
-	if randf() < seed_chance and not Generator.SEEDS.is_empty():
+	if seed_chance > 0.0 and randf() < clampf(seed_chance, 0.0, 1.0) and not Generator.SEEDS.is_empty():
 		var seed_id: String = Generator.SEEDS[randi_range(0, Generator.SEEDS.size() - 1)]
 		var seed: Item = Generator.create_item(seed_id)
 		if seed != null and level.has_method("drop_item"):

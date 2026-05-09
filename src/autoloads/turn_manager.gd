@@ -36,8 +36,9 @@ var waiting_for_input: bool = false
 var processing_mobs: bool = false
 
 ## Delay (seconds) between visible mob actions (move/attack in hero's FOV).
-## Invisible or inactive mobs are processed instantly with no delay.
-const MOB_ACTION_DELAY: float = 0.05
+## Set to 0 so visible mobs still animate/update in order, but don't add
+## extra post-action waiting before control returns to the hero.
+const MOB_ACTION_DELAY: float = 0.0
 
 ## Cached reference to the active GameScene (cleared on level transitions).
 var _cached_game_scene: Node = null
@@ -232,8 +233,9 @@ func _process_mobs_async() -> void:
 			actor.did_visible_action = false
 			if game_scene and game_scene.has_method("on_mob_action"):
 				game_scene.on_mob_action(actor)
-			# Brief delay for visible actions
-			await Engine.get_main_loop().create_timer(MOB_ACTION_DELAY).timeout
+			# Optional pacing delay for visible actions.
+			if MOB_ACTION_DELAY > 0.0:
+				await Engine.get_main_loop().create_timer(MOB_ACTION_DELAY).timeout
 
 	processing_mobs = false
 

@@ -398,7 +398,11 @@ func _spawn_single_mob_sprite(mob: Variant) -> void:
 	# Disguised mimics render as item sprites until revealed
 	if mob.get("disguised") == true and mob.get("mob_id") == "mimic":
 		var item_sprite: ItemSprite = ItemSprite.new()
-		item_sprite.setup_manual(ConstantsData.ItemCategory.POTION)  # Looks like an item
+		var fake_item: Variant = Generator.create_item(str(mob.get("fake_item_id", "")))
+		if fake_item != null:
+			item_sprite.setup_from_item(fake_item)
+		else:
+			item_sprite.setup_manual(ConstantsData.ItemCategory.MISC)
 		item_sprite.place_at(mob.get("pos"))
 		_entity_layer.add_child(item_sprite)
 		var key: int = mob.get("actor_id") if mob.get("actor_id") != null else mob.get_instance_id()

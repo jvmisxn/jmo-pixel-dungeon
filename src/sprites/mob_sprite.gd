@@ -129,6 +129,8 @@ static var _MOB_SHEETS: Dictionary = {
 	"succubus":        { "path": "succubus.png",       "fw": 12, "fh": 15 },
 	"eye":             { "path": "eye.png",            "fw": 16, "fh": 18 },
 	"scorpio":         { "path": "scorpio.png",        "fw": 18, "fh": 17 },
+	# --- Special ---
+	"mimic":           { "path": "mimic.png",          "fw": 16, "fh": 16 },
 }
 
 # --- State ---

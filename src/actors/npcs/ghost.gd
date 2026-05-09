@@ -66,19 +66,23 @@ func get_speed() -> float:
 func choose_enemy() -> Variant:
 	return null
 
-## Override wander destination: Ghost cannot wander onto heaps or the level exit.
-## Matches original Ghost.Wandering.randomDestination() override.
-func _get_wander_destination() -> int:
-	var dest: int = super._get_wander_destination() if has_method("_get_wander_destination") else -1
-	if dest < 0:
-		return dest
-	# Cannot wander onto heaps
-	if level and level.has_method("heap_at") and level.heap_at(dest) != null:
-		return -1
-	# Cannot wander onto level exit
-	if level and level.has_method("get_exit") and dest == level.get_exit():
-		return -1
-	return dest
+## Override wandering so Ghost cannot wander onto heaps or the level exit.
+func _wander() -> void:
+	if level == null:
+		return
+	var options: Array[int] = []
+	for dir: int in ConstantsData.DIRS_8:
+		var next_pos: int = pos + dir
+		if not _can_move_to(next_pos):
+			continue
+		if level.has_method("heaps_at") and not level.heaps_at(next_pos).is_empty():
+			continue
+		if level.get("exit_pos") != null and next_pos == level.exit_pos:
+			continue
+		options.append(next_pos)
+	if options.is_empty():
+		return
+	move_to(options[randi() % options.size()])
 
 ## Override _set_state: Ghost wanders (not passive like other NPCs, not hunting).
 func _set_state(new_state: AIState) -> void:
@@ -148,16 +152,12 @@ func _generate_rewards() -> void:
 	}
 	var tier_weapons: Array = weapon_ids_by_tier.get(reward_tier, ["shortsword"])
 	var picked_weapon_id: String = tier_weapons[randi() % tier_weapons.size()]
-
-	var _ItemScript: GDScript = load("res://src/items/item.gd")
-	reward_weapon = _ItemScript.new()
-	reward_weapon.item_id = picked_weapon_id
-	reward_weapon.item_name = picked_weapon_id.capitalize().replace("_", " ")
-	reward_weapon.description = "A weapon left behind by the ghost."
-	reward_weapon.category = ConstantsData.ItemCategory.WEAPON
-	reward_weapon.identified = true
-	reward_weapon.level = item_level
-	reward_weapon.set("tier", reward_tier)
+	reward_weapon = Generator.create_item(picked_weapon_id)
+	if reward_weapon != null:
+		reward_weapon.identified = true
+		for _i: int in range(item_level):
+			if reward_weapon.has_method("upgrade"):
+				reward_weapon.upgrade()
 
 	# Generate an armor reward using the proper tier
 	var armor_ids_by_tier: Dictionary = {
@@ -168,12 +168,148 @@ func _generate_rewards() -> void:
 	}
 	var tier_armors: Array = armor_ids_by_tier.get(reward_tier, ["leather_armor"])
 	var picked_armor_id: String = tier_armors[randi() % tier_armors.size()]
+	reward_armor = Generator.create_item(picked_armor_id)
+	if reward_armor != null:
+		reward_armor.identified = true
+		for _j: int in range(item_level):
+			if reward_armor.has_method("upgrade"):
+				reward_armor.upgrade()
 
-	reward_armor = _ItemScript.new()
-	reward_armor.item_id = picked_armor_id
-	reward_armor.item_name = picked_armor_id.capitalize().replace("_", " ")
-	reward_armor.description = "Armor left behind by the ghost."
-	reward_armor.category = ConstantsData.ItemCategory.ARMOR
-	reward_armor.identified = true
-	reward_armor.level = item_level
-	reward_armor.set("tier", reward_tier)
+# ---------------------------------------------------------------------------
+# Interaction
+# ---------------------------------------------------------------------------
+
+func interact(hero: Variant) -> void:
+	if hero == null:
+		return
+	if EventBus:
+		EventBus.npc_interacted.emit(npc_name)
+
+	if reward_given:
+		if MessageLog:
+			MessageLog.add_info("The ghost has already found peace.")
+		return
+
+	if quest_complete or target_slain:
+		quest_complete = true
+		if MessageLog:
+			MessageLog.add_info(dialogue_lines[2])
+		_offer_reward(hero)
+		return
+
+	if quest_active:
+		if MessageLog:
+			MessageLog.add_info(dialogue_lines[1] % quest_target_name)
+		return
+
+	quest_active = true
+	if not quest_mob_spawned:
+		_spawn_quest_mob()
+	if MessageLog:
+		MessageLog.add_info(dialogue_lines[0] % quest_target_name)
+	if EventBus:
+		EventBus.quest_updated.emit(quest_id, "active")
+
+# ---------------------------------------------------------------------------
+# Kill Tracking
+# ---------------------------------------------------------------------------
+
+func on_mob_defeated(_mob_pos: int, mob_name_str: String) -> void:
+	if not quest_active or reward_given or target_slain or quest_target_id == "":
+		return
+	var name_lower: String = mob_name_str.to_lower()
+	var target_lower: String = quest_target_id.to_lower()
+	if name_lower == target_lower or name_lower.begins_with(target_lower):
+		target_slain = true
+		quest_complete = true
+		if MessageLog:
+			MessageLog.add_positive("You have avenged the sad ghost.")
+		if EventBus:
+			EventBus.quest_updated.emit(quest_id, "complete")
+
+# ---------------------------------------------------------------------------
+# Quest Mob Spawning
+# ---------------------------------------------------------------------------
+
+func _spawn_quest_mob() -> void:
+	if quest_mob_spawned or level == null:
+		return
+	var mob: Mob = MobFactory.create_mob(quest_target_id)
+	if mob == null:
+		return
+	var spawn_pos: int = _find_quest_spawn_pos()
+	if spawn_pos < 0:
+		return
+	mob.pos = spawn_pos
+	mob.level = level
+	level.add_mob(mob)
+	if TurnManager:
+		TurnManager.add_actor(mob)
+	if level.has_method("get_terrain") and level.has_method("set_terrain"):
+		var terrain: int = level.get_terrain(spawn_pos)
+		if terrain == ConstantsData.Terrain.HIGH_GRASS or terrain == ConstantsData.Terrain.FURROWED_GRASS:
+			level.set_terrain(spawn_pos, ConstantsData.Terrain.GRASS)
+	if EventBus:
+		EventBus.mob_revealed.emit(mob)
+	quest_mob_spawned = true
+
+func _find_quest_spawn_pos() -> int:
+	if level == null:
+		return -1
+	var hero: Variant = GameManager.hero if GameManager else null
+	for _attempt: int in range(80):
+		var candidate: int = randi() % ConstantsData.LENGTH
+		if not level.has_method("is_passable") or not level.is_passable(candidate):
+			continue
+		if level.has_method("find_char_at") and level.find_char_at(candidate) != null:
+			continue
+		if hero != null and hero.has_method("distance_to") and hero.distance_to(candidate) < 6:
+			continue
+		return candidate
+	return -1
+
+# ---------------------------------------------------------------------------
+# Reward
+# ---------------------------------------------------------------------------
+
+func _offer_reward(hero: Variant) -> void:
+	var rewards: Array = []
+	if reward_weapon != null:
+		rewards.append(reward_weapon)
+	if reward_armor != null:
+		rewards.append(reward_armor)
+	if rewards.is_empty():
+		_depart()
+		return
+
+	var wnd: Node = load("res://src/ui/windows/wnd_quest_reward.gd").new()
+	wnd.setup("Ghost's Gratitude", "Choose a keepsake from the ghost.", rewards, hero)
+	wnd.tree_exited.connect(_on_reward_window_closed)
+
+	if EventBus and EventBus.has_signal("show_window"):
+		EventBus.show_window.emit(wnd)
+	else:
+		if hero and hero.get("belongings") != null and hero.belongings.has_method("add_item"):
+			hero.belongings.add_item(rewards[0])
+		_on_reward_window_closed()
+
+func _on_reward_window_closed() -> void:
+	if reward_given:
+		return
+	reward_given = true
+	if EventBus:
+		EventBus.quest_updated.emit(quest_id, "reward_chosen")
+	if MessageLog:
+		MessageLog.add_info("The sad ghost smiles faintly and fades away.")
+	_depart()
+
+func _depart() -> void:
+	is_alive = false
+	deactivate()
+	if EventBus and EventBus.has_signal("mob_defeated") and EventBus.mob_defeated.is_connected(on_mob_defeated):
+		EventBus.mob_defeated.disconnect(on_mob_defeated)
+	if QuestHandler:
+		QuestHandler.unregister_npc(self)
+		QuestHandler.complete_quest(quest_id)
+	if level and level.has_method("remove_mob"):
+		level.remove_mob(self)
