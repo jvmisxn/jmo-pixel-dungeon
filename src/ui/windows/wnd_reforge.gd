@@ -13,6 +13,7 @@ var _reforge_button: Button = null
 var _info_label: Label = null
 var _hero: Variant = null
 var _scroll_container: ScrollContainer = null
+var _blacksmith: Variant = null
 
 ## Which target slot is being filled next (1 or 2). 0 = auto-pick first empty.
 var _active_target: int = 0
@@ -23,8 +24,14 @@ func _init() -> void:
 	custom_minimum_size = Vector2(400, 440)
 
 
+func setup(hero: Variant, blacksmith: Variant = null) -> void:
+	_hero = hero
+	_blacksmith = blacksmith
+
+
 func _build_content() -> Control:
-	_hero = GameManager.hero if GameManager else null
+	if _hero == null and GameManager:
+		_hero = GameManager.hero
 
 	var main: VBoxContainer = VBoxContainer.new()
 	main.add_theme_constant_override("separation", 6)
@@ -241,8 +248,7 @@ func _update_state() -> void:
 	if both_filled:
 		var lvl_1: int = ConstantsData.get_prop(_item_1, "level", 0)
 		var lvl_2: int = ConstantsData.get_prop(_item_2, "level", 0)
-		# Original reforge: item_a gains +1 plus item_b's upgrade level
-		var result_level: int = lvl_1 + 1 + maxi(0, lvl_2)
+		var result_level: int = maxi(lvl_1, lvl_2) + 1
 		var name_1: String = _item_1.get_display_name() if _item_1.has_method("get_display_name") else ConstantsData.get_prop(_item_1, "item_name", "item")
 		var name_2: String = _item_2.get_display_name() if _item_2.has_method("get_display_name") else ConstantsData.get_prop(_item_2, "item_name", "item")
 		_info_label.text = "%s (+%d) will absorb %s (+%d) -> +%d" % [
@@ -264,49 +270,8 @@ func _on_reforge_pressed() -> void:
 	if _item_1 == null or _item_2 == null:
 		return
 
-	var lvl_transfer: int = ConstantsData.get_prop(_item_2, "level", 0)
-	var old_name_1: String = ConstantsData.get_prop(_item_1, "item_name", "item")
-	if _item_1.has_method("get_display_name"):
-		old_name_1 = _item_1.get_display_name()
-	var old_name_2: String = ConstantsData.get_prop(_item_2, "item_name", "item")
-	if _item_2.has_method("get_display_name"):
-		old_name_2 = _item_2.get_display_name()
-
-	# Transfer upgrades from item 2 to item 1: +1 bonus plus item_2's level
-	var total_upgrades: int = 1 + maxi(0, lvl_transfer)
-	if _item_1.has_method("upgrade"):
-		for i: int in range(total_upgrades):
-			_item_1.upgrade()
-	else:
-		_item_1.level = ConstantsData.get_prop(_item_1, "level", 0) + total_upgrades
-
-	# Remove curse from the kept item
-	if "cursed" in _item_1:
-		_item_1.cursed = false
-	if "cursed_known" in _item_1:
-		_item_1.cursed_known = true
-
-	# Identify the kept item
-	if _item_1.has_method("identify"):
-		_item_1.identify()
-
-	# Remove item 2 from inventory
-	if _hero and _hero.belongings:
-		# Check if item_2 is equipped
-		if _hero.belongings.weapon == _item_2:
-			_hero.belongings.unequip("weapon")
-		elif _hero.belongings.armor == _item_2:
-			_hero.belongings.unequip("armor")
-		else:
-			_hero.belongings.remove_item(_item_2)
-
-	if MessageLog:
-		MessageLog.add_positive("The blacksmith reforges your %s with the %s!" % [old_name_1, old_name_2])
-
-	if EventBus:
-		EventBus.quest_updated.emit("blacksmith", "reforge_complete")
-
-	if GameManager:
-		GameManager.record_stat("items_reforged")
-
-	close_window()
+	var success: bool = false
+	if _blacksmith != null and _blacksmith.has_method("reforge"):
+		success = _blacksmith.reforge(_hero, _item_1, _item_2)
+	if success:
+		close_window()
