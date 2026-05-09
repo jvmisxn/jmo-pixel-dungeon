@@ -21,17 +21,23 @@ func _init() -> void:
 func _act_hunting() -> void:
 	if target == null or not target.is_alive:
 		_set_state(AIState.WANDERING)
+		spend_turn()
 		return
 	sting_cooldown = maxi(0, sting_cooldown - 1)
 	var dist: int = distance_to(target.pos)
 	if sting_cooldown <= 0 and dist >= 2 and dist <= 6 and can_see(target.pos):
 		_ranged_sting()
+		spend_attack()
 		return
 	if dist <= 2:
 		_move_away_from(target.pos)
+		spend_move()
 		return
 	if dist > 6:
 		_move_toward(target.pos)
+		spend_move()
+		return
+	spend_turn()
 
 func _ranged_sting() -> void:
 	if target == null:

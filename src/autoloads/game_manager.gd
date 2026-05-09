@@ -189,6 +189,11 @@ func add_gold(amount: int) -> void:
 	gold_changed.emit(gold)
 	if EventBus:
 		EventBus.gold_collected.emit(amount, gold)
+	if amount > 0 and hero != null:
+		var belongings: Variant = hero.get("belongings")
+		var artifact: Variant = belongings.get_equipped_artifact() if belongings != null and belongings.has_method("get_equipped_artifact") else null
+		if artifact != null and artifact.has_method("on_gold_pickup"):
+			artifact.on_gold_pickup(amount)
 	stats["gold_collected"] = stats.get("gold_collected", 0) + amount
 
 ## Spend gold. Returns true if the hero had enough.

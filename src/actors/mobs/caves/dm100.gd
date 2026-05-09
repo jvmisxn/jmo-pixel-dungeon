@@ -27,6 +27,7 @@ func _init() -> void:
 func _act_hunting() -> void:
 	if target == null or not target.is_alive:
 		_set_state(AIState.WANDERING)
+		spend_turn()
 		return
 
 	zap_cooldown = maxi(0, zap_cooldown - 1)
@@ -35,16 +36,21 @@ func _act_hunting() -> void:
 	# Zap at range
 	if zap_cooldown <= 0 and dist >= 2 and dist <= ZAP_RANGE and can_see(target.pos):
 		_zap()
+		spend_attack()
 		return
 
 	# If too close, back up slightly
 	if dist <= 1:
 		_move_away_from(target.pos)
+		spend_move()
 		return
 
 	# Move closer if out of range
 	if dist > ZAP_RANGE:
 		_move_toward(target.pos)
+		spend_move()
+		return
+	spend_turn()
 
 func _zap() -> void:
 	did_visible_action = true

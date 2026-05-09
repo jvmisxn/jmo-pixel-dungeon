@@ -114,9 +114,15 @@ func _take_ore(hero: Variant) -> void:
 	var belongings: Variant = hero.get("belongings")
 	if belongings == null:
 		return
-	if belongings.has_method("remove_item_by_id"):
-		belongings.remove_item_by_id("dark_gold_ore", REQUIRED_ORE)
-	if MessageLog:
+	var removed: int = 0
+	if belongings.has_method("remove_item_quantity"):
+		removed = belongings.remove_item_quantity("dark_gold_ore", REQUIRED_ORE)
+	elif belongings.has_method("remove_item_by_id"):
+		for _i: int in range(REQUIRED_ORE):
+			if belongings.remove_item_by_id("dark_gold_ore") == null:
+				break
+			removed += 1
+	if removed > 0 and MessageLog:
 		MessageLog.add_info("You hand over %d pieces of dark gold ore." % REQUIRED_ORE)
 
 # ---------------------------------------------------------------------------
@@ -124,13 +130,13 @@ func _take_ore(hero: Variant) -> void:
 # ---------------------------------------------------------------------------
 
 func _offer_reforge(hero: Variant) -> void:
-	# In a full implementation, this opens a UI where the hero selects two items.
-	# The first item keeps its identity; the second is consumed and its upgrade
-	# level is transferred (+1 bonus). For now, log the offer.
-	if MessageLog:
-		MessageLog.add_positive("The blacksmith is ready to reforge! Select two items to combine.")
-		MessageLog.add_info("(The second item will be consumed to upgrade the first.)")
-	# The actual reforge is triggered by reforge() when the UI makes the call.
+	var wnd: Variant = load("res://src/ui/windows/wnd_reforge.gd").new()
+	if wnd.has_method("setup"):
+		wnd.setup(hero, self)
+	if EventBus and EventBus.has_signal("show_window"):
+		EventBus.show_window.emit(wnd)
+	elif MessageLog:
+		MessageLog.add_positive("The blacksmith is ready to reforge, but no forge window is available.")
 
 ## Reforge two items: keep item_a, consume item_b, transfer upgrade bonus.
 ## Returns true on success.
@@ -159,10 +165,22 @@ func reforge(hero: Variant, item_a: Variant, item_b: Variant) -> bool:
 	for i: int in range(upgrades_needed):
 		item_a.upgrade()
 
+	if "cursed" in item_a:
+		item_a.cursed = false
+	if "cursed_known" in item_a:
+		item_a.cursed_known = true
+	if item_a.has_method("identify"):
+		item_a.identify()
+
 	# Remove item_b from inventory
 	var belongings: Variant = hero.get("belongings") if hero else null
-	if belongings and belongings.has_method("remove_item"):
-		belongings.remove_item(item_b)
+	if belongings != null:
+		if belongings.weapon == item_b:
+			belongings.unequip("weapon")
+		elif belongings.armor == item_b:
+			belongings.unequip("armor")
+		elif belongings.has_method("remove_item"):
+			belongings.remove_item(item_b)
 
 	has_reforged = true
 
@@ -170,8 +188,19 @@ func reforge(hero: Variant, item_a: Variant, item_b: Variant) -> bool:
 		MessageLog.add_positive("The blacksmith hammers away... done! %s has been upgraded!" % item_a.get_display_name())
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "complete")
+		EventBus.hero_stats_changed.emit()
 
 	return true
 
-# ------------------
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["ore_delivered"] = ore_delivered
+	data["has_reforged"] = has_reforged
+	return data
 
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	ore_delivered = bool(data.get("ore_delivered", ore_delivered))
+	has_reforged = bool(data.get("has_reforged", has_reforged))
+
+# ------------------

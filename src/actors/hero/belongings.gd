@@ -317,6 +317,30 @@ func remove_item_by_id(search_id: String) -> Item:
 			return item
 	return null
 
+## Remove up to [amount] quantity of items matching [search_id] from the backpack.
+## Returns the number of units removed.
+func remove_item_quantity(search_id: String, amount: int = 1) -> int:
+	if amount <= 0:
+		return 0
+	var remaining: int = amount
+	for i: int in range(backpack.size() - 1, -1, -1):
+		var item: Item = backpack[i]
+		if item == null or item.item_id != search_id:
+			continue
+		var item_amount: int = item.quantity if item.stackable else 1
+		var removed_here: int = mini(item_amount, remaining)
+		remaining -= removed_here
+		if item.stackable and item.quantity > removed_here:
+			item.quantity -= removed_here
+		else:
+			backpack.remove_at(i)
+			for qi: int in range(QUICKSLOT_COUNT):
+				if quickslots[qi] == item:
+					quickslots[qi] = null
+		if remaining <= 0:
+			break
+	return amount - remaining
+
 # ---------------------------------------------------------------------------
 # Serialization
 # ---------------------------------------------------------------------------

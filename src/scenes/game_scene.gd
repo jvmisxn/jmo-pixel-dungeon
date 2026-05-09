@@ -619,9 +619,12 @@ func _handle_cell_click(cell: int) -> void:
 	var char_at: Variant = _current_level.find_char_at(cell) if _current_level else null
 
 	if char_at != null and char_at != hero:
-		# Attack if adjacent
+		# Interact with adjacent NPCs instead of attacking them.
 		if _current_level.adjacent(hero_pos, cell):
-			_submit_hero_action({"type": "attack", "target": char_at, "target_pos": cell})
+			if char_at is NPC:
+				_submit_hero_action({"type": "interact", "target_pos": cell})
+			else:
+				_submit_hero_action({"type": "attack", "target": char_at, "target_pos": cell})
 		else:
 			var ranged_action: Dictionary = hero.get_auto_ranged_action(cell) if hero.has_method("get_auto_ranged_action") else {}
 			if not ranged_action.is_empty():
@@ -901,6 +904,9 @@ func _on_hero_damaged(amount: int, _source: Variant) -> void:
 func _on_hero_died() -> void:
 	_game_ended = true
 	_cancel_auto_walk()
+	if TurnManager:
+		TurnManager.processing_mobs = false
+		TurnManager.waiting_for_input = false
 	if GameManager.hero != null:
 		var hero_key: int = GameManager.hero.get("actor_id") if GameManager.hero.get("actor_id") != null else -1
 		var hero_sprite: Variant = _hero_sprites.get(hero_key) if hero_key >= 0 else null
@@ -1075,6 +1081,12 @@ func _handle_descend() -> void:
 	if AudioManager:
 		AudioManager.play_sfx("descend")
 
+	var belongings: Variant = GameManager.hero.get("belongings")
+	if belongings != null and belongings.has_method("get_equipped_artifact"):
+		var artifact: Variant = belongings.get_equipped_artifact()
+		if artifact != null and artifact.has_method("on_floor_change"):
+			artifact.on_floor_change()
+
 	# Cache current level before leaving
 	GameManager._cache_current_level()
 	GameManager.depth += 1
@@ -1104,6 +1116,12 @@ func _handle_ascend() -> void:
 		MessageLog.add("You ascend the staircase...")
 	if AudioManager:
 		AudioManager.play_sfx("descend")
+
+	var belongings: Variant = GameManager.hero.get("belongings")
+	if belongings != null and belongings.has_method("get_equipped_artifact"):
+		var artifact: Variant = belongings.get_equipped_artifact()
+		if artifact != null and artifact.has_method("on_floor_change"):
+			artifact.on_floor_change()
 
 	# Cache current level before leaving
 	GameManager._cache_current_level()

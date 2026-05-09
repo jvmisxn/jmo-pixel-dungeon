@@ -189,11 +189,7 @@ func _serialize_current_level() -> Dictionary:
 	if GameManager == null or GameManager.current_level == null:
 		return {}
 	if GameManager.current_level.has_method("serialize"):
-		var level_data: Dictionary = GameManager.current_level.serialize()
-		# Level.serialize() already handles heaps, mobs, traps, and plants.
-		# Only add blobs which Level doesn't serialize.
-		level_data["blobs"] = _serialize_blobs()
-		return level_data
+		return GameManager.current_level.serialize()
 	return {}
 
 
@@ -202,12 +198,10 @@ func _deserialize_current_level(data: Dictionary) -> void:
 		return
 	# Create level if needed (cold start from saved game)
 	if GameManager.current_level == null:
-		GameManager.current_level = load("res://src/levels/level.gd").new()
+		var saved_depth: int = int(data.get("depth", GameManager.depth))
+		GameManager.current_level = LevelFactory.instantiate_for_depth(saved_depth)
 	if GameManager.current_level.has_method("deserialize"):
 		GameManager.current_level.deserialize(data)
-	# Level.deserialize() handles heaps, mobs, traps, and plants.
-	# Only handle blobs separately.
-	_deserialize_blobs(data.get("blobs", []))
 
 
 # ---------------------------------------------------------------------------

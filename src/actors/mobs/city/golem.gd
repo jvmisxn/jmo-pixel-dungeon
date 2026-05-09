@@ -31,6 +31,8 @@ func _teleport_target(victim: Char) -> void:
 		if level.has_method("is_passable") and level.is_passable(random_pos):
 			if level.has_method("find_char_at") and level.find_char_at(random_pos) == null:
 				victim.pos = random_pos
+				if victim.is_hero and EventBus:
+					EventBus.hero_moved.emit(random_pos)
 				if MessageLog:
 					MessageLog.add_warning("The golem's blow teleports you!")
 				return

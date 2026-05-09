@@ -37,7 +37,7 @@ var revive_persists: bool = false
 ## Called when the buff is first attached to a character.
 func attach(buff_owner: Node) -> void:
 	target = buff_owner
-	if duration > 0:
+	if duration > 0 and time_left < 0.0:
 		time_left = duration
 	on_attach()
 
@@ -173,6 +173,7 @@ func evasion_modifier(eva: int) -> int:
 
 func serialize() -> Dictionary:
 	return {
+		"_script_path": get_script().resource_path,
 		"buff_id": buff_id,
 		"buff_name": buff_name,
 		"buff_type": buff_type,

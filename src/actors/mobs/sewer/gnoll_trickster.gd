@@ -26,6 +26,7 @@ func _init() -> void:
 func _act_hunting() -> void:
 	if target == null or not target.is_alive:
 		_set_state(AIState.WANDERING)
+		spend_turn()
 		return
 
 	throw_cooldown = maxi(0, throw_cooldown - 1)
@@ -34,18 +35,24 @@ func _act_hunting() -> void:
 	# If adjacent, flee
 	if dist <= 1:
 		_move_away_from(target.pos)
+		spend_move()
 		return
 
 	# If in throw range and can see, throw
 	if throw_cooldown <= 0 and dist >= 2 and dist <= THROW_RANGE and can_see(target.pos):
 		_throw_at_target()
+		spend_attack()
 		return
 
 	# Otherwise kite: stay at range 3-4
 	if dist < 3:
 		_move_away_from(target.pos)
+		spend_move()
 	elif dist > THROW_RANGE:
 		_move_toward(target.pos)
+		spend_move()
+	else:
+		spend_turn()
 
 func _throw_at_target() -> void:
 	if target == null:

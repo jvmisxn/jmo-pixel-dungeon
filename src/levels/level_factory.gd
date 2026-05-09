@@ -4,43 +4,7 @@ extends RefCounted
 ## Mirrors Shattered PD's Dungeon.newLevel().
 
 static func create_for_depth(p_depth: int) -> Level:
-	var level: Level
-
-	match p_depth:
-		# Sewer boss
-		5:
-			level = SewerBossLevel.new()
-		# Prison boss
-		10:
-			level = PrisonBossLevel.new()
-		# Caves boss
-		15:
-			level = CavesBossLevel.new()
-		# City boss
-		20:
-			level = CityBossLevel.new()
-		# Halls boss
-		25:
-			level = HallsBossLevel.new()
-		# Amulet level
-		26:
-			level = LastLevel.new()
-		_:
-			# Regular levels by region
-			var region: int = ConstantsData.region_for_depth(p_depth)
-			match region:
-				ConstantsData.Region.SEWERS:
-					level = SewerLevel.new()
-				ConstantsData.Region.PRISON:
-					level = PrisonLevel.new()
-				ConstantsData.Region.CAVES:
-					level = CavesLevel.new()
-				ConstantsData.Region.CITY:
-					level = CityLevel.new()
-				ConstantsData.Region.HALLS:
-					level = HallsLevel.new()
-				_:
-					level = RegularLevel.new()
+	var level: Level = instantiate_for_depth(p_depth)
 
 	var success: bool = level.create(p_depth)
 	if not success:
@@ -68,3 +32,32 @@ static func create_for_depth(p_depth: int) -> Level:
 		level.set_terrain(level.exit_pos, ConstantsData.Terrain.EXIT)
 		level.build_flag_maps()
 	return level
+
+static func instantiate_for_depth(p_depth: int) -> Level:
+	match p_depth:
+		5:
+			return SewerBossLevel.new()
+		10:
+			return PrisonBossLevel.new()
+		15:
+			return CavesBossLevel.new()
+		20:
+			return CityBossLevel.new()
+		25:
+			return HallsBossLevel.new()
+		26:
+			return LastLevel.new()
+		_:
+			var region: int = ConstantsData.region_for_depth(p_depth)
+			match region:
+				ConstantsData.Region.SEWERS:
+					return SewerLevel.new()
+				ConstantsData.Region.PRISON:
+					return PrisonLevel.new()
+				ConstantsData.Region.CAVES:
+					return CavesLevel.new()
+				ConstantsData.Region.CITY:
+					return CityLevel.new()
+				ConstantsData.Region.HALLS:
+					return HallsLevel.new()
+	return RegularLevel.new()

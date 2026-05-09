@@ -33,6 +33,8 @@ func act() -> void:
 		# Teleport away instead of normal flee
 		_teleport_away()
 		_set_state(AIState.FLEEING)
+		spend_turn()
+		return
 	super.act()
 
 func _teleport_away() -> void:

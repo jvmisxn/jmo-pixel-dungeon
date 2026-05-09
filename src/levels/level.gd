@@ -674,6 +674,180 @@ func reveal_all() -> void:
 # ---------------------------------------------------------------------------
 
 ## Serialize the full level state for caching / save-load.
+func serialize() -> Dictionary:
+	var data: Dictionary = {
+		"_script_path": get_script().resource_path,
+		"depth": depth,
+		"entrance": entrance,
+		"exit_pos": exit_pos,
+		"feeling": feeling,
+		"map": map.duplicate(),
+		"visited": visited.duplicate(),
+		"mapped": mapped.duplicate(),
+	}
+
+	var heaps_data: Array[Dictionary] = []
+	for heap: Dictionary in heaps:
+		var heap_copy: Dictionary = heap.duplicate()
+		var item: Variant = heap.get("item")
+		if item != null and item.has_method("serialize"):
+			heap_copy["item_data"] = item.serialize()
+			heap_copy.erase("item")
+		heaps_data.append(heap_copy)
+	data["heaps"] = heaps_data
+
+	var mobs_data: Array[Dictionary] = []
+	for mob: Variant in mobs:
+		if mob != null and is_instance_valid(mob) and mob.has_method("serialize"):
+			mobs_data.append(mob.serialize())
+	data["mobs"] = mobs_data
+
+	var traps_data: Dictionary = {}
+	for trap_pos: int in traps.keys():
+		var trap: Variant = traps[trap_pos]
+		if trap != null and trap.has_method("serialize"):
+			traps_data[trap_pos] = trap.serialize()
+	data["traps"] = traps_data
+
+	var plants_data: Dictionary = {}
+	for plant_pos: int in plants.keys():
+		var plant: Variant = plants[plant_pos]
+		if plant != null and plant.has_method("serialize"):
+			plants_data[plant_pos] = plant.serialize()
+	data["plants"] = plants_data
+
+	var blobs_data: Array[Dictionary] = []
+	for blob_entry: Dictionary in blobs:
+		blobs_data.append(blob_entry.duplicate(true))
+	data["blobs"] = blobs_data
+
+	var bombs_data: Array[Dictionary] = []
+	for bomb_entry: Dictionary in pending_bombs:
+		var bomb: Variant = bomb_entry.get("bomb")
+		if bomb != null and bomb.has_method("serialize"):
+			bombs_data.append({
+				"pos": bomb_entry.get("pos", -1),
+				"turns_left": bomb_entry.get("turns_left", 1),
+				"bomb_data": bomb.serialize(),
+			})
+	data["pending_bombs"] = bombs_data
+
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	_init_arrays()
+	depth = int(data.get("depth", 1))
+	entrance = int(data.get("entrance", -1))
+	exit_pos = int(data.get("exit_pos", -1))
+	feeling = data.get("feeling", Feeling.NONE) as Feeling
+
+	var saved_map: Variant = data.get("map", [])
+	if saved_map is Array and (saved_map as Array).size() == LEN:
+		map = (saved_map as Array).duplicate()
+	var saved_visited: Variant = data.get("visited", [])
+	if saved_visited is Array and (saved_visited as Array).size() == LEN:
+		visited = (saved_visited as Array).duplicate()
+	var saved_mapped: Variant = data.get("mapped", [])
+	if saved_mapped is Array and (saved_mapped as Array).size() == LEN:
+		mapped = (saved_mapped as Array).duplicate()
+	build_flag_maps()
+
+	heaps.clear()
+	var heaps_data: Variant = data.get("heaps", [])
+	if heaps_data is Array:
+		for heap_entry: Variant in heaps_data:
+			if heap_entry is Dictionary:
+				var heap: Dictionary = (heap_entry as Dictionary).duplicate(true)
+				var item_data: Variant = heap.get("item_data")
+				if item_data is Dictionary:
+					var item_id: String = str((item_data as Dictionary).get("item_id", ""))
+					if item_id != "":
+						var item: Item = Generator.create_item(item_id)
+						if item != null and item.has_method("deserialize"):
+							item.deserialize(item_data as Dictionary)
+						heap["item"] = item
+					heap.erase("item_data")
+				heaps.append(heap)
+
+	mobs.clear()
+	var mobs_data: Variant = data.get("mobs", [])
+	if mobs_data is Array:
+		for mob_data_variant: Variant in mobs_data:
+			if mob_data_variant is Dictionary:
+				var mob_data: Dictionary = mob_data_variant as Dictionary
+				var mob_id: String = str(mob_data.get("mob_id", ""))
+				var mob: Variant = MobFactory.create_mob(mob_id) if mob_id != "" else null
+				if mob != null and mob.has_method("deserialize"):
+					mob.deserialize(mob_data)
+					add_mob(mob)
+	for mob_ref: Variant in mobs:
+		if mob_ref != null and is_instance_valid(mob_ref) and mob_ref.has_method("resolve_post_load"):
+			mob_ref.resolve_post_load(self)
+
+	traps.clear()
+	var traps_data: Variant = data.get("traps", {})
+	if traps_data is Dictionary:
+		for trap_pos_variant: Variant in traps_data.keys():
+			var trap_data: Variant = traps_data[trap_pos_variant]
+			if not (trap_data is Dictionary):
+				continue
+			var script_path: String = str((trap_data as Dictionary).get("_script_path", ""))
+			if script_path.is_empty() or not ResourceLoader.exists(script_path):
+				continue
+			var trap_script: Script = load(script_path) as Script
+			if trap_script == null:
+				continue
+			var trap: Variant = trap_script.new()
+			if trap != null and trap.has_method("deserialize"):
+				trap.deserialize(trap_data as Dictionary)
+				traps[int(trap_pos_variant)] = trap
+
+	plants.clear()
+	var plants_data: Variant = data.get("plants", {})
+	if plants_data is Dictionary:
+		for plant_pos_variant: Variant in plants_data.keys():
+			var plant_data: Variant = plants_data[plant_pos_variant]
+			if not (plant_data is Dictionary):
+				continue
+			var script_path: String = str((plant_data as Dictionary).get("_script_path", ""))
+			if script_path.is_empty() or not ResourceLoader.exists(script_path):
+				continue
+			var plant_script: Script = load(script_path) as Script
+			if plant_script == null:
+				continue
+			var plant: Variant = plant_script.new()
+			if plant != null and plant.has_method("deserialize"):
+				plant.deserialize(plant_data as Dictionary)
+				plants[int(plant_pos_variant)] = plant
+
+	blobs.clear()
+	var blobs_data: Variant = data.get("blobs", [])
+	if blobs_data is Array:
+		for blob_entry: Variant in blobs_data:
+			if blob_entry is Dictionary:
+				blobs.append((blob_entry as Dictionary).duplicate(true))
+
+	pending_bombs.clear()
+	var bombs_data: Variant = data.get("pending_bombs", [])
+	if bombs_data is Array:
+		for bomb_entry_variant: Variant in bombs_data:
+			if bomb_entry_variant is Dictionary:
+				var bomb_entry: Dictionary = bomb_entry_variant as Dictionary
+				var bomb_data: Variant = bomb_entry.get("bomb_data")
+				if bomb_data is Dictionary:
+					var bomb_id: String = str((bomb_data as Dictionary).get("item_id", ""))
+					if bomb_id != "":
+						var bomb: Variant = Generator.create_item(bomb_id)
+						if bomb != null and bomb.has_method("deserialize"):
+							bomb.deserialize(bomb_data as Dictionary)
+							pending_bombs.append({
+								"pos": int(bomb_entry.get("pos", -1)),
+								"turns_left": int(bomb_entry.get("turns_left", 1)),
+								"bomb": bomb,
+							})
+
+	visible.resize(LEN)
+	visible.fill(false)
 
 # ---------------------------------------------------------------------------
 # Missing Methods (added Run 15)

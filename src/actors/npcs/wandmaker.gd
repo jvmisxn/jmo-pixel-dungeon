@@ -16,19 +16,19 @@ var reward_given: bool = false
 
 # --- Wand Pool ---
 const WAND_POOL: Array = [
-	["wand_magic_missile", "Wand of Magic Missile"],
-	["wand_fireblast", "Wand of Fireblast"],
-	["wand_frost", "Wand of Frost"],
-	["wand_lightning", "Wand of Lightning"],
-	["wand_disintegration", "Wand of Disintegration"],
-	["wand_corruption", "Wand of Corruption"],
-	["wand_blast_wave", "Wand of Blast Wave"],
-	["wand_living_earth", "Wand of Living Earth"],
-	["wand_prismatic_light", "Wand of Prismatic Light"],
-	["wand_transfusion", "Wand of Transfusion"],
-	["wand_warding", "Wand of Warding"],
-	["wand_regrowth", "Wand of Regrowth"],
-	["wand_corrosion", "Wand of Corrosion"],
+	["wand_of_magic_missile", "Wand of Magic Missile"],
+	["wand_of_fire_bolt", "Wand of Fire Bolt"],
+	["wand_of_frost", "Wand of Frost"],
+	["wand_of_lightning", "Wand of Lightning"],
+	["wand_of_disintegration", "Wand of Disintegration"],
+	["wand_of_corruption", "Wand of Corruption"],
+	["wand_of_blast_wave", "Wand of Blast Wave"],
+	["wand_of_living_earth", "Wand of Living Earth"],
+	["wand_of_prismatic_light", "Wand of Prismatic Light"],
+	["wand_of_transfusion", "Wand of Transfusion"],
+	["wand_of_warding", "Wand of Warding"],
+	["wand_of_regrowth", "Wand of Regrowth"],
+	["wand_of_corrosion", "Wand of Corrosion"],
 ]
 
 # ---------------------------------------------------------------------------
@@ -86,22 +86,21 @@ func _generate_wand_rewards() -> void:
 	var pick_a: Array = WAND_POOL[indices[0]]
 	var pick_b: Array = WAND_POOL[indices[1]]
 
-	var _ItemScript: GDScript = load("res://src/items/item.gd")
-	wand_choice_a = _ItemScript.new()
-	wand_choice_a.item_id = pick_a[0]
-	wand_choice_a.item_name = pick_a[1]
-	wand_choice_a.description = "A magical wand gifted by the Wandmaker."
-	wand_choice_a.category = ConstantsData.ItemCategory.WAND
-	wand_choice_a.identified = true
-	wand_choice_a.level = 1
+	wand_choice_a = _create_reward_wand(pick_a[0], pick_a[1])
+	wand_choice_b = _create_reward_wand(pick_b[0], pick_b[1])
 
-	wand_choice_b = _ItemScript.new()
-	wand_choice_b.item_id = pick_b[0]
-	wand_choice_b.item_name = pick_b[1]
-	wand_choice_b.description = "A magical wand gifted by the Wandmaker."
-	wand_choice_b.category = ConstantsData.ItemCategory.WAND
-	wand_choice_b.identified = true
-	wand_choice_b.level = 1
+func _create_reward_wand(wand_id: String, fallback_name: String) -> Variant:
+	var wand: Variant = Generator.create_item(wand_id)
+	if wand == null:
+		wand = Wand.create(wand_id)
+	if wand == null:
+		return null
+	wand.item_name = fallback_name
+	if wand.has_method("identify"):
+		wand.identify()
+	else:
+		wand.identified = true
+	return wand
 
 # ---------------------------------------------------------------------------
 # Interaction
@@ -146,15 +145,13 @@ func _hero_has_seed(hero: Variant) -> bool:
 	var belongings: Variant = hero.get("belongings")
 	if belongings == null:
 		return false
-	if belongings.has_method("has_item"):
-		return belongings.has_item(requested_seed_id)
+	if belongings.has_method("has_item_by_id"):
+		return belongings.has_item_by_id(requested_seed_id)
 	# Fallback: check backpack array
 	if belongings.has_method("get_items"):
 		var items: Array = belongings.get_items()
 		for item: Variant in items:
 			if item != null and item.get("item_id") == requested_seed_id:
-				return true
-			elif item != null and item.get("item_id") == requested_seed_id:
 				return true
 	return false
 
@@ -162,9 +159,12 @@ func _take_seed(hero: Variant) -> void:
 	var belongings: Variant = hero.get("belongings")
 	if belongings == null:
 		return
-	if belongings.has_method("remove_item_by_id"):
-		belongings.remove_item_by_id(requested_seed_id, 1)
-	if MessageLog:
+	var removed: int = 0
+	if belongings.has_method("remove_item_quantity"):
+		removed = belongings.remove_item_quantity(requested_seed_id, 1)
+	elif belongings.has_method("remove_item_by_id"):
+		removed = 1 if belongings.remove_item_by_id(requested_seed_id) != null else 0
+	if removed > 0 and MessageLog:
 		MessageLog.add_info("You hand over the %s." % requested_seed_name)
 
 func _offer_reward(hero: Variant) -> void:
@@ -183,7 +183,8 @@ func _offer_reward(hero: Variant) -> void:
 
 	var wnd: Node = load("res://src/ui/windows/wnd_quest_reward.gd").new()
 	wnd.setup("Wandmaker's Gift", "Choose a wand as your reward.", rewards, hero)
-	wnd.tree_exited.connect(_on_reward_window_closed)
+	if wnd.has_signal("reward_chosen"):
+		wnd.reward_chosen.connect(_on_reward_chosen)
 
 	if EventBus and EventBus.has_signal("show_window"):
 		EventBus.show_window.emit(wnd)
@@ -195,9 +196,11 @@ func _offer_reward(hero: Variant) -> void:
 				belongings.add_item(wand_choice_a)
 		if MessageLog:
 			MessageLog.add_positive("You receive the %s." % wand_choice_a.item_name)
-		_on_reward_window_closed()
+		_on_reward_chosen(wand_choice_a)
 
-func _on_reward_window_closed() -> void:
+func _on_reward_chosen(_chosen_item: Variant) -> void:
+	if reward_given:
+		return
 	reward_given = true
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "complete")
@@ -208,8 +211,40 @@ func _on_reward_window_closed() -> void:
 func _depart() -> void:
 	is_alive = false
 	deactivate()
+	if QuestHandler:
+		QuestHandler.unregister_npc(self)
+		QuestHandler.complete_quest(quest_id)
 	if level and level.has_method("remove_mob"):
 		level.remove_mob(self)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["requested_seed_id"] = requested_seed_id
+	data["requested_seed_name"] = requested_seed_name
+	data["reward_given"] = reward_given
+	data["wand_choice_a"] = wand_choice_a.serialize() if wand_choice_a != null and wand_choice_a.has_method("serialize") else {}
+	data["wand_choice_b"] = wand_choice_b.serialize() if wand_choice_b != null and wand_choice_b.has_method("serialize") else {}
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	requested_seed_id = str(data.get("requested_seed_id", requested_seed_id))
+	requested_seed_name = str(data.get("requested_seed_name", requested_seed_name))
+	reward_given = bool(data.get("reward_given", reward_given))
+	var wand_a_data: Variant = data.get("wand_choice_a", {})
+	if wand_a_data is Dictionary and not (wand_a_data as Dictionary).is_empty():
+		var wand_a_id: String = str((wand_a_data as Dictionary).get("item_id", ""))
+		if wand_a_id != "":
+			wand_choice_a = Generator.create_item(wand_a_id)
+			if wand_choice_a != null and wand_choice_a.has_method("deserialize"):
+				wand_choice_a.deserialize(wand_a_data as Dictionary)
+	var wand_b_data: Variant = data.get("wand_choice_b", {})
+	if wand_b_data is Dictionary and not (wand_b_data as Dictionary).is_empty():
+		var wand_b_id: String = str((wand_b_data as Dictionary).get("item_id", ""))
+		if wand_b_id != "":
+			wand_choice_b = Generator.create_item(wand_b_id)
+			if wand_choice_b != null and wand_choice_b.has_method("deserialize"):
+				wand_choice_b.deserialize(wand_b_data as Dictionary)
 
 # ---------------------------------------------------------------------------
 # Quest Seed Item Creation

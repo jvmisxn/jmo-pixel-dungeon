@@ -68,6 +68,7 @@ func _act_hunting() -> void:
 	if target == null or not target.is_alive:
 		_find_hero_target()
 		if target == null:
+			spend_turn()
 			return
 
 	# Heal in water
@@ -85,6 +86,7 @@ func _act_hunting() -> void:
 			did_visible_action = true
 			if MessageLog:
 				MessageLog.add_warning("Goo is pumping up!")
+			spend_turn()
 			return
 
 	if pumped_up > 0:
@@ -95,6 +97,7 @@ func _act_hunting() -> void:
 			if target and target.is_alive:
 				var ooze: Ooze = Ooze.new()
 				target.add_buff(ooze)
+			spend_attack()
 		elif dist <= 2:
 			# Ranged pumped attack at distance 2
 			did_visible_action = true
@@ -104,8 +107,10 @@ func _act_hunting() -> void:
 				var ooze: Ooze = Ooze.new()
 				target.add_buff(ooze)
 			pumped_up = 0
+			spend_attack()
 		else:
 			_move_toward(target.pos)
+			spend_move()
 		return
 
 	# Normal behavior
@@ -115,8 +120,10 @@ func _act_hunting() -> void:
 		if target and target.is_alive and randf() < 0.5:
 			var ooze: Ooze = Ooze.new()
 			target.add_buff(ooze)
+		spend_attack()
 	else:
 		_move_toward(target.pos)
+		spend_move()
 
 func _is_in_water() -> bool:
 	if level and level.has_method("get_terrain"):

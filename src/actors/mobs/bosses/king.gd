@@ -25,6 +25,7 @@ func _act_hunting() -> void:
 	if target == null or not target.is_alive:
 		_find_hero_target()
 		if target == null:
+			spend_turn()
 			return
 
 	summon_cooldown = maxi(0, summon_cooldown - 1)
@@ -48,6 +49,8 @@ func _act_hunting() -> void:
 	# Summon minions periodically
 	if summon_cooldown <= 0 and undead_count < MAX_UNDEAD:
 		_try_summon()
+		spend_turn()
+		return
 
 	# Melee
 	if is_adjacent(target.pos):
@@ -57,8 +60,10 @@ func _act_hunting() -> void:
 			var crip: Cripple = Cripple.new()
 			crip.set_duration(3.0)
 			target.add_buff(crip)
+		spend_attack()
 	else:
 		_move_toward(target.pos)
+		spend_move()
 
 func _summon_wave() -> void:
 	for _i: int in range(3):

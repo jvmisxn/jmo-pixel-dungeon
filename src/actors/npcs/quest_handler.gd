@@ -114,7 +114,7 @@ static func _spawn_wandmaker(level_ref: Variant, _depth: int) -> Variant:
 	quest_states["wandmaker_quest"] = "active"
 
 	# Spawn the quest seed item on this level
-	var seed_item: Variant = wm_script.create_quest_seed(wm.requested_seed_id)
+	var seed_item: Variant = wm_script.create_quest_item(wm.requested_seed_id)
 	if level_ref and level_ref.has_method("drop_item"):
 		var item_pos: int = _find_spawn_pos(level_ref)
 		if item_pos >= 0:

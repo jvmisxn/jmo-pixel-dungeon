@@ -949,6 +949,7 @@ func serialize() -> Dictionary:
 	data["patient_strike_ready"] = _patient_strike_ready
 	data["backup_barrier_ready"] = _backup_barrier_ready
 	data["followup_strike_ready"] = _followup_strike_ready
+	data["buffs"] = _serialize_buffs()
 	data["belongings"] = belongings.serialize() if belongings != null else {}
 	return data
 
@@ -978,6 +979,7 @@ func deserialize(data: Dictionary) -> void:
 	_backup_barrier_ready = data.get("backup_barrier_ready", true)
 	_followup_strike_ready = data.get("followup_strike_ready", false)
 	name = hero_name
+	_deserialize_buffs(data.get("buffs", []))
 	if belongings == null:
 		belongings = Belongings.new(self)
 	var belongings_data: Dictionary = data.get("belongings", {})

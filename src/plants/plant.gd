@@ -39,6 +39,7 @@ func _do_effect(_char: Variant, _level: Variant) -> void:
 
 func serialize() -> Dictionary:
 	return {
+		"_script_path": get_script().resource_path,
 		"type": plant_id,
 		"pos": pos,
 	}

@@ -220,19 +220,22 @@ func _perform_generation() -> void:
 func _generate_current_level() -> void:
 	var depth: int = GameManager.depth
 	var level: Level = null
+	var reused_existing_state: bool = false
 
 	# If current_level is already loaded (e.g. from a save file) and matches
 	# the target depth, use it directly instead of regenerating.
 	if GameManager.current_level != null and GameManager.current_level.depth == depth:
 		if GameManager.current_level.map.size() == Level.LEN:
 			level = GameManager.current_level
+			reused_existing_state = true
 
 	# Check if we have a cached version of this level (backtracking)
 	if level == null and GameManager.has_cached_level(depth):
 		var cached_data: Variant = GameManager.get_cached_level(depth)
 		if cached_data is Dictionary:
-			level = RegularLevel.new()
+			level = LevelFactory.instantiate_for_depth(depth)
 			level.deserialize(cached_data)
+			reused_existing_state = true
 
 	# Generate a fresh level using LevelFactory
 	if level == null:
@@ -248,22 +251,23 @@ func _generate_current_level() -> void:
 			if h is Node:
 				h.level = level
 
-		# Spawn quest NPCs and shopkeepers
-		if QuestHandler.is_quest_depth(depth):
-			var npc: Variant = QuestHandler.spawn_quest_npc(level, depth)
-			if npc != null and npc is Object:
-				var npc_pos: int = QuestHandler._find_spawn_pos(level)
-				if npc_pos >= 0:
-					npc.set("pos", npc_pos)
-					level.add_mob(npc)
+		# Spawn quest NPCs and shopkeepers only for freshly generated levels.
+		if not reused_existing_state:
+			if QuestHandler.is_quest_depth(depth):
+				var npc: Variant = QuestHandler.spawn_quest_npc(level, depth)
+				if npc != null and npc is Object:
+					var npc_pos: int = QuestHandler._find_spawn_pos(level)
+					if npc_pos >= 0:
+						npc.set("pos", npc_pos)
+						level.add_mob(npc)
 
-		if QuestHandler.is_shop_depth(depth):
-			var keeper: Shopkeeper = QuestHandler.spawn_shopkeeper(level, depth)
-			if keeper != null:
-				var shop_pos: int = QuestHandler._find_spawn_pos(level)
-				if shop_pos >= 0:
-					keeper.pos = shop_pos
-					level.add_mob(keeper)
+			if QuestHandler.is_shop_depth(depth):
+				var keeper: Shopkeeper = QuestHandler.spawn_shopkeeper(level, depth)
+				if keeper != null:
+					var shop_pos: int = QuestHandler._find_spawn_pos(level)
+					if shop_pos >= 0:
+						keeper.pos = shop_pos
+						level.add_mob(keeper)
 
 		# Place hero at the correct staircase:
 		# - Descending (or new game): hero appears at entrance (stairs up)

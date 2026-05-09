@@ -132,7 +132,7 @@ func interact(hero: Variant) -> void:
 		return
 
 	if quest_complete:
-		_give_reward(hero)
+		_offer_reward(hero)
 		return
 
 	if quest_active:
@@ -140,7 +140,7 @@ func interact(hero: Variant) -> void:
 			quest_complete = true
 			if MessageLog:
 				MessageLog.add_info(dialogue_lines[2])
-			_give_reward(hero)
+			_offer_reward(hero)
 		else:
 			var remaining: int = required_kills - kill_count
 			if MessageLog:
@@ -185,12 +185,27 @@ func on_mob_defeated(_mob_pos: int, mob_name_str: String) -> void:
 # Reward
 # ---------------------------------------------------------------------------
 
+func _generate_reward() -> void:
+	var pick: Array = RING_POOL[randi() % RING_POOL.size()]
+	var ring_id: String = pick[0]
+	var normalized_id: String = ring_id
+	if not normalized_id.begins_with("ring_of_"):
+		normalized_id = normalized_id.replace("ring_", "ring_of_")
+	reward_ring = Generator.create_item(normalized_id)
+	if reward_ring == null:
+		reward_ring = Ring.create(normalized_id)
+	if reward_ring != null:
+		reward_ring.identified = true
+		reward_ring.cursed_known = true
+		reward_ring.cursed = true
+		if reward_ring.has_method("upgrade"):
+			reward_ring.upgrade()
+			reward_ring.upgrade()
+
 func _offer_reward(hero: Variant) -> void:
 	var rewards: Array = []
-	if reward_choice_a:
-		rewards.append(reward_choice_a)
-	if reward_choice_b:
-		rewards.append(reward_choice_b)
+	if reward_ring != null:
+		rewards.append(reward_ring)
 
 	if rewards.is_empty():
 		if MessageLog:
@@ -200,22 +215,59 @@ func _offer_reward(hero: Variant) -> void:
 
 	var wnd: Node = load("res://src/ui/windows/wnd_quest_reward.gd").new()
 	wnd.setup("Imp's Gift", "Choose a ring as your reward.", rewards, hero)
-	wnd.tree_exited.connect(_on_reward_window_closed)
+	if wnd.has_signal("reward_chosen"):
+		wnd.reward_chosen.connect(_on_reward_window_closed)
 
 	if EventBus and EventBus.has_signal("show_window"):
 		EventBus.show_window.emit(wnd)
 	else:
 		if hero and hero.get("belongings") != null:
 			if hero.belongings.has_method("add_item"):
-				hero.belongings.add_item(reward_choice_a)
+				hero.belongings.add_item(reward_ring)
 		if MessageLog:
-			MessageLog.add_positive("You receive the %s." % reward_choice_a.item_name)
-		_on_reward_window_closed()
+			MessageLog.add_positive("You receive the %s." % reward_ring.item_name)
+		_on_reward_window_closed(reward_ring)
 
-func _on_reward_window_closed() -> void:
+func _on_reward_window_closed(_chosen_item: Variant) -> void:
 	reward_given = true
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "complete")
 	if MessageLog:
 		MessageLog.add_info("The imp bows and vanishes in a puff of smoke.")
 	_depart()
+
+func _depart() -> void:
+	is_alive = false
+	deactivate()
+	if QuestHandler:
+		QuestHandler.unregister_npc(self)
+		QuestHandler.complete_quest(quest_id)
+	if level and level.has_method("remove_mob"):
+		level.remove_mob(self)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["quest_mob_id"] = quest_mob_id
+	data["quest_mob_name"] = quest_mob_name
+	data["required_kills"] = required_kills
+	data["kill_count"] = kill_count
+	data["reward_given"] = reward_given
+	data["_seen_before"] = _seen_before
+	data["reward_ring"] = reward_ring.serialize() if reward_ring != null and reward_ring.has_method("serialize") else {}
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	quest_mob_id = str(data.get("quest_mob_id", quest_mob_id))
+	quest_mob_name = str(data.get("quest_mob_name", quest_mob_name))
+	required_kills = int(data.get("required_kills", required_kills))
+	kill_count = int(data.get("kill_count", kill_count))
+	reward_given = bool(data.get("reward_given", reward_given))
+	_seen_before = bool(data.get("_seen_before", _seen_before))
+	var reward_ring_data: Variant = data.get("reward_ring", {})
+	if reward_ring_data is Dictionary and not (reward_ring_data as Dictionary).is_empty():
+		var item_id: String = str((reward_ring_data as Dictionary).get("item_id", ""))
+		if item_id != "":
+			reward_ring = Generator.create_item(item_id)
+			if reward_ring != null and reward_ring.has_method("deserialize"):
+				reward_ring.deserialize(reward_ring_data as Dictionary)

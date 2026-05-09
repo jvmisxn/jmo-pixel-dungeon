@@ -70,11 +70,17 @@ func reveal(level: Level) -> void:
 
 func serialize() -> Dictionary:
 	return {
+		"_script_path": get_script().resource_path,
 		"type": trap_name,
 		"pos": pos,
 		"visible": visible,
 		"active": active,
 	}
+
+func deserialize(data: Dictionary) -> void:
+	pos = int(data.get("pos", pos))
+	visible = bool(data.get("visible", visible))
+	active = bool(data.get("active", active))
 
 func _to_string() -> String:
 	return "%s at %d" % [trap_name, pos]

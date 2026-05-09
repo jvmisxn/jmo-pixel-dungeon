@@ -25,12 +25,13 @@ func on_attack_hit(target_char: Char, _damage: int) -> void:
 	if target_char is Hero and randf() < 0.4:
 		var hero: Hero = target_char as Hero
 		if hero.belongings and hero.belongings.item_count() > 0:
-			stolen_item = true  # Placeholder
+			stolen_item = _steal_from_hero(hero)
+		if stolen_item != null:
 			# Bandit uses stolen items — apply a random debuff to simulate
 			_use_stolen_item(target_char)
 			_set_state(AIState.FLEEING)
 			if MessageLog:
-				MessageLog.add_negative("The bandit steals from you and uses it!")
+				MessageLog.add_negative("The bandit steals %s and uses it!" % stolen_item.get_display_name())
 
 ## Simulate using a stolen item against the hero.
 func _use_stolen_item(victim: Char) -> void:
@@ -47,10 +48,23 @@ func _use_stolen_item(victim: Char) -> void:
 func should_flee() -> bool:
 	return stolen_item != null
 
+func _steal_from_hero(hero: Hero) -> Variant:
+	if hero == null or hero.belongings == null or hero.belongings.backpack.is_empty():
+		return null
+	var backpack: Array[Item] = hero.belongings.backpack
+	var source_item: Item = backpack[randi() % backpack.size()]
+	if source_item == null:
+		return null
+	if source_item.stackable and source_item.quantity > 1 and source_item.has_method("split"):
+		return source_item.split(1)
+	return hero.belongings.remove_item(source_item)
+
 func _on_death(source: Variant) -> void:
 	if stolen_item != null:
+		if level != null and level.has_method("drop_item"):
+			level.drop_item(pos, stolen_item)
 		if MessageLog:
-			MessageLog.add_positive("The bandit drops your stolen item!")
+			MessageLog.add_positive("The bandit drops %s!" % stolen_item.get_display_name())
 	super._on_death(source)
 
 func scale_to_depth(p_depth: int) -> void:

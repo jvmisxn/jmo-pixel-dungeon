@@ -25,20 +25,26 @@ func _act_hunting() -> void:
 	if target == null or not target.is_alive:
 		_find_hero_target()
 		if target == null:
+			spend_turn()
 			return
 
 	# Spawn fists on first sight
 	if not fists_spawned:
 		_spawn_fists()
 		fists_spawned = true
+		spend_turn()
+		return
 
 	laser_cooldown = maxi(0, laser_cooldown - 1)
 
 	# Fire laser at target
 	if laser_cooldown <= 0 and can_see(target.pos):
 		_fire_laser()
+		spend_attack()
+		return
 
 	# Yog doesn't move — it's stationary
+	spend_turn()
 
 func _spawn_fists() -> void:
 	# Spawn Rotting Fist

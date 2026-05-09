@@ -137,6 +137,9 @@ func _add_action_buttons(container: HBoxContainer) -> void:
 			_add_button(container, "Read", _action_use)
 		ConstantsData.ItemCategory.FOOD:
 			_add_button(container, "Eat", _action_use)
+		ConstantsData.ItemCategory.SEED:
+			if _can_feed_seed_to_sandals():
+				_add_button(container, "Feed", _action_feed_to_sandals)
 		_:
 			if (_item.has_method("execute") or _item.has_method("use")) and not (_item.has_method("is_equippable") and _item.is_equippable()):
 				_add_button(container, "Use", _action_use)
@@ -156,6 +159,14 @@ func _add_button(container: HBoxContainer, text: String, callback: Callable) -> 
 	btn.text = text
 	btn.pressed.connect(callback)
 	container.add_child(btn)
+
+func _can_feed_seed_to_sandals() -> bool:
+	if _hero == null or _hero.belongings == null or _item == null:
+		return false
+	var artifact: Variant = _hero.belongings.get_equipped_artifact()
+	if artifact == null:
+		return false
+	return str(ConstantsData.get_prop(artifact, "item_id", "")) == "sandals_of_nature" and artifact.has_method("feed_seed")
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +285,22 @@ func _action_use() -> void:
 	elif _item.has_method("use"):
 		_item.use(_hero)
 
+	close_window()
+
+func _action_feed_to_sandals() -> void:
+	if not _can_feed_seed_to_sandals():
+		close_window()
+		return
+	var artifact: Variant = _hero.belongings.get_equipped_artifact()
+	var seed_name: String = ConstantsData.get_prop(_item, "item_name", "seed")
+	artifact.feed_seed(seed_name)
+	var qty: int = int(ConstantsData.get_prop(_item, "quantity", 1))
+	if qty > 1:
+		_item.quantity = qty - 1
+	else:
+		_hero.belongings.remove_item(_item)
+	if EventBus:
+		EventBus.item_used.emit(seed_name)
 	close_window()
 
 

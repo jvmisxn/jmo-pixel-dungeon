@@ -62,6 +62,15 @@ func _init() -> void:
 func get_speed() -> float:
 	return 0.5
 
+## Ghost wanders on its own turn instead of using the passive NPC act loop.
+func act() -> void:
+	process_buffs()
+	if paralysed > 0:
+		spend_turn()
+		return
+	_wander()
+	spend_move()
+
 ## Original Ghost.chooseEnemy() returns null — ghost never hunts.
 func choose_enemy() -> Variant:
 	return null
@@ -86,11 +95,13 @@ func _wander() -> void:
 
 ## Override _set_state: Ghost wanders (not passive like other NPCs, not hunting).
 func _set_state(new_state: AIState) -> void:
-	# Ghost can wander but never hunts or flees
+	var applied_state: AIState = AIState.WANDERING
 	if new_state == AIState.WANDERING or new_state == AIState.PASSIVE:
-		super._set_state(new_state)
-	else:
-		super._set_state(AIState.WANDERING)
+		applied_state = new_state
+	if state == applied_state:
+		return
+	state = applied_state
+	state_changed.emit(applied_state)
 
 # ---------------------------------------------------------------------------
 # Quest Setup
@@ -284,16 +295,17 @@ func _offer_reward(hero: Variant) -> void:
 
 	var wnd: Node = load("res://src/ui/windows/wnd_quest_reward.gd").new()
 	wnd.setup("Ghost's Gratitude", "Choose a keepsake from the ghost.", rewards, hero)
-	wnd.tree_exited.connect(_on_reward_window_closed)
+	if wnd.has_signal("reward_chosen"):
+		wnd.reward_chosen.connect(_on_reward_window_closed)
 
 	if EventBus and EventBus.has_signal("show_window"):
 		EventBus.show_window.emit(wnd)
 	else:
 		if hero and hero.get("belongings") != null and hero.belongings.has_method("add_item"):
 			hero.belongings.add_item(rewards[0])
-		_on_reward_window_closed()
+		_on_reward_window_closed(rewards[0])
 
-func _on_reward_window_closed() -> void:
+func _on_reward_window_closed(_chosen_item: Variant) -> void:
 	if reward_given:
 		return
 	reward_given = true
@@ -313,3 +325,38 @@ func _depart() -> void:
 		QuestHandler.complete_quest(quest_id)
 	if level and level.has_method("remove_mob"):
 		level.remove_mob(self)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["quest_target_id"] = quest_target_id
+	data["quest_target_name"] = quest_target_name
+	data["target_slain"] = target_slain
+	data["reward_given"] = reward_given
+	data["quest_mob_spawned"] = quest_mob_spawned
+	data["reward_enchanted"] = reward_enchanted
+	data["reward_weapon"] = reward_weapon.serialize() if reward_weapon != null and reward_weapon.has_method("serialize") else {}
+	data["reward_armor"] = reward_armor.serialize() if reward_armor != null and reward_armor.has_method("serialize") else {}
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	quest_target_id = str(data.get("quest_target_id", quest_target_id))
+	quest_target_name = str(data.get("quest_target_name", quest_target_name))
+	target_slain = bool(data.get("target_slain", target_slain))
+	reward_given = bool(data.get("reward_given", reward_given))
+	quest_mob_spawned = bool(data.get("quest_mob_spawned", quest_mob_spawned))
+	reward_enchanted = bool(data.get("reward_enchanted", reward_enchanted))
+	var reward_weapon_data: Variant = data.get("reward_weapon", {})
+	if reward_weapon_data is Dictionary and not (reward_weapon_data as Dictionary).is_empty():
+		var item_id: String = str((reward_weapon_data as Dictionary).get("item_id", ""))
+		if item_id != "":
+			reward_weapon = Generator.create_item(item_id)
+			if reward_weapon != null and reward_weapon.has_method("deserialize"):
+				reward_weapon.deserialize(reward_weapon_data as Dictionary)
+	var reward_armor_data: Variant = data.get("reward_armor", {})
+	if reward_armor_data is Dictionary and not (reward_armor_data as Dictionary).is_empty():
+		var item_id_armor: String = str((reward_armor_data as Dictionary).get("item_id", ""))
+		if item_id_armor != "":
+			reward_armor = Generator.create_item(item_id_armor)
+			if reward_armor != null and reward_armor.has_method("deserialize"):
+				reward_armor.deserialize(reward_armor_data as Dictionary)

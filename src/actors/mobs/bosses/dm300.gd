@@ -25,6 +25,7 @@ func _act_hunting() -> void:
 	if target == null or not target.is_alive:
 		_find_hero_target()
 		if target == null:
+			spend_turn()
 			return
 
 	gas_cooldown = maxi(0, gas_cooldown - 1)
@@ -39,16 +40,21 @@ func _act_hunting() -> void:
 	# Charge attack at range
 	if charge_cooldown <= 0 and dist >= 3 and dist <= 6:
 		_charge_attack()
+		spend_attack()
 		return
 
 	# Gas vent when adjacent
 	if gas_cooldown <= 0 and dist <= 2:
 		_vent_gas()
+		spend_turn()
+		return
 
 	if is_adjacent(target.pos):
 		attack(target)
+		spend_attack()
 	else:
 		_move_toward(target.pos)
+		spend_move()
 
 func _charge_attack() -> void:
 	charge_cooldown = CHARGE_INTERVAL

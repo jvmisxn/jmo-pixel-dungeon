@@ -43,6 +43,20 @@ const MOB_ACTION_DELAY: float = 0.0
 ## Cached reference to the active GameScene (cleared on level transitions).
 var _cached_game_scene: Node = null
 
+func _is_time_frozen_for_nonhero(actor_node: Node) -> bool:
+	if actor_node == null or actor_node.get("is_hero") == true:
+		return false
+	if GameManager == null:
+		return false
+	var hero_ref: Variant = GameManager.hero
+	if hero_ref == null or not is_instance_valid(hero_ref):
+		return false
+	var belongings: Variant = hero_ref.get("belongings")
+	if belongings == null or not belongings.has_method("get_equipped_artifact"):
+		return false
+	var artifact: Variant = belongings.get_equipped_artifact()
+	return artifact != null and artifact.has_method("is_time_frozen") and artifact.is_time_frozen()
+
 # ---------------------------------------------------------------------------
 # Actor Registration
 # ---------------------------------------------------------------------------
@@ -172,6 +186,16 @@ func process_turn() -> Node:
 		_processing = false
 		return actor_node
 
+	# Time freeze from Timekeeper's Hourglass skips non-hero actions while
+	# still advancing them through the cooldown schedule.
+	if _is_time_frozen_for_nonhero(actor_node):
+		spend_energy(actor_node, TICK)
+		_turn_count += 1
+		if is_instance_valid(actor_node):
+			turn_processed.emit(actor_node, _turn_count)
+		_processing = false
+		return actor_node
+
 	# --- Let the actor act ---
 	if actor_node.has_method("act"):
 		actor_node.act()
@@ -213,17 +237,30 @@ func _get_game_scene_cached() -> Node:
 	_cached_game_scene = tree.current_scene
 	return _cached_game_scene
 
+func _should_abort_async_processing(game_scene: Node) -> bool:
+	if GameManager != null:
+		var hero_ref: Variant = GameManager.hero
+		if hero_ref != null and is_instance_valid(hero_ref) and hero_ref.get("is_alive") == false:
+			return true
+	if game_scene != null and game_scene.get("_game_ended") == true:
+		return true
+	return false
+
 func _process_mobs_async() -> void:
 	var safety: int = 200
 	var game_scene: Node = _get_game_scene_cached()
 
 	while safety > 0:
 		safety -= 1
+		if _should_abort_async_processing(game_scene):
+			break
 		if _actors.is_empty():
 			break
 		# Find next actor
 		var actor: Node = process_turn()
 		if actor == null:
+			break
+		if _should_abort_async_processing(game_scene):
 			break
 		# If it's the hero's turn, stop mob processing
 		if actor.get("is_hero") == true:

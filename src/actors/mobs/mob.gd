@@ -484,10 +484,60 @@ func set_mob_state(state_name: String) -> void:
 
 func serialize() -> Dictionary:
 	var data: Dictionary = super.serialize()
-	data["_class"] = mob_name
+	data["_class"] = get_script().resource_path
+	data["mob_id"] = mob_id
+	data["mob_name"] = mob_name
+	data["description"] = description
 	data["state"] = AIState.keys()[state]
-	data["enemy_id"] = target.get_instance_id() if is_instance_valid(target) else -1
+	data["target_pos"] = target_pos
+	data["hp"] = hp
+	data["hp_max"] = hp_max
+	data["ht"] = ht
+	data["shielding"] = shielding
+	data["str_val"] = str_val
+	data["base_speed"] = base_speed
+	data["attack_skill"] = attack_skill
+	data["defense_skill"] = defense_skill
+	data["damage_roll_min"] = damage_roll_min
+	data["damage_roll_max"] = damage_roll_max
+	data["armor_value"] = armor_value
+	data["is_alive"] = is_alive
+	data["flying"] = flying
+	data["invisible"] = invisible
+	data["paralysed"] = paralysed
+	data["xp_value"] = xp_value
+	data["max_level"] = max_level
+	data["awareness"] = awareness
+	data["aggro_range"] = aggro_range
+	data["buffs"] = _serialize_buffs()
 	return data
 
-func deserialize(_data: Dictionary) -> void:
-	pass
+func deserialize(data: Dictionary) -> void:
+	super.deserialize_actor(data)
+	mob_id = data.get("mob_id", mob_id)
+	mob_name = data.get("mob_name", mob_name)
+	description = data.get("description", description)
+	var state_name: String = str(data.get("state", AIState.keys()[AIState.SLEEPING]))
+	set_mob_state(state_name)
+	target = null
+	target_pos = int(data.get("target_pos", -1))
+	hp = int(data.get("hp", hp))
+	hp_max = int(data.get("hp_max", hp_max))
+	ht = int(data.get("ht", ht))
+	shielding = int(data.get("shielding", 0))
+	str_val = int(data.get("str_val", str_val))
+	base_speed = float(data.get("base_speed", base_speed))
+	attack_skill = int(data.get("attack_skill", attack_skill))
+	defense_skill = int(data.get("defense_skill", defense_skill))
+	damage_roll_min = int(data.get("damage_roll_min", damage_roll_min))
+	damage_roll_max = int(data.get("damage_roll_max", damage_roll_max))
+	armor_value = int(data.get("armor_value", armor_value))
+	is_alive = bool(data.get("is_alive", is_alive))
+	flying = bool(data.get("flying", flying))
+	invisible = int(data.get("invisible", invisible))
+	paralysed = int(data.get("paralysed", paralysed))
+	xp_value = int(data.get("xp_value", xp_value))
+	max_level = int(data.get("max_level", max_level))
+	awareness = float(data.get("awareness", awareness))
+	aggro_range = int(data.get("aggro_range", aggro_range))
+	_deserialize_buffs(data.get("buffs", []))

@@ -9,6 +9,13 @@ var active: bool = false
 var pos: int = -1
 ## The level this actor belongs to.
 var level: Variant = null  # Level reference (untyped to avoid circular dependency)
+## Stable runtime identifier used by save/load relinking.
+var actor_id: int = -1
+static var _next_id: int = 0
+
+func _init() -> void:
+	actor_id = _next_id
+	_next_id += 1
 
 # --- Turn System Integration ---
 
@@ -45,12 +52,16 @@ func deactivate() -> void:
 ## Serialize base actor state.
 func serialize_actor() -> Dictionary:
 	return {
+		"actor_id": actor_id,
 		"pos": pos,
 		"active": active,
 	}
 
 ## Deserialize base actor state.
 func deserialize_actor(data: Dictionary) -> void:
+	actor_id = data.get("actor_id", actor_id)
+	if actor_id >= _next_id:
+		_next_id = actor_id + 1
 	pos = data.get("pos", -1)
 	active = data.get("active", false)
 

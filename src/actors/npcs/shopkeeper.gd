@@ -264,3 +264,66 @@ func _flee() -> void:
 		MessageLog.add_negative("The shopkeeper vanishes in a puff of smoke, taking his wares!")
 	if level and level.has_method("remove_mob"):
 		level.remove_mob(self)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["has_fled"] = has_fled
+	data["shop_depth"] = shop_depth
+	data["turns_since_harmed"] = turns_since_harmed
+	var inventory_data: Array[Dictionary] = []
+	for entry: Dictionary in shop_inventory:
+		var item: Variant = entry.get("item")
+		if item != null and item.has_method("serialize"):
+			inventory_data.append({
+				"price": int(entry.get("price", 0)),
+				"item": item.serialize(),
+			})
+	data["shop_inventory"] = inventory_data
+	var buyback_data: Array[Dictionary] = []
+	for entry: Variant in buyback_items:
+		if entry is Dictionary:
+			var buyback_entry: Dictionary = entry as Dictionary
+			var buyback_item: Variant = buyback_entry.get("item")
+			if buyback_item != null and buyback_item.has_method("serialize"):
+				buyback_data.append({
+					"price": int(buyback_entry.get("price", 0)),
+					"item": buyback_item.serialize(),
+				})
+	data["buyback_items"] = buyback_data
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	has_fled = bool(data.get("has_fled", has_fled))
+	shop_depth = int(data.get("shop_depth", shop_depth))
+	turns_since_harmed = int(data.get("turns_since_harmed", turns_since_harmed))
+	shop_inventory.clear()
+	var inventory_data: Variant = data.get("shop_inventory", [])
+	if inventory_data is Array:
+		for entry_variant: Variant in inventory_data:
+			if not (entry_variant is Dictionary):
+				continue
+			var entry_data: Dictionary = entry_variant as Dictionary
+			var item_data: Variant = entry_data.get("item", {})
+			if item_data is Dictionary:
+				var item_id: String = str((item_data as Dictionary).get("item_id", ""))
+				if item_id != "":
+					var item: Variant = Generator.create_item(item_id)
+					if item != null and item.has_method("deserialize"):
+						item.deserialize(item_data as Dictionary)
+						shop_inventory.append({"item": item, "price": int(entry_data.get("price", 0))})
+	buyback_items.clear()
+	var buyback_data: Variant = data.get("buyback_items", [])
+	if buyback_data is Array:
+		for entry_variant: Variant in buyback_data:
+			if not (entry_variant is Dictionary):
+				continue
+			var entry_data: Dictionary = entry_variant as Dictionary
+			var item_data: Variant = entry_data.get("item", {})
+			if item_data is Dictionary:
+				var item_id: String = str((item_data as Dictionary).get("item_id", ""))
+				if item_id != "":
+					var item: Variant = Generator.create_item(item_id)
+					if item != null and item.has_method("deserialize"):
+						item.deserialize(item_data as Dictionary)
+						buyback_items.append({"item": item, "price": int(entry_data.get("price", 0))})

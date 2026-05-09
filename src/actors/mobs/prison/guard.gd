@@ -17,11 +17,13 @@ func _init() -> void:
 func _act_hunting() -> void:
 	if target == null or not target.is_alive:
 		_set_state(AIState.WANDERING)
+		spend_turn()
 		return
 	# If at range 2-3, try to chain pull
 	var dist: int = distance_to(target.pos)
 	if dist >= 2 and dist <= 4 and can_see(target.pos) and randf() < 0.4:
 		_chain_pull()
+		spend_attack()
 		return
 	super._act_hunting()
 

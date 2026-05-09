@@ -3,6 +3,8 @@ extends WndBase
 ## Quest reward selection window. Shows 2-3 item choices and lets the player
 ## pick one. Used by NPCs (Ghost, Wandmaker, Imp) when rewarding completed quests.
 
+signal reward_chosen(chosen_item: Variant)
+
 var _quest_name: String = ""
 var _quest_description: String = ""
 var _reward_items: Array = []
@@ -142,6 +144,8 @@ func _on_choose_pressed() -> void:
 		if chosen_item.has_method("get_display_name"):
 			chosen_name = chosen_item.get_display_name()
 		MessageLog.add_positive("You receive the %s!" % chosen_name)
+
+	reward_chosen.emit(chosen_item)
 
 	# Emit quest completion signal
 	if EventBus and _quest_name != "":

@@ -30,8 +30,8 @@ func act() -> void:
 		web_cooldown -= 1
 	super.act()
 	# Update last enemy position after acting (for web trajectory prediction)
-	if enemy != null and can_see(enemy.pos):
-		last_enemy_pos = enemy.pos
+	if target != null and can_see(target.pos):
+		last_enemy_pos = target.pos
 
 func _act_hunting() -> void:
 	if target == null or not target.is_alive:
@@ -71,8 +71,24 @@ func _shoot_web() -> void:
 	did_visible_action = true
 	if target == null or level == null:
 		return
-	# Place web at target position
+	var web_pos: int = _predict_web_position()
+	# Place web at predicted target position
 	if level.has_method("set_terrain"):
-		level.set_terrain(target.pos, ConstantsData.Terrain.WEB)
+		level.set_terrain(web_pos, ConstantsData.Terrain.WEB)
+	if level.has_method("add_blob"):
+		var web: WebBlob = WebBlob.new()
+		level.add_blob(web, web_pos)
 	if MessageLog:
 		MessageLog.add_warning("The spinner shoots a web!")
+
+func _predict_web_position() -> int:
+	if target == null or level == null:
+		return pos
+	var target_pos: int = target.pos
+	if last_enemy_pos >= 0 and last_enemy_pos != target_pos:
+		var dx: int = signi(ConstantsData.pos_to_x(target_pos) - ConstantsData.pos_to_x(last_enemy_pos))
+		var dy: int = signi(ConstantsData.pos_to_y(target_pos) - ConstantsData.pos_to_y(last_enemy_pos))
+		var predicted_pos: int = target_pos + dx + dy * ConstantsData.WIDTH
+		if ConstantsData.is_valid_pos(predicted_pos) and level.is_passable(predicted_pos):
+			return predicted_pos
+	return target_pos

@@ -23,6 +23,7 @@ func _act_hunting() -> void:
 	if target == null or not target.is_alive:
 		_find_hero_target()
 		if target == null:
+			spend_turn()
 			return
 
 	teleport_cooldown = maxi(0, teleport_cooldown - 1)
@@ -34,6 +35,7 @@ func _act_hunting() -> void:
 		_teleport_away()
 		if MessageLog:
 			MessageLog.add_warning("Tengu becomes more aggressive!")
+		spend_turn()
 		return
 
 	# Throw shuriken at range
@@ -43,6 +45,7 @@ func _act_hunting() -> void:
 		# Teleport away after attacking
 		if teleport_cooldown <= 0:
 			_teleport_away()
+		spend_attack()
 		return
 
 	# If adjacent, melee then teleport
@@ -50,9 +53,11 @@ func _act_hunting() -> void:
 		attack(target)
 		if teleport_cooldown <= 0:
 			_teleport_away()
+		spend_attack()
 		return
 
 	_move_toward(target.pos)
+	spend_move()
 
 func _throw_shuriken() -> void:
 	did_visible_action = true

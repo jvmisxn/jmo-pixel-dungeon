@@ -28,18 +28,31 @@ func on_attack_hit(target_char: Char, _damage: int) -> void:
 	if target_char is Hero and randf() < 0.3:
 		var hero: Hero = target_char as Hero
 		if hero.belongings and hero.belongings.item_count() > 0:
-			# Steal random item (simplified — Phase 3 will flesh this out)
-			stolen_item = true  # Placeholder
+			stolen_item = _steal_from_hero(hero)
+		if stolen_item != null:
 			_set_state(AIState.FLEEING)
 			if MessageLog:
-				MessageLog.add_negative("The thief steals from you!")
+				MessageLog.add_negative("The thief steals %s!" % stolen_item.get_display_name())
 
 func should_flee() -> bool:
 	return stolen_item != null
 
+func _steal_from_hero(hero: Hero) -> Variant:
+	if hero == null or hero.belongings == null or hero.belongings.backpack.is_empty():
+		return null
+	var backpack: Array[Item] = hero.belongings.backpack
+	var source_item: Item = backpack[randi() % backpack.size()]
+	if source_item == null:
+		return null
+	if source_item.stackable and source_item.quantity > 1 and source_item.has_method("split"):
+		return source_item.split(1)
+	return hero.belongings.remove_item(source_item)
+
 func _on_death(source: Variant) -> void:
 	# Drop stolen item
 	if stolen_item != null:
+		if level != null and level.has_method("drop_item"):
+			level.drop_item(pos, stolen_item)
 		if MessageLog:
-			MessageLog.add_positive("The thief drops your stolen item!")
+			MessageLog.add_positive("The thief drops %s!" % stolen_item.get_display_name())
 	super._on_death(source)

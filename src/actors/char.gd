@@ -45,14 +45,6 @@ var is_hero: bool = false  # Override in Hero class
 var invisible: int = 0  # >0 means invisible; incremented by Invisibility buff
 var paralysed: int = 0  # >0 means paralysed; incremented by Frost/Paralysis buffs
 
-# --- Multiplayer-ready: unique actor ID ---
-var actor_id: int = -1
-static var _next_id: int = 0
-
-func _init() -> void:
-	actor_id = _next_id
-	_next_id += 1
-
 # ---------------------------------------------------------------------------
 # Combat
 # ---------------------------------------------------------------------------
@@ -450,6 +442,40 @@ func process_buffs() -> void:
 		# Check if buff expired
 		if b.has_method("is_expired") and b.is_expired():
 			remove_buff(b)
+
+func _serialize_buffs() -> Array[Dictionary]:
+	var buff_data: Array[Dictionary] = []
+	for buff_node: Node in _buffs:
+		if buff_node != null and is_instance_valid(buff_node) and buff_node.has_method("serialize"):
+			buff_data.append(buff_node.serialize())
+	return buff_data
+
+func _deserialize_buffs(data: Variant) -> void:
+	for existing_buff: Node in _buffs.duplicate():
+		remove_buff(existing_buff)
+	if not (data is Array):
+		return
+	for buff_entry: Variant in data:
+		if not (buff_entry is Dictionary):
+			continue
+		var buff_dict: Dictionary = buff_entry as Dictionary
+		var script_path: String = str(buff_dict.get("_script_path", ""))
+		if script_path.is_empty() or not ResourceLoader.exists(script_path):
+			continue
+		var buff_script: Script = load(script_path) as Script
+		if buff_script == null:
+			continue
+		var buff_node: Variant = buff_script.new()
+		if not (buff_node is Node):
+			continue
+		var buff: Node = buff_node as Node
+		if buff.has_method("deserialize"):
+			buff.deserialize(buff_dict)
+		_buffs.append(buff)
+		add_child(buff)
+		if buff.has_method("attach"):
+			buff.attach(self)
+		buff_added.emit(buff)
 
 # ---------------------------------------------------------------------------
 # Movement

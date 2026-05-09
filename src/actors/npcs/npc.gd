@@ -97,4 +97,22 @@ func _on_death(source: Variant) -> void:
 	if level and level.has_method("remove_mob"):
 		level.remove_mob(self)
 
-# ---------------------------------------------
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["quest_id"] = quest_id
+	data["quest_active"] = quest_active
+	data["quest_complete"] = quest_complete
+	data["npc_name"] = npc_name
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	quest_id = str(data.get("quest_id", quest_id))
+	quest_active = bool(data.get("quest_active", quest_active))
+	quest_complete = bool(data.get("quest_complete", quest_complete))
+	npc_name = str(data.get("npc_name", npc_name))
+	mob_name = npc_name
+
+func resolve_post_load(_level_ref: Level) -> void:
+	if quest_id != "" and QuestHandler:
+		QuestHandler._register_npc(self)

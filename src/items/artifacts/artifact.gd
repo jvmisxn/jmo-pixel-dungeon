@@ -897,7 +897,9 @@ class MasterThievesArmband extends Artifact:
 		gain_exp(maxi(1, gold_amount / 20))
 
 	## Attempt to steal from a shopkeeper.
-	func activate(_hero: Char) -> bool:
+	func activate(hero: Char) -> bool:
+		if hero == null:
+			return false
 		var cost: int = charge_max
 		if not _spend_charge(cost):
 			if MessageLog:
@@ -907,14 +909,47 @@ class MasterThievesArmband extends Artifact:
 				)
 			return false
 
+		var shopkeeper: Variant = _find_nearby_shopkeeper(hero)
+		if shopkeeper == null:
+			if MessageLog:
+				MessageLog.add(
+					"There is no shopkeeper nearby to steal from.",
+					icon_color
+				)
+			charge = mini(charge + cost, charge_max)
+			return false
+
+		var stolen_entry: Dictionary = _pick_shop_item_to_steal(shopkeeper)
+		if stolen_entry.is_empty():
+			if MessageLog:
+				MessageLog.add(
+					"The shopkeeper has nothing left worth stealing.",
+					icon_color
+				)
+			charge = mini(charge + cost, charge_max)
+			return false
+
 		# Steal success chance scales with level
 		var success_chance: float = 0.5 + float(level) * 0.05
 		var roll: float = randf()
 
 		if roll < success_chance:
+			var stolen_item: Variant = stolen_entry.get("item")
+			var shop_inventory: Array = shopkeeper.shop_inventory if shopkeeper.get("shop_inventory") != null else []
+			var index: int = shop_inventory.find(stolen_entry)
+			if index >= 0:
+				shopkeeper.shop_inventory.remove_at(index)
+			var belongings: Variant = hero.get("belongings")
+			var added_to_inventory: bool = false
+			if belongings != null and belongings.has_method("add_item") and stolen_item != null:
+				added_to_inventory = belongings.add_item(stolen_item)
+			if not added_to_inventory:
+				var hero_level_ref: Variant = hero.get("level")
+				if hero_level_ref != null and hero_level_ref.has_method("drop_item") and stolen_item != null:
+					hero_level_ref.drop_item(hero.pos, stolen_item)
 			if MessageLog:
 				MessageLog.add(
-					"Your fingers are quicker than the eye! You steal successfully!",
+					"Your fingers are quicker than the eye! You steal %s!" % ConstantsData.get_prop(stolen_item, "item_name", "an item"),
 					icon_color
 				)
 			gain_exp(10)
@@ -927,10 +962,37 @@ class MasterThievesArmband extends Artifact:
 					"You are caught stealing! The shopkeeper is furious!",
 					Color.RED
 				)
-			# Consequence handling is done by the shop system
+			if shopkeeper.has_method("_flee"):
+				shopkeeper.call("_flee")
 			if EventBus:
 				EventBus.item_used.emit(item_name)
 			return false
+
+	func _find_nearby_shopkeeper(hero: Char) -> Variant:
+		var hero_level_ref: Variant = hero.get("level") if hero != null else null
+		if hero_level_ref == null or hero_level_ref.get("mobs") == null:
+			return null
+		for mob_ref: Variant in hero_level_ref.mobs:
+			if mob_ref == null or not is_instance_valid(mob_ref):
+				continue
+			if str(mob_ref.get("mob_id")) == "shopkeeper" and hero.distance_to(mob_ref.pos) <= 1:
+				return mob_ref
+		return null
+
+	func _pick_shop_item_to_steal(shopkeeper: Variant) -> Dictionary:
+		var inventory: Array = shopkeeper.shop_inventory if shopkeeper != null and shopkeeper.get("shop_inventory") != null else []
+		if inventory.is_empty():
+			return {}
+		var best_entry: Dictionary = {}
+		var best_price: int = -1
+		for entry_variant: Variant in inventory:
+			if entry_variant is Dictionary:
+				var entry: Dictionary = entry_variant as Dictionary
+				var price: int = int(entry.get("price", 0))
+				if price > best_price:
+					best_price = price
+					best_entry = entry
+		return best_entry
 
 	func level_up() -> void:
 		super.level_up()
