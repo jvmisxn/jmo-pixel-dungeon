@@ -381,7 +381,8 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1) -> void:
 func _do_search() -> void:
 	if level == null:
 		return
-	var found: int = DoorFeature.search(level, pos)
+	var door_feature: RefCounted = DoorFeature.new()
+	var found: int = int(door_feature.call("search", level, pos))
 	if found <= 0 and MessageLog:
 		MessageLog.add("You search, but find nothing.")
 	_patient_strike_ready = false
@@ -580,7 +581,8 @@ func _do_interact(target_pos: int) -> void:
 		var terrain: int = level.get_terrain(target_pos)
 		match terrain:
 			ConstantsData.Terrain.DOOR, ConstantsData.Terrain.LOCKED_DOOR, ConstantsData.Terrain.CRYSTAL_DOOR:
-				DoorFeature.open(level, target_pos, self)
+				var door_feature: RefCounted = DoorFeature.new()
+				door_feature.call("open", level, target_pos, self)
 
 func _do_ascend() -> void:
 	# Level transitions are handled by GameScene._handle_ascend().
