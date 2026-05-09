@@ -72,7 +72,7 @@ func detonate(bomb_pos: int, dungeon_level: Variant) -> void:
 				# Distance falloff: halve damage for each cell away from center
 				var dist: int = _chebyshev_distance(bomb_pos, ch.pos)
 				if dist > 0:
-					dmg = maxi(1, dmg / (dist + 1))
+					dmg = maxi(1, int(float(dmg) / float(dist + 1)))
 				# Apply type-specific damage modifiers
 				dmg = _modify_damage_for_type(dmg, ch)
 				ch.take_damage(dmg, null)

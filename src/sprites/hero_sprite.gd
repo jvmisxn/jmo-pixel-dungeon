@@ -99,7 +99,7 @@ func update_armor(tier: int = 0) -> void:
 	refresh_texture()
 
 ## Adjust run animation speed. Original HeroSprite.sprint() changes run.delay.
-func sprint(speed: float) -> void:
+func sprint(_speed: float) -> void:
 	# Higher speed = shorter move_to duration
 	# Base move is 0.15s; sprint scales inversely
 	pass  # Move duration is passed per-call in move_to(); this is a stub for future frame-animation support.
@@ -226,7 +226,7 @@ func _draw_mage(img: Image, body: Color, armor: Color, eyes: Color, weapon: Colo
 	img.set_pixel(14, 0, detail)
 	img.set_pixel(13, 1, detail)
 
-func _draw_rogue(img: Image, body: Color, armor: Color, eyes: Color, weapon: Color, detail: Color) -> void:
+func _draw_rogue(img: Image, _body: Color, armor: Color, eyes: Color, weapon: Color, detail: Color) -> void:
 	# Head with cowl
 	for x: int in range(5, 11):
 		for y: int in range(1, 6):

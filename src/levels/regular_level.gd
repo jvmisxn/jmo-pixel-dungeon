@@ -341,10 +341,10 @@ func mob_count() -> int:
 	# Floor 1 always spawns 8 mobs so the player can reach level 2
 	if depth <= 1:
 		return 8
-	var mobs: int = 3 + (depth % 5) + randi_range(0, 2)
+	var mob_total: int = 3 + (depth % 5) + randi_range(0, 2)
 	if feeling == Feeling.LARGE:
-		mobs = ceili(mobs * 1.33)
-	return mobs
+		mob_total = ceili(mob_total * 1.33)
+	return mob_total
 
 ## Returns positions suitable for mob spawning.
 ## Original: spawns mobs in weighted StandardRooms, avoiding entrance FOV + 8-tile walk.

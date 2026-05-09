@@ -53,7 +53,7 @@ func get_str_requirement() -> int:
 # ---------------------------------------------------------------------------
 
 ## Bows are slightly slower than melee weapons by default.
-func speed_factor(hero: Char) -> float:
+func speed_factor(_hero: Char) -> float:
 	var base_delay: float = 1.0
 
 	match augment:
@@ -140,5 +140,5 @@ func serialize() -> Dictionary:
 	data["is_spirit_bow"] = true
 	return data
 
-func deserialize(data: Dictionary) -> void:
+func deserialize(_data: Dictionary) -> void:
 	pass

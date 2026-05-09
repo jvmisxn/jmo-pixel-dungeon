@@ -230,7 +230,7 @@ func gain_charge(amount: int = 1) -> void:
 func on_hit_effect(target: Variant) -> void:
 	# Base implementation: deal minor zap damage
 	if target != null and target.has_method("take_damage"):
-		var dmg: int = maxi(1, roll_zap_damage() / 3)
+		var dmg: int = maxi(1, int(float(roll_zap_damage()) / 3.0))
 		target.take_damage(dmg, null)
 
 ## Get stats text for the item detail window.

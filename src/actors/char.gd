@@ -235,12 +235,12 @@ func dr_roll() -> int:
 	var bark_lvl: int = Barkskin.current_level(self)
 	if bark_lvl > 0:
 		# NormalIntRange(0, barkskin_level) approximated by triangular
-		dr += (randi_range(0, bark_lvl) + randi_range(0, bark_lvl)) / 2
+		dr += int((randi_range(0, bark_lvl) + randi_range(0, bark_lvl)) / 2.0)
 
 	var armor: int = effective_armor()
 	if armor > 0:
 		# Triangular distribution: average of two uniform rolls approximates NormalIntRange
-		dr += (randi_range(0, armor) + randi_range(0, armor)) / 2
+		dr += int((randi_range(0, armor) + randi_range(0, armor)) / 2.0)
 
 	return dr
 

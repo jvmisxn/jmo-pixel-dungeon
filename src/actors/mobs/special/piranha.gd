@@ -21,13 +21,13 @@ func _init() -> void:
 # --- Water Restriction ---
 
 ## Piranhas can only occupy water tiles.
-func _can_move_to(target_pos: int) -> bool:
+func _can_move_to(dest_pos: int) -> bool:
 	if level == null:
 		return false
-	if not level.is_passable(target_pos):
+	if not level.is_passable(dest_pos):
 		return false
 	# Can only move in water
-	return level.get_terrain(target_pos) == ConstantsData.Terrain.WATER
+	return level.get_terrain(dest_pos) == ConstantsData.Terrain.WATER
 
 ## Override act_hunting to only chase targets adjacent to or in water.
 func _act_hunting() -> void:
@@ -72,7 +72,7 @@ func _act_sleeping() -> void:
 		state = AIState.WANDERING
 
 ## Find the best water tile step toward a target position.
-func _find_water_step_toward(target_pos: int) -> int:
+func _find_water_step_toward(dest_pos: int) -> int:
 	if level == null:
 		return -1
 	var best: int = -1
@@ -80,7 +80,7 @@ func _find_water_step_toward(target_pos: int) -> int:
 	for dir: int in ConstantsData.DIRS_8:
 		var next: int = pos + dir
 		if _can_move_to(next) and level.find_char_at(next) == null:
-			var d: float = level.distance(next, target_pos)
+			var d: float = level.distance(next, dest_pos)
 			if d < best_dist:
 				best_dist = d
 				best = next
@@ -101,7 +101,7 @@ func scale_to_depth(p_depth: int) -> void:
 	damage_roll_max = 5 + tier * 3
 	attack_skill = 10 + tier * 5
 
-func _on_death(source: Variant) -> void:
+func _on_death(_source: Variant) -> void:
 	# Drop loot
 	_try_drop_loot()
 	# Track stat

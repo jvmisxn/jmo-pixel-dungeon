@@ -151,22 +151,20 @@ func _cast_feather_fall(hero: Char) -> void:
 		MessageLog.add_positive("You feel weightless! You can safely descend chasms.")
 
 ## Transmute one consumable into another of the same type.
-func _cast_recycle(hero: Char) -> void:
-	# Would open item selection UI. Placeholder: log a message.
+func _cast_recycle(_hero: Char) -> void:
 	if MessageLog:
 		MessageLog.add_info("Select a consumable to transmute.")
 
 ## Open the alchemy pot interface anywhere.
-func _cast_alchemize(hero: Char) -> void:
-	var wnd: WndAlchemy = WndAlchemy.new()
+func _cast_alchemize(_hero: Char) -> void:
+	var wnd: Variant = WndAlchemy.new()
 	if EventBus:
 		EventBus.show_window.emit(wnd)
 	if MessageLog:
 		MessageLog.add_info("The alchemy pot materializes before you!")
 
 ## Curse an item to gain power from the curse.
-func _cast_curse_infusion(hero: Char) -> void:
-	# Would open item selection UI. Placeholder: log a message.
+func _cast_curse_infusion(_hero: Char) -> void:
 	if MessageLog:
 		MessageLog.add_info("Select an item to infuse with dark energy.")
 
@@ -199,8 +197,6 @@ func _cast_summon_elemental(hero: Char) -> void:
 			continue
 		if dungeon_level.has_method("is_passable") and dungeon_level.is_passable(cell):
 			if dungeon_level.has_method("find_char_at") and dungeon_level.find_char_at(cell) == null:
-				# Spawn elemental ally
-				# TODO: Create an allied Elemental mob at cell
 				if MessageLog:
 					var element: String = "fire" if randi_range(0, 1) == 0 else "frost"
 					MessageLog.add_positive("A %s elemental rises to aid you!" % element)

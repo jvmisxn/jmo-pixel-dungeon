@@ -120,6 +120,7 @@ func _get_sprite_texture(idx: int) -> Texture2D:
 		if _sheet_texture == null:
 			return null
 	var col: int = idx % SHEET_COLUMNS
+	@warning_ignore("integer_division")
 	var row: int = idx / SHEET_COLUMNS
 	var region: Rect2 = Rect2(col * SPRITE_SIZE, row * SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE)
 	var atlas: AtlasTexture = AtlasTexture.new()

@@ -231,7 +231,6 @@ func jump(from: int, to: int, height: float = -1.0, duration: float = -1.0) -> v
 		_move_tween.kill()
 	_move_tween = create_tween()
 	# Animate position with a manual parabolic arc via method tween
-	var elapsed: float = 0.0
 	var steps: int = maxi(int(duration / 0.016), 2)
 	var step_time: float = duration / float(steps)
 	for i: int in range(steps + 1):
@@ -319,8 +318,8 @@ func _process_state_removal(_state: int) -> void:
 # ---------------------------------------------------------------------------
 
 ## Show or hide the sprite (fog of war driven).
-func set_visible_state(is_visible: bool) -> void:
-	visible = is_visible
+func set_visible_state(shown: bool) -> void:
+	visible = shown
 
 ## Update the HP bar display.
 func update_hp_bar(hp: int, ht: int) -> void:

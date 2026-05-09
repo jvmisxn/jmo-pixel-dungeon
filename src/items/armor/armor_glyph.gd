@@ -29,7 +29,7 @@ static func _emit_glyph_proc(glyph_id_str: String, wearer: Variant, attacker: Va
 
 ## Virtual proc method called when the wearer is hit.
 ## Returns the modified damage value after the glyph's effect.
-func proc(armor: Variant, attacker: Variant, defender: Variant, damage: int) -> int:
+func proc(_armor: Variant, _attacker: Variant, _defender: Variant, damage: int) -> int:
 	return damage
 
 ## Base proc chance scales with armor level. Higher level = higher chance.

@@ -19,7 +19,6 @@ func _on_death(source: Variant) -> void:
 	# Explode! Original: bone explosion applies DR twice (all DR sources 2x effective).
 	# Damage is NormalIntRange(6,12) approximated with triangular distribution.
 	if level:
-		var hero_killed: bool = false
 		for dir: int in ConstantsData.DIRS_8:
 			var adj_pos: int = pos + dir
 			if level.has_method("find_char_at"):
@@ -27,6 +26,4 @@ func _on_death(source: Variant) -> void:
 				if adj_char != null:
 					var dmg: int = randi_range(6, 12)
 					adj_char.take_damage(dmg, "skeleton explosion")
-					if adj_char.get("is_hero") == true:
-						hero_killed = not adj_char.is_alive
 		super._on_death(source)

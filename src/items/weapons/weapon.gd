@@ -18,7 +18,6 @@ var curse_infusion_bonus: bool = false
 ## Whether this weapon has a mastery potion bonus (reduced STR req).
 var mastery_potion_bonus: bool = false
 ## Use-based identification tracking (SPD: 20 uses to ID).
-var _uses_to_id: int = 20
 var _uses_left_to_id: float = 20.0
 var _available_uses_to_id: float = 10.0
 

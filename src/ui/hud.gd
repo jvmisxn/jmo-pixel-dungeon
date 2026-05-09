@@ -303,9 +303,9 @@ func _on_level_changed(_new_depth: int) -> void:
 		var lvl: Variant = GameManager.current_level
 		var level_map: Array[int] = lvl.map if lvl.get("map") != null else []
 		var visited: Array[bool] = lvl.visited if lvl.get("visited") != null else []
-		var visible: Array[bool] = lvl.visible if lvl.get("visible") != null else []
+		var visible_cells: Array[bool] = lvl.visible if lvl.get("visible") != null else []
 		var hero_pos: int = GameManager.hero.pos if GameManager.get("hero") != null else -1
-		_minimap.update_map(level_map, visited, visible, hero_pos)
+		_minimap.update_map(level_map, visited, visible_cells, hero_pos)
 
 
 func _on_gold_collected(_amount: int, _total: int) -> void:
@@ -391,7 +391,7 @@ func _on_settings_pressed() -> void:
 	show_window(wnd)
 
 
-func _on_quickslot_used(slot_index: int, item: RefCounted) -> void:
+func _on_quickslot_used(_slot_index: int, item: RefCounted) -> void:
 	if GameManager == null or GameManager.hero == null or item == null:
 		return
 	if item is Wand:

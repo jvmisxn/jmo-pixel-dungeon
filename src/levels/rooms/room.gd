@@ -128,7 +128,7 @@ func in_bounds() -> bool:
 ## Maximum number of connections this room can have.
 ## Original: StandardRoom returns ALL (unlimited), Special/Secret rooms return 1-2.
 ## Override in subclasses to restrict door count.
-func max_connections(direction: int = -1) -> int:
+func max_connections(_direction: int = -1) -> int:
 	# -1 means total across all directions. direction 0-3 = specific side.
 	return 999  # unlimited by default (StandardRoom behavior)
 

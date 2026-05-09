@@ -88,10 +88,10 @@ func _record(target: Dictionary[String, int], entry_name: String) -> void:
 
 func _build_entries(source: Dictionary[String, int]) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	for name: String in source.keys():
+	for entry_name: String in source.keys():
 		result.append({
-			"name": name,
-			"count": source.get(name, 0),
+			"name": entry_name,
+			"count": source.get(entry_name, 0),
 		})
 	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return a.get("name", "") < b.get("name", "")

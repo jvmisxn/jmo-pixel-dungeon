@@ -24,7 +24,7 @@ func set_level(value: int, time: int) -> void:
 		interval = time
 
 ## Delay the next tick by a given amount.
-func delay(value: float) -> void:
+func delay(_value: float) -> void:
 	# In the original this adjusts the Actor cooldown
 	pass
 

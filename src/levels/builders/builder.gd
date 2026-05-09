@@ -11,7 +11,7 @@ extends RefCounted
 
 ## Build a layout from the given rooms. Returns true on success.
 ## Subclasses override this.
-func build(rooms: Array) -> bool:
+func build(_rooms: Array) -> bool:
 	return false
 
 # ---------------------------------------------------------------------------

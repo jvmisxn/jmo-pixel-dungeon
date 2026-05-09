@@ -30,7 +30,7 @@ func degrade() -> Item:
 	return self
 
 ## On pickup, add gold to the GameManager and log a message.
-func on_pickup(hero: Char) -> void:
+func on_pickup(_hero: Char) -> void:
 	if GameManager:
 		GameManager.add_gold(quantity)
 	if MessageLog:

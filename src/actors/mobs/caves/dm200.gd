@@ -38,6 +38,6 @@ func _vent_gas() -> void:
 				var p: Poison = Poison.create(4.0)
 				(victim as Char).add_buff(p)
 
-func _on_death(source: Variant) -> void:
+func _on_death(_source: Variant) -> void:
 	# Release gas cloud on death
 	_vent_gas()

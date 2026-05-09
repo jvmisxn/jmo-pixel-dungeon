@@ -27,11 +27,15 @@ var loot_table: Array[Dictionary] = []  # [{item_id: String, chance: float}]
 var max_level: int = 30  # Hero level at which this mob gives 0 XP
 
 # --- Properties (e.g. "UNDEAD", "BOSS", "DEMONIC") and resistances ---
+@warning_ignore("unused_private_class_variable")
 var _properties: Array[String] = []
+@warning_ignore("unused_private_class_variable")
 var _resistances: Array[String] = []
+@warning_ignore("unused_private_class_variable")
 var _immunities: Array[String] = []
 
 # --- Movement ---
+@warning_ignore("unused_private_class_variable")
 var _path: Array[int] = []
 
 ## Set to true during act() when the mob does something the player should see
@@ -396,7 +400,7 @@ func on_attack_hit(target_char: Char, damage: int) -> void:
 	if target_char.is_hero and EventBus:
 		EventBus.hero_damaged.emit(damage, self)
 
-func _on_death(source: Variant) -> void:
+func _on_death(_source: Variant) -> void:
 	# Check Soul Mark (Warlock subclass)
 	if has_buff("SoulMark"):
 		var mark: Node = get_buff("SoulMark")
@@ -472,5 +476,5 @@ func serialize() -> Dictionary:
 	data["enemy_id"] = target.get_instance_id() if is_instance_valid(target) else -1
 	return data
 
-func deserialize(data: Dictionary) -> void:
+func deserialize(_data: Dictionary) -> void:
 	pass

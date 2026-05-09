@@ -678,7 +678,6 @@ class DriedRose extends Artifact:
 		# The actual ghost mob spawning is handled by the level/mob system
 		# via EventBus
 		if EventBus:
-			var hero_pos: int = hero.get("pos") if hero.get("pos") != null else 0
 			EventBus.item_used.emit(item_name)
 		return true
 
@@ -821,7 +820,8 @@ class HornOfPlenty extends Artifact:
 			)
 
 	## Eat from the horn to reduce hunger.
-	func activate(hero: Char) -> bool:
+	func activate(_hero: Char) -> bool:
+		var hero: Char = _hero
 		if charge <= 0:
 			if MessageLog:
 				MessageLog.add("The Horn of Plenty is empty.", icon_color)
@@ -897,7 +897,7 @@ class MasterThievesArmband extends Artifact:
 		gain_exp(maxi(1, gold_amount / 20))
 
 	## Attempt to steal from a shopkeeper.
-	func activate(hero: Char) -> bool:
+	func activate(_hero: Char) -> bool:
 		var cost: int = charge_max
 		if not _spend_charge(cost):
 			if MessageLog:

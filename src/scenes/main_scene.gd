@@ -15,24 +15,24 @@ func _start_new_game() -> void:
 	GameManager.new_game(ConstantsData.HeroClass.WARRIOR)
 
 	# Create hero
-	var hero: Hero = Hero.new()
-	hero.init_class(GameManager.hero_class)
-	hero.give_starting_items()
-	hero.pos = -1  # Will be set by level load
-	GameManager.hero = hero
-	GameManager.heroes = [hero]
+	var new_hero: Hero = Hero.new()
+	new_hero.init_class(GameManager.hero_class)
+	new_hero.give_starting_items()
+	new_hero.pos = -1  # Will be set by level load
+	GameManager.hero = new_hero
+	GameManager.heroes = [new_hero]
 
 	# Generate the first level
 	var level: Level = LevelFactory.create_for_depth(GameManager.depth)
 	GameManager.current_level = level
 
 	# Place hero at entrance
-	hero.pos = level.entrance
+	new_hero.pos = level.entrance
 
 	# Register hero with turn manager (use activate() so active flag is set)
 	TurnManager.clear_actors()
-	hero.active = false
-	hero.activate()
+	new_hero.active = false
+	new_hero.activate()
 
 	# Register mobs (use activate() so deactivate on death works properly)
 	for mob: Variant in level.mobs:

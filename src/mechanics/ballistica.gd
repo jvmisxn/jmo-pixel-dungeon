@@ -89,7 +89,7 @@ func cast(from_pos: int, to_pos: int, passable: Array[bool], params: int,
 		d_b = dx
 
 	var cell: int = from_pos
-	var err: int = d_a / 2 if d_a > 0 else 0
+	var err: int = d_a >> 1 if d_a > 0 else 0
 
 	# Build the FULL path to the map edge (original continues past collision)
 	while _inside_map(cell, width, height):
@@ -112,10 +112,7 @@ func cast(from_pos: int, to_pos: int, passable: Array[bool], params: int,
 					var soft_solid: bool = false
 					if (params & IGNORE_SOFT_SOLID) != 0:
 						# Doors and webs are "soft solid" — passable/avoidable
-						# Since they're not passable here, only check avoidable terrain
-						var terrain: int = -1
-						if cell < length:
-							terrain = ConstantsData.terrain_is_passable(0)  # placeholder
+						# Since avoid[] is not implemented yet, treat all solids as hard solids.
 						soft_solid = false  # simplified: no avoid[] array yet
 					if not soft_solid:
 						collision_pos = cell

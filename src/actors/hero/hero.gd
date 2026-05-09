@@ -863,11 +863,11 @@ func on_trampled_grass() -> void:
 
 	if seed_chance > 0.0 and randf() < clampf(seed_chance, 0.0, 1.0) and not Generator.SEEDS.is_empty():
 		var seed_id: String = Generator.SEEDS[randi_range(0, Generator.SEEDS.size() - 1)]
-		var seed: Item = Generator.create_item(seed_id)
-		if seed != null and level.has_method("drop_item"):
-			level.drop_item(pos, seed)
+		var seed_item: Item = Generator.create_item(seed_id)
+		if seed_item != null and level.has_method("drop_item"):
+			level.drop_item(pos, seed_item)
 			if MessageLog:
-				MessageLog.add_positive("You find %s in the grass." % seed.get_display_name())
+				MessageLog.add_positive("You find %s in the grass." % seed_item.get_display_name())
 
 
 func _maybe_identify_pickup(item: Item, chance: float, message_template: String) -> void:
@@ -886,8 +886,8 @@ func can_surprise_attack() -> bool:
 			return weapon.can_surprise_attack(self)
 	return super.can_surprise_attack()
 
-func attack_proc(enemy: Char, damage: int) -> int:
-	var result: int = super.attack_proc(enemy, damage)
+func attack_proc(target_char: Char, damage: int) -> int:
+	var result: int = super.attack_proc(target_char, damage)
 
 	var sucker_punch_level: int = get_talent_level("rogue_sucker_punch")
 	if hero_class == ConstantsData.HeroClass.ROGUE and sucker_punch_level > 0 and _pending_surprise_attack:
@@ -904,13 +904,13 @@ func attack_proc(enemy: Char, damage: int) -> int:
 	if belongings != null:
 		var weapon: Variant = belongings.get_equipped_weapon()
 		if weapon != null and weapon.has_method("proc_enchantment"):
-			result = weapon.proc_enchantment(self, enemy, result)
+			result = weapon.proc_enchantment(self, target_char, result)
 
 	_followup_strike_ready = false
 	return maxi(0, result)
 
-func defense_proc(enemy: Char, damage: int) -> int:
-	var result: int = super.defense_proc(enemy, damage)
+func defense_proc(attacker: Char, damage: int) -> int:
+	var result: int = super.defense_proc(attacker, damage)
 	if result < 0:
 		return result
 	if belongings != null:

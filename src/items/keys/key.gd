@@ -32,7 +32,7 @@ func execute(_hero: Char) -> void:
 	if MessageLog:
 		MessageLog.add_info("Use this key on a locked door or chest.")
 
-func on_pickup(hero: Char) -> void:
+func on_pickup(_hero: Char) -> void:
 	# Assign the key's depth to the current dungeon depth
 	if GameManager:
 		depth = GameManager.depth

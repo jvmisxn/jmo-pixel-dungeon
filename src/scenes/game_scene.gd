@@ -24,8 +24,6 @@ var _entity_layer: Node2D = null
 # --- Input State ---
 var _awaiting_hero_input: bool = false
 var _game_ended: bool = false  # Set on hero death/victory to stop _process loop
-@warning_ignore("unused_variable")
-var _selected_cell: int = -1
 var _hover_cell: int = -1
 
 # --- Auto-Walk State ---
@@ -404,8 +402,8 @@ func _ensure_mob_sprites() -> void:
 	for mob: Variant in _current_level.mobs:
 		if not (mob is Object) or mob.get("is_alive") != true:
 			continue
-		var key: int = mob.get("actor_id") if mob.get("actor_id") != null else mob.get_instance_id()
-		if _mob_sprites.has(key):
+		var mob_key: int = mob.get("actor_id") if mob.get("actor_id") != null else mob.get_instance_id()
+		if _mob_sprites.has(mob_key):
 			continue
 		_spawn_single_mob_sprite(mob)
 
@@ -421,10 +419,10 @@ func _spawn_single_mob_sprite(mob: Variant) -> void:
 			item_sprite.setup_manual(ConstantsData.ItemCategory.MISC)
 		item_sprite.place_at(mob.get("pos"))
 		_entity_layer.add_child(item_sprite)
-		var key: int = mob.get("actor_id") if mob.get("actor_id") != null else mob.get_instance_id()
+		var mob_key: int = mob.get("actor_id") if mob.get("actor_id") != null else mob.get_instance_id()
 		_item_sprites[mob.get("pos")] = item_sprite
 		# Store reference so we can swap it on reveal
-		_mob_sprites[key] = null  # placeholder
+		_mob_sprites[mob_key] = null  # placeholder
 		return
 
 	var sprite: MobSprite = MobSprite.new()
@@ -433,8 +431,8 @@ func _spawn_single_mob_sprite(mob: Variant) -> void:
 	sprite.place_at(mob.get("pos"))
 	sprite.character = mob
 	_entity_layer.add_child(sprite)
-	var key: int = mob.get("actor_id") if mob.get("actor_id") != null else mob.get_instance_id()
-	_mob_sprites[key] = sprite
+	var mob_key: int = mob.get("actor_id") if mob.get("actor_id") != null else mob.get_instance_id()
+	_mob_sprites[mob_key] = sprite
 	if mob is Object:
 		mob.set("sprite", sprite)
 	# Ensure the mob Node is in the scene tree (for queue_free on buffs)

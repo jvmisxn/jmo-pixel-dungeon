@@ -814,7 +814,7 @@ class ScrollRetribution extends Scroll:
 					var dist: int = 1
 					if hero.has_method("distance_to"):
 						dist = maxi(1, hero.distance_to(mob.pos))
-					var mob_damage: int = base_damage / dist
+					var mob_damage: int = maxi(1, int(float(base_damage) / float(dist)))
 					if mob.has_method("take_damage"):
 						mob.take_damage(mob_damage, hero)
 					affected += 1

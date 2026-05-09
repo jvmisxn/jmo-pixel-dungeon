@@ -37,13 +37,13 @@ func act() -> void:
 		return
 
 	# Find nearest enemy mob
-	var enemy: Mob = _find_nearest_enemy()
-	if enemy:
-		target = enemy
-		if is_adjacent(enemy.pos):
-			attack(enemy)
+	var nearest_enemy: Mob = _find_nearest_enemy()
+	if nearest_enemy:
+		target = nearest_enemy
+		if is_adjacent(nearest_enemy.pos):
+			attack(nearest_enemy)
 		else:
-			_move_toward(enemy.pos)
+			_move_toward(nearest_enemy.pos)
 	elif ally_hero and ally_hero.is_alive:
 		# No enemies — follow the hero
 		if not is_adjacent(ally_hero.pos):
@@ -85,7 +85,7 @@ func take_damage(dmg: int, source: Variant = null) -> int:
 		return 0  # Immune to hero damage
 	return super.take_damage(dmg, source)
 
-func _on_death(source: Variant) -> void:
+func _on_death(_source: Variant) -> void:
 	if MessageLog:
 		MessageLog.add_info("The golden bee dies.")
 	if EventBus:
