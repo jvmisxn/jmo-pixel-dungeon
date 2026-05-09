@@ -548,6 +548,10 @@ func get_heroes() -> Array[Char]:
 func has_los(origin: int, target: int) -> bool:
 	return is_visible_from(origin, target)
 
+## Alias for Actor.can_see() compatibility.
+func has_los(origin: int, target: int) -> bool:
+	return is_visible_from(origin, target)
+
 ## Returns true if pos is visible from origin (uses ShadowCaster LOS check).
 func is_visible_from(origin: int, target: int) -> bool:
 	if origin == target:

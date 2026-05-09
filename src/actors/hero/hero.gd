@@ -4,6 +4,8 @@ extends Char
 ## Designed for multiplayer: multiple Hero instances can coexist. Actions go through
 ## a command pattern — never directly mutate game state from input.
 
+const DoorFeature = preload("res://src/levels/features/door.gd")
+
 # --- Signals ---
 @warning_ignore("unused_signal")
 signal xp_gained(amount: int)
@@ -379,7 +381,7 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1) -> void:
 func _do_search() -> void:
 	if level == null:
 		return
-	var found: int = Door.search(level, pos)
+	var found: int = DoorFeature.search(level, pos)
 	if found <= 0 and MessageLog:
 		MessageLog.add("You search, but find nothing.")
 	_patient_strike_ready = false
@@ -578,7 +580,7 @@ func _do_interact(target_pos: int) -> void:
 		var terrain: int = level.get_terrain(target_pos)
 		match terrain:
 			ConstantsData.Terrain.DOOR, ConstantsData.Terrain.LOCKED_DOOR, ConstantsData.Terrain.CRYSTAL_DOOR:
-				Door.open(level, target_pos, self)
+				DoorFeature.open(level, target_pos, self)
 
 func _do_ascend() -> void:
 	# Level transitions are handled by GameScene._handle_ascend().
