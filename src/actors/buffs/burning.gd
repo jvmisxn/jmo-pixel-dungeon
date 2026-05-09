@@ -44,7 +44,7 @@ func on_turn() -> void:
 		@warning_ignore("integer_division")
 		var max_dmg: int = 3 + depth / 4
 		var dmg: int = randi_range(1, maxi(1, max_dmg))
-		target.take_damage(dmg, self, "fire")
+		target.take_damage(dmg, self)
 		if MessageLog:
 			MessageLog.add_negative("%s is burning! (%d dmg)" % [target.mob_name, dmg])
 

@@ -149,14 +149,13 @@ static func _decorate_walls(level: Level) -> void:
 
 ## Apply water/grass patches based on the level's feeling.
 static func _apply_feeling(level: Level) -> void:
-	if level.feeling == Level.Feeling.NONE:
-		return
+	var water_params: Dictionary = _water_params(level)
+	var water_fill: float = water_params.get("fill", 0.0)
+	var water_smoothness: int = water_params.get("smoothness", 0)
+	if water_fill > 0.0:
+		_paint_water_patches(level, water_fill, water_smoothness)
 
 	match level.feeling:
-		Level.Feeling.WATER:
-			for i: int in range(Level.LEN):
-				if level.map[i] == ConstantsData.Terrain.EMPTY and randf() < 0.20:
-					level.map[i] = ConstantsData.Terrain.WATER
 		Level.Feeling.GRASS:
 			for i: int in range(Level.LEN):
 				if level.map[i] != ConstantsData.Terrain.EMPTY:
@@ -166,6 +165,69 @@ static func _apply_feeling(level: Level) -> void:
 					level.map[i] = ConstantsData.Terrain.GRASS
 				elif roll < 0.18:
 					level.map[i] = ConstantsData.Terrain.HIGH_GRASS
-		Level.Feeling.DARK:
-			# Dark feeling doesn't change terrain, handled by fog of war
+		Level.Feeling.DARK, Level.Feeling.NONE, Level.Feeling.WATER:
+			# Dark doesn't change terrain directly. Water is handled by region-style patch painting.
 			return
+
+
+static func _water_params(level: Level) -> Dictionary:
+	if level is SewerLevel:
+		return {
+			"fill": 0.85 if level.feeling == Level.Feeling.WATER else 0.30,
+			"smoothness": 5,
+		}
+	if level is CavesLevel:
+		return {
+			"fill": 0.85 if level.feeling == Level.Feeling.WATER else 0.30,
+			"smoothness": 6,
+		}
+	if level is CityLevel:
+		return {
+			"fill": 0.90 if level.feeling == Level.Feeling.WATER else 0.30,
+			"smoothness": 4,
+		}
+	return {}
+
+
+static func _paint_water_patches(level: Level, fill: float, smoothness: int) -> void:
+	var patch: Array[bool] = _generate_patch(ConstantsData.WIDTH, ConstantsData.HEIGHT, fill, smoothness)
+	for room_ref: Variant in level.rooms:
+		var room: Room = room_ref as Room
+		if room == null:
+			continue
+		for pos: int in room.interior_cells():
+			if patch[pos] and level.map[pos] == ConstantsData.Terrain.EMPTY:
+				level.map[pos] = ConstantsData.Terrain.WATER
+
+
+static func _generate_patch(width: int, height: int, fill: float, smoothness: int) -> Array[bool]:
+	var patch: Array[bool] = []
+	patch.resize(width * height)
+
+	for y: int in range(height):
+		for x: int in range(width):
+			var pos: int = y * width + x
+			var on_edge: bool = x == 0 or y == 0 or x == width - 1 or y == height - 1
+			patch[pos] = false if on_edge else randf() < fill
+
+	for _step: int in range(smoothness):
+		var next_patch: Array[bool] = []
+		next_patch.resize(width * height)
+		for y: int in range(height):
+			for x: int in range(width):
+				var pos: int = y * width + x
+				if x == 0 or y == 0 or x == width - 1 or y == height - 1:
+					next_patch[pos] = false
+					continue
+				var neighbors: int = 0
+				for oy: int in range(-1, 2):
+					for ox: int in range(-1, 2):
+						if ox == 0 and oy == 0:
+							continue
+						var npos: int = (y + oy) * width + (x + ox)
+						if patch[npos]:
+							neighbors += 1
+				next_patch[pos] = neighbors >= 4
+		patch = next_patch
+
+	return patch

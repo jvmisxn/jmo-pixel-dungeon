@@ -153,6 +153,7 @@ static var _MOB_SHEETS: Dictionary = {
 	"wandmaker":       { "path": "wandmaker.png",      "fw": 12, "fh": 15 },
 	"blacksmith":      { "path": "blacksmith.png",     "fw": 12, "fh": 16 },
 	"shopkeeper":      { "path": "shopkeeper.png",     "fw": 13, "fh": 16 },
+	"ambitious_imp":   { "path": "demon.png",          "fw": 12, "fh": 15 },
 	# --- Extras with dedicated SPD assets ---
 	"ghoul":           { "path": "ghoul.png",          "fw": 12, "fh": 15 },
 	"guardian":        { "path": "guardian.png",       "fw": 14, "fh": 16 },

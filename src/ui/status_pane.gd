@@ -38,18 +38,8 @@ const BUFF_ICON_SIZE: Vector2 = Vector2(16, 16)
 const STATUS_PANE_PATH: String = "res://assets/spd/interfaces/status_pane.png"
 const HERO_ICONS_PATH: String = "res://assets/spd/interfaces/hero_icons.png"
 const BUFFS_PATH: String = "res://assets/spd/interfaces/buffs.png"
-
-## Hero class sprite sheet paths — matches the in-game character sprites.
-const HERO_SPRITE_PATHS: Array[String] = [
-	"res://assets/spd/sprites/warrior.png",
-	"res://assets/spd/sprites/mage.png",
-	"res://assets/spd/sprites/rogue.png",
-	"res://assets/spd/sprites/huntress.png",
-	"res://assets/spd/sprites/duelist.png",
-]
-## Hero sprite frame size (12x15 per frame in the sprite sheet).
-const HERO_FRAME_W: int = 12
-const HERO_FRAME_H: int = 15
+const HERO_AVATARS_PATH: String = "res://assets/spd/sprites/avatars.png"
+const HERO_AVATAR_SIZE: int = 32
 
 ## Low HP warning flash state — matches original StatusPane.java warning colors.
 ## Original uses warningColors = [0x660000, 0xCC0000, 0x660000] and cycles
@@ -540,30 +530,28 @@ func _set_slot_item(slot: ItemSlot, item: Variant) -> void:
 	slot.item = item  # null clears the slot, valid item draws the icon
 
 
-## Extract the hero's idle frame from the class sprite sheet and display it.
+## Extract the hero's portrait from the SPD avatar sheet and display it.
 func _update_portrait() -> void:
 	if not _portrait_rect:
 		return
 	var class_idx: int = GameManager.hero_class if GameManager else 0
-	if class_idx < 0 or class_idx >= HERO_SPRITE_PATHS.size():
+	if class_idx < 0:
 		# Fallback: show class name text
 		if _class_label:
 			_class_label.text = HeroClassData.get_class_name_str(class_idx).left(3) if GameManager else "???"
 		return
-	var path: String = HERO_SPRITE_PATHS[class_idx]
-	if not ResourceLoader.exists(path):
+	if not ResourceLoader.exists(HERO_AVATARS_PATH):
 		if _class_label:
 			_class_label.text = HeroClassData.get_class_name_str(class_idx).left(3)
 		return
-	var sheet: Texture2D = load(path) as Texture2D
-	if sheet == null:
+	var sheet: Texture2D = load(HERO_AVATARS_PATH) as Texture2D
+	if sheet == null or sheet.get_width() < HERO_AVATAR_SIZE * (class_idx + 1):
 		if _class_label:
 			_class_label.text = HeroClassData.get_class_name_str(class_idx).left(3)
 		return
-	# Extract first idle frame (12x15 at origin)
 	var atlas: AtlasTexture = AtlasTexture.new()
 	atlas.atlas = sheet
-	atlas.region = Rect2(0, 0, HERO_FRAME_W, HERO_FRAME_H)
+	atlas.region = Rect2(class_idx * HERO_AVATAR_SIZE, 0, HERO_AVATAR_SIZE, HERO_AVATAR_SIZE)
 	_portrait_rect.texture = atlas
 	# Hide fallback text since we have a real sprite
 	if _class_label:

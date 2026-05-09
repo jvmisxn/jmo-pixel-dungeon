@@ -36,24 +36,50 @@ class BlobOverlayLayer:
 			var y: int = pos / ConstantsData.WIDTH
 			var rect: Rect2 = Rect2(Vector2(x * CELL_SIZE, y * CELL_SIZE), Vector2(CELL_SIZE, CELL_SIZE))
 
-			var outer: Color = base_color
-			outer.a = alpha
-			draw_rect(rect, outer, true)
-
 			match style:
 				"web":
-					var web_line: Color = base_color.lightened(0.55)
-					web_line.a = minf(alpha + 0.2, 0.9)
-					draw_line(rect.position + Vector2(2, 2), rect.position + Vector2(CELL_SIZE - 2, CELL_SIZE - 2), web_line, 1.4)
-					draw_line(rect.position + Vector2(CELL_SIZE - 2, 2), rect.position + Vector2(2, CELL_SIZE - 2), web_line, 1.4)
+					_draw_web(rect, base_color, alpha)
 				"fire":
-					var ember: Color = base_color.lightened(0.45)
-					ember.a = minf(alpha + 0.18, 0.92)
-					draw_rect(rect.grow(-4), ember, true)
+					_draw_fire(rect, pos, base_color, alpha)
 				_:
-					var inner: Color = base_color.lightened(0.25)
-					inner.a = minf(alpha + 0.08, 0.72)
-					draw_rect(rect.grow(-3), inner, true)
+					_draw_gas(rect, pos, base_color, alpha)
+
+	func _draw_web(rect: Rect2, base_color: Color, alpha: float) -> void:
+		var mist: Color = base_color
+		mist.a = alpha * 0.3
+		draw_circle(rect.get_center(), 5.0, mist)
+		var web_line: Color = base_color.lightened(0.55)
+		web_line.a = minf(alpha + 0.2, 0.9)
+		draw_line(rect.position + Vector2(2, 2), rect.position + Vector2(CELL_SIZE - 2, CELL_SIZE - 2), web_line, 1.4)
+		draw_line(rect.position + Vector2(CELL_SIZE - 2, 2), rect.position + Vector2(2, CELL_SIZE - 2), web_line, 1.4)
+		draw_line(rect.position + Vector2(CELL_SIZE * 0.5, 1), rect.position + Vector2(CELL_SIZE * 0.5, CELL_SIZE - 1), web_line, 1.0)
+		draw_line(rect.position + Vector2(1, CELL_SIZE * 0.5), rect.position + Vector2(CELL_SIZE - 1, CELL_SIZE * 0.5), web_line, 1.0)
+
+	func _draw_fire(rect: Rect2, pos: int, base_color: Color, alpha: float) -> void:
+		var outer: Color = base_color
+		outer.a = alpha * 0.75
+		var inner: Color = base_color.lightened(0.45)
+		inner.a = minf(alpha + 0.18, 0.92)
+		var seed: int = pos * 37 + 11
+		_draw_puff(rect, seed, outer, 5.2, 0.95)
+		_draw_puff(rect, seed + 3, inner, 3.4, 0.55)
+		draw_circle(rect.position + Vector2(8, 11), 2.1, inner)
+
+	func _draw_gas(rect: Rect2, pos: int, base_color: Color, alpha: float) -> void:
+		var outer: Color = base_color
+		outer.a = alpha * 0.7
+		var inner: Color = base_color.lightened(0.22)
+		inner.a = minf(alpha + 0.08, 0.72)
+		var seed: int = pos * 53 + 7
+		_draw_puff(rect, seed, outer, 4.8, 1.0)
+		_draw_puff(rect, seed + 5, inner, 3.2, 0.58)
+
+	func _draw_puff(rect: Rect2, seed: int, color: Color, radius: float, spread: float) -> void:
+		var center: Vector2 = rect.get_center()
+		for i: int in range(3):
+			var offset_x: float = float(((seed + i * 11) % 7) - 3) * spread
+			var offset_y: float = float((((seed / 3) + i * 13) % 7) - 3) * spread
+			draw_circle(center + Vector2(offset_x, offset_y), radius - i * 0.8, color)
 
 # --- Layer References ---
 var tile_map: TileMapManager = null
@@ -64,8 +90,8 @@ var game_camera: GameCamera = null
 # --- Sprite Tracking ---
 ## Hero sprite instances. Key: actor_id (int) -> HeroSprite
 var _hero_sprites: Dictionary[int, HeroSprite] = {}
-## Mob sprite instances. Key: actor_id (int or mob ref) -> MobSprite
-var _mob_sprites: Dictionary[int, MobSprite] = {}
+## Mob sprite instances. Key: actor_id (int or mob ref) -> CharSprite
+var _mob_sprites: Dictionary[int, CharSprite] = {}
 ## Item sprites on the ground. Key: pos (int) -> ItemSprite
 var _item_sprites: Dictionary[int, ItemSprite] = {}
 ## Plant sprites on the ground. Key: pos (int) -> PlantSprite
@@ -319,7 +345,7 @@ func on_mob_action(actor: Node) -> void:
 	if actor == null or not is_instance_valid(actor):
 		return
 	var actor_id: int = actor.get("actor_id") if actor.get("actor_id") != null else -1
-	var sprite: MobSprite = _mob_sprites.get(actor_id) as MobSprite if actor_id >= 0 else null
+	var sprite: CharSprite = _mob_sprites.get(actor_id) as CharSprite if actor_id >= 0 else null
 
 	if sprite and is_instance_valid(sprite):
 		var mob_pos: int = actor.get("pos") if actor.get("pos") != null else -1
@@ -501,9 +527,18 @@ func _spawn_single_mob_sprite(mob: Variant) -> void:
 		_mob_sprites[mob_key] = null  # placeholder
 		return
 
-	var sprite: MobSprite = MobSprite.new()
 	var mob_id: String = mob.get("mob_id") if mob.get("mob_id") else "rat"
-	sprite.setup_for_mob(mob_id)
+	var sprite: CharSprite = null
+	if mob_id == "mirror_image":
+		var image_sprite: HeroSprite = HeroSprite.new()
+		var image_class: int = int(mob.get("source_hero_class")) if mob.get("source_hero_class") != null else ConstantsData.HeroClass.WARRIOR
+		image_sprite.setup_for_class(image_class)
+		image_sprite.modulate = Color(0.7, 0.9, 1.0, 0.85)
+		sprite = image_sprite
+	else:
+		var mob_sprite: MobSprite = MobSprite.new()
+		mob_sprite.setup_for_mob(mob_id)
+		sprite = mob_sprite
 	sprite.place_at(mob.get("pos"))
 	sprite.character = mob
 	_entity_layer.add_child(sprite)
@@ -559,10 +594,10 @@ func _clear_entity_sprites() -> void:
 func _cleanup_dead_mobs() -> void:
 	var to_remove: Array[int] = []
 	for key: int in _mob_sprites.keys():
-		var sprite: MobSprite = _mob_sprites[key]
+		var sprite: CharSprite = _mob_sprites[key]
 		if sprite == null:
 			continue  # Disguised mimic placeholder
-		if not sprite is MobSprite:
+		if not sprite is CharSprite:
 			continue
 		if not is_instance_valid(sprite.character):
 			# Character was freed (died and call_deferred("free") ran)
@@ -751,7 +786,7 @@ func _update_entity_visibility() -> void:
 		var sprite: Variant = _mob_sprites[key]
 		if sprite == null:
 			continue  # Disguised mimic placeholder
-		if not sprite is MobSprite:
+		if not sprite is CharSprite:
 			continue
 		if not is_instance_valid(sprite.character):
 			# Character was freed — hide sprite, cleanup will happen in _cleanup_dead_mobs
@@ -1234,6 +1269,14 @@ func _on_round_completed(_round_number: int) -> void:
 func _on_trap_triggered(_pos: int, _trap_name: String) -> void:
 	if AudioManager:
 		AudioManager.play_sfx("trap")
+	if _current_level != null:
+		tile_map.update_level(_current_level)
+		if GameManager and GameManager.hero and _current_level.has_method("update_fov"):
+			var view_distance: int = GameManager.hero.get_view_distance() if GameManager.hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
+			_current_level.update_fov(GameManager.hero.pos, view_distance)
+		if fog_of_war:
+			fog_of_war.update_visibility()
+		_update_entity_visibility()
 
 func _on_item_used_sfx(item_name: String) -> void:
 	if AudioManager == null:

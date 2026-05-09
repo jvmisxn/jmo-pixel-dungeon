@@ -27,6 +27,8 @@ var color: Color = Color.RED
 func activate(triggerer: Variant, level: Level) -> void:
 	if not active:
 		return
+	if not visible:
+		reveal(level)
 
 	_do_effect(triggerer, level)
 

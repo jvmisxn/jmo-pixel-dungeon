@@ -89,13 +89,14 @@ static func create_mob(mob_id: String) -> Mob:
 	match mob_id:
 		# Sewer mobs
 		"rat": return Rat.new()
+		"fetid_rat": return FetidRat.new()
 		"gnoll": return Gnoll.new()
 		"crab": return Crab.new()
+		"great_crab": return GreatCrab.new()
 		"snake": return Snake.new()
 		"slime": return Slime.new()
 		"swarm": return Swarm.new()
 		"gnoll_trickster": return GnollTrickster.new()
-		"great_crab": return GreatCrab.new()
 		# Prison mobs
 		"skeleton": return Skeleton.new()
 		"thief": return Thief.new()
@@ -134,7 +135,7 @@ static func create_mob(mob_id: String) -> Mob:
 		"king": return DwarfKing.new()
 		"yog": return Yog.new()
 	push_warning("MobFactory: Unknown mob_id '%s'" % mob_id)
-	return Mob.new()
+	return null
 
 ## Spawn a random mob appropriate for the given depth.
 static func create_random_mob(depth: int) -> Mob:
@@ -152,9 +153,11 @@ static func create_random_mob(depth: int) -> Mob:
 	for entry: Dictionary in table:
 		cumulative += entry["weight"]
 		if roll <= cumulative:
-			return create_mob(entry["mob_id"])
+			var selected: Mob = create_mob(entry["mob_id"])
+			return selected if selected != null else Rat.new()
 
-	return create_mob(table[0]["mob_id"])
+	var fallback: Mob = create_mob(table[0]["mob_id"])
+	return fallback if fallback != null else Rat.new()
 
 ## Create the boss for a given boss depth.
 static func create_boss(depth: int) -> Mob:

@@ -2,6 +2,9 @@ class_name WndHeroInfo
 extends WndBase
 ## Hero information window showing stats, buffs, and run statistics.
 
+const HERO_AVATARS_PATH: String = "res://assets/spd/sprites/avatars.png"
+const HERO_AVATAR_SIZE: int = 32
+
 var _hero: Hero = null
 
 
@@ -49,12 +52,8 @@ func _build_content() -> Control:
 		sub_label.add_theme_color_override("font_color", Color(0.8, 0.9, 1.0))
 		main.add_child(sub_label)
 
-	# --- Portrait placeholder ---
-	var portrait: ColorRect = ColorRect.new()
-	portrait.custom_minimum_size = Vector2(64, 64)
-	portrait.color = _get_class_color(_hero.hero_class)
 	var portrait_center: CenterContainer = CenterContainer.new()
-	portrait_center.add_child(portrait)
+	portrait_center.add_child(_build_hero_portrait(_hero.hero_class))
 	main.add_child(portrait_center)
 
 	# --- Core Stats ---
@@ -215,6 +214,53 @@ func _add_stat_row(grid: GridContainer, label_text: String, value_text: String) 
 	var val: Label = Label.new()
 	val.text = value_text
 	grid.add_child(val)
+
+
+func _build_hero_portrait(hero_class: int) -> Control:
+	var portrait_panel: PanelContainer = PanelContainer.new()
+	var portrait_style: StyleBoxFlat = StyleBoxFlat.new()
+	portrait_style.bg_color = Color(0.1, 0.09, 0.08)
+	portrait_style.border_color = Color(0.5, 0.45, 0.35)
+	portrait_style.set_border_width_all(2)
+	portrait_style.set_corner_radius_all(2)
+	portrait_style.content_margin_left = 6.0
+	portrait_style.content_margin_right = 6.0
+	portrait_style.content_margin_top = 6.0
+	portrait_style.content_margin_bottom = 6.0
+	portrait_panel.add_theme_stylebox_override("panel", portrait_style)
+
+	var portrait_holder: CenterContainer = CenterContainer.new()
+	portrait_holder.custom_minimum_size = Vector2(88, 96)
+	portrait_panel.add_child(portrait_holder)
+
+	if ResourceLoader.exists(HERO_AVATARS_PATH):
+		var sheet: Texture2D = load(HERO_AVATARS_PATH) as Texture2D
+		if sheet != null and sheet.get_width() >= HERO_AVATAR_SIZE * (hero_class + 1):
+			var atlas: AtlasTexture = AtlasTexture.new()
+			atlas.atlas = sheet
+			atlas.region = Rect2(hero_class * HERO_AVATAR_SIZE, 0, HERO_AVATAR_SIZE, HERO_AVATAR_SIZE)
+
+			var portrait_rect: TextureRect = TextureRect.new()
+			portrait_rect.texture = atlas
+			portrait_rect.custom_minimum_size = Vector2(72, 72)
+			portrait_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			portrait_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			portrait_holder.add_child(portrait_rect)
+			return portrait_panel
+
+	var fallback: ColorRect = ColorRect.new()
+	fallback.custom_minimum_size = Vector2(72, 90)
+	fallback.color = _get_class_color(hero_class)
+	portrait_holder.add_child(fallback)
+
+	var fallback_label: Label = Label.new()
+	fallback_label.text = HeroClassData.get_class_name_str(hero_class).left(3)
+	fallback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	fallback_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	fallback_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fallback.add_child(fallback_label)
+	return portrait_panel
 
 
 func _get_subclass_name(subclass: int) -> String:

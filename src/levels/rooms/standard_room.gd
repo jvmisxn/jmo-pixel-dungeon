@@ -75,8 +75,6 @@ func paint(level: Level) -> void:
 
 func _pick_floor_terrain(level: Level) -> int:
 	match level.feeling:
-		Level.Feeling.WATER:
-			return ConstantsData.Terrain.WATER
 		Level.Feeling.CHASM:
 			return ConstantsData.Terrain.EMPTY
 		_:
