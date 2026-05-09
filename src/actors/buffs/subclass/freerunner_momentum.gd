@@ -49,3 +49,14 @@ func description() -> String:
 	if momentum > 0:
 		return "Momentum (%d/%d)" % [momentum, MAX_MOMENTUM]
 	return "Momentum (still)"
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["momentum"] = momentum
+	data["last_was_move"] = last_was_move
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	momentum = int(data.get("momentum", momentum))
+	last_was_move = bool(data.get("last_was_move", last_was_move))

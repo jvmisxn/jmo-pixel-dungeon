@@ -34,3 +34,12 @@ func description() -> String:
 	if snapshot_cooldown > 0:
 		return "Sniper (snapshot in %d)" % snapshot_cooldown
 	return "Sniper (snapshot ready!)"
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["snapshot_cooldown"] = snapshot_cooldown
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	snapshot_cooldown = int(data.get("snapshot_cooldown", snapshot_cooldown))

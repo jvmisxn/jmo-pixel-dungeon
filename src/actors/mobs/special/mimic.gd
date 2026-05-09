@@ -129,3 +129,36 @@ func take_damage(dmg: int, source: Variant = null) -> int:
 	if disguised:
 		reveal()
 	return super.take_damage(dmg, source)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["disguised"] = disguised
+	data["fake_item_id"] = fake_item_id
+	var stored_data: Array[Dictionary] = []
+	for item: Variant in stored_items:
+		if item != null and item.has_method("serialize"):
+			stored_data.append(item.serialize())
+	data["stored_items"] = stored_data
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	disguised = bool(data.get("disguised", disguised))
+	fake_item_id = str(data.get("fake_item_id", fake_item_id))
+	stored_items.clear()
+	var stored_data: Variant = data.get("stored_items", [])
+	if stored_data is Array:
+		for item_data: Variant in stored_data:
+			if not (item_data is Dictionary):
+				continue
+			var item_id: String = str((item_data as Dictionary).get("item_id", ""))
+			if item_id == "":
+				continue
+			var item: Variant = Generator.create_item(item_id)
+			if item != null and item.has_method("deserialize"):
+				item.deserialize(item_data as Dictionary)
+				stored_items.append(item)
+	if disguised:
+		state = AIState.SLEEPING
+	else:
+		state = AIState.HUNTING

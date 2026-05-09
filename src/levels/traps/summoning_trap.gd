@@ -20,6 +20,19 @@ func _do_effect(_triggerer: Variant, level: Level) -> void:
 			if level.mob_at(adj) == null:
 				spawn_positions.append(adj)
 
-	# Mob spawning will be handled by the actor system in Phase 2
-	# For now, log the positions
-	var _to_spawn: int = mini(num_summons, spawn_positions.size())
+	var to_spawn: int = mini(num_summons, spawn_positions.size())
+	if to_spawn <= 0:
+		return
+	spawn_positions.shuffle()
+	for i: int in range(to_spawn):
+		var spawn_pos: int = spawn_positions[i]
+		var mob: Variant = MobFactory.create_random_mob(level.depth) if MobFactory else null
+		if mob == null:
+			continue
+		mob.pos = spawn_pos
+		mob.level = level
+		if mob.has_method("scale_to_depth"):
+			mob.scale_to_depth(level.depth)
+		level.add_mob(mob)
+		if TurnManager:
+			TurnManager.add_actor(mob)

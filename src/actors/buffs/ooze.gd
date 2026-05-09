@@ -75,3 +75,14 @@ func _is_flying() -> bool:
 
 func description() -> String:
 	return "Caustic ooze clings to the target, dealing damage each turn. Standing in water washes it off."
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["left"] = left
+	data["acted"] = acted
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	left = float(data.get("left", left))
+	acted = bool(data.get("acted", acted))

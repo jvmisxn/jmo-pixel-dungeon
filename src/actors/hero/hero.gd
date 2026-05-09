@@ -412,6 +412,13 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 		_followup_strike_ready = false
 		return
 
+	if item is SeedItem:
+		var seed_item: SeedItem = item as SeedItem
+		seed_item.plant_at(self, _projectile_collision_pos(target_pos))
+		_patient_strike_ready = false
+		_followup_strike_ready = false
+		return
+
 	var collision_pos: int = _projectile_collision_pos(target_pos)
 	var collision_target: Variant = level.find_char_at(collision_pos) if collision_pos >= 0 else null
 	var hit_target: Char = collision_target as Char if collision_target is Char and collision_target != self else null
@@ -582,6 +589,11 @@ func _do_use_item(item: Variant) -> void:
 func _do_interact(target_pos: int) -> void:
 	if level == null:
 		return
+	if level.has_method("find_char_at"):
+		var target_char: Variant = level.find_char_at(target_pos)
+		if target_char != null and target_char != self and target_char is NPC:
+			target_char.interact(self)
+			return
 	# Interact with terrain (open doors, search, pick up items)
 	if level.has_method("get_terrain"):
 		var terrain: int = level.get_terrain(target_pos)
@@ -863,8 +875,8 @@ func on_trampled_grass() -> void:
 
 	if randf() < clampf(dew_chance, 0.0, 1.0):
 		var dew: Dewdrop = Generator.create_item("dewdrop") as Dewdrop
-		if dew != null:
-			dew.on_pickup(self)
+		if dew != null and level.has_method("drop_item"):
+			level.drop_item(pos, dew)
 		return
 
 	if seed_chance > 0.0 and randf() < clampf(seed_chance, 0.0, 1.0) and not Generator.SEEDS.is_empty():
@@ -985,6 +997,10 @@ func deserialize(data: Dictionary) -> void:
 	var belongings_data: Dictionary = data.get("belongings", {})
 	if not belongings_data.is_empty():
 		belongings.deserialize(belongings_data)
+	var artifact_item: Variant = belongings.get_equipped_artifact() if belongings != null else null
+	var level_ref: Variant = level if level != null else GameManager.current_level
+	if artifact_item != null and artifact_item.has_method("resolve_post_load") and level_ref != null:
+		artifact_item.resolve_post_load(self, level_ref)
 
 # ---------------------------------------------------------------------------
 # Damage & Death Overrides
@@ -1044,6 +1060,10 @@ func get_view_distance() -> int:
 	# Torch buff adds +2
 	if has_buff("Torch"):
 		dist += 2
+	var current_level_ref: Variant = level if level != null else GameManager.current_level
+	if current_level_ref is HallsLevel:
+		var halls_cap: int = maxi(1, 26 - int(current_level_ref.get("depth")))
+		dist = mini(dist, halls_cap)
 	return dist
 
 ## Return true if the hero is considered "sighted" (can use shadowcasting).

@@ -13,7 +13,7 @@ func _roll_feeling() -> void:
 		feeling = Feeling.WATER
 	elif roll < 0.40:
 		feeling = Feeling.GRASS
-	elif roll < 0.45:
+	elif depth >= 3 and roll < 0.45:
 		feeling = Feeling.DARK
 	else:
 		feeling = Feeling.NONE

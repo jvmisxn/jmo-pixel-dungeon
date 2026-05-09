@@ -147,12 +147,12 @@ static func _register_npc(npc: Variant) -> void:
 		EventBus.mob_defeated.connect(_on_mob_defeated)
 
 ## Route mob defeat events to active quest NPCs that track kills.
-static func _on_mob_defeated(mob_pos: int, mob_name_str: String) -> void:
+static func _on_mob_defeated(mob_pos: int, mob_name_str: String, mob_id: String) -> void:
 	for npc: Variant in active_npcs:
 		if npc == null:
 			continue
 		if npc.has_method("on_mob_defeated"):
-			npc.on_mob_defeated(mob_pos, mob_name_str)
+			npc.on_mob_defeated(mob_pos, mob_name_str, mob_id)
 
 ## Unregister an NPC (called when quest is complete and NPC departs).
 static func unregister_npc(npc: Variant) -> void:

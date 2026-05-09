@@ -92,3 +92,14 @@ func _predict_web_position() -> int:
 		if ConstantsData.is_valid_pos(predicted_pos) and level.is_passable(predicted_pos):
 			return predicted_pos
 	return target_pos
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["web_cooldown"] = web_cooldown
+	data["last_enemy_pos"] = last_enemy_pos
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	web_cooldown = int(data.get("web_cooldown", web_cooldown))
+	last_enemy_pos = int(data.get("last_enemy_pos", last_enemy_pos))

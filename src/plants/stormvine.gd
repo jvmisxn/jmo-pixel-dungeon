@@ -1,7 +1,6 @@
 class_name Stormvine
 extends Plant
-## Applies the Rooted debuff to the character, preventing movement.
-## Also applies vertigo (reduced accuracy via Blindness-like effect).
+## Applies Rooted and Vertigo to the target, preventing reliable movement.
 
 const ROOT_DURATION: float = 5.0
 
@@ -14,10 +13,12 @@ func _do_effect(char: Variant, _level: Variant) -> void:
 		return
 
 	if char.has_method("add_buff"):
-		# Root the character in place
 		var root: Rooted = Rooted.new()
 		root.set_duration(ROOT_DURATION)
 		char.add_buff(root)
+		var vertigo: Vertigo = Vertigo.new()
+		vertigo.set_duration(ROOT_DURATION)
+		char.add_buff(vertigo)
 
 	if MessageLog:
 		if char.get("is_hero"):

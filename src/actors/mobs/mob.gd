@@ -432,7 +432,7 @@ func _on_death(_source: Variant) -> void:
 	# Emit death signals
 	if EventBus:
 		EventBus.mob_died.emit(self)
-		EventBus.mob_defeated.emit(pos, mob_name)
+		EventBus.mob_defeated.emit(pos, mob_name, mob_id)
 	# Log death
 	if MessageLog:
 		MessageLog.add("The %s dies." % mob_name)

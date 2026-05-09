@@ -138,6 +138,7 @@ func _add_action_buttons(container: HBoxContainer) -> void:
 		ConstantsData.ItemCategory.FOOD:
 			_add_button(container, "Eat", _action_use)
 		ConstantsData.ItemCategory.SEED:
+			_add_button(container, "Plant", _action_use)
 			if _can_feed_seed_to_sandals():
 				_add_button(container, "Feed", _action_feed_to_sandals)
 		_:

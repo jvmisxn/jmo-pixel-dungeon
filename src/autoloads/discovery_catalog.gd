@@ -53,7 +53,7 @@ func get_sections() -> Dictionary:
 		"glyphs": _build_entries(_glyphs),
 	}
 
-func _on_mob_defeated(_mob_pos: int, mob_name: String) -> void:
+func _on_mob_defeated(_mob_pos: int, mob_name: String, _mob_id: String) -> void:
 	record_mob(mob_name)
 
 func _on_mob_revealed(mob: Variant) -> void:

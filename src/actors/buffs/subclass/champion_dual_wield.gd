@@ -62,3 +62,26 @@ func description() -> String:
 		var which: String = "primary" if primary_next else "secondary"
 		return "Dual Wield (%s next, off-hand: %s)" % [which, wname]
 	return "Dual Wield (no off-hand penalty when using two weapons)."
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["primary_next"] = primary_next
+	if secondary_weapon != null and secondary_weapon.has_method("serialize"):
+		data["secondary_weapon"] = secondary_weapon.serialize()
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	primary_next = bool(data.get("primary_next", primary_next))
+	secondary_weapon = null
+	var weapon_data: Variant = data.get("secondary_weapon", null)
+	if not (weapon_data is Dictionary):
+		return
+	var item_data: Dictionary = weapon_data as Dictionary
+	var item_id: String = str(item_data.get("item_id", ""))
+	if item_id == "":
+		return
+	var restored_weapon: Variant = Generator.create_item(item_id)
+	if restored_weapon != null and restored_weapon.has_method("deserialize"):
+		restored_weapon.deserialize(item_data)
+		secondary_weapon = restored_weapon

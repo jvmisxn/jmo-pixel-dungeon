@@ -47,3 +47,14 @@ func description() -> String:
 	if combo_count > 0:
 		return "Combo (%d hits)" % combo_count
 	return "Combo"
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["combo_count"] = combo_count
+	data["turns_since_attack"] = turns_since_attack
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	combo_count = int(data.get("combo_count", combo_count))
+	turns_since_attack = int(data.get("turns_since_attack", turns_since_attack))

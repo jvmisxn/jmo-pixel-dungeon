@@ -47,3 +47,12 @@ func _fire_beam() -> void:
 	target.take_damage(BEAM_DAMAGE, self)
 	if MessageLog:
 		MessageLog.add_negative("The evil eye fires a death beam!")
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["beam_cooldown"] = beam_cooldown
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	beam_cooldown = int(data.get("beam_cooldown", beam_cooldown))

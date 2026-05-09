@@ -11,4 +11,4 @@ func _init() -> void:
 	max_level = 5
 	awareness = 0.2
 	aggro_range = 6
-	loot_table = [{"item_id": "food_ration", "chance": 0.1}]
+	loot_table = [{"item_id": "ration", "chance": 0.1}]

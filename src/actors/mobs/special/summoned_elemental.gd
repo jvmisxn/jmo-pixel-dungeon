@@ -6,6 +6,7 @@ extends Mob
 var ally_hero: Char = null
 var elemental_kind: String = "fire"
 var turns_left: int = 12
+var _saved_ally_hero_actor_id: int = -1
 
 func _init() -> void:
 	super._init()
@@ -142,3 +143,34 @@ static func spawn_at(spawn_pos: int, p_level: Variant, hero: Char, kind: String,
 	if TurnManager:
 		TurnManager.add_actor(elemental)
 	return elemental
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["elemental_kind"] = elemental_kind
+	data["turns_left"] = turns_left
+	data["ally_hero_actor_id"] = ally_hero.actor_id if ally_hero != null else -1
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	elemental_kind = str(data.get("elemental_kind", elemental_kind))
+	turns_left = int(data.get("turns_left", turns_left))
+	_saved_ally_hero_actor_id = int(data.get("ally_hero_actor_id", -1))
+	ally_hero = null
+	if elemental_kind == "frost":
+		mob_name = "Frost Elemental"
+		description = "A frigid summoned spirit that slows whatever it strikes."
+	else:
+		elemental_kind = "fire"
+		mob_name = "Fire Elemental"
+		description = "A blazing summoned spirit that scorches whatever it strikes."
+
+func resolve_post_load(level_ref: Level) -> void:
+	if _saved_ally_hero_actor_id < 0 or level_ref == null:
+		return
+	var heroes: Array[Char] = level_ref.get_heroes() if level_ref.has_method("get_heroes") else []
+	for hero_ref: Char in heroes:
+		if hero_ref != null and is_instance_valid(hero_ref) and hero_ref.actor_id == _saved_ally_hero_actor_id:
+			ally_hero = hero_ref
+			break
+	_saved_ally_hero_actor_id = -1

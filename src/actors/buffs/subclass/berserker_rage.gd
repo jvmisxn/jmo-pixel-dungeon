@@ -55,3 +55,14 @@ func description() -> String:
 	if rage > 0:
 		return "Berserker Rage (%.0f%%)" % (rage / MAX_RAGE * 100)
 	return "Berserker Rage"
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["rage"] = rage
+	data["rage_used"] = rage_used
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	rage = float(data.get("rage", rage))
+	rage_used = bool(data.get("rage_used", rage_used))

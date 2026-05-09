@@ -14,7 +14,7 @@ var shop_depth: int = 0
 ## Original: shopkeeper warns first, then flees on second harm (1-turn buffer).
 ## -1 = never harmed, 0+ = turns since first harm.
 var turns_since_harmed: int = -1
-## Buyback history — items the hero recently sold that can be repurchased.
+## Buyback history - items the hero recently sold that can be repurchased.
 ## Original: MAX_BUYBACK_HISTORY = 3.
 const MAX_BUYBACK_HISTORY: int = 3
 var buyback_items: Array = []
@@ -31,8 +31,8 @@ func _init() -> void:
 	quest_id = ""  # No quest, just a merchant
 	description = "A rotund fellow with a keen eye for gold."
 
-	# Original Shopkeeper has Property.IMMOVABLE — stays in place.
-	setup(1, 0, 100, 0, 0, 100, 1.0)  # Very high defense — effectively invulnerable
+	# Original Shopkeeper has Property.IMMOVABLE - stays in place.
+	setup(1, 0, 100, 0, 0, 100, 1.0)  # Very high defense - effectively invulnerable
 
 	dialogue_lines = [
 		"Welcome! Browse my wares.",
@@ -41,7 +41,7 @@ func _init() -> void:
 	]
 
 # ---------------------------------------------------------------------------
-# Turn — tick the harm warning timer
+# Turn - tick the harm warning timer
 # ---------------------------------------------------------------------------
 
 ## Original Shopkeeper.act() faces the hero each turn, ticks the harm timer, and
@@ -49,7 +49,7 @@ func _init() -> void:
 func act() -> void:
 	if turns_since_harmed >= 0:
 		turns_since_harmed += 1
-	# Original: sprite.turnTo(pos, Dungeon.hero.pos) — face the hero each turn.
+	# Original: sprite.turnTo(pos, Dungeon.hero.pos) - face the hero each turn.
 	# We emit a signal or set facing direction if sprite system supports it.
 	if EventBus and EventBus.has_signal("npc_face_hero"):
 		EventBus.npc_face_hero.emit(self)
@@ -133,20 +133,20 @@ func interact(hero: Variant) -> void:
 		return
 
 	if has_fled:
-		return  # Shopkeeper is gone
+		return
 
 	if shop_inventory.is_empty():
 		if MessageLog:
 			MessageLog.add_info("\"I'm all sold out! Come back another time.\"")
 		return
 
-	# Show shop contents
-	if MessageLog:
+	var wnd: Variant = load("res://src/ui/windows/wnd_shop.gd").new()
+	if wnd.has_method("setup"):
+		wnd.setup(get_shop_items(), hero, self)
+	if EventBus and EventBus.has_signal("show_window"):
+		EventBus.show_window.emit(wnd)
+	elif MessageLog:
 		MessageLog.add_info("\"Welcome! Browse my wares.\"")
-		for entry: Dictionary in shop_inventory:
-			var item: Variant = entry["item"]
-			var price: int = entry["price"] as int
-			MessageLog.add_info("  %s — %d gold" % [item.get_display_name(), price])
 
 ## Returns the list of items for sale (for UI integration).
 func get_shop_items() -> Array[Dictionary]:
@@ -174,19 +174,19 @@ func buy_item(hero: Variant, item_index: int) -> bool:
 			MessageLog.add_warning("\"You can't afford that!\" (%d gold needed)" % price)
 		return false
 
-	# Deduct gold
+	var belongings: Variant = hero.get("belongings") if hero else null
+	if belongings == null or not belongings.has_method("add_item"):
+		return false
+	if not belongings.add_item(item):
+		return false
+
+	# Deduct gold only after the item was accepted.
 	if GameManager:
 		GameManager.gold -= price
 		GameManager.gold_changed.emit(GameManager.gold)
 		if EventBus:
 			EventBus.gold_collected.emit(-price, GameManager.gold)
 
-	# Give item to hero
-	var belongings: Variant = hero.get("belongings") if hero else null
-	if belongings and belongings.has_method("add_item"):
-		belongings.add_item(item)
-
-	# Remove from shop
 	shop_inventory.remove_at(item_index)
 
 	if MessageLog:
@@ -195,7 +195,7 @@ func buy_item(hero: Variant, item_index: int) -> bool:
 	return true
 
 # ---------------------------------------------------------------------------
-# Attack Response — Flee
+# Attack Response - Flee
 # ---------------------------------------------------------------------------
 
 ## Returns true if the item can be sold to the shopkeeper.
@@ -203,7 +203,7 @@ func buy_item(hero: Variant, item_index: int) -> bool:
 static func can_sell(item: Variant) -> bool:
 	if item == null:
 		return false
-	var value: int = item.get("price") if item.get("price") != null else 0
+	var value: int = item.value() if item.has_method("value") else 0
 	if value <= 0:
 		return false
 	# Cannot sell cursed equipped items
@@ -220,8 +220,8 @@ func sell_item(hero: Variant, item: Variant) -> int:
 		return 0
 	if not Shopkeeper.can_sell(item):
 		return 0
-	var sell_price: int = item.get("price") if item.get("price") != null else 0
-	# Original: sell price is item value (not full shop price)
+	var base_value: int = item.value() if item.has_method("value") else 0
+	var sell_price: int = maxi(1, int(float(base_value) * 0.5))
 	if sell_price <= 0:
 		return 0
 
@@ -247,13 +247,12 @@ func sell_item(hero: Variant, item: Variant) -> int:
 	return sell_price
 
 ## Called when the shopkeeper is attacked. Warns first, then flees.
-func take_damage(dmg: int, source: Variant = null) -> int:
+func take_damage(_dmg: int, _source: Variant = null) -> int:
 	if turns_since_harmed < 0:
 		turns_since_harmed = 0
 		if MessageLog:
 			MessageLog.add_warning("\"How dare you! One more time and I'm leaving!\"")
 		return 0
-	# Second offense — flee
 	_flee()
 	return 0
 

@@ -41,3 +41,12 @@ func _vent_gas() -> void:
 func _on_death(_source: Variant) -> void:
 	# Release gas cloud on death
 	_vent_gas()
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["gas_cooldown"] = gas_cooldown
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	gas_cooldown = int(data.get("gas_cooldown", gas_cooldown))

@@ -152,20 +152,20 @@ static func _apply_feeling(level: Level) -> void:
 	if level.feeling == Level.Feeling.NONE:
 		return
 
-	var target_terrain: int = ConstantsData.Terrain.EMPTY
-	var fill_chance: float = 0.0
-
 	match level.feeling:
 		Level.Feeling.WATER:
-			target_terrain = ConstantsData.Terrain.WATER
-			fill_chance = 0.20
+			for i: int in range(Level.LEN):
+				if level.map[i] == ConstantsData.Terrain.EMPTY and randf() < 0.20:
+					level.map[i] = ConstantsData.Terrain.WATER
 		Level.Feeling.GRASS:
-			target_terrain = ConstantsData.Terrain.HIGH_GRASS
-			fill_chance = 0.15
+			for i: int in range(Level.LEN):
+				if level.map[i] != ConstantsData.Terrain.EMPTY:
+					continue
+				var roll: float = randf()
+				if roll < 0.12:
+					level.map[i] = ConstantsData.Terrain.GRASS
+				elif roll < 0.18:
+					level.map[i] = ConstantsData.Terrain.HIGH_GRASS
 		Level.Feeling.DARK:
 			# Dark feeling doesn't change terrain, handled by fog of war
 			return
-
-	for i: int in range(Level.LEN):
-		if level.map[i] == ConstantsData.Terrain.EMPTY and randf() < fill_chance:
-			level.map[i] = target_terrain

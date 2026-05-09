@@ -145,6 +145,11 @@ func play_attack(target: int, duration: float = 0.2) -> void:
 	_anim_state = AnimState.ATTACK
 	is_animating = true
 	var target_world: Vector2 = _cell_to_world(target)
+	var dx: float = target_world.x - position.x
+	if dx > 0.1:
+		_sprite.flip_h = false
+	elif dx < -0.1:
+		_sprite.flip_h = true
 	var dir: Vector2 = (target_world - position).normalized()
 	var lunge_pos: Vector2 = position + dir * (SPRITE_SIZE * 0.5)
 
@@ -189,6 +194,11 @@ func play_operate(target: int, duration: float = 0.3) -> void:
 	_anim_state = AnimState.OPERATE
 	is_animating = true
 	var target_world: Vector2 = _cell_to_world(target)
+	var dx: float = target_world.x - position.x
+	if dx > 0.1:
+		_sprite.flip_h = false
+	elif dx < -0.1:
+		_sprite.flip_h = true
 	var dir: Vector2 = (target_world - position).normalized()
 	var lean_pos: Vector2 = position + dir * (SPRITE_SIZE * 0.25)
 

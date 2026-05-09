@@ -84,6 +84,16 @@ func load_full_game() -> bool:
 	# --- Restore GameManager state ---
 	_deserialize_game_manager(save.get("game_manager", {}))
 
+	# --- Restore quest state before level/NPC reconstruction ---
+	# Restored NPC instances re-register themselves during level deserialize.
+	# QuestHandler must be initialized first so that registration is not wiped
+	# by a later reset/deserialize call.
+	var quest_data: Variant = save.get("quest_state", {})
+	if quest_data is Dictionary and not quest_data.is_empty():
+		var _qh2: GDScript = load("res://src/actors/npcs/quest_handler.gd")
+		if _qh2 and _qh2.has_method("deserialize"):
+			_qh2.deserialize(quest_data)
+
 	# --- Restore level cache ---
 	_deserialize_level_cache(save.get("level_cache", {}))
 
@@ -92,13 +102,6 @@ func load_full_game() -> bool:
 
 	# --- Restore hero ---
 	_deserialize_hero(save.get("hero", {}))
-
-	# --- Restore quest state ---
-	var quest_data: Variant = save.get("quest_state", {})
-	if quest_data is Dictionary and not quest_data.is_empty():
-		var _qh2: GDScript = load("res://src/actors/npcs/quest_handler.gd")
-		if _qh2 and _qh2.has_method("deserialize"):
-			_qh2.deserialize(quest_data)
 
 	if EventBus:
 		EventBus.game_loaded.emit()

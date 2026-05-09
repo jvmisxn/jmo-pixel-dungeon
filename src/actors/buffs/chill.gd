@@ -68,3 +68,12 @@ func merge(other: Node) -> void:
 		extend((other as Chill).left)
 	else:
 		super.merge(other)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["left"] = left
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	left = float(data.get("left", left))

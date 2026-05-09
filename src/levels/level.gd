@@ -522,6 +522,46 @@ func add_mob(mob: Variant) -> void:
 		if mob is Object:
 			mob.set("level", self)
 
+## Spawn a mob by ID at a position and register it with the level/turn manager.
+## Returns the spawned mob, or null if the spawn fails.
+func spawn_mob(mob_id: String, spawn_pos: int) -> Variant:
+	if spawn_pos < 0 or spawn_pos >= LEN:
+		return null
+	if not is_passable(spawn_pos) or find_char_at(spawn_pos) != null:
+		return null
+
+	var mob: Variant = null
+	match mob_id:
+		"sheep":
+			var sheep_script: GDScript = load("res://src/actors/mobs/special/sheep.gd")
+			mob = sheep_script.call("spawn_at", spawn_pos, self) if sheep_script != null else null
+			return mob
+		"guardian":
+			var statue_script: GDScript = load("res://src/actors/mobs/special/animated_statue.gd")
+			if statue_script != null:
+				mob = statue_script.new()
+				mob.pos = spawn_pos
+				mob.level = self
+				if mob.has_method("scale_to_depth"):
+					mob.scale_to_depth(depth)
+				add_mob(mob)
+				if TurnManager:
+					TurnManager.add_actor(mob)
+			return mob
+		_:
+			if MobFactory:
+				mob = MobFactory.create_mob(mob_id)
+	if mob == null:
+		return null
+	mob.pos = spawn_pos
+	mob.level = self
+	if mob.has_method("scale_to_depth"):
+		mob.scale_to_depth(depth)
+	add_mob(mob)
+	if TurnManager:
+		TurnManager.add_actor(mob)
+	return mob
+
 ## Remove a mob from this level.
 func remove_mob(mob: Variant) -> void:
 	var idx: int = mobs.find(mob)

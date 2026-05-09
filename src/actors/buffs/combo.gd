@@ -33,3 +33,12 @@ func finisher_multiplier() -> float:
 
 func description() -> String:
 	return "Combo: %d hits! Finisher multiplier: x%.1f" % [combo_count, finisher_multiplier()]
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["combo_count"] = combo_count
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	combo_count = int(data.get("combo_count", combo_count))

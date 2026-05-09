@@ -12,7 +12,7 @@ func _init() -> void:
 	max_level = 10  # Original: maxLvl = 10
 	awareness = 0.3
 	aggro_range = 8
-	loot_table = [{"item_id": "gold", "chance": 0.3}, {"item_id": "weapon_t2", "chance": 0.1667}]
+	loot_table = [{"item_id": "gold", "chance": 0.3}]
 	_properties = ["UNDEAD", "INORGANIC"]  # Original has both properties
 
 func _on_death(source: Variant) -> void:
@@ -26,4 +26,8 @@ func _on_death(source: Variant) -> void:
 				if adj_char != null:
 					var dmg: int = randi_range(6, 12)
 					adj_char.take_damage(dmg, "skeleton explosion")
+		if Generator and randf() < 0.1667 and level.has_method("drop_item"):
+			var weapon_drop: Variant = Generator.random_weapon_for_tier(2)
+			if weapon_drop != null:
+				level.drop_item(pos, weapon_drop)
 		super._on_death(source)

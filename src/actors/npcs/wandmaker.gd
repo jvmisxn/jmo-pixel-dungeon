@@ -5,7 +5,7 @@ extends NPC
 ## he offers a choice between two random wands.
 
 # --- Quest Specifics ---
-## Which seed the wandmaker wants: "rotberry_seed" or "corpseweed_seed"
+## Which quest item the wandmaker wants.
 var requested_seed_id: String = ""
 var requested_seed_name: String = ""
 
@@ -73,7 +73,7 @@ func _pick_requested_seed() -> void:
 			requested_seed_id = "elemental_embers"
 			requested_seed_name = "Elemental Embers"
 		3, _:
-			requested_seed_id = "rotberry_seed"
+			requested_seed_id = "seed_of_rotberry"
 			requested_seed_name = "Rotberry Seed"
 
 func _generate_wand_rewards() -> void:
@@ -269,13 +269,11 @@ static func create_quest_item(item_id: String) -> Variant:
 			quest_item.category = ConstantsData.ItemCategory.MISC
 			quest_item.stackable = false
 			quest_item.unique = true
-		"rotberry_seed":
-			quest_item.item_id = "rotberry_seed"
-			quest_item.item_name = "Rotberry Seed"
-			quest_item.description = "A seed from a rotberry bush. The wandmaker wants this."
-			quest_item.category = ConstantsData.ItemCategory.SEED
-			quest_item.stackable = false
+		"seed_of_rotberry":
+			quest_item = SeedItem.create("seed_of_rotberry")
+			quest_item.quantity = 1
 			quest_item.unique = true
+			quest_item.description = "A seed from a rotberry bush. The wandmaker wants this."
 		_:
 			quest_item.item_id = item_id
 			quest_item.item_name = item_id.replace("_", " ").capitalize()

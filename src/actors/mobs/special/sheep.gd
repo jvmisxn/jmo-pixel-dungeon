@@ -47,3 +47,12 @@ static func spawn_at(spawn_pos: int, p_level: Variant, duration_turns: int = 8) 
 	if TurnManager:
 		TurnManager.add_actor(sheep)
 	return sheep
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["turns_left"] = turns_left
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	turns_left = int(data.get("turns_left", turns_left))

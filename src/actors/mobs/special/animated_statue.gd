@@ -130,3 +130,26 @@ func _on_death(_source: Variant) -> void:
 		EventBus.mob_died.emit(self)
 	if GameManager:
 		GameManager.record_stat("enemies_slain")
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["spawn_pos"] = spawn_pos
+	if weapon != null and weapon.has_method("serialize"):
+		data["weapon"] = weapon.serialize()
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	spawn_pos = int(data.get("spawn_pos", spawn_pos))
+	weapon = null
+	var weapon_data: Variant = data.get("weapon", null)
+	if not (weapon_data is Dictionary):
+		return
+	var item_data: Dictionary = weapon_data as Dictionary
+	var item_id: String = str(item_data.get("item_id", ""))
+	if item_id == "":
+		return
+	var restored_weapon: Variant = Generator.create_item(item_id)
+	if restored_weapon != null and restored_weapon.has_method("deserialize"):
+		restored_weapon.deserialize(item_data)
+		weapon = restored_weapon

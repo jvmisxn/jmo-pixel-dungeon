@@ -30,7 +30,7 @@ func _init() -> void:
 	max_level = 14
 	awareness = 0.4
 	aggro_range = 10
-	loot_table = [{"item_id": "potion_healing", "chance": 0.2}]
+	loot_table = [{"item_id": "healing", "chance": 0.2}]
 	_properties = ["UNDEAD"]
 
 ## Necromancer cannot directly attack.

@@ -33,7 +33,7 @@ const RING_POOL: Array = [
 	["ring_furor", "Ring of Furor"],
 	["ring_haste", "Ring of Haste"],
 	["ring_might", "Ring of Might"],
-	["ring_sharpshoot", "Ring of Sharpshooting"],
+	["ring_of_sharpshooting", "Ring of Sharpshooting"],
 	["ring_tenacity", "Ring of Tenacity"],
 	["ring_wealth", "Ring of Wealth"],
 ]
@@ -163,15 +163,16 @@ func interact(hero: Variant) -> void:
 ## Called by the quest system when a mob is defeated. Tracks kills for this quest.
 ## Original uses DwarfToken items dropped by target mobs. We use a kill counter
 ## as a simplified equivalent — functionally similar but without physical token items.
-func on_mob_defeated(_mob_pos: int, mob_name_str: String) -> void:
+func on_mob_defeated(_mob_pos: int, mob_name_str: String, mob_id: String = "") -> void:
 	if not quest_active or quest_complete:
 		return
 	# Match by mob_id (case-insensitive). The quest_mob_id is the singular form
 	# (e.g., "monk" or "golem"), so we check if the killed mob's name matches.
 	# Original checks `mob instanceof Monk` or `mob instanceof Golem`.
-	var name_lower: String = mob_name_str.to_lower()
 	var target_lower: String = quest_mob_id.to_lower()
-	if name_lower == target_lower or name_lower == target_lower + "s" or name_lower.begins_with(target_lower):
+	var defeated_id: String = mob_id.to_lower()
+	var defeated_name: String = mob_name_str.to_lower()
+	if defeated_id == target_lower or defeated_name == target_lower or defeated_name == target_lower + "s" or defeated_name.begins_with(target_lower):
 		kill_count += 1
 		if kill_count >= required_kills:
 			if MessageLog:

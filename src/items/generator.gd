@@ -201,6 +201,8 @@ const ITEM_ID_ALIASES: Dictionary = {
 	"scroll_of_transmutation": "transmutation",
 	"scroll_of_recharging": "recharging",
 	"rotberry_seed": "seed_of_rotberry",
+	"ring_sharpshoot": "ring_of_sharpshooting",
+	"ring_of_sharpshoot": "ring_of_sharpshooting",
 }
 
 # ---------------------------------------------------------------------------
@@ -235,6 +237,8 @@ static func _create_item_internal(item_id: String) -> Item:
 	match item_id:
 		"spirit_bow":
 			return SpiritBow.new()
+		"reclaimed_trap":
+			return TrappedItem.new()
 		"dewdrop":
 			return Dewdrop.new()
 		"ankh":
@@ -243,6 +247,8 @@ static func _create_item_internal(item_id: String) -> Item:
 			return Torch.new()
 		"amulet_of_yendor":
 			return AmuletOfYendor.new()
+		"metal_shard":
+			return _make_misc_item("metal_shard", "Metal Shard", "A jagged fragment of dwarven machinery. It looks like it could be useful to someone.", ConstantsData.ItemCategory.MISC)
 		"corpse_dust":
 			return _make_misc_item("corpse_dust", "Corpse Dust", "Fine powdery remains gathered for the wandmaker.", ConstantsData.ItemCategory.MISC)
 		"elemental_embers":
@@ -306,7 +312,7 @@ static func _create_item_internal(item_id: String) -> Item:
 
 	# --- Seeds (generic Item for now — plants system built in Phase 6) ---
 	if item_id.begins_with("seed_of_"):
-		return _make_seed(item_id)
+		return SeedItem.create(item_id)
 
 	# Fallback — unknown item_id, create a generic item.
 	push_warning("Generator: Unknown item_id '%s', creating generic Item." % item_id)
@@ -357,10 +363,6 @@ const _FOOD_IDS: Array[String] = [
 	"small_ration", "frozen_carpaccio", "meat_pie",
 ]
 
-# ---------------------------------------------------------------------------
-# Seed Helper (plants system is Phase 6, seeds are basic Items for now)
-# ---------------------------------------------------------------------------
-
 ## Seed color lookup.
 const SEED_COLORS: Dictionary = {
 	"seed_of_firebloom": Color(0.9, 0.4, 0.1),
@@ -376,21 +378,6 @@ const SEED_COLORS: Dictionary = {
 	"seed_of_starflower": Color(0.9, 0.9, 0.4),
 	"seed_of_swiftthistle": Color(0.8, 0.6, 0.7),
 }
-
-static func _make_seed(id: String) -> Item:
-	var item: Item = Item.new()
-	item.item_id = id
-	var seed_name: String = id.replace("seed_of_", "").replace("_", " ").capitalize()
-	item.item_name = "Seed of %s" % seed_name
-	item.description = "A magical seed that can be planted or used in alchemy."
-	item.category = ConstantsData.ItemCategory.SEED
-	item.icon_color = SEED_COLORS.get(id, Color(0.5, 0.7, 0.3))
-	item.default_action = "PLANT"
-	item.stackable = true
-	item.quantity = 1
-	item.identified = true
-	item.cursed_known = true
-	return item
 
 static func _make_misc_item(id: String, display_name: String, desc: String, category: int) -> Item:
 	var item: Item = Item.new()

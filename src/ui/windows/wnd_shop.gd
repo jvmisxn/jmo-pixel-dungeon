@@ -9,6 +9,7 @@ signal item_sold(item: Variant, gold_gained: int)
 
 var _shop_items: Array[Dictionary] = []
 var _hero: Hero = null
+var _shopkeeper: Variant = null
 var _gold_label: Label = null
 var _shop_grid: GridContainer = null
 var _sell_area: Panel = null
@@ -24,9 +25,10 @@ func _init() -> void:
 
 
 ## Configure shop inventory before adding to tree.
-func setup(items: Array, hero: Hero) -> void:
+func setup(items: Array, hero: Hero, shopkeeper: Variant = null) -> void:
 	_shop_items = items
 	_hero = hero
+	_shopkeeper = shopkeeper
 
 
 func _build_content() -> Control:
@@ -169,17 +171,24 @@ func _on_shop_item_pressed(index: int) -> void:
 		_set_info("Your inventory is full!")
 		return
 
-	# Purchase
-	if GameManager:
-		GameManager.gold -= price
-	_hero.belongings.add_item(item)
-	_shop_items.remove_at(index)
+	var purchase_success: bool = false
+	if _shopkeeper != null and _shopkeeper.has_method("buy_item"):
+		purchase_success = _shopkeeper.buy_item(_hero, index)
+		if purchase_success and _shopkeeper.has_method("get_shop_items"):
+			_shop_items = _shopkeeper.get_shop_items()
+	else:
+		if GameManager:
+			GameManager.gold -= price
+		_hero.belongings.add_item(item)
+		_shop_items.remove_at(index)
+		purchase_success = true
+
+	if not purchase_success:
+		_set_info("Purchase failed.")
+		return
 
 	_set_info("Purchased %s for %d gold." % [ConstantsData.get_prop(item, "item_name", "item"), price])
 	item_purchased.emit(item)
-
-	if EventBus:
-		EventBus.item_picked_up.emit(ConstantsData.get_prop(item, "item_name", ""))
 
 	_update_gold_display()
 	_populate_shop_grid()
@@ -198,17 +207,26 @@ func _on_sell_from_inventory() -> void:
 func sell_item(item: Variant) -> void:
 	if not item or not _hero:
 		return
-	var base_price: int = ConstantsData.get_prop(item, "price", 10)
-	var sell_price: int = int(base_price * SELL_MULTIPLIER)
-	sell_price = maxi(1, sell_price)
+	var sell_price: int = 0
+	if _shopkeeper != null and _shopkeeper.has_method("sell_item"):
+		sell_price = _shopkeeper.sell_item(_hero, item)
+		if _shopkeeper.has_method("get_shop_items"):
+			_shop_items = _shopkeeper.get_shop_items()
+	else:
+		var base_price: int = item.value() if item.has_method("value") else 10
+		sell_price = maxi(1, int(float(base_price) * SELL_MULTIPLIER))
+		_hero.belongings.remove_item(item)
+		if GameManager:
+			GameManager.gold += sell_price
 
-	_hero.belongings.remove_item(item)
-	if GameManager:
-		GameManager.gold += sell_price
+	if sell_price <= 0:
+		_set_info("That item can't be sold.")
+		return
 
 	_set_info("Sold %s for %d gold." % [ConstantsData.get_prop(item, "item_name", "item"), sell_price])
 	item_sold.emit(item, sell_price)
 	_update_gold_display()
+	_populate_shop_grid()
 
 
 func _on_sell_picker_closed() -> void:
@@ -249,7 +267,7 @@ class WndSellPicker:
 		scroll.add_child(list)
 
 		for item: Variant in _hero_ref.belongings.backpack:
-			var base_price: int = ConstantsData.get_prop(item, "price", 10)
+			var base_price: int = item.value() if item != null and item.has_method("value") else 10
 			var sell_price: int = int(base_price * WndShop.SELL_MULTIPLIER)
 			sell_price = maxi(1, sell_price)
 

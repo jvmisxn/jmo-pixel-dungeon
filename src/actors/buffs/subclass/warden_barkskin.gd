@@ -51,3 +51,14 @@ func description() -> String:
 	if barkskin_armor > 0:
 		return "Barkskin (+%d armor, %d turns)" % [barkskin_armor, barkskin_turns]
 	return "Barkskin (inactive until standing on grass)."
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["barkskin_armor"] = barkskin_armor
+	data["barkskin_turns"] = barkskin_turns
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	barkskin_armor = int(data.get("barkskin_armor", barkskin_armor))
+	barkskin_turns = int(data.get("barkskin_turns", barkskin_turns))

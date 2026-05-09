@@ -14,7 +14,7 @@ func _init() -> void:
 	max_level = 7
 	awareness = 0.3
 	aggro_range = 8
-	loot_table = [{"item_id": "healing_potion", "chance": 0.15}]
+	loot_table = [{"item_id": "healing", "chance": 0.15}]
 
 ## When damaged below half HP, split into a new smaller swarm.
 func take_damage(dmg: int, source: Variant = null) -> int:
@@ -63,3 +63,12 @@ func scale_to_depth(p_depth: int) -> void:
 	damage_roll_max = 4 + scale
 	attack_skill = 10 + scale
 	defense_skill = 5 + scale
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["has_split"] = has_split
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	has_split = bool(data.get("has_split", has_split))

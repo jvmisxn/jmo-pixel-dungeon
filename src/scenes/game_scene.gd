@@ -4,6 +4,57 @@ extends Node2D
 ## handles input (click to move/attack, keyboard), and bridges game logic to visuals.
 ## Orchestrates level loading, hero placement, and the turn loop.
 
+class BlobOverlayLayer:
+	extends Node2D
+
+	const CELL_SIZE: int = TileMapManager.TILE_SIZE
+
+	var _cells: Array[Dictionary] = []
+
+	func set_cells(cells: Array[Dictionary]) -> void:
+		_cells = cells
+		queue_redraw()
+
+	func clear_cells() -> void:
+		if _cells.is_empty():
+			return
+		_cells.clear()
+		queue_redraw()
+
+	func _draw() -> void:
+		for cell_entry: Dictionary in _cells:
+			var pos: int = int(cell_entry.get("pos", -1))
+			if pos < 0:
+				continue
+			var base_color: Color = cell_entry.get("color", Color.WHITE) as Color
+			var alpha: float = clampf(float(cell_entry.get("alpha", 0.0)), 0.0, 0.85)
+			if alpha <= 0.0:
+				continue
+			var style: String = str(cell_entry.get("style", "gas"))
+			var x: int = pos % ConstantsData.WIDTH
+			@warning_ignore("integer_division")
+			var y: int = pos / ConstantsData.WIDTH
+			var rect: Rect2 = Rect2(Vector2(x * CELL_SIZE, y * CELL_SIZE), Vector2(CELL_SIZE, CELL_SIZE))
+
+			var outer: Color = base_color
+			outer.a = alpha
+			draw_rect(rect, outer, true)
+
+			match style:
+				"web":
+					var web_line: Color = base_color.lightened(0.55)
+					web_line.a = minf(alpha + 0.2, 0.9)
+					draw_line(rect.position + Vector2(2, 2), rect.position + Vector2(CELL_SIZE - 2, CELL_SIZE - 2), web_line, 1.4)
+					draw_line(rect.position + Vector2(CELL_SIZE - 2, 2), rect.position + Vector2(2, CELL_SIZE - 2), web_line, 1.4)
+				"fire":
+					var ember: Color = base_color.lightened(0.45)
+					ember.a = minf(alpha + 0.18, 0.92)
+					draw_rect(rect.grow(-4), ember, true)
+				_:
+					var inner: Color = base_color.lightened(0.25)
+					inner.a = minf(alpha + 0.08, 0.72)
+					draw_rect(rect.grow(-3), inner, true)
+
 # --- Layer References ---
 var tile_map: TileMapManager = null
 var fog_of_war: FogOfWar = null
@@ -17,10 +68,13 @@ var _hero_sprites: Dictionary[int, HeroSprite] = {}
 var _mob_sprites: Dictionary[int, MobSprite] = {}
 ## Item sprites on the ground. Key: pos (int) -> ItemSprite
 var _item_sprites: Dictionary[int, ItemSprite] = {}
+## Plant sprites on the ground. Key: pos (int) -> PlantSprite
+var _plant_sprites: Dictionary[int, PlantSprite] = {}
 ## Armed bomb sprites on the ground. Key: pos (int) -> ItemSprite
 var _armed_bomb_sprites: Dictionary[int, ItemSprite] = {}
 
 # --- Sprite Layers (Node2D containers for z-ordering) ---
+var _blob_layer: BlobOverlayLayer = null
 var _entity_layer: Node2D = null
 
 # --- Input State ---
@@ -157,6 +211,8 @@ func load_level(level: Level, region: int) -> void:
 	# Set up fog
 	var is_dark: bool = level.feeling == Level.Feeling.DARK
 	fog_of_war.setup(level, is_dark)
+	if is_dark and MessageLog:
+		MessageLog.add_warning("This floor feels unusually dark.")
 
 	# Camera bounds
 	game_camera.set_map_bounds(tile_map.get_map_pixel_size())
@@ -166,6 +222,7 @@ func load_level(level: Level, region: int) -> void:
 	_spawn_hero_sprites()
 	_spawn_mob_sprites()
 	_spawn_item_sprites()
+	_refresh_plant_sprites()
 	_refresh_armed_bomb_sprites()
 
 	# Initial FOV from hero position
@@ -251,6 +308,7 @@ func refresh_after_turn() -> void:
 
 	# Refresh item sprites
 	_refresh_item_sprites()
+	_refresh_plant_sprites()
 	_refresh_armed_bomb_sprites()
 	_interrupt_rest_if_needed()
 
@@ -300,6 +358,12 @@ func _create_layers() -> void:
 	tile_map = TileMapManager.new()
 	tile_map.name = "TileMap"
 	add_child(tile_map)
+
+	# Blob overlay layer (z = -2, above terrain and below entities)
+	_blob_layer = BlobOverlayLayer.new()
+	_blob_layer.name = "BlobOverlayLayer"
+	_blob_layer.z_index = -2
+	add_child(_blob_layer)
 
 	# Entity layer (z = 0, contains hero/mob/item sprites)
 	_entity_layer = Node2D.new()
@@ -351,6 +415,10 @@ func _connect_signals() -> void:
 			EventBus.item_used.connect(_on_item_used_sfx)
 		if EventBus.has_signal("hero_trampled_grass"):
 			EventBus.hero_trampled_grass.connect(_on_grass_trampled_sfx)
+		if EventBus.has_signal("seed_planted"):
+			EventBus.seed_planted.connect(_on_seed_planted)
+		if EventBus.has_signal("plant_activated"):
+			EventBus.plant_activated.connect(_on_plant_activated_vfx)
 		if EventBus.has_signal("badge_unlocked"):
 			EventBus.badge_unlocked.connect(_on_badge_unlocked_sfx)
 		if EventBus.has_signal("item_equipped"):
@@ -477,10 +545,16 @@ func _clear_entity_sprites() -> void:
 		if sprite is Node and is_instance_valid(sprite):
 			sprite.queue_free()
 	_item_sprites.clear()
+	for sprite: Variant in _plant_sprites.values():
+		if sprite is Node and is_instance_valid(sprite):
+			sprite.queue_free()
+	_plant_sprites.clear()
 	for sprite: Variant in _armed_bomb_sprites.values():
 		if sprite is Node and is_instance_valid(sprite):
 			sprite.queue_free()
 	_armed_bomb_sprites.clear()
+	if _blob_layer:
+		_blob_layer.clear_cells()
 
 func _cleanup_dead_mobs() -> void:
 	var to_remove: Array[int] = []
@@ -560,6 +634,114 @@ func _refresh_armed_bomb_sprites() -> void:
 		if effect_manager:
 			effect_manager.show_status(bomb_pos, "Fuse", Color(1.0, 0.7, 0.2))
 
+func _refresh_plant_sprites() -> void:
+	if _current_level == null:
+		return
+	var valid_positions: Dictionary[int, bool] = {}
+	for plant_pos_variant: Variant in _current_level.plants.keys():
+		var plant_pos: int = int(plant_pos_variant)
+		valid_positions[plant_pos] = true
+	var to_remove: Array[int] = []
+	for pos: int in _plant_sprites.keys():
+		if not valid_positions.has(pos):
+			var stale_sprite: PlantSprite = _plant_sprites[pos]
+			if is_instance_valid(stale_sprite):
+				stale_sprite.queue_free()
+			to_remove.append(pos)
+	for pos: int in to_remove:
+		_plant_sprites.erase(pos)
+	for plant_pos_variant: Variant in _current_level.plants.keys():
+		var plant_pos: int = int(plant_pos_variant)
+		if plant_pos < 0 or _plant_sprites.has(plant_pos):
+			continue
+		var plant: Variant = _current_level.plants[plant_pos]
+		var sprite: PlantSprite = PlantSprite.new()
+		var plant_key: String = str(plant.get("plant_id")) if plant != null and plant.get("plant_id") != null else ""
+		sprite.setup_for_plant(plant_key)
+		sprite.place_at(plant_pos)
+		_entity_layer.add_child(sprite)
+		_plant_sprites[plant_pos] = sprite
+
+func _refresh_blob_overlays() -> void:
+	if _current_level == null or _blob_layer == null:
+		return
+
+	var cells_by_pos: Dictionary[int, Dictionary] = {}
+	for blob_entry: Dictionary in _current_level.blobs:
+		var blob: Variant = blob_entry.get("blob")
+		if blob == null or not blob.has_method("get_density"):
+			continue
+		var blob_id: String = str(blob.get("blob_id"))
+		var style: String = _blob_style_for_id(blob_id)
+		var color: Color = _blob_color_for_id(blob_id)
+		var active_cells: Variant = blob.get("active_cells")
+		if not (active_cells is Array):
+			continue
+		for cell_variant: Variant in active_cells:
+			var cell: int = int(cell_variant)
+			if cell < 0 or cell >= Level.LEN:
+				continue
+			var density: float = float(blob.call("get_density", cell))
+			if density <= 0.0:
+				continue
+			var alpha: float = _blob_alpha_for_cell(cell, density)
+			if alpha <= 0.0:
+				continue
+			if cells_by_pos.has(cell):
+				var existing: Dictionary = cells_by_pos[cell]
+				existing["alpha"] = maxf(float(existing.get("alpha", 0.0)), alpha)
+				existing["color"] = (existing.get("color", color) as Color).lerp(color, 0.45)
+				cells_by_pos[cell] = existing
+			else:
+				cells_by_pos[cell] = {
+					"pos": cell,
+					"color": color,
+					"alpha": alpha,
+					"style": style,
+				}
+
+	var render_cells: Array[Dictionary] = []
+	for pos: int in cells_by_pos.keys():
+		render_cells.append(cells_by_pos[pos])
+	_blob_layer.set_cells(render_cells)
+
+func _blob_alpha_for_cell(cell: int, density: float) -> float:
+	if _current_level == null:
+		return 0.0
+	if cell < 0 or cell >= _current_level.visible.size():
+		return 0.0
+	if _current_level.visible[cell]:
+		return clampf(0.18 + density * 0.22, 0.18, 0.68)
+	return 0.0
+
+func _blob_color_for_id(blob_id: String) -> Color:
+	match blob_id:
+		"toxic_gas":
+			return Color(0.33, 0.8, 0.33)
+		"paralytic_gas":
+			return Color(0.95, 0.84, 0.26)
+		"confusion_gas":
+			return Color(0.72, 0.45, 0.95)
+		"fire":
+			return Color(1.0, 0.42, 0.12)
+		"web":
+			return Color(0.88, 0.88, 0.96)
+		"water_of_health":
+			return Color(0.32, 0.86, 0.94)
+		"smoke_screen":
+			return Color(0.55, 0.55, 0.6)
+		_:
+			return Color(0.7, 0.7, 0.7)
+
+func _blob_style_for_id(blob_id: String) -> String:
+	match blob_id:
+		"fire":
+			return "fire"
+		"web":
+			return "web"
+		_:
+			return "gas"
+
 func _update_entity_visibility() -> void:
 	if _current_level == null:
 		return
@@ -591,10 +773,15 @@ func _update_entity_visibility() -> void:
 		var sprite: ItemSprite = _item_sprites[pos]
 		if pos >= 0 and pos < _current_level.visible.size():
 			sprite.visible = _current_level.visible[pos] or _current_level.visited[pos]
+	for pos: int in _plant_sprites.keys():
+		var plant_sprite: PlantSprite = _plant_sprites[pos]
+		if pos >= 0 and pos < _current_level.visible.size():
+			plant_sprite.visible = _current_level.visible[pos] or _current_level.visited[pos]
 	for pos: int in _armed_bomb_sprites.keys():
 		var bomb_sprite: ItemSprite = _armed_bomb_sprites[pos]
 		if pos >= 0 and pos < _current_level.visible.size():
 			bomb_sprite.visible = _current_level.visible[pos] or _current_level.visited[pos]
+	_refresh_blob_overlays()
 
 # ---------------------------------------------------------------------------
 # Input Handling
@@ -665,6 +852,49 @@ func _handle_key_input(keycode: int) -> bool:
 	# Any keyboard input cancels auto-walk
 	_cancel_auto_walk()
 	match keycode:
+		KEY_A, KEY_F:
+			_attack_adjacent_enemy()
+			return true
+		KEY_I:
+			if _hud:
+				_hud.toggle_inventory()
+				return true
+		KEY_M:
+			if _hud:
+				_hud.toggle_map()
+				return true
+		KEY_R:
+			if _hud:
+				_hud._on_rest_pressed()
+				return true
+		KEY_ESCAPE:
+			if _hud and not _hud.has_active_window():
+				_hud.open_settings()
+				return true
+		KEY_1:
+			if _hud:
+				_hud.use_quickslot(0)
+				return true
+		KEY_2:
+			if _hud:
+				_hud.use_quickslot(1)
+				return true
+		KEY_3:
+			if _hud:
+				_hud.use_quickslot(2)
+				return true
+		KEY_4:
+			if _hud:
+				_hud.use_quickslot(3)
+				return true
+		KEY_5:
+			if _hud:
+				_hud.use_quickslot(4)
+				return true
+		KEY_6:
+			if _hud:
+				_hud.use_quickslot(5)
+				return true
 		KEY_SPACE:
 			_submit_hero_action({"type": "wait"})
 			return true
@@ -674,6 +904,15 @@ func _handle_key_input(keycode: int) -> bool:
 		KEY_S:
 			_submit_hero_action({"type": "search"})
 			return true
+		KEY_ENTER, KEY_KP_ENTER:
+			if GameManager.hero != null and _current_level != null:
+				var terrain: int = _current_level.terrain_at(GameManager.hero.pos)
+				if terrain == ConstantsData.Terrain.ENTRANCE and GameManager.hero.pos == _current_level.entrance:
+					_submit_hero_action({"type": "ascend"})
+					return true
+				if terrain == ConstantsData.Terrain.EXIT and GameManager.hero.pos == _current_level.exit_pos:
+					_submit_hero_action({"type": "descend"})
+					return true
 		# Numpad / Vi keys for movement
 		KEY_KP_8, KEY_K, KEY_UP:
 			_move_direction(ConstantsData.DIR_N)
@@ -717,7 +956,10 @@ func _move_direction(dir_offset: int) -> void:
 	# Check for enemy at target
 	var char_at: Variant = _current_level.find_char_at(target) if _current_level else null
 	if char_at != null and char_at != GameManager.hero:
-		_submit_hero_action({"type": "attack", "target": char_at, "target_pos": target})
+		if char_at is NPC:
+			_submit_hero_action({"type": "interact", "target_pos": target})
+		else:
+			_submit_hero_action({"type": "attack", "target": char_at, "target_pos": target})
 	else:
 		var terrain: int = _current_level.terrain_at(target)
 		if terrain == ConstantsData.Terrain.DOOR or terrain == ConstantsData.Terrain.LOCKED_DOOR or terrain == ConstantsData.Terrain.CRYSTAL_DOOR:
@@ -726,6 +968,24 @@ func _move_direction(dir_offset: int) -> void:
 			_submit_hero_action({"type": "search"})
 		else:
 			_submit_hero_action({"type": "move", "target_pos": target})
+
+func _attack_adjacent_enemy() -> void:
+	if GameManager.hero == null or _current_level == null:
+		return
+
+	var hero_pos: int = GameManager.hero.pos
+	for dir: int in ConstantsData.DIRS_8:
+		var target_pos: int = hero_pos + dir
+		if not ConstantsData.is_valid_pos(target_pos):
+			continue
+		var char_at: Variant = _current_level.find_char_at(target_pos)
+		if char_at == null or char_at == GameManager.hero or char_at is NPC:
+			continue
+		_submit_hero_action({"type": "attack", "target": char_at, "target_pos": target_pos})
+		return
+
+	if MessageLog:
+		MessageLog.add_warning("No adjacent enemy to attack.")
 
 func _submit_hero_action(action: Dictionary) -> void:
 	if GameManager.hero == null:
@@ -837,8 +1097,6 @@ func _check_plant_activation(hero_pos: int) -> void:
 		return
 	if plant.has_method("activate"):
 		plant.activate(GameManager.hero, _current_level)
-	# Remove the plant after activation
-	_current_level.plants.erase(hero_pos)
 
 # ---------------------------------------------------------------------------
 # Signal Handlers
@@ -856,7 +1114,7 @@ func _on_hero_moved(new_pos: int) -> void:
 	# Plant activation check
 	_check_plant_activation(new_pos)
 
-func _on_mob_defeated(mob_pos: int, _mob_name: String) -> void:
+func _on_mob_defeated(mob_pos: int, _mob_name: String, _mob_id: String) -> void:
 	# Particle burst at death location
 	if effect_manager:
 		effect_manager.particle_burst(mob_pos, Color(0.8, 0.2, 0.1), 6)
@@ -998,6 +1256,71 @@ func _on_item_used_sfx(item_name: String) -> void:
 func _on_grass_trampled_sfx(_pos: int) -> void:
 	if AudioManager:
 		AudioManager.play_sfx("trample")
+
+func _on_seed_planted(pos: int, plant_type: String) -> void:
+	if effect_manager:
+		effect_manager.particle_burst(pos, _plant_color_for(plant_type), 6)
+		effect_manager.show_status(pos, "Planted", Color(0.8, 0.95, 0.7))
+	_refresh_plant_sprites()
+
+func _on_plant_activated_vfx(pos: int, plant_name: String) -> void:
+	if effect_manager:
+		var color: Color = _plant_color_for(plant_name)
+		effect_manager.particle_burst(pos, color, 10)
+		effect_manager.ring_effect(pos, color, 22.0, 0.35)
+		match plant_name.to_lower():
+			"sungrass":
+				effect_manager.show_status(pos, "Regen", Color(1.0, 0.95, 0.45))
+			"earthroot":
+				effect_manager.show_status(pos, "Armor", Color(0.72, 0.58, 0.32))
+			"firebloom":
+				effect_manager.show_status(pos, "Burn!", Color(1.0, 0.4, 0.1))
+			"icecap":
+				effect_manager.show_status(pos, "Frozen", Color(0.55, 0.82, 1.0))
+			"sorrowmoss":
+				effect_manager.show_status(pos, "Poison", Color(0.45, 0.82, 0.38))
+			"stormvine":
+				effect_manager.show_status(pos, "Rooted", Color(0.7, 0.75, 0.35))
+			"blindweed":
+				effect_manager.show_status(pos, "Blind", Color(0.88, 0.88, 0.72))
+			"dreamfoil":
+				effect_manager.show_status(pos, "Sleep", Color(0.72, 0.58, 0.92))
+			"fadeleaf":
+				effect_manager.show_status(pos, "Warp", Color(0.62, 0.92, 0.72))
+			"starflower":
+				effect_manager.show_status(pos, "XP", Color(1.0, 0.94, 0.35))
+			"swiftthistle":
+				effect_manager.show_status(pos, "Haste", Color(0.96, 0.7, 0.95))
+	_refresh_plant_sprites()
+
+func _plant_color_for(plant_name: String) -> Color:
+	match plant_name.to_lower():
+		"firebloom":
+			return Color(0.96, 0.42, 0.1)
+		"icecap":
+			return Color(0.55, 0.82, 1.0)
+		"sorrowmoss":
+			return Color(0.45, 0.82, 0.38)
+		"stormvine":
+			return Color(0.72, 0.7, 0.95)
+		"sungrass":
+			return Color(0.95, 0.92, 0.38)
+		"earthroot":
+			return Color(0.62, 0.48, 0.24)
+		"fadeleaf":
+			return Color(0.62, 0.92, 0.72)
+		"rotberry":
+			return Color(0.82, 0.24, 0.34)
+		"blindweed":
+			return Color(0.88, 0.88, 0.72)
+		"dreamfoil":
+			return Color(0.72, 0.58, 0.92)
+		"starflower":
+			return Color(1.0, 0.94, 0.35)
+		"swiftthistle":
+			return Color(0.96, 0.7, 0.95)
+		_:
+			return Color(0.62, 0.86, 0.48)
 
 func _on_badge_unlocked_sfx(_badge_id: String) -> void:
 	if AudioManager:

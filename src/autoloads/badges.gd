@@ -281,7 +281,7 @@ func notify_scroll_identified(scroll_id: String) -> void:
 # Signal Handlers
 # ---------------------------------------------------------------------------
 
-func _on_mob_defeated(_mob_pos: int, mob_name: String) -> void:
+func _on_mob_defeated(_mob_pos: int, mob_name: String, _mob_id: String) -> void:
 	# Boss badges
 	if BOSS_BADGE_MAP.has(mob_name):
 		unlock(BOSS_BADGE_MAP[mob_name])

@@ -74,3 +74,16 @@ func _is_flying() -> bool:
 
 func description() -> String:
 	return "On fire! Taking fire damage each turn. Water extinguishes the flames."
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["left"] = left
+	data["acted"] = acted
+	data["burn_increment"] = burn_increment
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	left = float(data.get("left", left))
+	acted = bool(data.get("acted", acted))
+	burn_increment = int(data.get("burn_increment", burn_increment))

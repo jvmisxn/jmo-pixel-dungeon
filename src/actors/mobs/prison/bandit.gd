@@ -76,3 +76,24 @@ func scale_to_depth(p_depth: int) -> void:
 	damage_roll_max = 8 + scale * 2
 	attack_skill = 14 + scale * 2
 	defense_skill = 7 + scale
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	if stolen_item != null and stolen_item.has_method("serialize"):
+		data["stolen_item"] = stolen_item.serialize()
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	stolen_item = null
+	var stolen_data: Variant = data.get("stolen_item", null)
+	if not (stolen_data is Dictionary):
+		return
+	var item_data: Dictionary = stolen_data as Dictionary
+	var item_id: String = str(item_data.get("item_id", ""))
+	if item_id == "":
+		return
+	var restored_item: Variant = Generator.create_item(item_id)
+	if restored_item != null and restored_item.has_method("deserialize"):
+		restored_item.deserialize(item_data)
+		stolen_item = restored_item

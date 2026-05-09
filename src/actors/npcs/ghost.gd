@@ -225,12 +225,13 @@ func interact(hero: Variant) -> void:
 # Kill Tracking
 # ---------------------------------------------------------------------------
 
-func on_mob_defeated(_mob_pos: int, mob_name_str: String) -> void:
+func on_mob_defeated(_mob_pos: int, mob_name_str: String, mob_id: String = "") -> void:
 	if not quest_active or reward_given or target_slain or quest_target_id == "":
 		return
-	var name_lower: String = mob_name_str.to_lower()
 	var target_lower: String = quest_target_id.to_lower()
-	if name_lower == target_lower or name_lower.begins_with(target_lower):
+	var defeated_id: String = mob_id.to_lower()
+	var defeated_name: String = mob_name_str.to_lower()
+	if defeated_id == target_lower or defeated_name == target_lower or defeated_name.begins_with(target_lower):
 		target_slain = true
 		quest_complete = true
 		if MessageLog:

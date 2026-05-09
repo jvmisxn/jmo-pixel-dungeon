@@ -70,3 +70,14 @@ func description() -> String:
 	if parts.is_empty():
 		return "Flurry"
 	return "Flurry: rapid strikes deal bonus damage."
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["consecutive_hits"] = consecutive_hits
+	data["has_focus"] = has_focus
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	consecutive_hits = int(data.get("consecutive_hits", consecutive_hits))
+	has_focus = bool(data.get("has_focus", has_focus))

@@ -40,3 +40,12 @@ func extend(amount: float) -> void:
 
 func description() -> String:
 	return "Bleeding! Taking %d damage per turn." % roundi(bleed_level)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["bleed_level"] = bleed_level
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	bleed_level = float(data.get("bleed_level", bleed_level))

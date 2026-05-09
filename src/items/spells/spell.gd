@@ -151,9 +151,25 @@ func _cast_feather_fall(hero: Char) -> void:
 		MessageLog.add_positive("You feel weightless! You can safely descend chasms.")
 
 ## Transmute one consumable into another of the same type.
-func _cast_recycle(_hero: Char) -> void:
-	if MessageLog:
-		MessageLog.add_info("Select a consumable to transmute.")
+func _cast_recycle(hero: Char) -> void:
+	if hero == null or hero.get("belongings") == null:
+		return
+	var consumables: Array = []
+	for item: Variant in hero.belongings.backpack:
+		if _is_recyclable_item(item):
+			consumables.append(item)
+	if consumables.is_empty():
+		if MessageLog:
+			MessageLog.add_warning("You have no suitable consumables to recycle.")
+		return
+	if consumables.size() == 1:
+		_recycle_item(hero, consumables[0])
+		return
+	var wnd: WndItemSelect = WndItemSelect.new()
+	wnd.setup(consumables, "Choose a consumable to recycle:", func(chosen: Variant) -> void:
+		_recycle_item(hero, chosen)
+	)
+	_show_window(wnd)
 
 ## Open the alchemy pot interface anywhere.
 func _cast_alchemize(_hero: Char) -> void:
@@ -164,24 +180,65 @@ func _cast_alchemize(_hero: Char) -> void:
 		MessageLog.add_info("The alchemy pot materializes before you!")
 
 ## Curse an item to gain power from the curse.
-func _cast_curse_infusion(_hero: Char) -> void:
-	if MessageLog:
-		MessageLog.add_info("Select an item to infuse with dark energy.")
+func _cast_curse_infusion(hero: Char) -> void:
+	if hero == null or hero.get("belongings") == null:
+		return
+	var choices: Array = []
+	for item: Variant in hero.belongings.backpack:
+		if _is_curse_infusion_target(item):
+			choices.append(item)
+	var equipped: Array = [
+		hero.belongings.weapon,
+		hero.belongings.armor,
+		hero.belongings.spirit_bow,
+	]
+	for item: Variant in equipped:
+		if item != null and item not in choices and _is_curse_infusion_target(item):
+			choices.append(item)
+	if choices.is_empty():
+		if MessageLog:
+			MessageLog.add_warning("You have nothing suitable to infuse.")
+		return
+	if choices.size() == 1:
+		_apply_curse_infusion(choices[0])
+		return
+	var wnd: WndItemSelect = WndItemSelect.new()
+	wnd.setup(choices, "Choose an item to infuse with dark energy:", func(chosen: Variant) -> void:
+		_apply_curse_infusion(chosen)
+	)
+	_show_window(wnd)
 
 ## Pick up a trap to store and throw later.
 func _cast_reclaim_trap(hero: Char) -> void:
 	var dungeon_level: Variant = hero.get("level")
 	if dungeon_level == null:
 		return
-	# Check if hero is standing on a trap
-	if dungeon_level.has_method("get_terrain"):
-		var terrain: int = dungeon_level.get_terrain(hero.pos)
-		if terrain == ConstantsData.Terrain.TRAP or terrain == ConstantsData.Terrain.INACTIVE_TRAP:
-			dungeon_level.set_terrain(hero.pos, ConstantsData.Terrain.EMPTY)
+	var trap: Variant = dungeon_level.trap_at(hero.pos) if dungeon_level.has_method("trap_at") else null
+	if trap != null:
+		var trapped_item: TrappedItem = TrappedItem.new()
+		trapped_item.configure_from_trap(trap)
+		dungeon_level.traps.erase(hero.pos)
+		dungeon_level.set_terrain(hero.pos, ConstantsData.Terrain.EMPTY)
+		var stored: bool = false
+		if hero.get("belongings") != null:
+			var belongings: Belongings = hero.belongings
+			var self_index: int = belongings.backpack.find(self)
+			if self_index >= 0 and quantity <= 1:
+				belongings.backpack[self_index] = trapped_item
+				for slot_index: int in range(Belongings.QUICKSLOT_COUNT):
+					if belongings.quickslots[slot_index] == self:
+						belongings.quickslots[slot_index] = trapped_item
+				stored = true
+			elif belongings.backpack.size() < Belongings.MAX_INVENTORY:
+				belongings.backpack.append(trapped_item)
+				stored = true
+		if not stored:
+			dungeon_level.drop_item(hero.pos, trapped_item)
 			if MessageLog:
-				MessageLog.add_positive("You reclaim the trap!")
-			# TODO: Add a trapped item to inventory
-			return
+				MessageLog.add_warning("Your pack is full, so you leave the reclaimed trap on the ground.")
+		if MessageLog:
+			MessageLog.add_positive("You reclaim the %s!" % trapped_item.trap_name)
+		return
 	if MessageLog:
 		MessageLog.add("There is no trap here to reclaim.")
 
@@ -197,12 +254,107 @@ func _cast_summon_elemental(hero: Char) -> void:
 			continue
 		if dungeon_level.has_method("is_passable") and dungeon_level.is_passable(cell):
 			if dungeon_level.has_method("find_char_at") and dungeon_level.find_char_at(cell) == null:
+				var element: String = "fire" if randi_range(0, 1) == 0 else "frost"
+				var elemental_script: GDScript = load("res://src/actors/mobs/special/summoned_elemental.gd")
+				var elemental: Variant = elemental_script.call("spawn_at", cell, dungeon_level, hero, element, GameManager.depth if GameManager else 1) if elemental_script != null else null
+				if elemental != null and EventBus:
+					EventBus.mob_revealed.emit(elemental)
 				if MessageLog:
-					var element: String = "fire" if randi_range(0, 1) == 0 else "frost"
 					MessageLog.add_positive("A %s elemental rises to aid you!" % element)
 				return
 	if MessageLog:
 		MessageLog.add("There is no space to summon an elemental.")
+
+func _show_window(window: Control) -> void:
+	if EventBus:
+		EventBus.show_window.emit(window)
+		return
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree and tree.root:
+		tree.root.add_child(window)
+
+func _is_recyclable_item(item: Variant) -> bool:
+	if item == null or item == self:
+		return false
+	var recyclable_categories: Array[int] = [
+		ConstantsData.ItemCategory.POTION,
+		ConstantsData.ItemCategory.SCROLL,
+		ConstantsData.ItemCategory.FOOD,
+		ConstantsData.ItemCategory.STONE,
+		ConstantsData.ItemCategory.MISC,
+	]
+	return item.get("category") in recyclable_categories and _recycle_pool_for_item(item).size() > 0
+
+func _recycle_pool_for_item(item: Variant) -> Array[String]:
+	if item == null:
+		return []
+	match int(item.get("category")):
+		ConstantsData.ItemCategory.POTION:
+			return Generator.POTIONS.duplicate()
+		ConstantsData.ItemCategory.SCROLL:
+			return Generator.SCROLLS.duplicate()
+		ConstantsData.ItemCategory.FOOD:
+			return Generator.FOODS.duplicate()
+		ConstantsData.ItemCategory.STONE:
+			return Generator.STONES.duplicate()
+		ConstantsData.ItemCategory.MISC:
+			if item is Bomb:
+				return Generator.BOMBS.duplicate()
+			if item is Spell:
+				return Generator.SPELLS.duplicate()
+	return []
+
+func _recycle_item(hero: Char, item: Variant) -> void:
+	if hero == null or item == null or hero.get("belongings") == null:
+		return
+	var pool: Array[String] = _recycle_pool_for_item(item)
+	var current_id: String = str(item.get("item_id", ""))
+	pool.erase(current_id)
+	if pool.is_empty():
+		if current_id != "":
+			pool.append(current_id)
+	if pool.is_empty():
+		if MessageLog:
+			MessageLog.add_warning("The spell cannot transmute that item.")
+		return
+	var new_id: String = pool[randi() % pool.size()]
+	var replacement: Variant = Generator.create_item(new_id)
+	if replacement == null:
+		if MessageLog:
+			MessageLog.add_warning("The spell fizzles and fails to transmute the item.")
+		return
+	if item.get("stackable") == true and int(item.get("quantity", 1)) > 1 and item.has_method("split"):
+		item.split(1)
+	else:
+		hero.belongings.remove_item(item)
+	hero.belongings.add_item(replacement)
+	if MessageLog:
+		MessageLog.add_positive("%s twists into %s!" % [item.get_display_name(), replacement.get_display_name()])
+
+func _is_curse_infusion_target(item: Variant) -> bool:
+	if item == null:
+		return false
+	if not item.has_method("is_upgradeable") or not item.is_upgradeable():
+		return false
+	return item is Weapon or item is Armor
+
+func _apply_curse_infusion(item: Variant) -> void:
+	if item == null:
+		return
+	if item.has_method("upgrade"):
+		item.upgrade()
+	item.cursed = true
+	item.cursed_known = true
+	if item is Weapon:
+		item.curse_infusion_bonus = true
+	elif item is Armor:
+		item.curse_infusion_bonus = true
+	if item.has_method("identify"):
+		item.identify()
+	if MessageLog:
+		MessageLog.add_negative("Dark power seeps into your %s." % item.get_display_name())
+	if EventBus:
+		EventBus.hero_stats_changed.emit()
 
 ## Remove one from the stack.
 func _consume_one(hero: Char) -> void:

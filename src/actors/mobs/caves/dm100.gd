@@ -75,3 +75,12 @@ func scale_to_depth(p_depth: int) -> void:
 	damage_roll_max = 10 + scale * 2
 	attack_skill = 16 + scale * 2
 	defense_skill = 8 + scale
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["zap_cooldown"] = zap_cooldown
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	zap_cooldown = int(data.get("zap_cooldown", zap_cooldown))

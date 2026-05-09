@@ -46,7 +46,7 @@ var subpath: Array[int] = []
 ## matching the original Ballistica.java behavior. Use subpath for the
 ## common source→collision segment.
 func cast(from_pos: int, to_pos: int, passable: Array[bool], params: int,
-		occupied: Array[bool] = [], width: int = 32) -> Ballistica:
+		occupied: Array[bool] = [], width: int = 32, terrain: Array[int] = []) -> Ballistica:
 	path.clear()
 	subpath.clear()
 	collision_pos = -1
@@ -113,7 +113,7 @@ func cast(from_pos: int, to_pos: int, passable: Array[bool], params: int,
 					if (params & IGNORE_SOFT_SOLID) != 0:
 						# Doors and webs are "soft solid" — passable/avoidable
 						# Since avoid[] is not implemented yet, treat all solids as hard solids.
-						soft_solid = false  # simplified: no avoid[] array yet
+						soft_solid = _is_soft_solid_terrain(cell, terrain)
 					if not soft_solid:
 						collision_pos = cell
 						collision_index = path.size() - 1
@@ -160,6 +160,15 @@ func _inside_map(cell: int, width: int, height: int) -> bool:
 	var y: int = cell / width
 	return x >= 0 and x < width and y >= 0 and y < height
 
+func _is_soft_solid_terrain(cell: int, terrain: Array[int]) -> bool:
+	if terrain.is_empty() or cell < 0 or cell >= terrain.size():
+		return false
+	match terrain[cell]:
+		ConstantsData.Terrain.DOOR, ConstantsData.Terrain.WEB:
+			return true
+		_:
+			return false
+
 
 # ---------------------------------------------------------------------------
 # Static Helpers
@@ -170,9 +179,9 @@ func _inside_map(cell: int, width: int, height: int) -> bool:
 ## subpath from source to collision point.
 static func cast_line(from_pos: int, to_pos: int, passable: Array[bool],
 		params: int, occupied: Array[bool] = [],
-		width: int = ConstantsData.WIDTH) -> Array[int]:
+		width: int = ConstantsData.WIDTH, terrain: Array[int] = []) -> Array[int]:
 	var b: Ballistica = Ballistica.new()
-	b.cast(from_pos, to_pos, passable, params, occupied, width)
+	b.cast(from_pos, to_pos, passable, params, occupied, width, terrain)
 	return b.subpath
 
 

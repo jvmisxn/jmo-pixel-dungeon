@@ -54,3 +54,14 @@ func description() -> String:
 	if prep_level > 0:
 		return "Preparation (level %d, x%.1f damage)" % [prep_level, 1.0 + prep_level * 0.4]
 	return "Preparation"
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["prep_level"] = prep_level
+	data["is_preparing"] = is_preparing
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	prep_level = int(data.get("prep_level", prep_level))
+	is_preparing = bool(data.get("is_preparing", is_preparing))

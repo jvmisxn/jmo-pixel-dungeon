@@ -16,7 +16,7 @@ func _init() -> void:
 	awareness = 0.5
 	aggro_range = 10
 	base_speed = 0.9
-	loot_table = [{"item_id": "potion_healing", "chance": 0.2}]
+	loot_table = [{"item_id": "healing", "chance": 0.2}]
 
 func _act_hunting() -> void:
 	if target == null or not target.is_alive:
@@ -55,3 +55,12 @@ func _ranged_sting() -> void:
 		target.add_buff(p)
 	if MessageLog:
 		MessageLog.add_negative("The scorpio stings you from afar!")
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["sting_cooldown"] = sting_cooldown
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	sting_cooldown = int(data.get("sting_cooldown", sting_cooldown))

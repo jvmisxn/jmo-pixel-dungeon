@@ -617,6 +617,8 @@ class DriedRose extends Artifact:
 	var ghost_hp: int = 20
 	## Ghost's max HP, scales with level.
 	var ghost_hp_max: int = 20
+	var summoned_ghost_actor_id: int = -1
+	var current_ghost: Variant = null
 
 	func _init() -> void:
 		super._init()
@@ -631,10 +633,28 @@ class DriedRose extends Artifact:
 		charge_rate = 0.0  # charges from petals, not time
 		exp_to_level = 20
 
-	func on_turn(_hero: Char) -> void:
-		# Ghost passive regen if summoned
-		if ghost_summoned and ghost_hp < ghost_hp_max:
-			ghost_hp = mini(ghost_hp + 1, ghost_hp_max)
+	func on_turn(hero: Char) -> void:
+		if current_ghost != null and is_instance_valid(current_ghost):
+			if not bool(current_ghost.get("is_alive")):
+				current_ghost = null
+				summoned_ghost_actor_id = -1
+				ghost_summoned = false
+				ghost_hp = 0
+				return
+			ghost_hp = int(current_ghost.get("hp")) if current_ghost.get("hp") != null else ghost_hp
+			ghost_hp_max = int(current_ghost.get("hp_max")) if current_ghost.get("hp_max") != null else ghost_hp_max
+			if ghost_hp < ghost_hp_max and current_ghost.has_method("heal"):
+				current_ghost.heal(1)
+				ghost_hp = mini(ghost_hp + 1, ghost_hp_max)
+			return
+
+		current_ghost = null
+		summoned_ghost_actor_id = -1
+		if ghost_summoned:
+			# The ally is floor-local. If it no longer exists, treat it as gone.
+			ghost_summoned = false
+			if ghost_hp > 0 and hero != null and MessageLog:
+				MessageLog.add("The spirit bound to the rose has faded.", icon_color)
 
 	func passives(_hero: Char) -> void:
 		pass
@@ -669,20 +689,64 @@ class DriedRose extends Artifact:
 		ghost_summoned = true
 		ghost_hp = ghost_hp_max
 		gain_exp(5)
+		if not _spawn_ghost_ally(hero):
+			ghost_summoned = false
+			charge = charge_max
+			return false
 
 		if MessageLog:
 			MessageLog.add(
 				"A ghostly figure emerges from the rose and takes form beside you!",
 				icon_color
 			)
-		# The actual ghost mob spawning is handled by the level/mob system
-		# via EventBus
 		if EventBus:
 			EventBus.item_used.emit(item_name)
 		return true
 
+	func _spawn_ghost_ally(hero: Char) -> bool:
+		if hero == null:
+			return false
+		var hero_level_ref: Variant = hero.get("level") if hero.get("level") != null else GameManager.current_level
+		if hero_level_ref == null:
+			return false
+		var spawn_pos: int = _find_spawn_pos(hero.pos, hero_level_ref)
+		if spawn_pos < 0:
+			if MessageLog:
+				MessageLog.add("There is no room for the ghost to appear.", icon_color)
+			return false
+		var ghost_script: GDScript = load("res://src/actors/mobs/special/rose_ghost.gd")
+		var ghost: Variant = ghost_script.call("spawn_at", spawn_pos, hero_level_ref, hero, self) if ghost_script != null else null
+		if ghost == null:
+			return false
+		current_ghost = ghost
+		summoned_ghost_actor_id = int(ghost.get("actor_id")) if ghost.get("actor_id") != null else -1
+		ghost_hp = int(ghost.get("hp")) if ghost.get("hp") != null else ghost_hp_max
+		return true
+
+	func _find_spawn_pos(center_pos: int, hero_level_ref: Variant) -> int:
+		for dir: int in ConstantsData.DIRS_8:
+			var candidate: int = center_pos + dir
+			if candidate < 0 or candidate >= ConstantsData.LENGTH:
+				continue
+			if hero_level_ref.has_method("is_passable") and not hero_level_ref.is_passable(candidate):
+				continue
+			if hero_level_ref.has_method("find_char_at") and hero_level_ref.find_char_at(candidate) != null:
+				continue
+			return candidate
+		return -1
+
 	## Called when moving to a new floor — ghost must be re-summoned.
 	func on_floor_change() -> void:
+		if current_ghost != null and is_instance_valid(current_ghost):
+			ghost_hp = int(current_ghost.get("hp")) if current_ghost.get("hp") != null else ghost_hp
+			if current_ghost.get("level") != null and current_ghost.level.has_method("remove_mob"):
+				current_ghost.level.remove_mob(current_ghost)
+			if TurnManager:
+				TurnManager.remove_actor(current_ghost)
+			if current_ghost.has_method("destroy"):
+				current_ghost.destroy()
+		current_ghost = null
+		summoned_ghost_actor_id = -1
 		ghost_summoned = false
 
 	func level_up() -> void:
@@ -696,6 +760,7 @@ class DriedRose extends Artifact:
 		data["ghost_summoned"] = ghost_summoned
 		data["ghost_hp"] = ghost_hp
 		data["ghost_hp_max"] = ghost_hp_max
+		data["summoned_ghost_actor_id"] = summoned_ghost_actor_id
 		return data
 
 	func deserialize(data: Dictionary) -> void:
@@ -704,6 +769,26 @@ class DriedRose extends Artifact:
 		ghost_summoned = data.get("ghost_summoned", false)
 		ghost_hp = data.get("ghost_hp", 20)
 		ghost_hp_max = data.get("ghost_hp_max", 20)
+		summoned_ghost_actor_id = data.get("summoned_ghost_actor_id", -1)
+		current_ghost = null
+
+	func resolve_post_load(hero: Char, level_ref: Variant) -> void:
+		current_ghost = null
+		if not ghost_summoned or summoned_ghost_actor_id < 0 or level_ref == null:
+			return
+		var mob_list: Array = level_ref.get_mobs() if level_ref.has_method("get_mobs") else level_ref.mobs
+		for node: Variant in mob_list:
+			if node == null or not is_instance_valid(node):
+				continue
+			if int(node.get("actor_id")) == summoned_ghost_actor_id:
+				current_ghost = node
+				if current_ghost.get("ally_hero") == null:
+					current_ghost.ally_hero = hero
+				current_ghost.source_artifact = self
+				break
+		if current_ghost == null:
+			ghost_summoned = false
+			summoned_ghost_actor_id = -1
 
 
 # ===========================================================================
@@ -731,46 +816,129 @@ class EtherealChains extends Artifact:
 	func passives(_hero: Char) -> void:
 		pass
 
-	## Pull hero toward target position. Returns true if successful.
-	func activate(_hero: Char) -> bool:
-		var cost: int = 1
-		if not _spend_charge(cost):
+	## Use targeting to pull the hero or an enemy.
+	func activate(hero: Char) -> bool:
+		if hero == null:
+			return false
+		if charge < 1:
 			if MessageLog:
 				MessageLog.add("The chains have no charges.", icon_color)
 			return false
-
-		gain_exp(2)
-		activated = false  # Instant effect, not sustained
-
-		if MessageLog:
-			MessageLog.add(
-				"The ethereal chains lash out!",
-				icon_color
-			)
-		if EventBus:
-			EventBus.item_used.emit(item_name)
-		# Actual movement logic is handled by the targeting/movement system.
-		# This method signals intent; the game controller resolves positioning.
-		return true
-
-	## Pull an enemy toward the hero's position.
-	func pull_enemy(_hero: Char, _enemy: Variant) -> bool:
-		var cost: int = 1
-		if not _spend_charge(cost):
+		var hero_ref: Char = hero
+		var chain_ref: EtherealChains = self
+		var callback: Callable = func(cell: int) -> void:
+			chain_ref._resolve_chain_target(hero_ref, cell)
+		if EventBus and EventBus.has_signal("enter_targeting"):
+			EventBus.enter_targeting.emit(self, 7 + level, callback)
 			if MessageLog:
-				MessageLog.add("The chains have no charges.", icon_color)
+				MessageLog.add("Select a target for the Ethereal Chains.", icon_color)
+			return true
+		return false
+
+	func _resolve_chain_target(hero: Char, target_pos: int) -> void:
+		if hero == null:
+			return
+		var hero_level_ref: Variant = hero.get("level") if hero.get("level") != null else null
+		if hero_level_ref == null:
+			return
+		var target_char: Variant = hero_level_ref.find_char_at(target_pos) if hero_level_ref.has_method("find_char_at") else null
+		if target_char != null and target_char != hero:
+			if _pull_enemy_to_hero(hero, target_char):
+				return
+		_pull_hero_to_cell(hero, target_pos)
+
+	func _pull_hero_to_cell(hero: Char, target_pos: int) -> bool:
+		var hero_level_ref: Variant = hero.get("level") if hero.get("level") != null else null
+		if hero_level_ref == null:
 			return false
+		if target_pos == hero.pos:
+			if MessageLog:
+				MessageLog.add("The chains strain, but you are already there.", icon_color)
+			return false
+		if not _has_clear_chain_path(hero.pos, target_pos, hero_level_ref):
+			if MessageLog:
+				MessageLog.add("The chains can't reach that spot.", icon_color)
+			return false
+		if not hero_level_ref.is_passable(target_pos):
+			if MessageLog:
+				MessageLog.add("The chains need open ground to pull you there.", icon_color)
+			return false
+		var occupant: Variant = hero_level_ref.find_char_at(target_pos)
+		if occupant != null and occupant != hero:
+			if MessageLog:
+				MessageLog.add("Something blocks that destination.", icon_color)
+			return false
+		if not _spend_charge(1):
+			return false
+		if hero.move_to(target_pos):
+			gain_exp(2)
+			activated = false
+			if MessageLog:
+				MessageLog.add("The ethereal chains pull you through the air!", icon_color)
+			if EventBus:
+				EventBus.hero_moved.emit(target_pos)
+				EventBus.item_used.emit(item_name)
+			return true
+		return false
 
-		gain_exp(2)
+	func _pull_enemy_to_hero(hero: Char, target_char: Variant) -> bool:
+		var hero_level_ref: Variant = hero.get("level") if hero.get("level") != null else null
+		if hero_level_ref == null or target_char == null:
+			return false
+		if target_char is NPC:
+			if MessageLog:
+				MessageLog.add("The chains refuse to bind that target.", icon_color)
+			return false
+		if not _has_clear_chain_path(hero.pos, target_char.pos, hero_level_ref):
+			if MessageLog:
+				MessageLog.add("The chains cannot get a clean hold on that target.", icon_color)
+			return false
+		var landing_pos: int = _find_enemy_pull_destination(hero.pos, target_char.pos, hero_level_ref)
+		if landing_pos < 0:
+			if MessageLog:
+				MessageLog.add("There is nowhere to yank the target.", icon_color)
+			return false
+		if not _spend_charge(1):
+			return false
+		if target_char.move_to(landing_pos):
+			gain_exp(2)
+			activated = false
+			if MessageLog:
+				MessageLog.add("The ethereal chains yank the enemy toward you!", icon_color)
+			if EventBus:
+				EventBus.item_used.emit(item_name)
+			return true
+		return false
 
-		if MessageLog:
-			MessageLog.add(
-				"The ethereal chains yank the enemy toward you!",
-				icon_color
-			)
-		if EventBus:
-			EventBus.item_used.emit(item_name)
-		return true
+	func _has_clear_chain_path(from_pos: int, to_pos: int, hero_level_ref: Variant) -> bool:
+		if hero_level_ref == null or hero_level_ref.get("passable") == null:
+			return false
+		var path: Array[int] = Ballistica.cast_line(from_pos, to_pos, hero_level_ref.passable, Ballistica.STOP_SOLID)
+		return not path.is_empty() and path[path.size() - 1] == to_pos
+
+	func _find_enemy_pull_destination(hero_pos: int, enemy_pos: int, hero_level_ref: Variant) -> int:
+		if hero_level_ref == null or hero_level_ref.get("passable") == null:
+			return -1
+		var path: Array[int] = Ballistica.cast_line(enemy_pos, hero_pos, hero_level_ref.passable, Ballistica.STOP_SOLID)
+		if path.size() >= 2:
+			var preferred: int = path[path.size() - 2]
+			if preferred != enemy_pos and hero_level_ref.is_passable(preferred) and hero_level_ref.find_char_at(preferred) == null:
+				return preferred
+		var best_pos: int = -1
+		var best_dist: int = 999
+		for dir: int in ConstantsData.DIRS_8:
+			var candidate: int = hero_pos + dir
+			if candidate < 0 or candidate >= ConstantsData.LENGTH:
+				continue
+			if not hero_level_ref.is_passable(candidate):
+				continue
+			if hero_level_ref.find_char_at(candidate) != null:
+				continue
+			var dist: int = Ballistica.distance(candidate, enemy_pos)
+			if dist < best_dist:
+				best_dist = dist
+				best_pos = candidate
+		return best_pos
 
 	func level_up() -> void:
 		super.level_up()

@@ -55,3 +55,12 @@ func _dark_bolt() -> void:
 		var weak: Weakness = Weakness.new()
 		weak.set_duration(10.0)
 		target.add_buff(weak)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["bolt_cooldown"] = bolt_cooldown
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	bolt_cooldown = int(data.get("bolt_cooldown", bolt_cooldown))

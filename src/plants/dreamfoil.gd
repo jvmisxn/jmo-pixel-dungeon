@@ -1,7 +1,6 @@
 class_name Dreamfoil
 extends Plant
-## On hero: cures mind-altering debuffs (Blindness, Terror, Charm, Amok, etc.).
-## On mobs: puts them to sleep (applies Paralysis as a sleep stand-in).
+## On hero: cures mind-altering debuffs. On mobs: puts them to sleep.
 
 ## Debuff IDs that dreamfoil can cure.
 const MIND_DEBUFFS: Array[String] = [
@@ -36,8 +35,7 @@ func _do_effect(char: Variant, _level: Variant) -> void:
 			var sleep: Paralysis = Paralysis.new()
 			sleep.set_duration(SLEEP_DURATION)
 			char.add_buff(sleep)
-		# Also set mob state to sleeping if possible
-		if char.get("state") != null and char.has_method("set"):
-			char.set("state", 0)  # Mob.AIState.SLEEPING = 0
+		if char is Mob:
+			(char as Mob)._set_state(Mob.AIState.SLEEPING)
 		if MessageLog:
 			MessageLog.add("The %s falls into a deep sleep." % str(char.get("name")))

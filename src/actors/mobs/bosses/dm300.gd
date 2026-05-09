@@ -106,3 +106,16 @@ func _on_death(source: Variant) -> void:
 	if level and level.has_method("unlock_exit"):
 		level.unlock_exit()
 	super._on_death(source)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["gas_cooldown"] = gas_cooldown
+	data["pylons_active"] = pylons_active
+	data["charge_cooldown"] = charge_cooldown
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	gas_cooldown = int(data.get("gas_cooldown", gas_cooldown))
+	pylons_active = int(data.get("pylons_active", pylons_active))
+	charge_cooldown = int(data.get("charge_cooldown", charge_cooldown))

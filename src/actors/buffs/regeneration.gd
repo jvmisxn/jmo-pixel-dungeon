@@ -66,3 +66,12 @@ func _regen_on() -> bool:
 		if level != null and level.has_method("is_locked") and level.is_locked():
 			return false
 	return true
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["partial_regen"] = partial_regen
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	partial_regen = float(data.get("partial_regen", partial_regen))

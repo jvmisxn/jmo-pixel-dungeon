@@ -75,8 +75,6 @@ func paint(level: Level) -> void:
 
 func _pick_floor_terrain(level: Level) -> int:
 	match level.feeling:
-		Level.Feeling.GRASS:
-			return ConstantsData.Terrain.GRASS
 		Level.Feeling.WATER:
 			return ConstantsData.Terrain.WATER
 		Level.Feeling.CHASM:
@@ -88,15 +86,21 @@ func _decorate_interior(level: Level, interior: Array[int]) -> void:
 	if interior.is_empty():
 		return
 
-	# Chance to scatter some grass or water patches
-	var scatter_chance: float = 0.15
-	for pos: int in interior:
-		if randf() < scatter_chance:
-			var roll: float = randf()
-			if roll < 0.4:
-				level.set_terrain(pos, ConstantsData.Terrain.GRASS)
-			elif roll < 0.55:
-				level.set_terrain(pos, ConstantsData.Terrain.HIGH_GRASS)
+	match level.feeling:
+		Level.Feeling.GRASS:
+			for pos: int in interior:
+				var roll: float = randf()
+				if roll < 0.22:
+					level.set_terrain(pos, ConstantsData.Terrain.GRASS)
+				elif roll < 0.34:
+					level.set_terrain(pos, ConstantsData.Terrain.HIGH_GRASS)
+				elif roll < 0.38:
+					level.set_terrain(pos, ConstantsData.Terrain.FURROWED_GRASS)
+		_:
+			# Normal rooms should only pick up a little natural clutter.
+			for pos: int in interior:
+				if randf() < 0.035:
+					level.set_terrain(pos, ConstantsData.Terrain.GRASS)
 
 ## Create a StandardRoom with a random size category weighted toward NORMAL.
 static func create_random() -> StandardRoom:

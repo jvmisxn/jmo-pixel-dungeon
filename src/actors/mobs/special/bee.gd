@@ -5,6 +5,7 @@ extends Mob
 
 var ally_hero: Char = null  # The hero this bee follows
 var pot_pos: int = -1  # Position the honeypot shattered (bee returns here if no enemies)
+var _saved_ally_hero_actor_id: int = -1
 
 func _init() -> void:
 	super._init()
@@ -119,3 +120,25 @@ static func spawn_at(spawn_pos: int, p_level: Variant, hero: Char, depth: int) -
 	if MessageLog:
 		MessageLog.add_positive("A golden bee emerges from the honeypot!")
 	return b
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["pot_pos"] = pot_pos
+	data["ally_hero_actor_id"] = ally_hero.actor_id if ally_hero != null else -1
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	pot_pos = int(data.get("pot_pos", pot_pos))
+	_saved_ally_hero_actor_id = int(data.get("ally_hero_actor_id", -1))
+	ally_hero = null
+
+func resolve_post_load(level_ref: Level) -> void:
+	if _saved_ally_hero_actor_id < 0 or level_ref == null:
+		return
+	var heroes: Array[Char] = level_ref.get_heroes() if level_ref.has_method("get_heroes") else []
+	for hero_ref: Char in heroes:
+		if hero_ref != null and is_instance_valid(hero_ref) and hero_ref.actor_id == _saved_ally_hero_actor_id:
+			ally_hero = hero_ref
+			break
+	_saved_ally_hero_actor_id = -1

@@ -42,12 +42,7 @@ func _ready() -> void:
 	expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 
-	# Create the image and texture
-	_image = Image.create(MAP_SIZE, MAP_SIZE, false, Image.FORMAT_RGBA8)
-	_image.fill(COLOR_UNEXPLORED)
-	_image_texture = ImageTexture.create_from_image(_image)
-	texture = _image_texture
-
+	_ensure_image_ready()
 	_connect_signals()
 	# Use a Timer node for hero blink instead of manual delta tracking
 	var blink_timer: Timer = Timer.new()
@@ -55,6 +50,15 @@ func _ready() -> void:
 	blink_timer.autostart = true
 	blink_timer.timeout.connect(_on_blink_timeout)
 	add_child(blink_timer)
+
+func _ensure_image_ready() -> void:
+	if _image != null and _image_texture != null:
+		return
+	# Create the image and texture
+	_image = Image.create(MAP_SIZE, MAP_SIZE, false, Image.FORMAT_RGBA8)
+	_image.fill(COLOR_UNEXPLORED)
+	_image_texture = ImageTexture.create_from_image(_image)
+	texture = _image_texture
 
 
 func _connect_signals() -> void:
@@ -88,6 +92,7 @@ func set_minimap_visible(vis: bool) -> void:
 
 ## Full redraw of the minimap from current level data.
 func update_map(level_map: Array[int], visited: Array[bool], visible_cells_arr: Array[bool], hero_pos: int, mob_positions: Array[int] = []) -> void:
+	_ensure_image_ready()
 	_level_map = level_map
 	_visited = visited
 	_visible_cells = visible_cells_arr
@@ -98,6 +103,7 @@ func update_map(level_map: Array[int], visited: Array[bool], visible_cells_arr: 
 
 ## Partial update when FOV changes (hero moves).
 func update_fov(visible_cells_arr: Array[bool], hero_pos: int, mob_positions: Array[int] = []) -> void:
+	_ensure_image_ready()
 	_visible_cells = visible_cells_arr
 	_hero_pos = hero_pos
 	_mob_positions = mob_positions

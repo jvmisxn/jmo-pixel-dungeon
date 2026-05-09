@@ -50,3 +50,12 @@ func _leap_attack() -> void:
 func act() -> void:
 	can_leap = true
 	super.act()
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["can_leap"] = can_leap
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	can_leap = bool(data.get("can_leap", can_leap))

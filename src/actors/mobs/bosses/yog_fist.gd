@@ -30,3 +30,12 @@ func _on_death(source: Variant) -> void:
 	if MessageLog:
 		MessageLog.add_positive("The %s is destroyed!" % mob_name)
 	super._on_death(source)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["fist_type"] = int(fist_type)
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	fist_type = int(data.get("fist_type", int(fist_type))) as FistType

@@ -344,9 +344,11 @@ func _on_inventory_pressed() -> void:
 
 
 func _on_map_pressed() -> void:
-	# Toggle minimap visibility
-	if _minimap:
-		_minimap.visible = not _minimap.visible
+	if has_active_window() and _active_window is WndMap:
+		close_window()
+		return
+	var wnd: WndBase = WndMap.new()
+	show_window(wnd)
 
 
 func _on_wait_pressed() -> void:
@@ -410,6 +412,33 @@ func _on_quickslot_used(_slot_index: int, item: RefCounted) -> void:
 		return
 	if item.has_method("execute"):
 		item.execute(GameManager.hero)
+
+func has_active_window() -> bool:
+	return _active_window != null and is_instance_valid(_active_window)
+
+func toggle_inventory() -> void:
+	if has_active_window() and _active_window is WndInventory:
+		close_window()
+		return
+	_on_inventory_pressed()
+
+func toggle_map() -> void:
+	_on_map_pressed()
+
+func open_settings() -> void:
+	if has_active_window() and _active_window is WndSettings:
+		close_window()
+		return
+	_on_settings_pressed()
+
+func use_quickslot(slot_index: int) -> void:
+	if slot_index < 0 or slot_index >= Belongings.QUICKSLOT_COUNT:
+		return
+	var belongings: Variant = GameManager.hero.get("belongings") if GameManager and GameManager.hero else null
+	if belongings == null or not belongings.has_method("get_quickslot"):
+		return
+	var item: RefCounted = belongings.get_quickslot(slot_index)
+	_on_quickslot_used(slot_index, item)
 
 func _refresh_quickslots() -> void:
 	if _toolbar_bar == null or GameManager == null or GameManager.hero == null:

@@ -55,3 +55,12 @@ func _zap() -> void:
 	if randf() < 0.4:
 		var weak: Weakness = Weakness.new()
 		target.add_buff(weak)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["zap_cooldown"] = zap_cooldown
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	zap_cooldown = int(data.get("zap_cooldown", zap_cooldown))

@@ -29,3 +29,12 @@ func on_attack_hit(target_char: Char, damage: int) -> void:
 
 func on_attack_miss(_target_char: Char) -> void:
 	combo = 0
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["combo"] = combo
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	combo = int(data.get("combo", combo))

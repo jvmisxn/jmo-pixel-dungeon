@@ -12,7 +12,15 @@ func _do_effect(char: Variant, level: Variant) -> void:
 
 	var new_pos: int = -1
 	if level.has_method("random_passable_cell"):
-		new_pos = level.random_passable_cell()
+		for _attempt: int in range(12):
+			new_pos = level.random_passable_cell()
+			if new_pos < 0:
+				continue
+			if level.has_method("find_char_at") and level.find_char_at(new_pos) != null:
+				continue
+			if level.get("exit_pos") != null and new_pos == level.exit_pos:
+				continue
+			break
 
 	if new_pos < 0:
 		return
@@ -22,6 +30,8 @@ func _do_effect(char: Variant, level: Variant) -> void:
 		char.set_pos(new_pos)
 	elif char.get("pos") != null:
 		char.pos = new_pos
+	if char.get("is_hero") and EventBus:
+		EventBus.hero_moved.emit(new_pos)
 
 	if MessageLog:
 		if char.get("is_hero"):

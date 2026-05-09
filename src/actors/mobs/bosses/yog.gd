@@ -99,3 +99,14 @@ func _on_death(source: Variant) -> void:
 	if level and level.has_method("unlock_exit"):
 		level.unlock_exit()
 	super._on_death(source)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["fists_spawned"] = fists_spawned
+	data["laser_cooldown"] = laser_cooldown
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	fists_spawned = bool(data.get("fists_spawned", fists_spawned))
+	laser_cooldown = int(data.get("laser_cooldown", laser_cooldown))

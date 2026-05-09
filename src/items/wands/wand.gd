@@ -126,7 +126,7 @@ func _build_zap_path(hero: Char, target_pos: int) -> Array[int]:
 			_make_open_passable(), Ballistica.MAGIC_BOLT)
 	var passable_arr: Array[bool] = lvl.passable
 	return Ballistica.cast_line(hero_pos, target_pos, passable_arr,
-		Ballistica.MAGIC_BOLT)
+		Ballistica.MAGIC_BOLT | Ballistica.IGNORE_SOFT_SOLID, [], ConstantsData.WIDTH, lvl.map if lvl.get("map") != null else [])
 
 ## Generate a fully-open passable array for fallback.
 func _make_open_passable() -> Array[bool]:

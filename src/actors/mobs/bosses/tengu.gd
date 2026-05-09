@@ -99,3 +99,14 @@ func _on_death(source: Variant) -> void:
 	if level and level.has_method("unlock_exit"):
 		level.unlock_exit()
 	super._on_death(source)
+
+func serialize() -> Dictionary:
+	var data: Dictionary = super.serialize()
+	data["teleport_cooldown"] = teleport_cooldown
+	data["phase"] = phase
+	return data
+
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	teleport_cooldown = int(data.get("teleport_cooldown", teleport_cooldown))
+	phase = int(data.get("phase", phase))

@@ -18,9 +18,9 @@ signal hero_died
 signal hero_stats_changed
 
 # --- Combat Signals ---
-## Emitted when any mob is defeated. payload: mob_pos (int), mob_name (String)
+## Emitted when any mob is defeated. payload: mob_pos (int), mob_name (String), mob_id (String)
 @warning_ignore("unused_signal")
-signal mob_defeated(mob_pos: int, mob_name: String)
+signal mob_defeated(mob_pos: int, mob_name: String, mob_id: String)
 ## Emitted when a mob dies (passes the mob object for loot/effects).
 @warning_ignore("unused_signal")
 signal mob_died(mob: Variant)
@@ -98,6 +98,9 @@ signal quest_updated(quest_id: String, state: String)
 ## Emitted when the hero tramples grass (for Sandals of Nature / seed drops).
 @warning_ignore("unused_signal")
 signal hero_trampled_grass(pos: int)
+## Emitted when a seed is planted. payload: pos (int), plant_type (String)
+@warning_ignore("unused_signal")
+signal seed_planted(pos: int, plant_type: String)
 ## Emitted when a plant activates. payload: pos (int), plant_name (String)
 @warning_ignore("unused_signal")
 signal plant_activated(pos: int, plant_name: String)
