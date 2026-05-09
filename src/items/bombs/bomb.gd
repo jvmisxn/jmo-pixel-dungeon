@@ -48,12 +48,13 @@ func execute(hero: Char) -> void:
 	_consume_one(hero)
 
 ## Start the fuse countdown. In a full implementation this would register with
-## TurnManager to count down. For now we detonate immediately as a placeholder.
+## the current level so it can tick down on each hero round.
 func _start_fuse(target_pos: int, hero: Char) -> void:
-	# TODO: Register a delayed action with TurnManager for fuse_turns countdown.
-	# For immediate gameplay testing, detonate now.
 	var dungeon_level: Variant = hero.get("level") if hero != null else null
-	detonate(target_pos, dungeon_level)
+	if dungeon_level != null and dungeon_level.has_method("arm_bomb"):
+		dungeon_level.arm_bomb(target_pos, self, fuse_turns)
+	else:
+		detonate(target_pos, dungeon_level)
 
 ## Detonate the bomb at a position, dealing damage and applying effects.
 func detonate(bomb_pos: int, dungeon_level: Variant) -> void:

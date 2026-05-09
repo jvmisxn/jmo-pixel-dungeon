@@ -47,6 +47,9 @@ var heaps: Array[Dictionary] = []
 var mobs: Array[Node] = []
 ## Active blobs (gas clouds, fire, etc.). Each: { "pos": int, "blob": Variant }
 var blobs: Array[Dictionary] = []
+## Armed bombs waiting to detonate. Each entry:
+## { "pos": int, "bomb": Variant, "turns_left": int }
+var pending_bombs: Array[Dictionary] = []
 ## Traps placed on the level. Key: pos (int) -> trap object.
 var traps: Dictionary[int, RefCounted] = {}
 ## Plants placed on the level. Key: pos (int) -> plant object.
@@ -710,6 +713,42 @@ func add_blob(blob: Variant, cell: int) -> void:
 		blob.seed(cell, 1)
 	var entry: Dictionary = {"blob": blob, "pos": cell}
 	blobs.append(entry)
+
+## Arm a bomb on the floor so it detonates after a fixed number of hero rounds.
+func arm_bomb(cell: int, bomb: Variant, turns_left: int) -> void:
+	if bomb == null or cell < 0 or cell >= LEN:
+		return
+	pending_bombs.append({
+		"pos": cell,
+		"bomb": bomb,
+		"turns_left": maxi(1, turns_left),
+	})
+	if MessageLog:
+		var bomb_name: String = bomb.get("item_name") if bomb.get("item_name") != null else "bomb"
+		MessageLog.add_warning("The %s starts hissing!" % bomb_name)
+
+## Advance all armed bomb fuses by one hero round. Returns true if any bomb
+## detonated so the caller can refresh visuals immediately.
+func tick_pending_bombs() -> bool:
+	if pending_bombs.is_empty():
+		return false
+	var remaining: Array[Dictionary] = []
+	var detonated_any: bool = false
+	for entry: Dictionary in pending_bombs:
+		var bomb: Variant = entry.get("bomb")
+		var cell: int = int(entry.get("pos", -1))
+		var turns_left: int = int(entry.get("turns_left", 1)) - 1
+		if bomb == null or cell < 0 or cell >= LEN:
+			continue
+		if turns_left <= 0:
+			detonated_any = true
+			if bomb.has_method("detonate"):
+				bomb.detonate(cell, self)
+		else:
+			entry["turns_left"] = turns_left
+			remaining.append(entry)
+	pending_bombs = remaining
+	return detonated_any
 
 ## Alert all mobs on the level to a position (alarm traps, noisemaker bombs).
 func alert_all_mobs(alert_pos: int) -> void:

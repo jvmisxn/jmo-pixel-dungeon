@@ -42,6 +42,8 @@ var _path: Array[int] = []
 ## (moves, attacks, opens a door). TurnManager checks this to decide whether
 ## to add a visual delay and refresh the screen.
 var did_visible_action: bool = false
+var last_visible_action: String = ""
+var last_visible_target_pos: int = -1
 
 # ---------------------------------------------------------------------------
 # Initialization
@@ -91,6 +93,8 @@ func act() -> void:
 		return
 
 	did_visible_action = false
+	last_visible_action = ""
+	last_visible_target_pos = -1
 	process_buffs()
 	# Refresh cached speed in TurnManager after buffs may have changed it.
 	if TurnManager:
@@ -387,6 +391,8 @@ func take_damage(dmg: int, source: Variant = null) -> int:
 func on_move(old_pos: int, new_pos: int) -> void:
 	super.on_move(old_pos, new_pos)
 	did_visible_action = true
+	last_visible_action = "move"
+	last_visible_target_pos = new_pos
 	# Check if the mob stepped onto a closed door — open it
 	if level:
 		var terrain: int = level.terrain_at(new_pos)
@@ -397,8 +403,15 @@ func on_move(old_pos: int, new_pos: int) -> void:
 
 func on_attack_hit(target_char: Char, damage: int) -> void:
 	did_visible_action = true
+	last_visible_action = "attack"
+	last_visible_target_pos = target_char.pos if target_char != null else -1
 	if target_char.is_hero and EventBus:
 		EventBus.hero_damaged.emit(damage, self)
+
+func on_attack_miss(target_char: Char) -> void:
+	did_visible_action = true
+	last_visible_action = "attack"
+	last_visible_target_pos = target_char.pos if target_char != null else -1
 
 func _on_death(_source: Variant) -> void:
 	# Check Soul Mark (Warlock subclass)

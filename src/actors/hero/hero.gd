@@ -216,6 +216,9 @@ func execute_action() -> void:
 	# Process buffs at the start of each hero turn (hunger, regen, poison, etc.).
 	# TurnManager pauses before calling act() for heroes, so we must do it here.
 	process_buffs()
+	var equipped_artifact: Variant = belongings.get_equipped_artifact() if belongings != null else null
+	if equipped_artifact != null and equipped_artifact.has_method("on_turn"):
+		equipped_artifact.on_turn(self)
 
 	# If the hero died during buff processing (starvation, poison), skip the action
 	# but still complete the turn to avoid softlocking the turn system.
@@ -383,6 +386,9 @@ func _do_search() -> void:
 		return
 	var door_feature: RefCounted = DoorFeature.new()
 	var found: int = int(door_feature.call("search", level, pos))
+	var equipped_artifact: Variant = belongings.get_equipped_artifact() if belongings != null else null
+	if equipped_artifact != null and equipped_artifact.has_method("on_search"):
+		equipped_artifact.on_search()
 	if found <= 0 and MessageLog:
 		MessageLog.add("You search, but find nothing.")
 	_patient_strike_ready = false

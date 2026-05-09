@@ -64,13 +64,29 @@ func _apply_effect(hero: Char) -> void:
 
 ## Add a random enchantment to the hero's equipped weapon.
 func _use_enchantment(hero: Char) -> void:
-	if hero.get("belongings") == null or hero.belongings.weapon == null:
+	if hero.get("belongings") == null:
 		if MessageLog:
 			MessageLog.add_warning("You need a weapon equipped to use this!")
 		return
-	# Apply a random enchantment (placeholder - would call enchantment system)
-	if MessageLog:
-		MessageLog.add_positive("Your weapon glows with new enchantment!")
+	var choices: Array = []
+	var equipped_weapon: Variant = hero.belongings.weapon
+	var spirit_bow: Variant = hero.belongings.spirit_bow
+	if equipped_weapon != null and equipped_weapon.has_method("enchant"):
+		choices.append(equipped_weapon)
+	if spirit_bow != null and spirit_bow.has_method("enchant") and spirit_bow != equipped_weapon:
+		choices.append(spirit_bow)
+	if choices.is_empty():
+		if MessageLog:
+			MessageLog.add_warning("You need a weapon equipped to use this!")
+		return
+	if choices.size() == 1:
+		_apply_enchantment_to_item(choices[0])
+		return
+	var wnd: WndItemSelect = WndItemSelect.new()
+	wnd.setup(choices, "Choose a weapon to enchant:", func(chosen: Variant) -> void:
+		_apply_enchantment_to_item(chosen)
+	)
+	_show_window(wnd)
 
 ## Set augmentation on the hero's weapon or armor.
 func _use_augmentation(hero: Char) -> void:
@@ -78,9 +94,86 @@ func _use_augmentation(hero: Char) -> void:
 		if MessageLog:
 			MessageLog.add_warning("You need equipment to augment!")
 		return
-	# Would open UI to select weapon/armor and speed/damage augment
+	var choices: Array = []
+	var belongings: Variant = hero.belongings
+	var candidates: Array = [
+		belongings.weapon,
+		belongings.armor,
+		belongings.spirit_bow,
+	]
+	for item: Variant in candidates:
+		if item == null:
+			continue
+		if item.has_method("apply_augment"):
+			choices.append(item)
+	if choices.is_empty():
+		if MessageLog:
+			MessageLog.add_warning("You need equipment to augment!")
+		return
+	if choices.size() == 1:
+		_open_augment_choice(choices[0])
+		return
+	var wnd: WndItemSelect = WndItemSelect.new()
+	wnd.setup(choices, "Choose an item to augment:", func(chosen: Variant) -> void:
+		_open_augment_choice(chosen)
+	)
+	_show_window(wnd)
+
+func _apply_enchantment_to_item(item: Variant) -> void:
+	if item == null or not item.has_method("enchant"):
+		return
+	item.enchant(WeaponEnchantment.random())
+	if item.has_method("identify"):
+		item.identify()
 	if MessageLog:
-		MessageLog.add_info("Select an item to augment.")
+		MessageLog.add_positive("Your %s glows with new enchantment!" % item.get_display_name())
+	if EventBus:
+		EventBus.hero_stats_changed.emit()
+
+func _open_augment_choice(item: Variant) -> void:
+	if item == null:
+		return
+	var wnd: WndAugmentSelect = WndAugmentSelect.new()
+	wnd.setup(item, func(chosen_item: Variant, augment_key: String) -> void:
+		_apply_augment_to_item(chosen_item, augment_key)
+	)
+	_show_window(wnd)
+
+func _apply_augment_to_item(item: Variant, augment_key: String) -> void:
+	if item == null or not item.has_method("apply_augment"):
+		return
+	if item is Armor:
+		var armor: Armor = item as Armor
+		match augment_key:
+			"evasion":
+				armor.apply_augment(Armor.Augment.EVASION)
+			"defense":
+				armor.apply_augment(Armor.Augment.DEFENSE)
+			_:
+				return
+	else:
+		var weapon: Weapon = item as Weapon
+		match augment_key:
+			"speed":
+				weapon.apply_augment(Weapon.Augment.SPEED)
+			"damage":
+				weapon.apply_augment(Weapon.Augment.DAMAGE)
+			_:
+				return
+	if item.has_method("identify"):
+		item.identify()
+	if MessageLog:
+		MessageLog.add_positive("%s is augmented for %s." % [item.get_display_name(), augment_key])
+	if EventBus:
+		EventBus.hero_stats_changed.emit()
+
+func _show_window(window: Control) -> void:
+	if EventBus:
+		EventBus.show_window.emit(window)
+		return
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree and tree.root:
+		tree.root.add_child(window)
 
 ## Chance to identify a random unidentified item in inventory.
 func _use_intuition(hero: Char) -> void:

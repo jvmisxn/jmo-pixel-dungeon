@@ -17,6 +17,8 @@ var _hero_sprites: Dictionary[int, HeroSprite] = {}
 var _mob_sprites: Dictionary[int, MobSprite] = {}
 ## Item sprites on the ground. Key: pos (int) -> ItemSprite
 var _item_sprites: Dictionary[int, ItemSprite] = {}
+## Armed bomb sprites on the ground. Key: pos (int) -> ItemSprite
+var _armed_bomb_sprites: Dictionary[int, ItemSprite] = {}
 
 # --- Sprite Layers (Node2D containers for z-ordering) ---
 var _entity_layer: Node2D = null
@@ -164,6 +166,7 @@ func load_level(level: Level, region: int) -> void:
 	_spawn_hero_sprites()
 	_spawn_mob_sprites()
 	_spawn_item_sprites()
+	_refresh_armed_bomb_sprites()
 
 	# Initial FOV from hero position
 	if GameManager.hero:
@@ -248,6 +251,7 @@ func refresh_after_turn() -> void:
 
 	# Refresh item sprites
 	_refresh_item_sprites()
+	_refresh_armed_bomb_sprites()
 	_interrupt_rest_if_needed()
 
 ## Called by TurnManager after each visible mob action (move, attack) so the
@@ -261,14 +265,15 @@ func on_mob_action(actor: Node) -> void:
 
 	if sprite and is_instance_valid(sprite):
 		var mob_pos: int = actor.get("pos") if actor.get("pos") != null else -1
+		var action_name: String = str(actor.get("last_visible_action"))
+		var action_target_pos: int = int(actor.get("last_visible_target_pos")) if actor.get("last_visible_target_pos") != null else -1
 		# Sync sprite to mob's current logical position (animate move)
 		if mob_pos >= 0 and mob_pos != sprite.cell_pos:
 			sprite.move_to(mob_pos)
-		# If the mob just attacked the hero, play attack animation toward hero
-		if actor.get("target") != null and actor.get("target") is Char:
-			var target_char: Variant = actor.get("target")
-			if target_char.get("is_hero") == true and actor.is_adjacent(target_char.pos):
-				sprite.play_attack(target_char.pos)
+		# Attack animation must use explicit action data; inferring from the
+		# mob's current target after resolution is unreliable.
+		if action_name == "attack" and action_target_pos >= 0:
+			sprite.play_attack(action_target_pos)
 		# Update HP bar
 		if actor.get("hp") != null and actor.get("ht") != null:
 			sprite.update_hp_bar(actor.hp, actor.ht)
@@ -355,6 +360,9 @@ func _connect_signals() -> void:
 			EventBus.enter_targeting.connect(_on_enter_targeting)
 		if EventBus.has_signal("cancel_targeting"):
 			EventBus.cancel_targeting.connect(_on_cancel_targeting)
+
+	if TurnManager and not TurnManager.round_completed.is_connected(_on_round_completed):
+		TurnManager.round_completed.connect(_on_round_completed)
 
 	# HUD toolbar connections — only connect wait/search (gameplay actions).
 	# Inventory/map/settings are handled by HUD directly; connecting here
@@ -469,6 +477,10 @@ func _clear_entity_sprites() -> void:
 		if sprite is Node and is_instance_valid(sprite):
 			sprite.queue_free()
 	_item_sprites.clear()
+	for sprite: Variant in _armed_bomb_sprites.values():
+		if sprite is Node and is_instance_valid(sprite):
+			sprite.queue_free()
+	_armed_bomb_sprites.clear()
 
 func _cleanup_dead_mobs() -> void:
 	var to_remove: Array[int] = []
@@ -515,6 +527,39 @@ func _refresh_item_sprites() -> void:
 			_entity_layer.add_child(sprite)
 			_item_sprites[pos] = sprite
 
+func _refresh_armed_bomb_sprites() -> void:
+	if _current_level == null:
+		return
+	var valid_positions: Dictionary[int, bool] = {}
+	for bomb_entry: Dictionary in _current_level.pending_bombs:
+		var bomb_pos: int = bomb_entry.get("pos", -1)
+		valid_positions[bomb_pos] = true
+	var to_remove: Array[int] = []
+	for pos: int in _armed_bomb_sprites.keys():
+		if not valid_positions.has(pos):
+			var stale_sprite: ItemSprite = _armed_bomb_sprites[pos]
+			if is_instance_valid(stale_sprite):
+				stale_sprite.play_pickup(0.15)
+			to_remove.append(pos)
+	for pos: int in to_remove:
+		_armed_bomb_sprites.erase(pos)
+	for bomb_entry: Dictionary in _current_level.pending_bombs:
+		var bomb_pos: int = bomb_entry.get("pos", -1)
+		if bomb_pos < 0 or _armed_bomb_sprites.has(bomb_pos):
+			continue
+		var bomb: Variant = bomb_entry.get("bomb")
+		var sprite: ItemSprite = ItemSprite.new()
+		if bomb is Object:
+			sprite.setup_from_item(bomb)
+		else:
+			sprite.setup_manual(ConstantsData.ItemCategory.MISC, Color(0.8, 0.3, 0.2))
+		sprite.place_at(bomb_pos)
+		sprite.play_drop()
+		_entity_layer.add_child(sprite)
+		_armed_bomb_sprites[bomb_pos] = sprite
+		if effect_manager:
+			effect_manager.show_status(bomb_pos, "Fuse", Color(1.0, 0.7, 0.2))
+
 func _update_entity_visibility() -> void:
 	if _current_level == null:
 		return
@@ -546,6 +591,10 @@ func _update_entity_visibility() -> void:
 		var sprite: ItemSprite = _item_sprites[pos]
 		if pos >= 0 and pos < _current_level.visible.size():
 			sprite.visible = _current_level.visible[pos] or _current_level.visited[pos]
+	for pos: int in _armed_bomb_sprites.keys():
+		var bomb_sprite: ItemSprite = _armed_bomb_sprites[pos]
+		if pos >= 0 and pos < _current_level.visible.size():
+			bomb_sprite.visible = _current_level.visible[pos] or _current_level.visited[pos]
 
 # ---------------------------------------------------------------------------
 # Input Handling
@@ -909,6 +958,14 @@ func _on_toolbar_wait() -> void:
 func _on_toolbar_search() -> void:
 	if _awaiting_hero_input:
 		_submit_hero_action({"type": "search"})
+
+func _on_round_completed(_round_number: int) -> void:
+	if _current_level == null:
+		return
+	if _current_level.has_method("tick_pending_bombs"):
+		var detonated: bool = _current_level.tick_pending_bombs()
+		if detonated:
+			refresh_after_turn()
 
 func _on_trap_triggered(_pos: int, _trap_name: String) -> void:
 	if AudioManager:

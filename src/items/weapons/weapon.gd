@@ -149,6 +149,11 @@ func can_surprise_attack(hero: Char) -> bool:
 # Enchantment
 # ---------------------------------------------------------------------------
 
+## Apply an augment to this weapon. Only one augment can be active at a time.
+func apply_augment(new_augment: Augment) -> Weapon:
+	augment = new_augment
+	return self
+
 ## Apply the enchantment's proc effect, if one is present.
 ## Returns the (possibly modified) damage value.
 func proc_enchantment(attacker: Variant, defender: Variant, damage: int) -> int:

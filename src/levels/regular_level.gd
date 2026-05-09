@@ -547,6 +547,17 @@ func serialize() -> Dictionary:
 		if trap != null and trap.has_method("serialize"):
 			traps_data[trap_pos] = trap.serialize()
 	data["traps"] = traps_data
+	# Serialize pending bombs
+	var bombs_data: Array[Dictionary] = []
+	for bomb_entry: Dictionary in pending_bombs:
+		var bomb: Variant = bomb_entry.get("bomb")
+		if bomb != null and bomb.has_method("serialize"):
+			bombs_data.append({
+				"pos": bomb_entry.get("pos", -1),
+				"turns_left": bomb_entry.get("turns_left", 1),
+				"bomb_data": bomb.serialize(),
+			})
+	data["pending_bombs"] = bombs_data
 	return data
 
 ## Deserialize level state from cached data.
@@ -584,6 +595,25 @@ func deserialize(data: Dictionary) -> void:
 						heap["item"] = item
 						heap.erase("item_data")
 				heaps.append(heap)
+	# Deserialize pending bombs
+	pending_bombs.clear()
+	var bombs_data: Variant = data.get("pending_bombs", [])
+	if bombs_data is Array:
+		for bomb_entry_variant: Variant in bombs_data:
+			if bomb_entry_variant is Dictionary:
+				var bomb_entry: Dictionary = bomb_entry_variant as Dictionary
+				var bomb_data: Variant = bomb_entry.get("bomb_data")
+				if bomb_data is Dictionary:
+					var bomb_id: String = (bomb_data as Dictionary).get("item_id", "")
+					if bomb_id != "":
+						var bomb: Variant = Generator.create_item(bomb_id)
+						if bomb != null and bomb.has_method("deserialize"):
+							bomb.deserialize(bomb_data as Dictionary)
+							pending_bombs.append({
+								"pos": int(bomb_entry.get("pos", -1)),
+								"turns_left": int(bomb_entry.get("turns_left", 1)),
+								"bomb": bomb,
+							})
 	# Visible array must be re-initialized (recomputed via FOV each turn)
 	visible.resize(LEN)
 	visible.fill(false)

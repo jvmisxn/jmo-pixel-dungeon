@@ -999,19 +999,22 @@ class SandalsOfNature extends Artifact:
 				MessageLog.add("The sandals have no charges.", icon_color)
 			return false
 
-		# Plant a higher-tier plant based on level
 		var hero_pos: int = hero.get("pos") if hero.get("pos") != null else -1
+		var hero_level_ref: Variant = hero.get("level") if hero != null else null
 		if hero_pos < 0:
+			return false
+		if hero_level_ref == null:
 			return false
 
 		_spend_charge(1)
 		@warning_ignore("integer_division")
 		var plant_tier: int = mini(level / 3, 3)  # 0-3 based on level
+		var grown_cells: int = _burst_growth(hero_pos, hero_level_ref, plant_tier)
 
 		if MessageLog:
-			var plant_names: Array[String] = ["grass", "a seedling", "a bush", "a magical plant"]
+			var plant_names: Array[String] = ["grass", "a patch of grass", "a thick patch of high grass", "a vibrant overgrowth"]
 			MessageLog.add(
-				"You channel nature's energy, growing %s!" % plant_names[plant_tier],
+				"You channel nature's energy, growing %s! (%d)" % [plant_names[plant_tier], grown_cells],
 				icon_color
 			)
 		gain_exp(2)
@@ -1024,8 +1027,47 @@ class SandalsOfNature extends Artifact:
 		# Chance to grow grass scales with level
 		var grow_chance: float = 0.1 + float(level) * 0.05
 		if randf() < grow_chance:
-			# Actual terrain modification handled by level system
-			pass
+			var hero_level_ref: Variant = _hero.get("level") if _hero != null else null
+			if hero_level_ref != null:
+				if _apply_growth_to_cell(_pos, hero_level_ref, level >= 6):
+					_spend_charge(1)
+					gain_exp(1)
+
+	func _burst_growth(center_pos: int, hero_level_ref: Variant, plant_tier: int) -> int:
+		var grown_cells: int = 0
+		var radius: int = mini(1 + plant_tier, 2)
+		var upgrade_to_high_grass: bool = plant_tier >= 2
+		var positions: Array[int] = [center_pos]
+		for dir: int in ConstantsData.DIRS_8:
+			positions.append(center_pos + dir)
+		if radius > 1:
+			for pos: int in positions.duplicate():
+				for dir: int in ConstantsData.DIRS_8:
+					var next_pos: int = pos + dir
+					if next_pos not in positions:
+						positions.append(next_pos)
+		for cell: int in positions:
+			if _apply_growth_to_cell(cell, hero_level_ref, upgrade_to_high_grass):
+				grown_cells += 1
+		return grown_cells
+
+	func _apply_growth_to_cell(cell: int, hero_level_ref: Variant, upgrade_to_high_grass: bool) -> bool:
+		if hero_level_ref == null or not hero_level_ref.has_method("get_terrain") or not hero_level_ref.has_method("set_terrain"):
+			return false
+		if cell < 0 or cell >= ConstantsData.LENGTH:
+			return false
+		var terrain: int = hero_level_ref.get_terrain(cell)
+		match terrain:
+			ConstantsData.Terrain.EMPTY, ConstantsData.Terrain.EMBERS:
+				hero_level_ref.set_terrain(cell, ConstantsData.Terrain.GRASS)
+				return true
+			ConstantsData.Terrain.GRASS, ConstantsData.Terrain.FURROWED_GRASS:
+				if upgrade_to_high_grass:
+					hero_level_ref.set_terrain(cell, ConstantsData.Terrain.HIGH_GRASS)
+					return true
+			ConstantsData.Terrain.HIGH_GRASS:
+				return false
+		return false
 
 	func level_up() -> void:
 		super.level_up()
@@ -1281,6 +1323,8 @@ class UnstableSpellbook extends Artifact:
 
 	## Cast a random scroll effect.
 	func activate(hero: Char) -> bool:
+		if hero == null:
+			return false
 		var cost: int = 1
 		if not _spend_charge(cost):
 			if MessageLog:
@@ -1298,6 +1342,13 @@ class UnstableSpellbook extends Artifact:
 			available = SCROLL_EFFECTS.duplicate()
 
 		var chosen: String = available[randi() % available.size()]
+		var scroll: Scroll = Scroll.create(chosen)
+		if scroll == null:
+			if MessageLog:
+				MessageLog.add("The spellbook sputters and fails to weave a spell.", Color.RED)
+			return false
+		scroll.identified = true
+		scroll.known = true
 
 		gain_exp(3)
 		if MessageLog:
@@ -1306,10 +1357,9 @@ class UnstableSpellbook extends Artifact:
 				"The Spellbook casts: %s!" % display_name,
 				icon_color
 			)
+		scroll.read_scroll(hero)
 		if EventBus:
-			EventBus.item_used.emit(chosen)
-		# The actual scroll effect is triggered by the scroll/item system
-		# responding to the item_used event with the scroll's item_id.
+			EventBus.item_used.emit(item_name)
 		return true
 
 	func level_up() -> void:
