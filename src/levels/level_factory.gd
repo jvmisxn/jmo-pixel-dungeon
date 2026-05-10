@@ -3,12 +3,19 @@ extends RefCounted
 ## Creates the appropriate Level subclass for a given depth.
 ## Mirrors Shattered PD's Dungeon.newLevel().
 
-static func create_for_depth(p_depth: int) -> Level:
-	var level: Level = instantiate_for_depth(p_depth)
+const MAX_GENERATION_ATTEMPTS: int = 6
 
-	var success: bool = level.create(p_depth)
+static func create_for_depth(p_depth: int) -> Level:
+	var level: Level = null
+	var success: bool = false
+	for _attempt: int in range(MAX_GENERATION_ATTEMPTS):
+		level = instantiate_for_depth(p_depth)
+		success = level.create(p_depth)
+		if success:
+			break
 	if not success:
-		push_warning("LevelFactory: Level generation failed for depth %d, using fallback." % p_depth)
+		level = instantiate_for_depth(p_depth)
+		push_warning("LevelFactory: Level generation failed for depth %d after %d attempts, using fallback." % [p_depth, MAX_GENERATION_ATTEMPTS])
 		# Fallback: create a simple level with a single room
 		level._init_arrays()
 		level.depth = p_depth

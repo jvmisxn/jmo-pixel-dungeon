@@ -523,6 +523,8 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 
 	target.take_damage(effective_damage, self)
 	on_attack_hit(target, effective_damage)
+	if EventBus and item is MissileWeapon and not (item is SpiritBow):
+		EventBus.game_event.emit("thrown_weapon_hit", {"target_pos": target.pos})
 	return true
 
 func _get_throw_delay(item: Variant) -> float:
@@ -565,6 +567,8 @@ func _get_auto_ranged_item(target_pos: int) -> Variant:
 func on_attack_hit(target_char: Char, damage: int) -> void:
 	if EventBus and target_char != null:
 		EventBus.mob_damaged.emit(target_char.pos, damage)
+		if _pending_surprise_attack:
+			EventBus.game_event.emit("surprise_attack", {"target_pos": target_char.pos, "damage": damage})
 	if AudioManager:
 		AudioManager.play_sfx("hit")
 

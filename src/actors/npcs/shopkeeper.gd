@@ -131,22 +131,42 @@ func _add_shop_item(item: Variant, price: int) -> void:
 func interact(hero: Variant) -> void:
 	if hero == null:
 		return
+	_remember_interacting_hero(hero)
 
 	if has_fled:
 		return
 
 	if shop_inventory.is_empty():
-		if MessageLog:
-			MessageLog.add_info("\"I'm all sold out! Come back another time.\"")
+		_deliver_message("\"I'm all sold out! Come back another time.\"", "info", hero)
 		return
+
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id:
+			var shop_items_data: Array[Dictionary] = []
+			for entry: Dictionary in shop_inventory:
+				var event_entry: Dictionary = {"price": int(entry.get("price", 0))}
+				var item: Variant = entry.get("item")
+				if item != null and item.has_method("serialize"):
+					event_entry["item_data"] = item.serialize()
+				shop_items_data.append(event_entry)
+			if NetworkManager.has_method("send_ui_event_to_peer"):
+				NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+					"type": "shop_open",
+					"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+					"shopkeeper_actor_id": int(ConstantsData.get_prop(self, "actor_id", -1)),
+					"shop_items": shop_items_data,
+				})
+			return
 
 	var wnd: Variant = load("res://src/ui/windows/wnd_shop.gd").new()
 	if wnd.has_method("setup"):
 		wnd.setup(get_shop_items(), hero, self)
 	if EventBus and EventBus.has_signal("show_window"):
 		EventBus.show_window.emit(wnd)
-	elif MessageLog:
-		MessageLog.add_info("\"Welcome! Browse my wares.\"")
+	else:
+		_deliver_message("\"Welcome! Browse my wares.\"", "info", hero)
 
 ## Returns the list of items for sale (for UI integration).
 func get_shop_items() -> Array[Dictionary]:
@@ -170,8 +190,7 @@ func buy_item(hero: Variant, item_index: int) -> bool:
 	var price: int = entry["price"] as int
 
 	if GameManager and GameManager.gold < price:
-		if MessageLog:
-			MessageLog.add_warning("\"You can't afford that!\" (%d gold needed)" % price)
+		_deliver_message("\"You can't afford that!\" (%d gold needed)" % price, "warning", hero)
 		return false
 
 	var belongings: Variant = hero.get("belongings") if hero else null
@@ -189,8 +208,7 @@ func buy_item(hero: Variant, item_index: int) -> bool:
 
 	shop_inventory.remove_at(item_index)
 
-	if MessageLog:
-		MessageLog.add_positive("You purchased %s for %d gold." % [item.get_display_name(), price])
+	_deliver_message("You purchased %s for %d gold." % [item.get_display_name(), price], "positive", hero)
 
 	return true
 
@@ -241,8 +259,7 @@ func sell_item(hero: Variant, item: Variant) -> int:
 		buyback_items.pop_front()
 	buyback_items.append({"item": item, "price": sell_price})
 
-	if MessageLog:
-		MessageLog.add_positive("You sold %s for %d gold." % [item.get_display_name(), sell_price])
+	_deliver_message("You sold %s for %d gold." % [item.get_display_name(), sell_price], "positive", hero)
 
 	return sell_price
 
@@ -250,8 +267,7 @@ func sell_item(hero: Variant, item: Variant) -> int:
 func take_damage(_dmg: int, _source: Variant = null) -> int:
 	if turns_since_harmed < 0:
 		turns_since_harmed = 0
-		if MessageLog:
-			MessageLog.add_warning("\"How dare you! One more time and I'm leaving!\"")
+		_deliver_message("\"How dare you! One more time and I'm leaving!\"", "warning")
 		return 0
 	_flee()
 	return 0
@@ -259,8 +275,7 @@ func take_damage(_dmg: int, _source: Variant = null) -> int:
 func _flee() -> void:
 	has_fled = true
 	shop_inventory.clear()
-	if MessageLog:
-		MessageLog.add_negative("The shopkeeper vanishes in a puff of smoke, taking his wares!")
+	_deliver_message("The shopkeeper vanishes in a puff of smoke, taking his wares!", "negative")
 	if level and level.has_method("remove_mob"):
 		level.remove_mob(self)
 

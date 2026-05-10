@@ -193,31 +193,28 @@ func _generate_rewards() -> void:
 func interact(hero: Variant) -> void:
 	if hero == null:
 		return
+	_remember_interacting_hero(hero)
 	if EventBus:
 		EventBus.npc_interacted.emit(npc_name)
 
 	if reward_given:
-		if MessageLog:
-			MessageLog.add_info("The ghost has already found peace.")
+		_deliver_message("The ghost has already found peace.", "info", hero)
 		return
 
 	if quest_complete or target_slain:
 		quest_complete = true
-		if MessageLog:
-			MessageLog.add_info(dialogue_lines[2])
+		_deliver_message(dialogue_lines[2], "info", hero)
 		_offer_reward(hero)
 		return
 
 	if quest_active:
-		if MessageLog:
-			MessageLog.add_info(dialogue_lines[1] % quest_target_name)
+		_deliver_message(dialogue_lines[1] % quest_target_name, "info", hero)
 		return
 
 	quest_active = true
 	if not quest_mob_spawned:
 		_spawn_quest_mob()
-	if MessageLog:
-		MessageLog.add_info(dialogue_lines[0] % quest_target_name)
+	_deliver_message(dialogue_lines[0] % quest_target_name, "info", hero)
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "active")
 
@@ -234,8 +231,7 @@ func on_mob_defeated(_mob_pos: int, mob_name_str: String, mob_id: String = "") -
 	if defeated_id == target_lower or defeated_name == target_lower or defeated_name.begins_with(target_lower):
 		target_slain = true
 		quest_complete = true
-		if MessageLog:
-			MessageLog.add_positive("You have avenged the sad ghost.")
+		_deliver_message("You have avenged the sad ghost.", "positive")
 		if EventBus:
 			EventBus.quest_updated.emit(quest_id, "complete")
 
@@ -294,8 +290,27 @@ func _offer_reward(hero: Variant) -> void:
 		_depart()
 		return
 
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id:
+			var reward_data: Array[Dictionary] = []
+			for reward_item: Variant in rewards:
+				if reward_item != null and reward_item.has_method("serialize"):
+					reward_data.append(reward_item.serialize())
+			if NetworkManager.has_method("send_ui_event_to_peer"):
+				NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+					"type": "quest_reward_open",
+					"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+					"npc_actor_id": int(ConstantsData.get_prop(self, "actor_id", -1)),
+					"quest_name": "Ghost's Gratitude",
+					"quest_description": "Choose a keepsake from the ghost.",
+					"reward_items": reward_data,
+				})
+			return
+
 	var wnd: Node = load("res://src/ui/windows/wnd_quest_reward.gd").new()
-	wnd.setup("Ghost's Gratitude", "Choose a keepsake from the ghost.", rewards, hero)
+	wnd.setup("Ghost's Gratitude", "Choose a keepsake from the ghost.", rewards, hero, int(ConstantsData.get_prop(self, "actor_id", -1)))
 	if wnd.has_signal("reward_chosen"):
 		wnd.reward_chosen.connect(_on_reward_window_closed)
 
@@ -312,8 +327,7 @@ func _on_reward_window_closed(_chosen_item: Variant) -> void:
 	reward_given = true
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "reward_chosen")
-	if MessageLog:
-		MessageLog.add_info("The sad ghost smiles faintly and fades away.")
+	_deliver_message("The sad ghost smiles faintly and fades away.", "info")
 	_depart()
 
 func _depart() -> void:

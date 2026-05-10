@@ -241,6 +241,26 @@ func _encode_network_action(hero_node: Variant, action: Dictionary) -> Dictionar
 		var item_ref: Dictionary = _make_item_ref(hero_node, encoded.get("item"))
 		encoded.erase("item")
 		encoded["item_ref"] = item_ref
+	if encoded.has("item_a"):
+		var item_a_ref: Dictionary = _make_item_ref(hero_node, encoded.get("item_a"))
+		encoded.erase("item_a")
+		encoded["item_a_ref"] = item_a_ref
+	if encoded.has("item_b"):
+		var item_b_ref: Dictionary = _make_item_ref(hero_node, encoded.get("item_b"))
+		encoded.erase("item_b")
+		encoded["item_b_ref"] = item_b_ref
+	if encoded.has("source_item"):
+		var source_item_ref: Dictionary = _make_item_ref(hero_node, encoded.get("source_item"))
+		encoded.erase("source_item")
+		encoded["source_item_ref"] = source_item_ref
+	if encoded.has("ingredient_items"):
+		var ingredient_refs: Array[Dictionary] = []
+		var source_ingredients: Variant = encoded.get("ingredient_items", [])
+		if source_ingredients is Array:
+			for ingredient_item: Variant in source_ingredients:
+				ingredient_refs.append(_make_item_ref(hero_node, ingredient_item))
+		encoded.erase("ingredient_items")
+		encoded["ingredient_refs"] = ingredient_refs
 	if encoded.has("target"):
 		encoded.erase("target")
 	return encoded
@@ -251,6 +271,27 @@ func _normalize_action_for_hero(hero_node: Variant, action: Dictionary) -> Dicti
 		var resolved_item: Variant = _resolve_item_ref(hero_node, normalized.get("item_ref"))
 		if resolved_item != null:
 			normalized["item"] = resolved_item
+	if not normalized.has("item_a") and normalized.has("item_a_ref"):
+		var resolved_item_a: Variant = _resolve_item_ref(hero_node, normalized.get("item_a_ref"))
+		if resolved_item_a != null:
+			normalized["item_a"] = resolved_item_a
+	if not normalized.has("item_b") and normalized.has("item_b_ref"):
+		var resolved_item_b: Variant = _resolve_item_ref(hero_node, normalized.get("item_b_ref"))
+		if resolved_item_b != null:
+			normalized["item_b"] = resolved_item_b
+	if not normalized.has("source_item") and normalized.has("source_item_ref"):
+		var resolved_source_item: Variant = _resolve_item_ref(hero_node, normalized.get("source_item_ref"))
+		if resolved_source_item != null:
+			normalized["source_item"] = resolved_source_item
+	if not normalized.has("ingredient_items") and normalized.has("ingredient_refs"):
+		var resolved_ingredients: Array = []
+		var ingredient_refs: Variant = normalized.get("ingredient_refs", [])
+		if ingredient_refs is Array:
+			for ingredient_ref: Variant in ingredient_refs:
+				var resolved_ingredient: Variant = _resolve_item_ref(hero_node, ingredient_ref)
+				if resolved_ingredient != null:
+					resolved_ingredients.append(resolved_ingredient)
+		normalized["ingredient_items"] = resolved_ingredients
 	if normalized.get("type", "") == "attack" and not normalized.has("target"):
 		var target_pos: int = int(normalized.get("target_pos", -1))
 		if _current_level != null and target_pos >= 0 and _current_level.has_method("find_char_at"):
@@ -922,6 +963,59 @@ func _make_item_from_data(item_data: Dictionary) -> Variant:
 		item.deserialize(item_data)
 	return item
 
+func _find_hero_by_actor_id(actor_id: int) -> Variant:
+	if GameManager == null or actor_id < 0:
+		return null
+	for hero_node: Variant in GameManager.heroes:
+		if hero_node == null or not is_instance_valid(hero_node):
+			continue
+		if int(ConstantsData.get_prop(hero_node, "actor_id", -1)) == actor_id:
+			return hero_node
+	return null
+
+func _find_mob_by_actor_id(actor_id: int) -> Variant:
+	if _current_level == null or actor_id < 0:
+		return null
+	for mob_node: Variant in _current_level.mobs:
+		if mob_node == null or not is_instance_valid(mob_node):
+			continue
+		if int(ConstantsData.get_prop(mob_node, "actor_id", -1)) == actor_id:
+			return mob_node
+	return null
+
+func _serialize_shop_items(shopkeeper_node: Variant) -> Array[Dictionary]:
+	var shop_data: Array[Dictionary] = []
+	if shopkeeper_node == null or not shopkeeper_node.has_method("get_shop_items"):
+		return shop_data
+	for entry: Dictionary in shopkeeper_node.get_shop_items():
+		var serialized_entry: Dictionary = {"price": int(entry.get("price", 0))}
+		var item: Variant = entry.get("item")
+		if item != null and item.has_method("serialize"):
+			serialized_entry["item_data"] = item.serialize()
+		shop_data.append(serialized_entry)
+	return shop_data
+
+func _get_npc_reward_choices(npc_node: Variant) -> Array:
+	var rewards: Array = []
+	if npc_node == null:
+		return rewards
+	var reward_weapon: Variant = ConstantsData.get_prop(npc_node, "reward_weapon", null)
+	var reward_armor: Variant = ConstantsData.get_prop(npc_node, "reward_armor", null)
+	var reward_ring: Variant = ConstantsData.get_prop(npc_node, "reward_ring", null)
+	var wand_choice_a: Variant = ConstantsData.get_prop(npc_node, "wand_choice_a", null)
+	var wand_choice_b: Variant = ConstantsData.get_prop(npc_node, "wand_choice_b", null)
+	if reward_weapon != null:
+		rewards.append(reward_weapon)
+	if reward_armor != null:
+		rewards.append(reward_armor)
+	if reward_ring != null:
+		rewards.append(reward_ring)
+	if wand_choice_a != null:
+		rewards.append(wand_choice_a)
+	if wand_choice_b != null:
+		rewards.append(wand_choice_b)
+	return rewards
+
 func _make_plant_from_type(plant_type: String) -> Variant:
 	var normalized_type: String = plant_type.to_lower()
 	var plant_script_path: String = ""
@@ -1228,6 +1322,9 @@ func _connect_signals() -> void:
 	if NetworkManager and NetworkManager.has_signal("online_world_event_received"):
 		if not NetworkManager.online_world_event_received.is_connected(_on_online_world_event_received):
 			NetworkManager.online_world_event_received.connect(_on_online_world_event_received)
+	if NetworkManager and NetworkManager.has_signal("online_ui_event_received"):
+		if not NetworkManager.online_ui_event_received.is_connected(_on_online_ui_event_received):
+			NetworkManager.online_ui_event_received.connect(_on_online_ui_event_received)
 	if NetworkManager and NetworkManager.has_signal("online_level_transition_requested"):
 		if not NetworkManager.online_level_transition_requested.is_connected(_on_online_level_transition_requested):
 			NetworkManager.online_level_transition_requested.connect(_on_online_level_transition_requested)
@@ -1992,12 +2089,10 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 			if equipped_item == null:
 				return true
 			if ConstantsData.get_prop(equipped_item, "cursed", false) and ConstantsData.get_prop(equipped_item, "cursed_known", false):
-				if MessageLog:
-					MessageLog.add_warning("You cannot remove the cursed %s!" % ConstantsData.get_prop(equipped_item, "item_name", "item"))
+				_deliver_hero_message(hero_node, "You cannot remove the cursed %s!" % ConstantsData.get_prop(equipped_item, "item_name", "item"), "warning")
 				return true
 			if not belongings.has_space():
-				if MessageLog:
-					MessageLog.add_warning("Your inventory is full!")
+				_deliver_hero_message(hero_node, "Your inventory is full!", "warning")
 				return true
 			var removed_item: Variant = belongings.unequip(slot_name)
 			if removed_item != null:
@@ -2012,8 +2107,7 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 			var equip_slot: String = str(action.get("equip_slot", ""))
 			if not equip_slot.is_empty():
 				if ConstantsData.get_prop(item_to_drop, "cursed", false) and ConstantsData.get_prop(item_to_drop, "cursed_known", false):
-					if MessageLog:
-						MessageLog.add_warning("You cannot remove the cursed %s!" % ConstantsData.get_prop(item_to_drop, "item_name", "item"))
+					_deliver_hero_message(hero_node, "You cannot remove the cursed %s!" % ConstantsData.get_prop(item_to_drop, "item_name", "item"), "warning")
 					return true
 				item_to_drop = belongings.unequip(equip_slot)
 			else:
@@ -2023,8 +2117,7 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 				_current_level.drop_item(drop_pos, item_to_drop)
 				if item_to_drop.has_method("on_drop"):
 					item_to_drop.on_drop(hero_node)
-				if MessageLog:
-					MessageLog.add("Dropped %s." % ConstantsData.get_prop(item_to_drop, "item_name", "item"))
+				_deliver_hero_message(hero_node, "Dropped %s." % ConstantsData.get_prop(item_to_drop, "item_name", "item"))
 				if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event") and item_to_drop.has_method("serialize"):
 					NetworkManager.broadcast_world_event({
 						"type": "item_dropped",
@@ -2064,6 +2157,276 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 				belongings.remove_item(seed_item)
 			if EventBus:
 				EventBus.item_used.emit(seed_name)
+			return true
+		"shop_buy":
+			var shopkeeper_actor_id: int = int(action.get("shopkeeper_actor_id", -1))
+			var item_index: int = int(action.get("item_index", -1))
+			var shopkeeper_node: Variant = _find_mob_by_actor_id(shopkeeper_actor_id)
+			if shopkeeper_node != null and shopkeeper_node.has_method("buy_item"):
+				var buy_success: bool = shopkeeper_node.buy_item(hero_node, item_index)
+				if buy_success and _is_online_host() and NetworkManager and NetworkManager.has_method("send_ui_event_to_peer"):
+					var owner_peer_id: int = int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1))
+					NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+						"type": "shop_refresh",
+						"hero_actor_id": int(ConstantsData.get_prop(hero_node, "actor_id", -1)),
+						"shopkeeper_actor_id": shopkeeper_actor_id,
+						"shop_items": _serialize_shop_items(shopkeeper_node),
+					})
+			return true
+		"shop_sell":
+			var selling_item: Variant = action.get("item")
+			var selling_shopkeeper_actor_id: int = int(action.get("shopkeeper_actor_id", -1))
+			var selling_shopkeeper: Variant = _find_mob_by_actor_id(selling_shopkeeper_actor_id)
+			if selling_item != null and selling_shopkeeper != null and selling_shopkeeper.has_method("sell_item"):
+				var sell_gold: int = selling_shopkeeper.sell_item(hero_node, selling_item)
+				if sell_gold > 0 and _is_online_host() and NetworkManager and NetworkManager.has_method("send_ui_event_to_peer"):
+					var owner_peer_id_sell: int = int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1))
+					NetworkManager.send_ui_event_to_peer(owner_peer_id_sell, {
+						"type": "shop_refresh",
+						"hero_actor_id": int(ConstantsData.get_prop(hero_node, "actor_id", -1)),
+						"shopkeeper_actor_id": selling_shopkeeper_actor_id,
+						"shop_items": _serialize_shop_items(selling_shopkeeper),
+					})
+			return true
+		"claim_quest_reward":
+			var npc_actor_id: int = int(action.get("npc_actor_id", -1))
+			var reward_index: int = int(action.get("reward_index", -1))
+			var npc_node: Variant = _find_mob_by_actor_id(npc_actor_id)
+			var reward_choices: Array = _get_npc_reward_choices(npc_node)
+			if npc_node == null or reward_index < 0 or reward_index >= reward_choices.size():
+				return true
+			var chosen_reward: Variant = reward_choices[reward_index]
+			if belongings != null and chosen_reward != null and belongings.has_method("add_item"):
+				belongings.add_item(chosen_reward)
+				var chosen_name: String = ConstantsData.get_prop(chosen_reward, "item_name", "item")
+				if chosen_reward.has_method("get_display_name"):
+					chosen_name = chosen_reward.get_display_name()
+				_deliver_hero_message(hero_node, "You receive the %s!" % chosen_name, "positive")
+			if npc_node.has_method("_on_reward_window_closed"):
+				npc_node._on_reward_window_closed(chosen_reward)
+			elif npc_node.has_method("_on_reward_chosen"):
+				npc_node._on_reward_chosen(chosen_reward)
+			return true
+		"identify_item":
+			var identify_item: Variant = action.get("item")
+			if identify_item == null:
+				return true
+			if identify_item.has_method("identify"):
+				identify_item.identify()
+			var identify_name: String = identify_item.get_display_name() if identify_item.has_method("get_display_name") else str(ConstantsData.get_prop(identify_item, "item_name", "item"))
+			_deliver_hero_message(hero_node, "You identify the %s!" % identify_name, "positive")
+			return true
+		"upgrade_item":
+			var upgrade_item: Variant = action.get("item")
+			if upgrade_item == null:
+				return true
+			if upgrade_item.has_method("upgrade"):
+				upgrade_item.upgrade()
+			if upgrade_item.has_method("identify"):
+				upgrade_item.identify()
+			var upgrade_name: String = upgrade_item.get_display_name() if upgrade_item.has_method("get_display_name") else str(ConstantsData.get_prop(upgrade_item, "item_name", "item"))
+			_deliver_hero_message(hero_node, "Your %s glows brightly!" % upgrade_name, "positive")
+			if GameManager:
+				GameManager.record_stat("scrolls_of_upgrade")
+			return true
+		"recycle_item":
+			var recycle_item: Variant = action.get("item")
+			if recycle_item == null or belongings == null:
+				return true
+			var recycle_script: GDScript = load("res://src/items/spells/spell.gd") as GDScript
+			if recycle_script == null:
+				return true
+			var pool: Array[String] = recycle_script.call("_recycle_pool_for_item", recycle_item)
+			var current_id: String = str(ConstantsData.get_prop(recycle_item, "item_id", ""))
+			pool.erase(current_id)
+			if pool.is_empty() and not current_id.is_empty():
+				pool.append(current_id)
+			if pool.is_empty():
+				_deliver_hero_message(hero_node, "The spell cannot transmute that item.", "warning")
+				return true
+			var new_id: String = pool[randi() % pool.size()]
+			var replacement: Variant = Generator.create_item(new_id)
+			if replacement == null:
+				_deliver_hero_message(hero_node, "The spell fizzles and fails to transmute the item.", "warning")
+				return true
+			if ConstantsData.get_prop(recycle_item, "stackable", false) and int(ConstantsData.get_prop(recycle_item, "quantity", 1)) > 1 and recycle_item.has_method("split"):
+				recycle_item.split(1)
+			else:
+				belongings.remove_item(recycle_item)
+			belongings.add_item(replacement)
+			var old_name: String = recycle_item.get_display_name() if recycle_item.has_method("get_display_name") else str(ConstantsData.get_prop(recycle_item, "item_name", "item"))
+			var new_name: String = replacement.get_display_name() if replacement.has_method("get_display_name") else str(ConstantsData.get_prop(replacement, "item_name", "item"))
+			_deliver_hero_message(hero_node, "%s twists into %s!" % [old_name, new_name], "positive")
+			return true
+		"curse_infusion_item":
+			var infusion_item: Variant = action.get("item")
+			if infusion_item == null:
+				return true
+			if infusion_item.has_method("upgrade"):
+				infusion_item.upgrade()
+			infusion_item.cursed = true
+			infusion_item.cursed_known = true
+			if infusion_item is Weapon or infusion_item is Armor:
+				infusion_item.curse_infusion_bonus = true
+			if infusion_item.has_method("identify"):
+				infusion_item.identify()
+			var infusion_name: String = infusion_item.get_display_name() if infusion_item.has_method("get_display_name") else str(ConstantsData.get_prop(infusion_item, "item_name", "item"))
+			_deliver_hero_message(hero_node, "Dark power seeps into your %s." % infusion_name, "negative")
+			if EventBus:
+				EventBus.hero_stats_changed.emit()
+			return true
+		"stone_enchant_item":
+			var enchant_item: Variant = action.get("item")
+			if enchant_item == null or not enchant_item.has_method("enchant"):
+				return true
+			enchant_item.enchant(WeaponEnchantment.random())
+			if enchant_item.has_method("identify"):
+				enchant_item.identify()
+			var enchant_name: String = enchant_item.get_display_name() if enchant_item.has_method("get_display_name") else str(ConstantsData.get_prop(enchant_item, "item_name", "item"))
+			_deliver_hero_message(hero_node, "Your %s glows with new enchantment!" % enchant_name, "positive")
+			if EventBus:
+				EventBus.hero_stats_changed.emit()
+			return true
+		"stone_augmentation_pick_item":
+			var augment_pick_item: Variant = action.get("item")
+			if augment_pick_item == null:
+				return true
+			if _is_online_host() and NetworkManager != null and NetworkManager.has_method("send_ui_event_to_peer") and augment_pick_item.has_method("serialize"):
+				var owner_peer_id_augment: int = int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1))
+				NetworkManager.send_ui_event_to_peer(owner_peer_id_augment, {
+					"type": "augment_select_open",
+					"hero_actor_id": int(ConstantsData.get_prop(hero_node, "actor_id", -1)),
+					"action_type": "stone_augmentation_apply",
+					"item": augment_pick_item.serialize(),
+				})
+			return true
+		"stone_augmentation_apply":
+			var augment_item: Variant = action.get("item")
+			var augment_key: String = str(action.get("augment_key", ""))
+			if augment_item == null or not augment_item.has_method("apply_augment"):
+				return true
+			if augment_item is Armor:
+				var armor: Armor = augment_item as Armor
+				match augment_key:
+					"evasion":
+						armor.apply_augment(Armor.Augment.EVASION)
+					"defense":
+						armor.apply_augment(Armor.Augment.DEFENSE)
+					_:
+						return true
+			else:
+				var weapon: Weapon = augment_item as Weapon
+				match augment_key:
+					"speed":
+						weapon.apply_augment(Weapon.Augment.SPEED)
+					"damage":
+						weapon.apply_augment(Weapon.Augment.DAMAGE)
+					_:
+						return true
+			if augment_item.has_method("identify"):
+				augment_item.identify()
+			var augment_name: String = augment_item.get_display_name() if augment_item.has_method("get_display_name") else str(ConstantsData.get_prop(augment_item, "item_name", "item"))
+			_deliver_hero_message(hero_node, "%s is augmented for %s." % [augment_name, augment_key], "positive")
+			if EventBus:
+				EventBus.hero_stats_changed.emit()
+			return true
+		"transmute_item":
+			var original_item: Variant = action.get("item")
+			var source_scroll: Variant = action.get("source_item")
+			if belongings == null or original_item == null or source_scroll == null:
+				return true
+			var transmute_script: GDScript = load("res://src/ui/windows/wnd_transmute.gd") as GDScript
+			if transmute_script == null or not transmute_script.has_method("transmute_item"):
+				_deliver_hero_message(hero_node, "The transmutation fizzles... nothing happens.", "warning")
+				return true
+			var result_item: Variant = transmute_script.call("transmute_item", original_item)
+			if result_item == null:
+				_deliver_hero_message(hero_node, "The transmutation fizzles... nothing happens.", "warning")
+				return true
+			var original_name: String = ConstantsData.get_prop(original_item, "item_name", "item")
+			if original_item.has_method("get_display_name"):
+				original_name = original_item.get_display_name()
+			var original_level: int = int(ConstantsData.get_prop(original_item, "level", 0))
+			if result_item.get("level") != null:
+				result_item.level = original_level
+			if result_item.has_method("identify"):
+				result_item.identify()
+			var was_equipped_slot: String = ""
+			if belongings.weapon == original_item:
+				was_equipped_slot = "weapon"
+			elif belongings.armor == original_item:
+				was_equipped_slot = "armor"
+			elif belongings.artifact == original_item:
+				was_equipped_slot = "artifact"
+			elif belongings.ring_left == original_item:
+				was_equipped_slot = "ring_left"
+			elif belongings.ring_right == original_item:
+				was_equipped_slot = "ring_right"
+			elif belongings.misc == original_item:
+				was_equipped_slot = "misc"
+			if was_equipped_slot != "":
+				belongings.unequip(was_equipped_slot)
+				belongings.add_item(result_item)
+			else:
+				belongings.remove_item(original_item)
+				belongings.add_item(result_item)
+			if source_scroll.has_method("_consume"):
+				source_scroll._consume(hero_node)
+			else:
+				var source_qty: int = int(ConstantsData.get_prop(source_scroll, "quantity", 1))
+				if source_qty <= 1:
+					belongings.remove_item(source_scroll)
+				else:
+					source_scroll.quantity = source_qty - 1
+			var result_name: String = ConstantsData.get_prop(result_item, "item_name", "item")
+			if result_item.has_method("get_display_name"):
+				result_name = result_item.get_display_name()
+			_deliver_hero_message(hero_node, "Your %s shimmers and transforms into a %s!" % [original_name, result_name], "positive")
+			if EventBus:
+				EventBus.item_used.emit("transmutation")
+			if GameManager:
+				GameManager.record_stat("items_transmuted")
+			return true
+		"alchemy_brew":
+			var ingredient_items: Variant = action.get("ingredient_items", [])
+			if belongings == null or not (ingredient_items is Array):
+				return true
+			var recipe_script: GDScript = load("res://src/items/recipe.gd") as GDScript
+			if recipe_script == null or not recipe_script.has_method("find_recipe"):
+				return true
+			var recipe: Variant = recipe_script.find_recipe(ingredient_items)
+			if recipe == null:
+				_deliver_hero_message(hero_node, "Alchemy fails: no valid recipe.", "warning")
+				return true
+			var brew_result: Variant = recipe.craft(hero_node, ingredient_items)
+			if brew_result == null:
+				return true
+			belongings.add_item(brew_result)
+			var toolkit: Variant = belongings.get_equipped_artifact() if belongings.has_method("get_equipped_artifact") else null
+			if toolkit != null and str(ConstantsData.get_prop(toolkit, "item_id", "")) == "alchemists_toolkit" and toolkit.has_method("on_craft"):
+				toolkit.on_craft(int(ConstantsData.get_prop(recipe, "energy_cost", 0)))
+			var craft_msg: String = "You brewed a %s!" % ConstantsData.get_prop(brew_result, "item_name", "item")
+			var energy_cost: int = int(ConstantsData.get_prop(recipe, "energy_cost", 0))
+			if energy_cost > 0:
+				craft_msg += " (%d energy)" % energy_cost
+			_deliver_hero_message(hero_node, craft_msg)
+			if EventBus:
+				EventBus.item_picked_up.emit(ConstantsData.get_prop(brew_result, "item_name", "item"))
+			return true
+		"blacksmith_reforge":
+			var blacksmith_actor_id: int = int(action.get("blacksmith_actor_id", -1))
+			var item_a: Variant = action.get("item_a")
+			var item_b: Variant = action.get("item_b")
+			var blacksmith_node: Variant = _find_mob_by_actor_id(blacksmith_actor_id)
+			if blacksmith_node == null or not blacksmith_node.has_method("reforge"):
+				return true
+			var reforge_success: bool = blacksmith_node.reforge(hero_node, item_a, item_b)
+			if not reforge_success and _is_online_host() and NetworkManager and NetworkManager.has_method("reject_online_action"):
+				NetworkManager.reject_online_action(
+					int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1)),
+					int(ConstantsData.get_prop(hero_node, "hero_slot_index", -1)),
+					"Blacksmith refused the reforge."
+				)
 			return true
 	return false
 
@@ -2129,6 +2492,32 @@ func _on_online_action_rejected(slot_index: int, reason: String) -> void:
 	var local_hero: Variant = _get_focused_hero()
 	if local_hero != null and int(ConstantsData.get_prop(local_hero, "hero_slot_index", -1)) == slot_index and effect_manager != null:
 		effect_manager.show_status(local_hero.pos, "Blocked", Color(1.0, 0.74, 0.38))
+
+func _deliver_hero_message(hero_node: Variant, text: String, kind: String = "info") -> void:
+	var trimmed_text: String = text.strip_edges()
+	if trimmed_text.is_empty():
+		return
+	if _is_online_host() and NetworkManager != null and NetworkManager.has_method("send_ui_event_to_peer"):
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id:
+			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+				"type": "npc_message",
+				"text": trimmed_text,
+				"message_kind": kind,
+			})
+			return
+	if MessageLog == null:
+		return
+	match kind:
+		"positive":
+			MessageLog.add_positive(trimmed_text)
+		"warning":
+			MessageLog.add_warning(trimmed_text)
+		"negative":
+			MessageLog.add_negative(trimmed_text)
+		_:
+			MessageLog.add_info(trimmed_text)
 
 func _on_run_snapshot_received(snapshot: Dictionary) -> void:
 	if not _is_online_client():
@@ -2339,6 +2728,145 @@ func _on_online_world_event_received(event: Dictionary) -> void:
 				effect_manager.show_status(trap_pos, "Trap!", Color(1.0, 0.55, 0.25))
 			if MessageLog and not trap_name.is_empty():
 				MessageLog.add_warning("%s triggered!" % trap_name.capitalize())
+
+func _on_online_ui_event_received(event: Dictionary) -> void:
+	var event_type: String = str(event.get("type", ""))
+	match event_type:
+		"npc_message":
+			var message_text: String = str(event.get("text", "")).strip_edges()
+			var message_kind: String = str(event.get("message_kind", "info"))
+			if message_text.is_empty() or MessageLog == null:
+				return
+			match message_kind:
+				"positive":
+					MessageLog.add_positive(message_text)
+				"warning":
+					MessageLog.add_warning(message_text)
+				"negative":
+					MessageLog.add_negative(message_text)
+				_:
+					MessageLog.add_info(message_text)
+		"shop_open", "shop_refresh":
+			var hero_actor_id: int = int(event.get("hero_actor_id", -1))
+			var shopkeeper_actor_id: int = int(event.get("shopkeeper_actor_id", -1))
+			var hero_node: Variant = _find_hero_by_actor_id(hero_actor_id)
+			if hero_node == null:
+				return
+			var items_data: Variant = event.get("shop_items", [])
+			var items: Array[Dictionary] = []
+			if items_data is Array:
+				for entry: Variant in items_data:
+					if not (entry is Dictionary):
+						continue
+					var item_entry: Dictionary = entry
+					var item_dict: Dictionary = {"price": int(item_entry.get("price", 0))}
+					var item_data: Variant = item_entry.get("item_data", {})
+					if item_data is Dictionary:
+						var item_node: Variant = _make_item_from_data(item_data)
+						if item_node != null:
+							item_dict["item"] = item_node
+					items.append(item_dict)
+			var active_window: Variant = _hud.get("_active_window") if _hud != null else null
+			if event_type == "shop_refresh" and active_window != null and is_instance_valid(active_window) and active_window.has_method("refresh_shop"):
+				if int(ConstantsData.get_prop(active_window, "_shopkeeper_actor_id", -1)) == shopkeeper_actor_id:
+					active_window.refresh_shop(items)
+					return
+			if event_type == "shop_refresh":
+				return
+			var wnd: Variant = load("res://src/ui/windows/wnd_shop.gd").new()
+			if wnd != null and wnd.has_method("setup") and EventBus and EventBus.has_signal("show_window"):
+				wnd.setup(items, hero_node, null, shopkeeper_actor_id)
+				EventBus.show_window.emit(wnd)
+		"quest_reward_open":
+			var reward_hero_actor_id: int = int(event.get("hero_actor_id", -1))
+			var reward_npc_actor_id: int = int(event.get("npc_actor_id", -1))
+			var reward_hero: Variant = _find_hero_by_actor_id(reward_hero_actor_id)
+			if reward_hero == null:
+				return
+			var reward_items_data: Variant = event.get("reward_items", [])
+			var reward_items: Array = []
+			if reward_items_data is Array:
+				for reward_entry: Variant in reward_items_data:
+					if reward_entry is Dictionary:
+						var reward_item: Variant = _make_item_from_data(reward_entry)
+						if reward_item != null:
+							reward_items.append(reward_item)
+			var reward_wnd: Variant = load("res://src/ui/windows/wnd_quest_reward.gd").new()
+			if reward_wnd != null and reward_wnd.has_method("setup") and EventBus and EventBus.has_signal("show_window"):
+				reward_wnd.setup(
+					str(event.get("quest_name", "Reward")),
+					str(event.get("quest_description", "")),
+					reward_items,
+					reward_hero,
+					reward_npc_actor_id
+				)
+				EventBus.show_window.emit(reward_wnd)
+		"item_select_open":
+			var select_hero_actor_id: int = int(event.get("hero_actor_id", -1))
+			var select_hero: Variant = _find_hero_by_actor_id(select_hero_actor_id)
+			if select_hero == null:
+				return
+			var select_items_data: Variant = event.get("items", [])
+			var select_items: Array = []
+			if select_items_data is Array:
+				for select_entry: Variant in select_items_data:
+					if select_entry is Dictionary:
+						var select_item: Variant = _make_item_from_data(select_entry)
+						if select_item != null:
+							select_items.append(select_item)
+			var select_wnd: Variant = load("res://src/ui/windows/wnd_item_select.gd").new()
+			if select_wnd != null and select_wnd.has_method("setup_online") and EventBus and EventBus.has_signal("show_window"):
+				select_wnd.setup_online(select_items, str(event.get("prompt", "Select an item:")), str(event.get("action_type", "")))
+				EventBus.show_window.emit(select_wnd)
+		"augment_select_open":
+			var augment_hero_actor_id: int = int(event.get("hero_actor_id", -1))
+			var augment_hero: Variant = _find_hero_by_actor_id(augment_hero_actor_id)
+			if augment_hero == null:
+				return
+			var augment_item_data: Variant = event.get("item", {})
+			var augment_item_node: Variant = null
+			if augment_item_data is Dictionary:
+				augment_item_node = _make_item_from_data(augment_item_data)
+			if augment_item_node == null:
+				return
+			var augment_wnd: Variant = load("res://src/ui/windows/wnd_augment_select.gd").new()
+			if augment_wnd != null and augment_wnd.has_method("setup_online") and EventBus and EventBus.has_signal("show_window"):
+				augment_wnd.setup_online(augment_item_node, str(event.get("action_type", "")))
+				EventBus.show_window.emit(augment_wnd)
+		"transmute_open":
+			var transmute_hero_actor_id: int = int(event.get("hero_actor_id", -1))
+			var transmute_hero: Variant = _find_hero_by_actor_id(transmute_hero_actor_id)
+			if transmute_hero == null:
+				return
+			var scroll_item_id: String = str(event.get("scroll_item_id", "transmutation"))
+			var transmute_scroll: Variant = null
+			var transmute_belongings: Variant = transmute_hero.get("belongings")
+			if transmute_belongings != null and transmute_belongings.has_method("find_item"):
+				transmute_scroll = transmute_belongings.find_item(scroll_item_id)
+			if transmute_scroll == null:
+				return
+			var transmute_wnd: Variant = load("res://src/ui/windows/wnd_transmute.gd").new()
+			if transmute_wnd != null and transmute_wnd.has_method("setup") and EventBus and EventBus.has_signal("show_window"):
+				transmute_wnd.setup(transmute_scroll, transmute_hero)
+				EventBus.show_window.emit(transmute_wnd)
+		"alchemy_open":
+			var alchemy_hero_actor_id: int = int(event.get("hero_actor_id", -1))
+			var alchemy_hero: Variant = _find_hero_by_actor_id(alchemy_hero_actor_id)
+			if alchemy_hero == null:
+				return
+			var alchemy_wnd: Variant = load("res://src/ui/windows/wnd_alchemy.gd").new()
+			if alchemy_wnd != null and EventBus and EventBus.has_signal("show_window"):
+				EventBus.show_window.emit(alchemy_wnd)
+		"reforge_open":
+			var reforge_hero_actor_id: int = int(event.get("hero_actor_id", -1))
+			var reforge_npc_actor_id: int = int(event.get("npc_actor_id", -1))
+			var reforge_hero: Variant = _find_hero_by_actor_id(reforge_hero_actor_id)
+			if reforge_hero == null:
+				return
+			var reforge_wnd: Variant = load("res://src/ui/windows/wnd_reforge.gd").new()
+			if reforge_wnd != null and reforge_wnd.has_method("setup") and EventBus and EventBus.has_signal("show_window"):
+				reforge_wnd.setup(reforge_hero, null, reforge_npc_actor_id)
+				EventBus.show_window.emit(reforge_wnd)
 
 func _on_online_level_transition_requested(config: Dictionary) -> void:
 	if not _is_online_client():

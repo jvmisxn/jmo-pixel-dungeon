@@ -289,6 +289,16 @@ func _on_transmute_pressed() -> void:
 	if _selected_item == null:
 		return
 
+	if NetworkManager != null and NetworkManager.has_method("is_online_session") and NetworkManager.is_online_session():
+		if EventBus and EventBus.has_signal("request_hero_action"):
+			EventBus.request_hero_action.emit({
+				"type": "transmute_item",
+				"item": _selected_item,
+				"source_item": _scroll_ref,
+			})
+		close_window()
+		return
+
 	var original: Variant = _selected_item
 	var original_name: String = ConstantsData.get_prop(original, "item_name", "item")
 	if original.has_method("get_display_name"):
@@ -367,6 +377,10 @@ func _on_transmute_pressed() -> void:
 ## Perform the actual transmutation, returning a new item of the same category/tier
 ## but a different type. Returns null if transmutation is impossible.
 func _transmute_item(item: Variant) -> Variant:
+	return transmute_item(item)
+
+
+static func transmute_item(item: Variant) -> Variant:
 	var cat: int = ConstantsData.get_prop(item, "category", -1)
 
 	match cat:
@@ -387,7 +401,7 @@ func _transmute_item(item: Variant) -> Variant:
 	return null
 
 
-func _transmute_weapon(item: Variant) -> Variant:
+static func _transmute_weapon(item: Variant) -> Variant:
 	var item_tier: int = ConstantsData.get_prop(item, "tier", 1)
 	var current_id: String = ConstantsData.get_prop(item, "item_id", "")
 
@@ -403,7 +417,7 @@ func _transmute_weapon(item: Variant) -> Variant:
 	return MeleeWeapon.create(new_id)
 
 
-func _transmute_armor(item: Variant) -> Variant:
+static func _transmute_armor(item: Variant) -> Variant:
 	var item_tier: int = ConstantsData.get_prop(item, "tier", 1)
 	var current_id: String = ConstantsData.get_prop(item, "item_id", "")
 
@@ -419,7 +433,7 @@ func _transmute_armor(item: Variant) -> Variant:
 	return Armor.create(new_id)
 
 
-func _transmute_potion(item: Variant) -> Variant:
+static func _transmute_potion(item: Variant) -> Variant:
 	var current_id: String = ConstantsData.get_prop(item, "item_id", "")
 	var all_ids: Array[String] = Potion.all_ids()
 	all_ids.erase(current_id)
@@ -431,7 +445,7 @@ func _transmute_potion(item: Variant) -> Variant:
 	return Potion.create(new_id)
 
 
-func _transmute_scroll(item: Variant) -> Variant:
+static func _transmute_scroll(item: Variant) -> Variant:
 	var current_id: String = ConstantsData.get_prop(item, "item_id", "")
 	var all_ids: Array[String] = Scroll.all_ids()
 	all_ids.erase(current_id)
@@ -445,7 +459,7 @@ func _transmute_scroll(item: Variant) -> Variant:
 	return Scroll.create(new_id)
 
 
-func _transmute_ring(item: Variant) -> Variant:
+static func _transmute_ring(item: Variant) -> Variant:
 	var current_id: String = ConstantsData.get_prop(item, "item_id", "")
 	var all_ring_ids: Array[String] = [
 		"ring_of_accuracy", "ring_of_evasion", "ring_of_elements",
@@ -462,7 +476,7 @@ func _transmute_ring(item: Variant) -> Variant:
 	return Ring.create(new_id)
 
 
-func _transmute_wand(item: Variant) -> Variant:
+static func _transmute_wand(item: Variant) -> Variant:
 	var current_id: String = ConstantsData.get_prop(item, "item_id", "")
 	var all_wand_ids: Array[String] = [
 		"wand_of_magic_missile", "wand_of_fire_bolt", "wand_of_frost",
@@ -480,7 +494,7 @@ func _transmute_wand(item: Variant) -> Variant:
 	return Wand.create(new_id)
 
 
-func _transmute_artifact(item: Variant) -> Variant:
+static func _transmute_artifact(item: Variant) -> Variant:
 	var current_id: String = ConstantsData.get_prop(item, "item_id", "")
 	var all_ids: Array[String] = Artifact.all_ids()
 	all_ids.erase(current_id)
@@ -497,7 +511,7 @@ func _transmute_artifact(item: Variant) -> Variant:
 # ---------------------------------------------------------------------------
 
 ## Return melee weapon IDs for a given tier (1-5).
-func _get_weapon_ids_for_tier(weapon_tier: int) -> Array[String]:
+static func _get_weapon_ids_for_tier(weapon_tier: int) -> Array[String]:
 	# MeleeWeapon.ALL_IDS is grouped in 5 per tier
 	var ids_per_tier: int = 5
 	var start: int = (weapon_tier - 1) * ids_per_tier

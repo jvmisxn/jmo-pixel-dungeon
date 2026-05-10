@@ -13,6 +13,7 @@ var _item_slots: Array[ItemSlot] = []
 var _select_button: Button = null
 var _info_label: RichTextLabel = null
 var _hero: Variant = null
+var _npc_actor_id: int = -1
 
 
 func _init() -> void:
@@ -20,11 +21,12 @@ func _init() -> void:
 
 
 ## Call before adding to tree to configure the window.
-func setup(quest_name: String, description: String, rewards: Array, hero: Variant = null) -> void:
+func setup(quest_name: String, description: String, rewards: Array, hero: Variant = null, npc_actor_id: int = -1) -> void:
 	_quest_name = quest_name
 	_quest_description = description
 	_reward_items = rewards
 	_hero = hero
+	_npc_actor_id = npc_actor_id
 
 
 func _build_content() -> Control:
@@ -132,6 +134,16 @@ func _on_choose_pressed() -> void:
 		return
 
 	var chosen_item: Variant = _reward_items[_selected_index]
+
+	if NetworkManager != null and NetworkManager.has_method("is_online_session") and NetworkManager.is_online_session() and _npc_actor_id >= 0:
+		if EventBus and EventBus.has_signal("request_hero_action"):
+			EventBus.request_hero_action.emit({
+				"type": "claim_quest_reward",
+				"npc_actor_id": _npc_actor_id,
+				"reward_index": _selected_index,
+			})
+		close_window()
+		return
 
 	# Give item to hero
 	if _hero and _hero.get("belongings") != null:

@@ -4,6 +4,7 @@ extends WndBase
 
 var _item: Item = null
 var _callback: Callable = Callable()
+var _online_action_type: String = ""
 
 func _init() -> void:
 	window_title = "Augment"
@@ -12,6 +13,11 @@ func _init() -> void:
 func setup(item: Item, callback: Callable) -> void:
 	_item = item
 	_callback = callback
+
+func setup_online(item: Item, action_type: String) -> void:
+	_item = item
+	_online_action_type = action_type
+	_callback = Callable()
 
 func _build_content() -> Control:
 	var main: VBoxContainer = VBoxContainer.new()
@@ -42,6 +48,15 @@ func _options_for_item() -> Array[Dictionary]:
 	]
 
 func _choose(value: String) -> void:
+	if not _online_action_type.is_empty():
+		if EventBus and EventBus.has_signal("request_hero_action"):
+			EventBus.request_hero_action.emit({
+				"type": _online_action_type,
+				"item": _item,
+				"augment_key": value,
+			})
+		close_window()
+		return
 	if _callback.is_valid():
 		_callback.call(_item, value)
 	close_window()

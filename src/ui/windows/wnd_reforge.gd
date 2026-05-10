@@ -14,6 +14,7 @@ var _info_label: Label = null
 var _hero: Variant = null
 var _scroll_container: ScrollContainer = null
 var _blacksmith: Variant = null
+var _blacksmith_actor_id: int = -1
 
 ## Which target slot is being filled next (1 or 2). 0 = auto-pick first empty.
 var _active_target: int = 0
@@ -24,9 +25,10 @@ func _init() -> void:
 	custom_minimum_size = Vector2(400, 440)
 
 
-func setup(hero: Variant, blacksmith: Variant = null) -> void:
+func setup(hero: Variant, blacksmith: Variant = null, blacksmith_actor_id: int = -1) -> void:
 	_hero = hero
 	_blacksmith = blacksmith
+	_blacksmith_actor_id = blacksmith_actor_id if blacksmith_actor_id >= 0 else int(ConstantsData.get_prop(blacksmith, "actor_id", -1))
 
 
 func _build_content() -> Control:
@@ -268,6 +270,17 @@ func _update_state() -> void:
 
 func _on_reforge_pressed() -> void:
 	if _item_1 == null or _item_2 == null:
+		return
+
+	if NetworkManager != null and NetworkManager.has_method("is_online_session") and NetworkManager.is_online_session() and _blacksmith_actor_id >= 0:
+		if EventBus and EventBus.has_signal("request_hero_action"):
+			EventBus.request_hero_action.emit({
+				"type": "blacksmith_reforge",
+				"blacksmith_actor_id": _blacksmith_actor_id,
+				"item_a": _item_1,
+				"item_b": _item_2,
+			})
+		close_window()
 		return
 
 	var success: bool = false

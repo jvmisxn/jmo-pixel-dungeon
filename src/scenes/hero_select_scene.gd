@@ -10,7 +10,6 @@ var _party_size: int = 1
 var _editing_party_slot: int = 0
 var _party_classes: Array[int] = []
 var _hero_buttons: Array[Button] = []
-var _party_size_buttons: Array[Button] = []
 var _party_slot_buttons: Array[Button] = []
 var _start_button: Button = null
 var _back_button: Button = null
@@ -18,11 +17,9 @@ var _hero_name_label: Label = null
 var _hero_desc_label: Label = null
 var _party_summary_label: Label = null
 var _network_notice_label: Label = null
-var _party_size_title_label: Label = null
 var _title_label: Label = null
 var _class_button_row: HBoxContainer = null
 var _stats_label: Label = null
-var _party_size_row: HBoxContainer = null
 var _slots_title_label: Label = null
 var _party_slots_row: HBoxContainer = null
 var _action_row: HBoxContainer = null
@@ -79,6 +76,7 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	RenderingServer.set_default_clear_color(Color.BLACK)
 	_ensure_party_defaults()
+	_selected_class = _get_default_selectable_class(_selected_class)
 	_build_background()
 	_build_ui()
 	_apply_layout()
@@ -104,30 +102,25 @@ func _process(_delta: float) -> void:
 		_archs_sprite.position.x = -fmod(time_elapsed * 10.0, 1024.0)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed:
-		match event.keycode:
-			KEY_LEFT:
-				_selected_class = (_selected_class - 1)
-				if _selected_class < 0:
-					_selected_class = CLASS_COUNT - 1
-				_update_selection()
-				get_viewport().set_input_as_handled()
-			KEY_RIGHT:
-				_selected_class = (_selected_class + 1) % CLASS_COUNT
-				_update_selection()
-				get_viewport().set_input_as_handled()
-			KEY_ENTER, KEY_KP_ENTER:
-				_on_start_pressed()
-				get_viewport().set_input_as_handled()
-			KEY_TAB:
-				_cycle_party_slot(1)
-				get_viewport().set_input_as_handled()
-			KEY_1, KEY_2, KEY_3, KEY_4:
-				_set_party_size(int(event.keycode - KEY_0))
-				get_viewport().set_input_as_handled()
-			KEY_ESCAPE:
-				_on_back_pressed()
-				get_viewport().set_input_as_handled()
+	if _is_left_input(event):
+		_selected_class = (_selected_class - 1)
+		if _selected_class < 0:
+			_selected_class = CLASS_COUNT - 1
+		_update_selection()
+		get_viewport().set_input_as_handled()
+	elif _is_right_input(event):
+		_selected_class = (_selected_class + 1) % CLASS_COUNT
+		_update_selection()
+		get_viewport().set_input_as_handled()
+	elif _is_accept_input(event):
+		_on_start_pressed()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_TAB:
+		_cycle_party_slot(1)
+		get_viewport().set_input_as_handled()
+	elif _is_cancel_input(event):
+		_on_back_pressed()
+		get_viewport().set_input_as_handled()
 
 # ---------------------------------------------------------------------------
 # UI Construction
@@ -299,45 +292,18 @@ void fragment() {
 	_stats_label.custom_minimum_size = Vector2(300, 40)
 	_left_panel.add_child(_stats_label)
 
-	# --- Party size selector ---
-	_party_size_title_label = Label.new()
-	_party_size_title_label.text = "Party Size"
-	_party_size_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_party_size_title_label.add_theme_font_size_override("font_size", 12)
-	_party_size_title_label.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85))
-	_party_size_title_label.position = Vector2(40, 360)
-	_party_size_title_label.custom_minimum_size = Vector2(300, 20)
-	_left_panel.add_child(_party_size_title_label)
-
-	_party_size_row = HBoxContainer.new()
-	_party_size_row.position = Vector2(55, 388)
-	_party_size_row.custom_minimum_size = Vector2(270, 36)
-	_party_size_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_party_size_row.add_theme_constant_override("separation", 6)
-	_left_panel.add_child(_party_size_row)
-
-	for party_count: int in range(1, GameManager.MAX_PARTY_SIZE + 1):
-		var size_button: Button = _create_party_chip_button(str(party_count), Vector2(46, 32))
-		var player_suffix: String = ""
-		if party_count != 1:
-			player_suffix = "s"
-		size_button.tooltip_text = "%d player%s" % [party_count, player_suffix]
-		size_button.pressed.connect(_on_party_size_pressed.bind(party_count))
-		_party_size_row.add_child(size_button)
-		_party_size_buttons.append(size_button)
-
 	# --- Party slots selector ---
 	_slots_title_label = Label.new()
 	_slots_title_label.text = "Party Loadout"
 	_slots_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_slots_title_label.add_theme_font_size_override("font_size", 12)
 	_slots_title_label.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85))
-	_slots_title_label.position = Vector2(40, 430)
+	_slots_title_label.position = Vector2(40, 360)
 	_slots_title_label.custom_minimum_size = Vector2(300, 20)
 	_left_panel.add_child(_slots_title_label)
 
 	_party_slots_row = HBoxContainer.new()
-	_party_slots_row.position = Vector2(20, 458)
+	_party_slots_row.position = Vector2(20, 388)
 	_party_slots_row.custom_minimum_size = Vector2(340, 42)
 	_party_slots_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_party_slots_row.add_theme_constant_override("separation", 6)
@@ -355,7 +321,7 @@ void fragment() {
 	_party_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_party_summary_label.add_theme_font_size_override("font_size", 11)
 	_party_summary_label.add_theme_color_override("font_color", Color(0.72, 0.76, 0.82))
-	_party_summary_label.position = Vector2(25, 505)
+	_party_summary_label.position = Vector2(25, 445)
 	_party_summary_label.custom_minimum_size = Vector2(330, 48)
 	_left_panel.add_child(_party_summary_label)
 
@@ -364,26 +330,26 @@ void fragment() {
 	_network_notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_network_notice_label.add_theme_font_size_override("font_size", 11)
 	_network_notice_label.add_theme_color_override("font_color", Color(0.75, 0.82, 0.95))
-	_network_notice_label.position = Vector2(25, 552)
+	_network_notice_label.position = Vector2(25, 492)
 	_network_notice_label.custom_minimum_size = Vector2(330, 36)
 	_left_panel.add_child(_network_notice_label)
 
 	# --- Action buttons ---
 	_action_row = HBoxContainer.new()
-	_action_row.position = Vector2(60, 600)
+	_action_row.position = Vector2(60, 420)
 	_action_row.custom_minimum_size = Vector2(260, 44)
 	_action_row.add_theme_constant_override("separation", 20)
 	_left_panel.add_child(_action_row)
+
+	_back_button = _create_chrome_button("Back")
+	_back_button.pressed.connect(_on_back_pressed)
+	_action_row.add_child(_back_button)
 
 	_start_button = _create_chrome_button("Start")
 	_start_button.add_theme_color_override("font_color", Color(0.6, 0.9, 0.6))
 	_start_button.add_theme_color_override("font_hover_color", Color(0.7, 1.0, 0.7))
 	_start_button.pressed.connect(_on_start_pressed)
 	_action_row.add_child(_start_button)
-
-	_back_button = _create_chrome_button("Back")
-	_back_button.pressed.connect(_on_back_pressed)
-	_action_row.add_child(_back_button)
 
 
 func _create_hero_button(class_index: int) -> Button:
@@ -506,6 +472,34 @@ func _create_party_chip_button(text: String, min_size: Vector2) -> Button:
 
 	return btn
 
+func _is_accept_input(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed:
+		return event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER
+	if event is InputEventJoypadButton and event.pressed:
+		return event.button_index == JOY_BUTTON_A
+	return false
+
+func _is_cancel_input(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed:
+		return event.keycode == KEY_ESCAPE
+	if event is InputEventJoypadButton and event.pressed:
+		return event.button_index == JOY_BUTTON_B
+	return false
+
+func _is_left_input(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed:
+		return event.keycode == KEY_LEFT
+	if event is InputEventJoypadButton and event.pressed:
+		return event.button_index == JOY_BUTTON_DPAD_LEFT
+	return false
+
+func _is_right_input(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed:
+		return event.keycode == KEY_RIGHT
+	if event is InputEventJoypadButton and event.pressed:
+		return event.button_index == JOY_BUTTON_DPAD_RIGHT
+	return false
+
 
 # ---------------------------------------------------------------------------
 # Selection Logic
@@ -526,26 +520,24 @@ func _update_selection() -> void:
 
 	# Update hero name and description labels
 	if _hero_name_label:
-		var display_name: String = _get_party_slot_display_name(_editing_party_slot)
-		_hero_name_label.text = "%s: %s" % [display_name, HeroClassData.get_class_name_str(_selected_class)]
+		var class_name: String = HeroClassData.get_class_name_str(_selected_class)
+		var unlocked: bool = _is_class_unlocked(_selected_class)
+		if online_party_locked:
+			var display_name: String = _get_party_slot_display_name(_editing_party_slot)
+			_hero_name_label.text = "%s: %s" % [display_name, class_name]
+		else:
+			_hero_name_label.text = class_name if unlocked else "%s (Locked)" % class_name
 	if _hero_desc_label:
-		_hero_desc_label.text = HeroClassData.get_class_description(_selected_class)
+		var class_desc: String = HeroClassData.get_class_description(_selected_class)
+		if not _is_class_unlocked(_selected_class):
+			class_desc += "\n\nUnlock: %s" % PlayerProfile.get_hero_unlock_text(_selected_class)
+		_hero_desc_label.text = class_desc
 
 	# Update stats label
 	if _stats_label:
 		var starting: Variant = HeroClassData.get_starting_stats(_selected_class)
 		if starting:
 			_stats_label.text = "HP: %d  STR: %d" % [starting.hp, starting.str_val]
-
-	for idx: int in range(_party_size_buttons.size()):
-		var size_button: Button = _party_size_buttons[idx]
-		var is_selected_size: bool = (idx + 1) == _party_size
-		size_button.disabled = online_party_locked
-		size_button.visible = not online_party_locked
-		_apply_party_button_style(size_button, is_selected_size)
-
-	if _party_size_title_label:
-		_party_size_title_label.text = "Connected Players" if online_party_locked else "Party Size"
 
 	for idx: int in range(_party_slot_buttons.size()):
 		var slot_button: Button = _party_slot_buttons[idx]
@@ -564,15 +556,20 @@ func _update_selection() -> void:
 			slot_button.modulate = Color(0.7, 0.7, 0.7, 0.7)
 		_apply_party_button_style(slot_button, slot_active and idx == _editing_party_slot)
 
+	if _slots_title_label:
+		_slots_title_label.visible = online_party_locked
+	if _party_slots_row:
+		_party_slots_row.visible = online_party_locked
+
 	if _party_summary_label:
-		var party_parts: Array[String] = []
-		for idx: int in range(_party_size):
-			party_parts.append("%s %s" % [_get_party_slot_display_name(idx), HeroClassData.get_class_name_str(_party_classes[idx])])
+		_party_summary_label.visible = online_party_locked
 		if online_party_locked:
+			var party_parts: Array[String] = []
+			for idx: int in range(_party_size):
+				party_parts.append("%s %s" % [_get_party_slot_display_name(idx), HeroClassData.get_class_name_str(_party_classes[idx])])
 			_party_summary_label.text = "Online party locked to %d connected player%s: %s" % [_party_size, "" if _party_size == 1 else "s", ", ".join(party_parts)]
-		else:
-			_party_summary_label.text = "Start %d-player co-op party: %s" % [_party_size, ", ".join(party_parts)]
 	if _network_notice_label:
+		_network_notice_label.visible = online_party_locked
 		if NetworkManager and NetworkManager.has_method("is_host") and NetworkManager.is_host():
 			var ready_summary: String = NetworkManager.get_ready_summary() if NetworkManager.has_method("get_ready_summary") else ""
 			var notice_text: String = "Host controls class loadout for %d connected player%s." % [_party_size, "" if _party_size == 1 else "s"]
@@ -584,32 +581,19 @@ func _update_selection() -> void:
 			_network_notice_label.text = "Waiting for host %s to choose the class loadout and start the run." % host_name
 		else:
 			_network_notice_label.text = ""
+	if _action_row:
+		_action_row.position.y = 555 if online_party_locked else 420
+	if _start_button:
+		var selected_unlocked: bool = _is_class_unlocked(_selected_class)
+		_start_button.disabled = not selected_unlocked
+		_start_button.tooltip_text = "" if selected_unlocked else PlayerProfile.get_hero_unlock_text(_selected_class)
 
-	# Highlight the selected button with a gold border
 	for i: int in range(_hero_buttons.size()):
 		var btn: Button = _hero_buttons[i]
-		if i == _selected_class:
-			var sel_style: StyleBoxFlat = StyleBoxFlat.new()
-			sel_style.bg_color = Color(0.18, 0.16, 0.14, 0.9)
-			sel_style.border_color = Color(1.0, 0.85, 0.3)
-			sel_style.set_border_width_all(2)
-			sel_style.set_corner_radius_all(2)
-			sel_style.content_margin_left = 4.0
-			sel_style.content_margin_right = 4.0
-			sel_style.content_margin_top = 4.0
-			sel_style.content_margin_bottom = 4.0
-			btn.add_theme_stylebox_override("normal", sel_style)
-		else:
-			var norm_style: StyleBoxFlat = StyleBoxFlat.new()
-			norm_style.bg_color = Color(0.12, 0.11, 0.10, 0.85)
-			norm_style.border_color = Color(0.3, 0.28, 0.25)
-			norm_style.set_border_width_all(1)
-			norm_style.set_corner_radius_all(2)
-			norm_style.content_margin_left = 4.0
-			norm_style.content_margin_right = 4.0
-			norm_style.content_margin_top = 4.0
-			norm_style.content_margin_bottom = 4.0
-			btn.add_theme_stylebox_override("normal", norm_style)
+		var class_unlocked: bool = _is_class_unlocked(i)
+		btn.tooltip_text = HeroClassData.get_class_name_str(i) if class_unlocked else "%s\nUnlock: %s" % [HeroClassData.get_class_name_str(i), PlayerProfile.get_hero_unlock_text(i)]
+		_apply_hero_button_style(btn, i == _selected_class, class_unlocked)
+		btn.disabled = false
 
 
 func _on_hero_button_pressed(class_index: int) -> void:
@@ -619,31 +603,12 @@ func _on_hero_button_pressed(class_index: int) -> void:
 	_update_selection()
 
 
-func _on_party_size_pressed(size: int) -> void:
-	_set_party_size(size)
-
-
 func _on_party_slot_pressed(slot_index: int) -> void:
 	if slot_index < 0 or slot_index >= _party_size:
 		return
 	_editing_party_slot = slot_index
 	_selected_class = _party_classes[_editing_party_slot]
 	_update_selection()
-
-
-func _set_party_size(size: int) -> void:
-	if _is_online_party_locked():
-		_party_size = _get_online_party_size()
-		_ensure_party_defaults()
-		_update_selection()
-		return
-	_party_size = clampi(size, 1, GameManager.MAX_PARTY_SIZE)
-	_ensure_party_defaults()
-	if _editing_party_slot >= _party_size:
-		_editing_party_slot = _party_size - 1
-	_selected_class = _party_classes[_editing_party_slot]
-	_update_selection()
-
 
 func _cycle_party_slot(step: int) -> void:
 	if _party_size <= 1:
@@ -656,6 +621,8 @@ func _cycle_party_slot(step: int) -> void:
 func _ensure_party_defaults() -> void:
 	if _is_online_party_locked():
 		_party_size = _get_online_party_size()
+	else:
+		_party_size = 1
 	if _party_classes.is_empty():
 		_party_classes.append(_selected_class)
 	while _party_classes.size() < GameManager.MAX_PARTY_SIZE:
@@ -731,6 +698,39 @@ func _on_lobby_updated() -> void:
 	_update_selection()
 
 
+func _is_class_unlocked(class_index: int) -> bool:
+	if PlayerProfile == null or not PlayerProfile.has_method("is_hero_class_unlocked"):
+		return true
+	return PlayerProfile.is_hero_class_unlocked(class_index)
+
+
+func _get_default_selectable_class(fallback_class: int) -> int:
+	if _is_class_unlocked(fallback_class):
+		return fallback_class
+	return ConstantsData.HeroClass.WARRIOR if _is_class_unlocked(ConstantsData.HeroClass.WARRIOR) else 0
+
+
+func _apply_hero_button_style(btn: Button, is_selected: bool, is_unlocked: bool) -> void:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	if not is_unlocked:
+		style.bg_color = Color(0.08, 0.08, 0.08, 0.72)
+		style.border_color = Color(0.24, 0.24, 0.24)
+	elif is_selected:
+		style.bg_color = Color(0.18, 0.16, 0.14, 0.9)
+		style.border_color = GOLD_COLOR
+	else:
+		style.bg_color = Color(0.12, 0.11, 0.10, 0.85)
+		style.border_color = Color(0.3, 0.28, 0.25)
+	style.set_border_width_all(2 if is_selected and is_unlocked else 1)
+	style.set_corner_radius_all(2)
+	style.content_margin_left = 4.0
+	style.content_margin_right = 4.0
+	style.content_margin_top = 4.0
+	style.content_margin_bottom = 4.0
+	btn.add_theme_stylebox_override("normal", style)
+	btn.modulate = Color(1, 1, 1, 1) if is_unlocked else Color(0.65, 0.65, 0.65, 0.95)
+
+
 func _apply_party_button_style(btn: Button, is_selected: bool) -> void:
 	var style: StyleBoxFlat = StyleBoxFlat.new()
 	if is_selected:
@@ -750,6 +750,10 @@ func _apply_party_button_style(btn: Button, is_selected: bool) -> void:
 # ---------------------------------------------------------------------------
 
 func _on_start_pressed() -> void:
+	if not _is_class_unlocked(_selected_class):
+		if MessageLog:
+			MessageLog.add_warning(PlayerProfile.get_hero_unlock_text(_selected_class))
+		return
 	var loading_script: GDScript = load("res://src/scenes/loading_scene.gd") as GDScript
 	if loading_script == null:
 		return

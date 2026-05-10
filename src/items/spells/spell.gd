@@ -168,6 +168,22 @@ func _cast_recycle(hero: Char) -> void:
 	if consumables.size() == 1:
 		_recycle_item(hero, consumables[0])
 		return
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+			var items_data: Array[Dictionary] = []
+			for consumable: Variant in consumables:
+				if consumable != null and consumable.has_method("serialize"):
+					items_data.append(consumable.serialize())
+			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+				"type": "item_select_open",
+				"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+				"prompt": "Choose a consumable to recycle:",
+				"action_type": "recycle_item",
+				"items": items_data,
+			})
+			return
 	var wnd: WndItemSelect = WndItemSelect.new()
 	wnd.setup(consumables, "Choose a consumable to recycle:", func(chosen: Variant) -> void:
 		_recycle_item(hero, chosen)
@@ -176,6 +192,17 @@ func _cast_recycle(hero: Char) -> void:
 
 ## Open the alchemy pot interface anywhere.
 func _cast_alchemize(_hero: Char) -> void:
+	if _hero == null:
+		return
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(_hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+				"type": "alchemy_open",
+				"hero_actor_id": int(ConstantsData.get_prop(_hero, "actor_id", -1)),
+			})
+			return
 	var wnd: Variant = WndAlchemy.new()
 	if EventBus:
 		EventBus.show_window.emit(wnd)
@@ -205,6 +232,22 @@ func _cast_curse_infusion(hero: Char) -> void:
 	if choices.size() == 1:
 		_apply_curse_infusion(choices[0])
 		return
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+			var items_data: Array[Dictionary] = []
+			for choice_item: Variant in choices:
+				if choice_item != null and choice_item.has_method("serialize"):
+					items_data.append(choice_item.serialize())
+			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+				"type": "item_select_open",
+				"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+				"prompt": "Choose an item to infuse with dark energy:",
+				"action_type": "curse_infusion_item",
+				"items": items_data,
+			})
+			return
 	var wnd: WndItemSelect = WndItemSelect.new()
 	wnd.setup(choices, "Choose an item to infuse with dark energy:", func(chosen: Variant) -> void:
 		_apply_curse_infusion(chosen)

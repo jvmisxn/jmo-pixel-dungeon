@@ -18,12 +18,12 @@ var _brightness_val_label: Label = null
 
 func _init() -> void:
 	window_title = "Settings"
-	custom_minimum_size = Vector2(360, 340)
+	custom_minimum_size = Vector2(420, 380)
 
 
 func _build_content() -> Control:
 	var main: VBoxContainer = VBoxContainer.new()
-	main.add_theme_constant_override("separation", 12)
+	main.add_theme_constant_override("separation", 14)
 	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	# --- Music Volume ---
@@ -43,6 +43,7 @@ func _build_content() -> Control:
 	_music_mute_btn.text = "Mute Music"
 	_music_mute_btn.button_pressed = _get_music_muted()
 	_music_mute_btn.add_theme_font_size_override("font_size", 12)
+	_music_mute_btn.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85))
 	_music_mute_btn.toggled.connect(_on_music_mute_toggled)
 	main.add_child(_music_mute_btn)
 
@@ -63,6 +64,7 @@ func _build_content() -> Control:
 	_sfx_mute_btn.text = "Mute SFX"
 	_sfx_mute_btn.button_pressed = _get_sfx_muted()
 	_sfx_mute_btn.add_theme_font_size_override("font_size", 12)
+	_sfx_mute_btn.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85))
 	_sfx_mute_btn.toggled.connect(_on_sfx_mute_toggled)
 	main.add_child(_sfx_mute_btn)
 
@@ -72,6 +74,7 @@ func _build_content() -> Control:
 	var zoom_label: Label = Label.new()
 	zoom_label.text = "Zoom Level"
 	zoom_label.add_theme_font_size_override("font_size", 12)
+	zoom_label.add_theme_color_override("font_color", Color(0.85, 0.8, 0.65))
 	zoom_container.add_child(zoom_label)
 
 	_zoom_option = OptionButton.new()
@@ -101,12 +104,27 @@ func _build_content() -> Control:
 	var sep: HSeparator = HSeparator.new()
 	main.add_child(sep)
 
-	# --- Save & Close Button --- SPD styled
-	var save_btn: Button = WndBase.create_spd_button("Save & Close")
+	var action_row: HBoxContainer = HBoxContainer.new()
+	action_row.add_theme_constant_override("separation", 12)
+	main.add_child(action_row)
+
+	var back_btn: Button = WndBase.create_spd_button("Back")
+	back_btn.pressed.connect(close_window)
+	action_row.add_child(back_btn)
+
+	var save_btn: Button = WndBase.create_spd_button("Save")
 	save_btn.add_theme_color_override("font_color", Color(0.6, 0.9, 0.6))
 	save_btn.add_theme_color_override("font_hover_color", Color(0.7, 1.0, 0.7))
 	save_btn.pressed.connect(_on_save_close)
-	main.add_child(save_btn)
+	action_row.add_child(save_btn)
+
+	var game_scene: Node = get_tree().root.get_node_or_null("GameScene")
+	if game_scene != null:
+		var exit_btn: Button = WndBase.create_spd_button("Exit to Menu")
+		exit_btn.add_theme_color_override("font_color", Color(1.0, 0.6, 0.6))
+		exit_btn.add_theme_color_override("font_hover_color", Color(1.0, 0.45, 0.45))
+		exit_btn.pressed.connect(_on_exit_to_menu)
+		action_row.add_child(exit_btn)
 
 	return main
 
@@ -218,6 +236,22 @@ func _on_save_close() -> void:
 	if SaveManager:
 		SaveManager.save_audio_settings()
 	close_window()
+
+
+func _on_exit_to_menu() -> void:
+	close_window()
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var title_script: GDScript = load("res://src/scenes/title_scene.gd") as GDScript
+	if title_script == null:
+		return
+	var game_scene: Node = tree.root.get_node_or_null("GameScene")
+	if game_scene != null:
+		game_scene.queue_free()
+	var title_scene: Control = title_script.new()
+	title_scene.name = "TitleScene"
+	tree.root.add_child(title_scene)
 
 
 # --- Helpers ---

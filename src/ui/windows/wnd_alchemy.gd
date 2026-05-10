@@ -184,6 +184,15 @@ func _on_brew_pressed() -> void:
 	if recipe == null:
 		return
 
+	if NetworkManager != null and NetworkManager.has_method("is_online_session") and NetworkManager.is_online_session():
+		if EventBus and EventBus.has_signal("request_hero_action"):
+			EventBus.request_hero_action.emit({
+				"type": "alchemy_brew",
+				"ingredient_items": active_ingredients,
+			})
+		close_window()
+		return
+
 	var result: Item = recipe.craft(_hero, active_ingredients)
 	if result == null:
 		return

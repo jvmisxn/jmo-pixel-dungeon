@@ -81,13 +81,11 @@ func act() -> void:
 		if cell_visited:
 			if not _seen_before and level.has_method("is_in_hero_fov") and level.is_in_hero_fov(pos):
 				_seen_before = true
-				if MessageLog:
-					MessageLog.add_info("\"Hey!\" calls out a tiny imp.")
+				_deliver_message("\"Hey!\" calls out a tiny imp.")
 		# Fallback for levels without visited tracking
 		elif not _seen_before and level and level.has_method("is_visible") and level.is_visible(pos):
 			_seen_before = true
-			if MessageLog:
-				MessageLog.add_info("\"Hey!\" calls out a tiny imp.")
+			_deliver_message("\"Hey!\" calls out a tiny imp.")
 	else:
 		_seen_before = false
 	process_buffs()
@@ -125,10 +123,10 @@ func _pick_quest_target() -> void:
 func interact(hero: Variant) -> void:
 	if hero == null:
 		return
+	_remember_interacting_hero(hero)
 
 	if reward_given:
-		if MessageLog:
-			MessageLog.add_info("The imp is gone.")
+		_deliver_message("The imp is gone.", "info", hero)
 		return
 
 	if quest_complete:
@@ -138,21 +136,18 @@ func interact(hero: Variant) -> void:
 	if quest_active:
 		if kill_count >= required_kills:
 			quest_complete = true
-			if MessageLog:
-				MessageLog.add_info(dialogue_lines[2])
+			_deliver_message(dialogue_lines[2], "info", hero)
 			_offer_reward(hero)
 		else:
 			var remaining: int = required_kills - kill_count
-			if MessageLog:
-				MessageLog.add_info(dialogue_lines[1] % [kill_count, remaining])
+			_deliver_message(dialogue_lines[1] % [kill_count, remaining], "info", hero)
 		return
 
 	# First interaction — give the quest
 	quest_active = true
 	# Original resets seenBefore when quest is given so the yell doesn't repeat
 	_seen_before = false
-	if MessageLog:
-		MessageLog.add_info(dialogue_lines[0] % [quest_mob_name, required_kills])
+	_deliver_message(dialogue_lines[0] % [quest_mob_name, required_kills], "info", hero)
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "active")
 
@@ -175,12 +170,10 @@ func on_mob_defeated(_mob_pos: int, mob_name_str: String, mob_id: String = "") -
 	if defeated_id == target_lower or defeated_name == target_lower or defeated_name == target_lower + "s" or defeated_name.begins_with(target_lower):
 		kill_count += 1
 		if kill_count >= required_kills:
-			if MessageLog:
-				MessageLog.add_positive("You've killed enough %s for the imp!" % quest_mob_name)
+			_deliver_message("You've killed enough %s for the imp!" % quest_mob_name, "positive")
 		elif kill_count % 2 == 0:
 			# Periodic progress reminder (every 2 kills for better feedback)
-			if MessageLog:
-				MessageLog.add_info("Imp's quest: %d/%d %s slain." % [kill_count, required_kills, quest_mob_name])
+			_deliver_message("Imp's quest: %d/%d %s slain." % [kill_count, required_kills, quest_mob_name], "info")
 
 # ---------------------------------------------------------------------------
 # Reward
@@ -209,13 +202,31 @@ func _offer_reward(hero: Variant) -> void:
 		rewards.append(reward_ring)
 
 	if rewards.is_empty():
-		if MessageLog:
-			MessageLog.add_info("The imp has nothing left to offer.")
+		_deliver_message("The imp has nothing left to offer.")
 		_depart()
 		return
 
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id:
+			var reward_data: Array[Dictionary] = []
+			for reward_item: Variant in rewards:
+				if reward_item != null and reward_item.has_method("serialize"):
+					reward_data.append(reward_item.serialize())
+			if NetworkManager.has_method("send_ui_event_to_peer"):
+				NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+					"type": "quest_reward_open",
+					"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+					"npc_actor_id": int(ConstantsData.get_prop(self, "actor_id", -1)),
+					"quest_name": "Imp's Gift",
+					"quest_description": "Choose a ring as your reward.",
+					"reward_items": reward_data,
+				})
+			return
+
 	var wnd: Node = load("res://src/ui/windows/wnd_quest_reward.gd").new()
-	wnd.setup("Imp's Gift", "Choose a ring as your reward.", rewards, hero)
+	wnd.setup("Imp's Gift", "Choose a ring as your reward.", rewards, hero, int(ConstantsData.get_prop(self, "actor_id", -1)))
 	if wnd.has_signal("reward_chosen"):
 		wnd.reward_chosen.connect(_on_reward_window_closed)
 
@@ -225,16 +236,14 @@ func _offer_reward(hero: Variant) -> void:
 		if hero and hero.get("belongings") != null:
 			if hero.belongings.has_method("add_item"):
 				hero.belongings.add_item(reward_ring)
-		if MessageLog:
-			MessageLog.add_positive("You receive the %s." % reward_ring.item_name)
+		_deliver_message("You receive the %s." % reward_ring.item_name, "positive", hero)
 		_on_reward_window_closed(reward_ring)
 
 func _on_reward_window_closed(_chosen_item: Variant) -> void:
 	reward_given = true
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "complete")
-	if MessageLog:
-		MessageLog.add_info("The imp bows and vanishes in a puff of smoke.")
+	_deliver_message("The imp bows and vanishes in a puff of smoke.")
 	_depart()
 
 func _depart() -> void:

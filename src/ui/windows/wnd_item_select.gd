@@ -7,6 +7,7 @@ extends WndBase
 var _items: Array[Item] = []
 var _prompt: String = "Select an item:"
 var _callback: Callable = Callable()
+var _online_action_type: String = ""
 
 func _init() -> void:
 	window_title = "Select Item"
@@ -21,6 +22,12 @@ func setup(items: Array, prompt: String, callback: Callable) -> void:
 	_items = items
 	_prompt = prompt
 	_callback = callback
+
+func setup_online(items: Array, prompt: String, action_type: String) -> void:
+	_items = items
+	_prompt = prompt
+	_online_action_type = action_type
+	_callback = Callable()
 
 
 func _build_content() -> Control:
@@ -87,6 +94,14 @@ func _build_content() -> Control:
 
 
 func _on_item_selected(item: Variant) -> void:
+	if not _online_action_type.is_empty():
+		if EventBus and EventBus.has_signal("request_hero_action"):
+			EventBus.request_hero_action.emit({
+				"type": _online_action_type,
+				"item": item,
+			})
+		close_window()
+		return
 	if _callback.is_valid():
 		_callback.call(item)
 	close_window()

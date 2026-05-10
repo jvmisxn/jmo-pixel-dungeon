@@ -10,6 +10,7 @@ signal item_sold(item: Variant, gold_gained: int)
 var _shop_items: Array[Dictionary] = []
 var _hero: Hero = null
 var _shopkeeper: Variant = null
+var _shopkeeper_actor_id: int = -1
 var _gold_label: Label = null
 var _shop_grid: GridContainer = null
 var _sell_area: Panel = null
@@ -25,10 +26,17 @@ func _init() -> void:
 
 
 ## Configure shop inventory before adding to tree.
-func setup(items: Array, hero: Hero, shopkeeper: Variant = null) -> void:
+func setup(items: Array, hero: Hero, shopkeeper: Variant = null, shopkeeper_actor_id: int = -1) -> void:
 	_shop_items = items
 	_hero = hero
 	_shopkeeper = shopkeeper
+	_shopkeeper_actor_id = shopkeeper_actor_id if shopkeeper_actor_id >= 0 else int(ConstantsData.get_prop(shopkeeper, "actor_id", -1))
+
+
+func refresh_shop(items: Array) -> void:
+	_shop_items = items
+	_update_gold_display()
+	_populate_shop_grid()
 
 
 func _build_content() -> Control:
@@ -171,6 +179,16 @@ func _on_shop_item_pressed(index: int) -> void:
 		_set_info("Your inventory is full!")
 		return
 
+	if NetworkManager != null and NetworkManager.has_method("is_online_session") and NetworkManager.is_online_session() and _shopkeeper_actor_id >= 0:
+		if EventBus and EventBus.has_signal("request_hero_action"):
+			EventBus.request_hero_action.emit({
+				"type": "shop_buy",
+				"shopkeeper_actor_id": _shopkeeper_actor_id,
+				"item_index": index,
+			})
+			_set_info("Purchase request sent.")
+		return
+
 	var purchase_success: bool = false
 	if _shopkeeper != null and _shopkeeper.has_method("buy_item"):
 		purchase_success = _shopkeeper.buy_item(_hero, index)
@@ -206,6 +224,15 @@ func _on_sell_from_inventory() -> void:
 
 func sell_item(item: Variant) -> void:
 	if not item or not _hero:
+		return
+	if NetworkManager != null and NetworkManager.has_method("is_online_session") and NetworkManager.is_online_session() and _shopkeeper_actor_id >= 0:
+		if EventBus and EventBus.has_signal("request_hero_action"):
+			EventBus.request_hero_action.emit({
+				"type": "shop_sell",
+				"shopkeeper_actor_id": _shopkeeper_actor_id,
+				"item": item,
+			})
+			_set_info("Sale request sent.")
 		return
 	var sell_price: int = 0
 	if _shopkeeper != null and _shopkeeper.has_method("sell_item"):

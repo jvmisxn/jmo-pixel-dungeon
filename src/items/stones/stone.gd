@@ -82,6 +82,22 @@ func _use_enchantment(hero: Char) -> void:
 	if choices.size() == 1:
 		_apply_enchantment_to_item(choices[0])
 		return
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+			var items_data: Array[Dictionary] = []
+			for choice_item: Variant in choices:
+				if choice_item != null and choice_item.has_method("serialize"):
+					items_data.append(choice_item.serialize())
+			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+				"type": "item_select_open",
+				"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+				"prompt": "Choose a weapon to enchant:",
+				"action_type": "stone_enchant_item",
+				"items": items_data,
+			})
+			return
 	var wnd: WndItemSelect = WndItemSelect.new()
 	wnd.setup(choices, "Choose a weapon to enchant:", func(chosen: Variant) -> void:
 		_apply_enchantment_to_item(chosen)
@@ -111,8 +127,24 @@ func _use_augmentation(hero: Char) -> void:
 			MessageLog.add_warning("You need equipment to augment!")
 		return
 	if choices.size() == 1:
-		_open_augment_choice(choices[0])
+		_open_augment_choice_for_hero(hero, choices[0])
 		return
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+			var items_data: Array[Dictionary] = []
+			for choice_item: Variant in choices:
+				if choice_item != null and choice_item.has_method("serialize"):
+					items_data.append(choice_item.serialize())
+			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+				"type": "item_select_open",
+				"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+				"prompt": "Choose an item to augment:",
+				"action_type": "stone_augmentation_pick_item",
+				"items": items_data,
+			})
+			return
 	var wnd: WndItemSelect = WndItemSelect.new()
 	wnd.setup(choices, "Choose an item to augment:", func(chosen: Variant) -> void:
 		_open_augment_choice(chosen)
@@ -138,6 +170,22 @@ func _open_augment_choice(item: Variant) -> void:
 		_apply_augment_to_item(chosen_item, augment_key)
 	)
 	_show_window(wnd)
+
+func _open_augment_choice_for_hero(hero: Char, item: Variant) -> void:
+	if item == null:
+		return
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer") and item.has_method("serialize"):
+			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+				"type": "augment_select_open",
+				"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+				"action_type": "stone_augmentation_apply",
+				"item": item.serialize(),
+			})
+			return
+	_open_augment_choice(item)
 
 func _apply_augment_to_item(item: Variant, augment_key: String) -> void:
 	if item == null or not item.has_method("apply_augment"):
@@ -175,6 +223,29 @@ func _show_window(window: Control) -> void:
 	if tree and tree.root:
 		tree.root.add_child(window)
 
+func _notify_hero(hero: Char, text: String, kind: String = "info") -> void:
+	if hero == null:
+		return
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+				"type": "npc_message",
+				"text": text,
+				"kind": kind,
+			})
+			return
+	if MessageLog == null:
+		return
+	match kind:
+		"positive":
+			MessageLog.add_positive(text)
+		"warning", "negative":
+			MessageLog.add_warning(text)
+		_:
+			MessageLog.add(text)
+
 ## Chance to identify a random unidentified item in inventory.
 func _use_intuition(hero: Char) -> void:
 	if not (hero is Hero) or (hero as Hero).belongings == null:
@@ -184,19 +255,16 @@ func _use_intuition(hero: Char) -> void:
 		if item != null and not item.identified:
 			unidentified.append(item)
 	if unidentified.is_empty():
-		if MessageLog:
-			MessageLog.add_info("You have nothing left to identify.")
+		_notify_hero(hero, "You have nothing left to identify.")
 		return
 	# 60% chance to identify a random item
 	if randf() < 0.6:
 		var target: Variant = unidentified[randi_range(0, unidentified.size() - 1)]
 		if target.has_method("identify"):
 			target.identify()
-		if MessageLog:
-			MessageLog.add_positive("You identify the %s!" % target.get("item_name"))
+		_notify_hero(hero, "You identify the %s!" % target.get("item_name"), "positive")
 	else:
-		if MessageLog:
-			MessageLog.add("The stone crumbles, but nothing happens.")
+		_notify_hero(hero, "The stone crumbles, but nothing happens.")
 
 ## Create a mini explosion at the hero's position.
 func _use_blast(hero: Char) -> void:
@@ -213,8 +281,7 @@ func _use_blast(hero: Char) -> void:
 		for ch: Variant in chars:
 			if ch != null and ch != hero and ch.has_method("take_damage"):
 				ch.take_damage(randi_range(5, 15), null)
-	if MessageLog:
-		MessageLog.add("The stone explodes!")
+	_notify_hero(hero, "The stone explodes!")
 
 ## Short-range teleport (blink).
 func _use_blink(hero: Char) -> void:
@@ -239,16 +306,14 @@ func _use_blink(hero: Char) -> void:
 		if dungeon_level.has_method("is_passable") and dungeon_level.is_passable(new_pos):
 			if dungeon_level.has_method("find_char_at") and dungeon_level.find_char_at(new_pos) == null:
 				hero.pos = new_pos
-				if MessageLog:
-					MessageLog.add_positive("You blink to a new position!")
+				_notify_hero(hero, "You blink to a new position!", "positive")
 				if EventBus:
 					EventBus.hero_moved_detailed.emit(hero, new_pos)
 					var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
 					if focused_hero == hero:
 						EventBus.hero_moved.emit(new_pos)
 				return
-	if MessageLog:
-		MessageLog.add("The stone crumbles, but there was nowhere to blink to.")
+	_notify_hero(hero, "The stone crumbles, but there was nowhere to blink to.")
 
 ## Reveal the area around a target position.
 func _use_clairvoyance(hero: Char) -> void:
@@ -258,8 +323,7 @@ func _use_clairvoyance(hero: Char) -> void:
 	# Reveal cells in a large radius around hero
 	if dungeon_level.has_method("reveal_area"):
 		dungeon_level.reveal_area(hero.pos, 8)
-	if MessageLog:
-		MessageLog.add_positive("The dungeon layout becomes clear!")
+	_notify_hero(hero, "The dungeon layout becomes clear!", "positive")
 
 ## Put a target enemy into deep sleep.
 func _use_deepened_sleep(hero: Char) -> void:
@@ -278,11 +342,9 @@ func _use_deepened_sleep(hero: Char) -> void:
 				var sleep_buff: Paralysis = Paralysis.new()
 				sleep_buff.set_duration(20.0)
 				ch.add_buff(sleep_buff)
-				if MessageLog:
-					MessageLog.add_positive("The target falls into a deep sleep!")
+				_notify_hero(hero, "The target falls into a deep sleep!", "positive")
 				return
-	if MessageLog:
-		MessageLog.add("There is no adjacent target to put to sleep.")
+	_notify_hero(hero, "There is no adjacent target to put to sleep.")
 
 ## Remove a target's weapon (disarm).
 func _use_disarming(hero: Char) -> void:
@@ -301,11 +363,9 @@ func _use_disarming(hero: Char) -> void:
 					var weak: Weakness = Weakness.new()
 					weak.set_duration(10.0)
 					ch.add_buff(weak)
-				if MessageLog:
-					MessageLog.add_positive("You disarm the target!")
+				_notify_hero(hero, "You disarm the target!", "positive")
 				return
-	if MessageLog:
-		MessageLog.add("There is no adjacent target to disarm.")
+	_notify_hero(hero, "There is no adjacent target to disarm.")
 
 ## Terrify targets in the area.
 func _use_fear(hero: Char) -> void:
@@ -324,8 +384,7 @@ func _use_fear(hero: Char) -> void:
 				var terror_buff: Terror = Terror.new()
 				terror_buff.set_duration(10.0)
 				ch.add_buff(terror_buff)
-	if MessageLog:
-		MessageLog.add("A wave of terror washes over nearby enemies!")
+	_notify_hero(hero, "A wave of terror washes over nearby enemies!")
 
 ## Summon blocking sheep at adjacent positions.
 func _use_flock(hero: Char) -> void:
@@ -343,11 +402,10 @@ func _use_flock(hero: Char) -> void:
 			continue
 		Sheep.spawn_at(cell, dungeon_level, 8)
 		spawned += 1
-	if MessageLog:
-		if spawned > 0:
-			MessageLog.add("A flock of magical sheep appears!")
-		else:
-			MessageLog.add("There is no space for the flock to appear.")
+	if spawned > 0:
+		_notify_hero(hero, "A flock of magical sheep appears!")
+	else:
+		_notify_hero(hero, "There is no space for the flock to appear.")
 
 ## Chain lightning from the thrown position.
 func _use_shock(hero: Char) -> void:
@@ -363,8 +421,7 @@ func _use_shock(hero: Char) -> void:
 			var ch: Variant = dungeon_level.find_char_at(cell)
 			if ch != null and ch != hero and ch.has_method("take_damage"):
 				ch.take_damage(randi_range(4, 12), null)
-	if MessageLog:
-		MessageLog.add_warning("Lightning arcs between targets!")
+	_notify_hero(hero, "Lightning arcs between targets!", "warning")
 
 ## Remove one from the stack.
 func _consume_one(hero: Char) -> void:

@@ -68,6 +68,14 @@ func _build() -> bool:
 	if entrance < 0 or exit_pos < 0:
 		return false
 
+	# Step 6.5: Validate that the floor is actually traversable from the
+	# entrance to the stairs down. Some room/tunnel layouts can paint a valid
+	# exit room but still leave it graph-disconnected, which softlocks the run.
+	build_flag_maps()
+	var exit_path: Array[int] = find_path(entrance, exit_pos)
+	if exit_path.is_empty():
+		return false
+
 	# Step 7: Spawn mobs
 	var num_mobs: int = mob_count()
 	var mob_positions: Array[int] = mob_spawn_positions(num_mobs)

@@ -58,10 +58,10 @@ func _init() -> void:
 func interact(hero: Variant) -> void:
 	if hero == null:
 		return
+	_remember_interacting_hero(hero)
 
 	if has_reforged:
-		if MessageLog:
-			MessageLog.add_info("The blacksmith grunts. \"Already did my part. Now scram.\"")
+		_deliver_message("The blacksmith grunts. \"Already did my part. Now scram.\"", "info", hero)
 		return
 
 	if quest_complete:
@@ -75,18 +75,15 @@ func interact(hero: Variant) -> void:
 			_take_ore(hero)
 			ore_delivered = true
 			quest_complete = true
-			if MessageLog:
-				MessageLog.add_info(dialogue_lines[2])
+			_deliver_message(dialogue_lines[2], "info", hero)
 			_offer_reforge(hero)
 		else:
-			if MessageLog:
-				MessageLog.add_info("\"Got %d ore so far. Need %d total.\"" % [ore_count, REQUIRED_ORE])
+			_deliver_message("\"Got %d ore so far. Need %d total.\"" % [ore_count, REQUIRED_ORE], "info", hero)
 		return
 
 	# First interaction — give the quest
 	quest_active = true
-	if MessageLog:
-		MessageLog.add_info(dialogue_lines[0])
+	_deliver_message(dialogue_lines[0], "info", hero)
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "active")
 
@@ -122,38 +119,46 @@ func _take_ore(hero: Variant) -> void:
 			if belongings.remove_item_by_id("dark_gold_ore") == null:
 				break
 			removed += 1
-	if removed > 0 and MessageLog:
-		MessageLog.add_info("You hand over %d pieces of dark gold ore." % REQUIRED_ORE)
+	if removed > 0:
+		_deliver_message("You hand over %d pieces of dark gold ore." % REQUIRED_ORE)
 
 # ---------------------------------------------------------------------------
 # Reforge
 # ---------------------------------------------------------------------------
 
 func _offer_reforge(hero: Variant) -> void:
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id:
+			if NetworkManager.has_method("send_ui_event_to_peer"):
+				NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+					"type": "reforge_open",
+					"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+					"npc_actor_id": int(ConstantsData.get_prop(self, "actor_id", -1)),
+				})
+			return
 	var wnd: Variant = load("res://src/ui/windows/wnd_reforge.gd").new()
 	if wnd.has_method("setup"):
-		wnd.setup(hero, self)
+		wnd.setup(hero, self, int(ConstantsData.get_prop(self, "actor_id", -1)))
 	if EventBus and EventBus.has_signal("show_window"):
 		EventBus.show_window.emit(wnd)
-	elif MessageLog:
-		MessageLog.add_positive("The blacksmith is ready to reforge, but no forge window is available.")
+	else:
+		_deliver_message("The blacksmith is ready to reforge, but no forge window is available.", "positive", hero)
 
 ## Reforge two items: keep item_a, consume item_b, transfer upgrade bonus.
 ## Returns true on success.
 func reforge(hero: Variant, item_a: Variant, item_b: Variant) -> bool:
 	if has_reforged:
-		if MessageLog:
-			MessageLog.add_warning("The blacksmith has already reforged for you.")
+		_deliver_message("The blacksmith has already reforged for you.", "warning", hero)
 		return false
 
 	if item_a == null or item_b == null:
-		if MessageLog:
-			MessageLog.add_warning("You need two items to reforge.")
+		_deliver_message("You need two items to reforge.", "warning", hero)
 		return false
 
 	if item_a == item_b:
-		if MessageLog:
-			MessageLog.add_warning("You can't reforge an item with itself.")
+		_deliver_message("You can't reforge an item with itself.", "warning", hero)
 		return false
 
 	# Original reforge: the kept item gets the HIGHER of the two levels, plus +1.
@@ -184,8 +189,7 @@ func reforge(hero: Variant, item_a: Variant, item_b: Variant) -> bool:
 
 	has_reforged = true
 
-	if MessageLog:
-		MessageLog.add_positive("The blacksmith hammers away... done! %s has been upgraded!" % item_a.get_display_name())
+	_deliver_message("The blacksmith hammers away... done! %s has been upgraded!" % item_a.get_display_name(), "positive", hero)
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "complete")
 		EventBus.hero_stats_changed.emit()

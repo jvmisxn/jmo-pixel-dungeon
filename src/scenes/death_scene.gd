@@ -61,6 +61,7 @@ func _ready() -> void:
 
 func _save_ranking() -> void:
 	var entry: Dictionary = {
+		"player_name": PlayerProfile.get_player_name() if PlayerProfile else "Player",
 		"hero_class": GameManager.hero_class,
 		"depth": GameManager.depth,
 		"score": _final_score,

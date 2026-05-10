@@ -62,6 +62,29 @@ func _consume(hero: Char) -> void:
 		if hero.belongings and hero.belongings.has_method("remove_item"):
 			hero.belongings.remove_item(self)
 
+func _notify_hero(hero: Char, text: String, kind: String = "info") -> void:
+	if hero == null:
+		return
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+				"type": "npc_message",
+				"text": text,
+				"kind": kind,
+			})
+			return
+	if MessageLog == null:
+		return
+	match kind:
+		"positive":
+			MessageLog.add_positive(text)
+		"warning", "negative":
+			MessageLog.add_warning(text)
+		_:
+			MessageLog.add(text)
+
 ## Override duplicate_item to preserve scroll-specific properties.
 func duplicate_item() -> Item:
 	var copy: Scroll = Scroll.new()
@@ -248,6 +271,22 @@ class ScrollIdentify extends Scroll:
 			if MessageLog:
 				MessageLog.add_positive("You identify the %s!" % chosen.get_display_name())
 		else:
+			if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+				var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+				var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+				if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+					var items_data: Array[Dictionary] = []
+					for unidentified_item: Variant in unidentified:
+						if unidentified_item != null and unidentified_item.has_method("serialize"):
+							items_data.append(unidentified_item.serialize())
+					NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+						"type": "item_select_open",
+						"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+						"prompt": "Choose an item to identify:",
+						"action_type": "identify_item",
+						"items": items_data,
+					})
+					return
 			# Open item selection window
 			var wnd: WndItemSelect = WndItemSelect.new()
 			wnd.setup(unidentified, "Choose an item to identify:", func(chosen: Variant) -> void:
@@ -296,6 +335,22 @@ class ScrollUpgrade extends Scroll:
 			# Only one option — upgrade it directly
 			_do_upgrade(upgradeable[0])
 		else:
+			if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+				var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+				var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+				if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+					var items_data: Array[Dictionary] = []
+					for upgrade_item: Variant in upgradeable:
+						if upgrade_item != null and upgrade_item.has_method("serialize"):
+							items_data.append(upgrade_item.serialize())
+					NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+						"type": "item_select_open",
+						"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+						"prompt": "Choose an item to upgrade:",
+						"action_type": "upgrade_item",
+						"items": items_data,
+					})
+					return
 			# Open item selection window
 			var wnd: WndItemSelect = WndItemSelect.new()
 			wnd.setup(upgradeable, "Choose an item to upgrade:", func(chosen: Variant) -> void:
@@ -359,11 +414,9 @@ class ScrollRemoveCurse extends Scroll:
 			elif item.has_method("is_actually_cursed") and not item.is_actually_cursed():
 				item.cursed_known = true
 		if uncursed_count > 0:
-			if MessageLog:
-				MessageLog.add_positive("A warm light washes over your belongings! %d curse(s) lifted." % uncursed_count)
+			_notify_hero(hero, "A warm light washes over your belongings! %d curse(s) lifted." % uncursed_count, "positive")
 		else:
-			if MessageLog:
-				MessageLog.add("The scroll's light reveals no curses on your items.")
+			_notify_hero(hero, "The scroll's light reveals no curses on your items.")
 
 
 # ---------------------------------------------------------------------------
@@ -384,19 +437,16 @@ class ScrollMagicMapping extends Scroll:
 		var dungeon_level: Variant = hero.level
 		if dungeon_level and dungeon_level.has_method("reveal_all"):
 			dungeon_level.reveal_all()
-			if MessageLog:
-				MessageLog.add_positive("The layout of this floor is revealed to you!")
+			_notify_hero(hero, "The layout of this floor is revealed to you!", "positive")
 		elif dungeon_level and dungeon_level.get("mapped") != null:
 			# Alternative: set mapped array to all true
 			if dungeon_level.has_method("get") and dungeon_level.get("visited") is Array:
 				var visited: Array = dungeon_level.get("visited")
 				for i: int in range(visited.size()):
 					visited[i] = true
-			if MessageLog:
-				MessageLog.add_positive("The layout of this floor is revealed to you!")
+			_notify_hero(hero, "The layout of this floor is revealed to you!", "positive")
 		else:
-			if MessageLog:
-				MessageLog.add_positive("A map of this floor burns into your mind!")
+			_notify_hero(hero, "A map of this floor burns into your mind!", "positive")
 
 
 # ---------------------------------------------------------------------------
@@ -429,16 +479,14 @@ class ScrollTeleportation extends Scroll:
 			attempts -= 1
 		if new_pos >= 0:
 			hero.pos = new_pos
-			if MessageLog:
-				MessageLog.add_positive("You are teleported to a new location!")
+			_notify_hero(hero, "You are teleported to a new location!", "positive")
 			if EventBus:
 				EventBus.hero_moved_detailed.emit(hero, new_pos)
 				var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
 				if focused_hero == hero:
 					EventBus.hero_moved.emit(new_pos)
 		else:
-			if MessageLog:
-				MessageLog.add_warning("The scroll fails to find a suitable destination.")
+			_notify_hero(hero, "The scroll fails to find a suitable destination.", "warning")
 
 
 # ---------------------------------------------------------------------------
@@ -475,11 +523,9 @@ class ScrollLullaby extends Scroll:
 						mob.add_buff(sleep_buff)
 						affected += 1
 		if affected > 0:
-			if MessageLog:
-				MessageLog.add_positive("A soothing melody lulls %d enemies to sleep!" % affected)
+			_notify_hero(hero, "A soothing melody lulls %d enemies to sleep!" % affected, "positive")
 		else:
-			if MessageLog:
-				MessageLog.add("The lullaby echoes through empty corridors.")
+			_notify_hero(hero, "The lullaby echoes through empty corridors.")
 
 
 # ---------------------------------------------------------------------------
@@ -512,11 +558,9 @@ class ScrollRage extends Scroll:
 						mob.add_buff(amok_buff)
 						affected += 1
 		if affected > 0:
-			if MessageLog:
-				MessageLog.add_warning("%d enemies fly into a mindless rage!" % affected)
+			_notify_hero(hero, "%d enemies fly into a mindless rage!" % affected, "warning")
 		else:
-			if MessageLog:
-				MessageLog.add("The rage fades without a target.")
+			_notify_hero(hero, "The rage fades without a target.")
 
 
 # ---------------------------------------------------------------------------
@@ -597,11 +641,9 @@ class ScrollMirrorImage extends Scroll:
 						dungeon_level.spawn_mirror_image(target_pos, hero)
 					spawned += 1
 		if spawned > 0:
-			if MessageLog:
-				MessageLog.add_positive("Mirror images appear around you!")
+			_notify_hero(hero, "Mirror images appear around you!", "positive")
 		else:
-			if MessageLog:
-				MessageLog.add_warning("There isn't enough space for mirror images.")
+			_notify_hero(hero, "There isn't enough space for mirror images.", "warning")
 
 
 # ---------------------------------------------------------------------------
@@ -643,11 +685,9 @@ class ScrollRecharging extends Scroll:
 					misc_item.charges = mini(misc_item.charges + int(RECHARGE_AMOUNT), misc_item.max_charges)
 					recharged += 1
 		if recharged > 0:
-			if MessageLog:
-				MessageLog.add_positive("Your wands crackle with renewed energy! (%d recharged)" % recharged)
+			_notify_hero(hero, "Your wands crackle with renewed energy! (%d recharged)" % recharged, "positive")
 		else:
-			if MessageLog:
-				MessageLog.add("You don't have any wands to recharge.")
+			_notify_hero(hero, "You don't have any wands to recharge.")
 
 
 # ---------------------------------------------------------------------------
@@ -677,6 +717,16 @@ class ScrollTransmutation extends Scroll:
 	func read_scroll(hero: Char) -> void:
 		if hero == null or hero.belongings == null:
 			return
+		if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+			var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+			var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+			if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+				NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+					"type": "transmute_open",
+					"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+					"scroll_item_id": str(item_id),
+				})
+				return
 		# Open the transmutation selection window via the HUD
 		var game_scene: Node = _find_game_scene()
 		if game_scene and game_scene.get("_hud") != null:

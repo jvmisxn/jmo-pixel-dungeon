@@ -87,6 +87,7 @@ func _on_continue() -> void:
 
 func _save_ranking() -> void:
 	var ranking: Dictionary = {
+		"player_name": PlayerProfile.get_player_name() if PlayerProfile else "Player",
 		"victory": true,
 		"score": _final_score,
 		"depth": GameManager.depth if GameManager else 0,

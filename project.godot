@@ -31,6 +31,7 @@ ItemAppearance="*res://src/autoloads/item_appearance.gd"
 DiscoveryCatalog="*res://src/autoloads/discovery_catalog.gd"
 SceneManager="*res://src/autoloads/scene_manager.gd"
 NetworkManager="*res://src/autoloads/network_manager.gd"
+PlayerProfile="*res://src/autoloads/player_profile.gd"
 
 [display]
 

@@ -15,6 +15,8 @@ var dialogue_lines: Array[String] = []
 
 # --- NPC Identity ---
 var npc_name: String = "NPC"
+var _last_interacting_hero_actor_id: int = -1
+var _last_interacting_owner_peer_id: int = 1
 
 # ---------------------------------------------------------------------------
 # Initialization
@@ -43,11 +45,12 @@ func act() -> void:
 func interact(hero: Variant) -> void:
 	if hero == null:
 		return
+	_remember_interacting_hero(hero)
 	if EventBus:
 		EventBus.npc_interacted.emit(npc_name)
 	var line: String = get_dialogue()
-	if line != "" and MessageLog:
-		MessageLog.add_info(line)
+	if line != "":
+		_deliver_message(line, "info", hero)
 
 ## Returns the appropriate dialogue line based on the current quest state.
 func get_dialogue() -> String:
@@ -92,10 +95,51 @@ func _set_state(new_state: AIState) -> void:
 # ---------------------------------------------------------------------------
 
 func _on_death(source: Variant) -> void:
-	if MessageLog:
-		MessageLog.add_warning("The %s fades away..." % mob_name)
+	_deliver_message("The %s fades away..." % mob_name, "warning")
 	if level and level.has_method("remove_mob"):
 		level.remove_mob(self)
+
+func _remember_interacting_hero(hero: Variant) -> void:
+	if hero == null:
+		return
+	_last_interacting_hero_actor_id = int(ConstantsData.get_prop(hero, "actor_id", -1))
+	_last_interacting_owner_peer_id = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+
+func _deliver_message(text: String, kind: String = "info", hero: Variant = null) -> void:
+	var trimmed_text: String = text.strip_edges()
+	if trimmed_text.is_empty():
+		return
+	var owner_peer_id: int = _get_message_owner_peer_id(hero)
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id and NetworkManager.has_method("send_ui_event_to_peer"):
+			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+				"type": "npc_message",
+				"text": trimmed_text,
+				"message_kind": kind,
+			})
+			return
+	_log_message_local(trimmed_text, kind)
+
+func _get_message_owner_peer_id(hero: Variant = null) -> int:
+	if hero != null:
+		return int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+	if _last_interacting_owner_peer_id > 0:
+		return _last_interacting_owner_peer_id
+	return 1
+
+func _log_message_local(text: String, kind: String) -> void:
+	if MessageLog == null:
+		return
+	match kind:
+		"positive":
+			MessageLog.add_positive(text)
+		"warning":
+			MessageLog.add_warning(text)
+		"negative":
+			MessageLog.add_negative(text)
+		_:
+			MessageLog.add_info(text)
 
 func serialize() -> Dictionary:
 	var data: Dictionary = super.serialize()

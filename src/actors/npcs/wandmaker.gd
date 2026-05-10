@@ -109,10 +109,10 @@ func _create_reward_wand(wand_id: String, fallback_name: String) -> Variant:
 func interact(hero: Variant) -> void:
 	if hero == null:
 		return
+	_remember_interacting_hero(hero)
 
 	if reward_given:
-		if MessageLog:
-			MessageLog.add_info("The wandmaker nods knowingly and returns to his work.")
+		_deliver_message("The wandmaker nods knowingly and returns to his work.", "info", hero)
 		return
 
 	if quest_complete:
@@ -124,18 +124,15 @@ func interact(hero: Variant) -> void:
 		if _hero_has_seed(hero):
 			_take_seed(hero)
 			quest_complete = true
-			if MessageLog:
-				MessageLog.add_info(dialogue_lines[2])
+			_deliver_message(dialogue_lines[2], "info", hero)
 			_offer_reward(hero)
 		else:
-			if MessageLog:
-				MessageLog.add_info(dialogue_lines[1] % requested_seed_name)
+			_deliver_message(dialogue_lines[1] % requested_seed_name, "info", hero)
 		return
 
 	# First interaction — give the quest
 	quest_active = true
-	if MessageLog:
-		MessageLog.add_info(dialogue_lines[0] % requested_seed_name)
+	_deliver_message(dialogue_lines[0] % requested_seed_name, "info", hero)
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "active")
 
@@ -164,8 +161,8 @@ func _take_seed(hero: Variant) -> void:
 		removed = belongings.remove_item_quantity(requested_seed_id, 1)
 	elif belongings.has_method("remove_item_by_id"):
 		removed = 1 if belongings.remove_item_by_id(requested_seed_id) != null else 0
-	if removed > 0 and MessageLog:
-		MessageLog.add_info("You hand over the %s." % requested_seed_name)
+	if removed > 0:
+		_deliver_message("You hand over the %s." % requested_seed_name)
 
 func _offer_reward(hero: Variant) -> void:
 	# Open the quest reward window for the player to choose a wand.
@@ -176,13 +173,31 @@ func _offer_reward(hero: Variant) -> void:
 		rewards.append(wand_choice_b)
 
 	if rewards.is_empty():
-		if MessageLog:
-			MessageLog.add_info("The wandmaker has nothing left to offer.")
+		_deliver_message("The wandmaker has nothing left to offer.")
 		_depart()
 		return
 
+	if NetworkManager != null and NetworkManager.has_method("is_host") and NetworkManager.is_host():
+		var owner_peer_id: int = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
+		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+		if owner_peer_id != local_peer_id:
+			var reward_data: Array[Dictionary] = []
+			for reward_item: Variant in rewards:
+				if reward_item != null and reward_item.has_method("serialize"):
+					reward_data.append(reward_item.serialize())
+			if NetworkManager.has_method("send_ui_event_to_peer"):
+				NetworkManager.send_ui_event_to_peer(owner_peer_id, {
+					"type": "quest_reward_open",
+					"hero_actor_id": int(ConstantsData.get_prop(hero, "actor_id", -1)),
+					"npc_actor_id": int(ConstantsData.get_prop(self, "actor_id", -1)),
+					"quest_name": "Wandmaker's Gift",
+					"quest_description": "Choose a wand as your reward.",
+					"reward_items": reward_data,
+				})
+			return
+
 	var wnd: Node = load("res://src/ui/windows/wnd_quest_reward.gd").new()
-	wnd.setup("Wandmaker's Gift", "Choose a wand as your reward.", rewards, hero)
+	wnd.setup("Wandmaker's Gift", "Choose a wand as your reward.", rewards, hero, int(ConstantsData.get_prop(self, "actor_id", -1)))
 	if wnd.has_signal("reward_chosen"):
 		wnd.reward_chosen.connect(_on_reward_chosen)
 
@@ -194,8 +209,7 @@ func _offer_reward(hero: Variant) -> void:
 			var belongings: Variant = hero.belongings
 			if belongings.has_method("add_item"):
 				belongings.add_item(wand_choice_a)
-		if MessageLog:
-			MessageLog.add_positive("You receive the %s." % wand_choice_a.item_name)
+		_deliver_message("You receive the %s." % wand_choice_a.item_name, "positive", hero)
 		_on_reward_chosen(wand_choice_a)
 
 func _on_reward_chosen(_chosen_item: Variant) -> void:
@@ -204,8 +218,7 @@ func _on_reward_chosen(_chosen_item: Variant) -> void:
 	reward_given = true
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "complete")
-	if MessageLog:
-		MessageLog.add_info("The wandmaker bows and shuffles away into the shadows.")
+	_deliver_message("The wandmaker bows and shuffles away into the shadows.")
 	_depart()
 
 func _depart() -> void:

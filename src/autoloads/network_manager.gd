@@ -18,6 +18,7 @@ signal online_action_requested(peer_id: int, slot_index: int, action: Dictionary
 signal online_action_rejected(slot_index: int, reason: String)
 signal run_snapshot_received(snapshot: Dictionary)
 signal online_world_event_received(event: Dictionary)
+signal online_ui_event_received(event: Dictionary)
 signal online_level_transition_requested(config: Dictionary)
 signal online_run_ended(victory: bool, payload: Dictionary)
 
@@ -42,9 +43,15 @@ var last_join_code: String = ""
 var active_run_config: Dictionary = {}
 var latest_run_snapshot: Dictionary = {}
 var run_in_progress: bool = false
+var local_lobby_class: int = ConstantsData.HeroClass.WARRIOR
+var local_profile_icon_id: String = "warrior"
 
 func _ready() -> void:
 	_load_prefs()
+	if PlayerProfile != null and PlayerProfile.has_method("has_player_name") and PlayerProfile.has_player_name():
+		local_player_name = PlayerProfile.get_player_name()
+	if PlayerProfile != null and PlayerProfile.has_method("get_selected_icon_id"):
+		local_profile_icon_id = PlayerProfile.get_selected_icon_id()
 	if multiplayer != null:
 		multiplayer.peer_connected.connect(_on_peer_connected)
 		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
@@ -69,7 +76,7 @@ func host_game(port: int = DEFAULT_PORT, player_cap: int = DEFAULT_MAX_PLAYERS) 
 	last_error = ""
 	_save_prefs()
 	_reset_lobby_state()
-	_upsert_lobby_player(multiplayer.get_unique_id(), _get_effective_local_player_name(), false)
+	_upsert_lobby_player(multiplayer.get_unique_id(), _get_effective_local_player_name(), false, local_lobby_class, local_profile_icon_id)
 	last_join_code = "%s:%d" % [get_preferred_bind_address(), port]
 	_broadcast_lobby_snapshot()
 	session_state_changed.emit()
@@ -164,7 +171,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 
 func _on_connected_to_server() -> void:
 	last_error = ""
-	rpc_id(1, "_server_register_player", _get_effective_local_player_name())
+	rpc_id(1, "_server_register_player", _get_effective_local_player_name(), local_lobby_class, local_profile_icon_id)
 	session_state_changed.emit()
 	connected_to_host.emit()
 
@@ -178,9 +185,13 @@ func set_local_player_name(player_name: String) -> void:
 	local_player_name = player_name.strip_edges()
 	if local_player_name.is_empty():
 		local_player_name = "Player"
+	if PlayerProfile != null and PlayerProfile.has_method("get_player_name"):
+		var profile_name: String = PlayerProfile.get_player_name()
+		if profile_name != local_player_name:
+			PlayerProfile.set_player_name(local_player_name)
 	_save_prefs()
 	if is_host():
-		_upsert_lobby_player(multiplayer.get_unique_id(), _get_effective_local_player_name(), _is_local_player_ready())
+		_upsert_lobby_player(multiplayer.get_unique_id(), _get_effective_local_player_name(), _is_local_player_ready(), local_lobby_class, local_profile_icon_id)
 		_broadcast_lobby_snapshot()
 
 func get_preferred_bind_address() -> String:
@@ -240,6 +251,22 @@ func get_lobby_player_name(slot_index: int) -> String:
 		return "Player %d" % (slot_index + 1)
 	return str(lobby_players[slot_index].get("name", "Player %d" % (slot_index + 1)))
 
+func get_lobby_player_class(slot_index: int) -> int:
+	if slot_index < 0 or slot_index >= lobby_players.size():
+		return ConstantsData.HeroClass.WARRIOR
+	return int(lobby_players[slot_index].get("chosen_class", ConstantsData.HeroClass.WARRIOR))
+
+func get_lobby_player_icon(slot_index: int) -> String:
+	if slot_index < 0 or slot_index >= lobby_players.size():
+		return "warrior"
+	return str(lobby_players[slot_index].get("profile_icon_id", "warrior"))
+
+func get_local_lobby_class() -> int:
+	return local_lobby_class
+
+func get_local_profile_icon_id() -> String:
+	return local_profile_icon_id
+
 func get_ready_player_count() -> int:
 	var ready_count: int = 0
 	for player_entry: Dictionary in lobby_players:
@@ -259,11 +286,35 @@ func get_ready_summary() -> String:
 func can_control_slot(slot_index: int) -> bool:
 	return get_slot_owner_peer_id(slot_index) == get_local_peer_id()
 
+func set_local_lobby_class(class_id: int) -> void:
+	local_lobby_class = clampi(class_id, 0, ConstantsData.HeroClass.DUELIST)
+	_save_prefs()
+	if not is_online_session():
+		return
+	if is_host():
+		_upsert_lobby_player(multiplayer.get_unique_id(), _get_effective_local_player_name(), _is_local_player_ready(), local_lobby_class, local_profile_icon_id)
+		_broadcast_lobby_snapshot()
+	elif is_client():
+		rpc_id(1, "_server_set_lobby_class", local_lobby_class)
+
+func set_local_profile_icon_id(icon_id: String) -> void:
+	local_profile_icon_id = icon_id.strip_edges()
+	if local_profile_icon_id.is_empty():
+		local_profile_icon_id = "warrior"
+	_save_prefs()
+	if not is_online_session():
+		return
+	if is_host():
+		_upsert_lobby_player(multiplayer.get_unique_id(), _get_effective_local_player_name(), _is_local_player_ready(), local_lobby_class, local_profile_icon_id)
+		_broadcast_lobby_snapshot()
+	elif is_client():
+		rpc_id(1, "_server_set_profile_icon", local_profile_icon_id)
+
 func set_local_ready(ready: bool) -> void:
 	if not is_online_session():
 		return
 	if is_host():
-		_upsert_lobby_player(multiplayer.get_unique_id(), _get_effective_local_player_name(), ready)
+		_upsert_lobby_player(multiplayer.get_unique_id(), _get_effective_local_player_name(), ready, local_lobby_class)
 		_broadcast_lobby_snapshot()
 	elif is_client():
 		rpc_id(1, "_server_set_ready", ready)
@@ -316,6 +367,15 @@ func broadcast_world_event(event: Dictionary) -> void:
 	if not is_host():
 		return
 	rpc("_client_receive_world_event", event.duplicate(true))
+
+func send_ui_event_to_peer(peer_id: int, event: Dictionary) -> void:
+	if not is_host():
+		return
+	var payload: Dictionary = event.duplicate(true)
+	if peer_id == get_local_peer_id():
+		_emit_online_ui_event_received(payload)
+		return
+	rpc_id(peer_id, "_client_receive_ui_event", payload)
 
 func broadcast_level_transition(config: Dictionary) -> void:
 	if not is_host():
@@ -371,6 +431,10 @@ func _load_prefs() -> void:
 	if listen_port <= 0:
 		listen_port = DEFAULT_PORT
 	max_players = clampi(int(prefs.get_value("network", "max_players", max_players)), 1, GameManager.MAX_PARTY_SIZE if GameManager != null else DEFAULT_MAX_PLAYERS)
+	local_lobby_class = clampi(int(prefs.get_value("network", "local_lobby_class", local_lobby_class)), 0, ConstantsData.HeroClass.DUELIST)
+	local_profile_icon_id = str(prefs.get_value("network", "local_profile_icon_id", local_profile_icon_id)).strip_edges()
+	if local_profile_icon_id.is_empty():
+		local_profile_icon_id = "warrior"
 
 func _save_prefs() -> void:
 	var prefs: ConfigFile = ConfigFile.new()
@@ -378,19 +442,25 @@ func _save_prefs() -> void:
 	prefs.set_value("network", "last_join_code", last_join_code)
 	prefs.set_value("network", "listen_port", listen_port)
 	prefs.set_value("network", "max_players", max_players)
+	prefs.set_value("network", "local_lobby_class", local_lobby_class)
+	prefs.set_value("network", "local_profile_icon_id", local_profile_icon_id)
 	prefs.save(PREFS_PATH)
 
-func _upsert_lobby_player(peer_id: int, player_name: String, ready: bool) -> void:
+func _upsert_lobby_player(peer_id: int, player_name: String, ready: bool, chosen_class: int = ConstantsData.HeroClass.WARRIOR, profile_icon_id: String = "warrior") -> void:
 	for idx: int in range(lobby_players.size()):
 		if int(lobby_players[idx].get("peer_id", -1)) == peer_id:
 			lobby_players[idx]["name"] = player_name
 			lobby_players[idx]["ready"] = ready
+			lobby_players[idx]["chosen_class"] = chosen_class
+			lobby_players[idx]["profile_icon_id"] = profile_icon_id
 			lobby_updated.emit()
 			return
 	lobby_players.append({
 		"peer_id": peer_id,
 		"name": player_name,
 		"ready": ready,
+		"chosen_class": chosen_class,
+		"profile_icon_id": profile_icon_id,
 	})
 	lobby_players.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return int(a.get("peer_id", 0)) < int(b.get("peer_id", 0))
@@ -422,6 +492,9 @@ func _rebind_active_run_player(player_name: String, new_peer_id: int) -> void:
 			if hero_node != null and is_instance_valid(hero_node):
 				hero_node.set("owner_peer_id", new_peer_id)
 				hero_node.set("hero_slot_index", idx)
+		var chosen_class: int = int(info.get("chosen_class", ConstantsData.HeroClass.WARRIOR))
+		var profile_icon_id: String = str(info.get("profile_icon_id", "warrior"))
+		_upsert_lobby_player(new_peer_id, player_name, false, chosen_class, profile_icon_id)
 		break
 
 func _remove_lobby_player(peer_id: int) -> void:
@@ -438,6 +511,18 @@ func _is_local_player_ready() -> bool:
 		if int(player_entry.get("peer_id", -1)) == local_id:
 			return bool(player_entry.get("ready", false))
 	return false
+
+func _get_existing_player_class(peer_id: int) -> int:
+	for player_entry: Dictionary in lobby_players:
+		if int(player_entry.get("peer_id", -1)) == peer_id:
+			return int(player_entry.get("chosen_class", ConstantsData.HeroClass.WARRIOR))
+	return ConstantsData.HeroClass.WARRIOR
+
+func _get_existing_player_icon(peer_id: int) -> String:
+	for player_entry: Dictionary in lobby_players:
+		if int(player_entry.get("peer_id", -1)) == peer_id:
+			return str(player_entry.get("profile_icon_id", "warrior"))
+	return "warrior"
 
 func _broadcast_lobby_snapshot() -> void:
 	var snapshot: Array = lobby_players.duplicate(true)
@@ -464,6 +549,9 @@ func _emit_run_snapshot_received(snapshot: Dictionary) -> void:
 func _emit_online_world_event_received(event: Dictionary) -> void:
 	online_world_event_received.emit(event)
 
+func _emit_online_ui_event_received(event: Dictionary) -> void:
+	online_ui_event_received.emit(event)
+
 func _emit_online_level_transition_requested(config: Dictionary) -> void:
 	online_level_transition_requested.emit(config)
 
@@ -471,20 +559,21 @@ func _emit_online_run_ended(victory: bool, payload: Dictionary) -> void:
 	online_run_ended.emit(victory, payload)
 
 func _sanitize_run_config(config: Dictionary) -> Dictionary:
-	var chosen_class: int = int(config.get("chosen_class", ConstantsData.HeroClass.WARRIOR))
 	var run_seed: int = int(config.get("run_seed", randi()))
-	var raw_party: Variant = config.get("party_classes", [chosen_class])
 	var party: Array[int] = []
-	if raw_party is Array:
+	var player_infos: Array[Dictionary] = []
+	for player_entry: Dictionary in lobby_players:
+		player_infos.append(player_entry.duplicate(true))
+		party.append(int(player_entry.get("chosen_class", ConstantsData.HeroClass.WARRIOR)))
+	var chosen_class: int = int(config.get("chosen_class", ConstantsData.HeroClass.WARRIOR))
+	var raw_party: Variant = config.get("party_classes", [chosen_class])
+	if party.is_empty() and raw_party is Array:
 		for class_value: Variant in raw_party:
 			if party.size() >= (GameManager.MAX_PARTY_SIZE if GameManager != null else DEFAULT_MAX_PLAYERS):
 				break
 			party.append(int(class_value))
 	if party.is_empty():
 		party.append(chosen_class)
-	var player_infos: Array[Dictionary] = []
-	for player_entry: Dictionary in lobby_players:
-		player_infos.append(player_entry.duplicate(true))
 	var required_party_size: int = clampi(player_infos.size(), 1, GameManager.MAX_PARTY_SIZE if GameManager != null else DEFAULT_MAX_PLAYERS)
 	while party.size() < required_party_size:
 		party.append(chosen_class)
@@ -499,13 +588,18 @@ func _sanitize_run_config(config: Dictionary) -> Dictionary:
 	}
 
 @rpc("any_peer", "reliable")
-func _server_register_player(player_name: String) -> void:
+func _server_register_player(player_name: String, chosen_class: int = ConstantsData.HeroClass.WARRIOR, profile_icon_id: String = "warrior") -> void:
 	if not is_host():
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var trimmed_name: String = player_name.strip_edges()
 	_rebind_active_run_player(trimmed_name, sender_id)
-	_upsert_lobby_player(sender_id, trimmed_name, false)
+	var applied_class: int = clampi(chosen_class, 0, ConstantsData.HeroClass.DUELIST)
+	var applied_icon: String = profile_icon_id
+	if run_in_progress:
+		applied_class = _get_existing_player_class(sender_id)
+		applied_icon = _get_existing_player_icon(sender_id)
+	_upsert_lobby_player(sender_id, trimmed_name, false, applied_class, applied_icon)
 	_broadcast_lobby_snapshot()
 	if run_in_progress and not active_run_config.is_empty():
 		rpc_id(sender_id, "_client_receive_online_run_start", active_run_config)
@@ -522,7 +616,37 @@ func _server_set_ready(ready: bool) -> void:
 		if int(player_entry.get("peer_id", -1)) == sender_id:
 			player_name = str(player_entry.get("name", player_name))
 			break
-	_upsert_lobby_player(sender_id, player_name, ready)
+	_upsert_lobby_player(sender_id, player_name, ready, _get_existing_player_class(sender_id), _get_existing_player_icon(sender_id))
+	_broadcast_lobby_snapshot()
+
+@rpc("any_peer", "reliable")
+func _server_set_lobby_class(class_id: int) -> void:
+	if not is_host():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var player_name: String = "Player %d" % sender_id
+	var ready: bool = false
+	for player_entry: Dictionary in lobby_players:
+		if int(player_entry.get("peer_id", -1)) == sender_id:
+			player_name = str(player_entry.get("name", player_name))
+			ready = bool(player_entry.get("ready", false))
+			break
+	_upsert_lobby_player(sender_id, player_name, ready, clampi(class_id, 0, ConstantsData.HeroClass.DUELIST), _get_existing_player_icon(sender_id))
+	_broadcast_lobby_snapshot()
+
+@rpc("any_peer", "reliable")
+func _server_set_profile_icon(profile_icon_id: String) -> void:
+	if not is_host():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var player_name: String = "Player %d" % sender_id
+	var ready: bool = false
+	for player_entry: Dictionary in lobby_players:
+		if int(player_entry.get("peer_id", -1)) == sender_id:
+			player_name = str(player_entry.get("name", player_name))
+			ready = bool(player_entry.get("ready", false))
+			break
+	_upsert_lobby_player(sender_id, player_name, ready, _get_existing_player_class(sender_id), profile_icon_id)
 	_broadcast_lobby_snapshot()
 
 @rpc("authority", "reliable")
@@ -531,6 +655,11 @@ func _client_receive_lobby_snapshot(snapshot: Array) -> void:
 	for entry: Variant in snapshot:
 		if entry is Dictionary:
 			lobby_players.append((entry as Dictionary).duplicate(true))
+	for player_entry: Dictionary in lobby_players:
+		if int(player_entry.get("peer_id", -1)) == get_local_peer_id():
+			local_lobby_class = int(player_entry.get("chosen_class", local_lobby_class))
+			local_profile_icon_id = str(player_entry.get("profile_icon_id", local_profile_icon_id))
+			break
 	lobby_updated.emit()
 	session_state_changed.emit()
 
@@ -549,6 +678,10 @@ func _client_receive_run_snapshot(snapshot: Dictionary) -> void:
 @rpc("authority", "reliable")
 func _client_receive_world_event(event: Dictionary) -> void:
 	_emit_online_world_event_received(event.duplicate(true))
+
+@rpc("authority", "reliable")
+func _client_receive_ui_event(event: Dictionary) -> void:
+	_emit_online_ui_event_received(event.duplicate(true))
 
 @rpc("authority", "reliable")
 func _client_receive_level_transition(config: Dictionary) -> void:
