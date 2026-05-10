@@ -67,10 +67,16 @@ func _populate_map(minimap: Minimap) -> void:
 	var level_map: Array[int] = level_ref.map if level_ref.get("map") != null else []
 	var visited: Array[bool] = level_ref.visited if level_ref.get("visited") != null else []
 	var visible_cells: Array[bool] = level_ref.visible if level_ref.get("visible") != null else []
-	var hero_pos: int = GameManager.hero.pos if GameManager.hero != null else -1
+	var hero_ref: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+	var hero_pos: int = hero_ref.pos if hero_ref != null else -1
 	var mob_positions: Array[int] = []
+	var party_positions: Array[int] = []
 	if level_ref.has_method("get_mobs"):
 		for mob_ref: Variant in level_ref.get_mobs():
 			if mob_ref != null and is_instance_valid(mob_ref) and mob_ref.get("pos") != null:
 				mob_positions.append(int(mob_ref.pos))
-	minimap.update_map(level_map, visited, visible_cells, hero_pos, mob_positions)
+	if GameManager and GameManager.has_method("get_active_heroes"):
+		for party_hero: Node in GameManager.get_active_heroes():
+			if party_hero != null:
+				party_positions.append(int(party_hero.pos))
+	minimap.update_map(level_map, visited, visible_cells, hero_pos, mob_positions, party_positions)

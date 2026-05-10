@@ -15,6 +15,8 @@ signal depth_changed(new_depth: int)
 signal gold_changed(new_total: int)
 @warning_ignore("unused_signal")
 signal score_changed(new_score: int)
+@warning_ignore("unused_signal")
+signal local_hero_changed(hero_node: Node, hero_index: int)
 
 # --- Run State ---
 ## The currently active level (RefCounted, not a Node).
@@ -23,6 +25,13 @@ var current_level: Variant = null
 var hero: Node = null
 ## All active heroes (multiplayer-ready). hero == heroes[0] for single-player.
 var heroes: Array[Node] = []
+## Requested hero classes for the current/future party bootstrap.
+var party_classes: Array[int] = []
+## Which hero the local client/UI is currently focused on.
+## For single-player this stays at 0. In future co-op this becomes the local
+## controlled party member, while `hero` remains a backwards-compat alias.
+var local_hero_index: int = 0
+const MAX_PARTY_SIZE: int = 4
 ## Current dungeon depth (1-26). Depth 0 = surface/not in dungeon.
 var depth: int = 0
 ## Gold collected in this run.
@@ -75,6 +84,8 @@ func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: i
 	_cleanup_previous_run()
 
 	hero_class = chosen_class
+	if party_classes.is_empty():
+		set_party_classes([chosen_class])
 	hero_subclass = ConstantsData.HeroSubclass.NONE
 	depth = 0
 	gold = 0
@@ -105,6 +116,8 @@ func _cleanup_previous_run() -> void:
 			(h as Node).free()
 	heroes.clear()
 	hero = null
+	party_classes.clear()
+	local_hero_index = 0
 
 	# Free mobs cached in the level cache
 	if current_level != null and current_level.get("mobs") != null:
@@ -171,6 +184,203 @@ func _cache_current_level() -> void:
 				(mob as Node).free()
 		current_level.mobs.clear()
 
+# ---------------------------------------------------------------------------
+# Party Helpers
+# ---------------------------------------------------------------------------
+
+## Return the canonical primary hero.
+## This remains the compatibility path for single-player assumptions.
+func get_primary_hero() -> Node:
+	if hero != null and is_instance_valid(hero):
+		return hero
+	for candidate: Variant in heroes:
+		if candidate != null and is_instance_valid(candidate):
+			hero = candidate as Node
+			return hero
+	return null
+
+## Return the hero currently focused by the local client/UI.
+func get_focused_hero() -> Node:
+	if heroes.is_empty():
+		return get_primary_hero()
+	if local_hero_index < 0 or local_hero_index >= heroes.size():
+		local_hero_index = 0
+	var candidate: Variant = heroes[local_hero_index]
+	if candidate != null and is_instance_valid(candidate):
+		return candidate as Node
+	return get_primary_hero()
+
+## Backwards-compatible alias for the current local/focused hero.
+func get_local_hero() -> Node:
+	return get_focused_hero()
+
+## Return the hero currently owning the input/action phase.
+func get_input_hero() -> Node:
+	if TurnManager != null and TurnManager.has_method("get_input_hero"):
+		var input_hero: Node = TurnManager.get_input_hero()
+		if input_hero != null and is_instance_valid(input_hero):
+			return input_hero
+	return get_focused_hero()
+
+## Return all valid party heroes.
+func get_active_heroes() -> Array[Node]:
+	var valid: Array[Node] = []
+	for candidate: Variant in heroes:
+		if candidate != null and is_instance_valid(candidate):
+			valid.append(candidate as Node)
+	return valid
+
+func get_living_heroes() -> Array[Node]:
+	var living: Array[Node] = []
+	for candidate: Node in get_active_heroes():
+		if candidate.get("is_alive") == true:
+			living.append(candidate)
+	return living
+
+func get_local_owned_hero() -> Node:
+	if NetworkManager == null or not NetworkManager.has_method("is_online_session") or not NetworkManager.is_online_session():
+		return get_primary_hero()
+	var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
+	for candidate: Node in get_active_heroes():
+		if int(ConstantsData.get_prop(candidate, "owner_peer_id", -1)) == local_peer_id:
+			return candidate
+	return get_primary_hero()
+
+func is_local_player_spectating() -> bool:
+	var owned_hero: Node = get_local_owned_hero()
+	if owned_hero == null or owned_hero.get("is_alive") == true:
+		return false
+	var focused_hero: Node = get_focused_hero()
+	return focused_hero != null and focused_hero != owned_hero and focused_hero.get("is_alive") == true
+
+func are_all_heroes_dead() -> bool:
+	var party: Array[Node] = get_active_heroes()
+	if party.is_empty():
+		return true
+	for hero_node: Node in party:
+		if hero_node.get("is_alive") == true:
+			return false
+	return true
+
+func set_party_classes(classes: Array) -> void:
+	party_classes.clear()
+	for class_value: Variant in classes:
+		if party_classes.size() >= MAX_PARTY_SIZE:
+			break
+		if class_value == null:
+			continue
+		party_classes.append(int(class_value))
+	if party_classes.is_empty():
+		party_classes.append(hero_class)
+	hero_class = party_classes[0]
+
+func get_party_classes() -> Array[int]:
+	if party_classes.is_empty():
+		set_party_classes([hero_class])
+	return party_classes.duplicate()
+
+func create_party_heroes() -> Array[Node]:
+	var created: Array[Node] = []
+	var hero_script: GDScript = load("res://src/actors/hero/hero.gd") as GDScript
+	if hero_script == null:
+		return created
+	for class_id: int in get_party_classes():
+		var hero_node: Node = hero_script.new()
+		if hero_node.has_method("init_class"):
+			hero_node.init_class(class_id)
+		if hero_node.has_method("give_starting_items"):
+			hero_node.give_starting_items()
+		hero_node.set("pos", -1)
+		created.append(hero_node)
+	return created
+
+func replace_party(hero_nodes: Array) -> void:
+	for existing: Variant in heroes:
+		if existing != null and is_instance_valid(existing) and existing is Node:
+			(existing as Node).free()
+	heroes.clear()
+	hero = null
+	local_hero_index = 0
+	for hero_node: Variant in hero_nodes:
+		if hero_node is Node and is_instance_valid(hero_node):
+			add_hero(hero_node as Node)
+	hero = get_primary_hero()
+	if not party_classes.is_empty():
+		hero_class = party_classes[0]
+
+func get_hero_index(hero_node: Node) -> int:
+	if hero_node == null:
+		return -1
+	for idx: int in range(heroes.size()):
+		if heroes[idx] == hero_node:
+			return idx
+	return -1
+
+## Register a hero into the current party.
+## The first registered hero becomes the primary backwards-compatible hero.
+func add_hero(hero_node: Node) -> void:
+	if hero_node == null or not is_instance_valid(hero_node):
+		return
+	for existing: Variant in heroes:
+		if existing == hero_node:
+			if hero == null:
+				hero = hero_node
+			return
+	heroes.append(hero_node)
+	if hero == null:
+		hero = hero_node
+	if local_hero_index < 0:
+		local_hero_index = 0
+	if heroes.size() == 1:
+		local_hero_changed.emit(hero_node, 0)
+
+## Remove a hero from the current party and repair primary/local references.
+func remove_hero(hero_node: Node) -> void:
+	if hero_node == null:
+		return
+	for idx: int in range(heroes.size() - 1, -1, -1):
+		if heroes[idx] == hero_node:
+			heroes.remove_at(idx)
+	if hero == hero_node:
+		hero = null
+	if local_hero_index >= heroes.size():
+		local_hero_index = maxi(0, heroes.size() - 1)
+	hero = get_primary_hero()
+	local_hero_changed.emit(get_focused_hero(), local_hero_index)
+
+## Explicitly choose which party hero the local UI is focused on.
+func set_local_hero_index(index: int) -> void:
+	if heroes.is_empty():
+		local_hero_index = 0
+		return
+	var clamped_index: int = clampi(index, 0, heroes.size() - 1)
+	if local_hero_index == clamped_index:
+		return
+	local_hero_index = clamped_index
+	local_hero_changed.emit(get_focused_hero(), local_hero_index)
+
+func cycle_local_hero_focus(step: int = 1) -> void:
+	if heroes.is_empty():
+		return
+	var living_indices: Array[int] = []
+	for idx: int in range(heroes.size()):
+		var hero_node: Variant = heroes[idx]
+		if hero_node != null and is_instance_valid(hero_node) and hero_node.get("is_alive") == true:
+			living_indices.append(idx)
+	if living_indices.size() <= 1:
+		var next_index: int = posmod(local_hero_index + step, heroes.size())
+		set_local_hero_index(next_index)
+		return
+	var current_living_index: int = living_indices.find(local_hero_index)
+	if current_living_index < 0:
+		current_living_index = 0
+	var next_living_index: int = posmod(current_living_index + step, living_indices.size())
+	set_local_hero_index(living_indices[next_living_index])
+
+## Returns true if more than one hero is currently active in the party.
+func is_party_run() -> bool:
+	return get_active_heroes().size() > 1
+
 ## Check if a cached version of a level exists at the given depth.
 func has_cached_level(target_depth: int) -> bool:
 	return _level_cache.has(target_depth)
@@ -184,13 +394,16 @@ func get_cached_level(target_depth: int) -> Variant:
 # ---------------------------------------------------------------------------
 
 ## Add gold and emit signals.
-func add_gold(amount: int) -> void:
+func add_gold(amount: int, collector_hero: Variant = null) -> void:
 	gold += amount
 	gold_changed.emit(gold)
 	if EventBus:
 		EventBus.gold_collected.emit(amount, gold)
-	if amount > 0 and hero != null:
-		var belongings: Variant = hero.get("belongings")
+	var collector: Variant = collector_hero
+	if collector == null or not is_instance_valid(collector):
+		collector = get_primary_hero()
+	if amount > 0 and collector != null:
+		var belongings: Variant = collector.get("belongings")
 		var artifact: Variant = belongings.get_equipped_artifact() if belongings != null and belongings.has_method("get_equipped_artifact") else null
 		if artifact != null and artifact.has_method("on_gold_pickup"):
 			artifact.on_gold_pickup(amount)

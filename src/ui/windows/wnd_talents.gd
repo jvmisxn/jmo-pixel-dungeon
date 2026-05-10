@@ -17,7 +17,7 @@ func _ready() -> void:
 
 
 func _build_content() -> Control:
-	_hero = GameManager.hero if GameManager else null
+	_hero = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
 
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -121,7 +121,8 @@ func _build_talent_row(talent: TalentData.TalentInfo) -> Control:
 func _on_upgrade_pressed(talent_id: String) -> void:
 	if _hero == null:
 		return
-	_hero.upgrade_talent(talent_id)
+	if EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "upgrade_talent", "talent_id": talent_id})
 
 
 func _on_hero_stats_changed() -> void:

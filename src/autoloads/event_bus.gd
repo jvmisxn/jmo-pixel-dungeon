@@ -7,12 +7,21 @@ extends Node
 ## Emitted when the hero moves to a new cell. payload: new_pos (int)
 @warning_ignore("unused_signal")
 signal hero_moved(new_pos: int)
+## Emitted when any hero moves. payload: hero (Variant), new_pos (int)
+@warning_ignore("unused_signal")
+signal hero_moved_detailed(hero: Variant, new_pos: int)
 ## Emitted when the hero takes damage. payload: amount (int), source (Variant)
 @warning_ignore("unused_signal")
 signal hero_damaged(amount: int, source: Variant)
+## Emitted when any hero takes damage. payload: hero (Variant), amount (int), source (Variant)
+@warning_ignore("unused_signal")
+signal hero_damaged_detailed(hero: Variant, amount: int, source: Variant)
 ## Emitted when the hero's HP reaches zero.
 @warning_ignore("unused_signal")
 signal hero_died
+## Emitted when any hero dies. payload: hero (Variant)
+@warning_ignore("unused_signal")
+signal hero_died_detailed(hero: Variant)
 ## Emitted when the hero's stats change (HP, STR, EXP, etc.).
 @warning_ignore("unused_signal")
 signal hero_stats_changed
@@ -21,6 +30,9 @@ signal hero_stats_changed
 ## Emitted when any mob is defeated. payload: mob_pos (int), mob_name (String), mob_id (String)
 @warning_ignore("unused_signal")
 signal mob_defeated(mob_pos: int, mob_name: String, mob_id: String)
+## Emitted when any mob moves. payload: mob (Variant), new_pos (int)
+@warning_ignore("unused_signal")
+signal mob_moved_detailed(mob: Variant, new_pos: int)
 ## Emitted when a mob dies (passes the mob object for loot/effects).
 @warning_ignore("unused_signal")
 signal mob_died(mob: Variant)
@@ -104,6 +116,9 @@ signal seed_planted(pos: int, plant_type: String)
 ## Emitted when a plant activates. payload: pos (int), plant_name (String)
 @warning_ignore("unused_signal")
 signal plant_activated(pos: int, plant_name: String)
+## Emitted when a status effect/buff is applied or refreshed. payload: target (Variant), effect_id (String)
+@warning_ignore("unused_signal")
+signal status_effect_applied(target: Variant, effect_id: String)
 
 # --- Targeting ---
 ## Emitted to enter targeting mode (throw, zap). payload: item, max_range, callback
@@ -112,6 +127,9 @@ signal enter_targeting(item: Variant, max_range: int, callback: Callable)
 ## Emitted to cancel targeting mode.
 @warning_ignore("unused_signal")
 signal cancel_targeting
+## Emitted when UI wants GameScene to submit an action through the authoritative path.
+@warning_ignore("unused_signal")
+signal request_hero_action(action: Dictionary)
 
 # --- Boss Fight ---
 ## Emitted when a boss fight begins. Triggers boss HP bar display.

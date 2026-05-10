@@ -43,8 +43,8 @@ func _slot_label(slot_idx: int) -> String:
 	return "Slot %d: %s" % [slot_idx + 1, ConstantsData.get_prop(equipped, "item_name", "item")]
 
 func _assign_slot(slot_idx: int) -> void:
-	if _hero != null and _hero.belongings != null and _hero.belongings.has_method("set_quickslot"):
-		_hero.belongings.set_quickslot(slot_idx, _item)
+	if EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "set_quickslot", "slot_index": slot_idx, "item": _item})
 		if MessageLog:
 			MessageLog.add("Set %s to quickslot %d." % [ConstantsData.get_prop(_item, "item_name", "item"), slot_idx + 1])
 	close_window()
@@ -54,8 +54,8 @@ func _clear_assignment() -> void:
 		close_window()
 		return
 	var idx: int = _hero.belongings.get_quickslot_index(_item)
-	if idx >= 0 and _hero.belongings.has_method("clear_quickslot"):
-		_hero.belongings.clear_quickslot(idx)
+	if idx >= 0 and EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "clear_quickslot", "slot_index": idx})
 		if MessageLog:
 			MessageLog.add("Removed %s from quickslots." % ConstantsData.get_prop(_item, "item_name", "item"))
 	close_window()

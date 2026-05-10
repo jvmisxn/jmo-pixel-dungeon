@@ -487,7 +487,10 @@ class ChaliceOfBlood extends Artifact:
 				icon_color
 			)
 		if EventBus:
-			EventBus.hero_damaged.emit(prick_cost, self)
+			EventBus.hero_damaged_detailed.emit(hero, prick_cost, self)
+			var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+			if focused_hero == hero:
+				EventBus.hero_damaged.emit(prick_cost, self)
 			EventBus.hero_stats_changed.emit()
 		return true
 
@@ -876,7 +879,10 @@ class EtherealChains extends Artifact:
 			if MessageLog:
 				MessageLog.add("The ethereal chains pull you through the air!", icon_color)
 			if EventBus:
-				EventBus.hero_moved.emit(target_pos)
+				EventBus.hero_moved_detailed.emit(hero, target_pos)
+				var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+				if focused_hero == hero:
+					EventBus.hero_moved.emit(target_pos)
 				EventBus.item_used.emit(item_name)
 			return true
 		return false

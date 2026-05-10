@@ -54,8 +54,10 @@ func setup(p_level: Variant, is_dark: bool = false) -> void:
 func render_full() -> void:
 	if level == null or _fog_image == null:
 		return
-	if GameManager and GameManager.hero:
-		_hero_pos = GameManager.hero.pos
+	if GameManager:
+		var hero_ref: Variant = GameManager.get_local_hero() if GameManager.has_method("get_local_hero") else GameManager.hero
+		if hero_ref != null:
+			_hero_pos = hero_ref.pos
 	for pos: int in range(ConstantsData.LENGTH):
 		_set_fog_pixel(pos)
 	_fog_texture.update(_fog_image)
@@ -72,8 +74,10 @@ func update_visibility() -> void:
 		render_full()
 		return
 
-	if GameManager and GameManager.hero:
-		_hero_pos = GameManager.hero.pos
+	if GameManager:
+		var hero_ref: Variant = GameManager.get_local_hero() if GameManager.has_method("get_local_hero") else GameManager.hero
+		if hero_ref != null:
+			_hero_pos = hero_ref.pos
 
 	var changed: bool = false
 	for pos: int in range(ConstantsData.LENGTH):

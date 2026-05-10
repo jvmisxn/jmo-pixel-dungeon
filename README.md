@@ -2,11 +2,11 @@
 
 A Godot 4.5 port of **Shattered Pixel Dungeon**, built in GDScript.
 
-The project is already **playable** and has broad coverage across dungeon generation, combat, items, mobs, UI, quests, and progression. The current goal for **0.1.1** is to keep closing parity gaps, harden save/load and quest behavior, and make the codebase a safer base for future customization.
+The project is already **playable** and has broad coverage across dungeon generation, combat, items, mobs, UI, quests, and progression. The current goal for **0.1.2** is to begin the co-op groundwork while continuing to harden parity, save/load, and quest behavior so the codebase becomes a safer base for future customization.
 
 ## Status
 
-- Current milestone: `0.1.1`
+- Current milestone: `0.1.2`
 - Engine: `Godot 4.5`
 - Language: `GDScript`
 - Main scene: `res://src/scenes/main_scene.tscn`
@@ -100,7 +100,7 @@ The project is playable, but still has active work in areas like:
 
 ## Versioning
 
-Development is currently focused on **`0.1.1`**.
+Development is currently focused on **`0.1.2`**.
 
 ## License
 

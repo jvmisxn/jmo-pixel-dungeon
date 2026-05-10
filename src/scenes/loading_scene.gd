@@ -12,6 +12,9 @@ var _generation_started: bool = false
 var _generation_complete: bool = false
 var _transition_delay: float = 0.0
 var _chosen_class: int = ConstantsData.HeroClass.WARRIOR
+var _party_classes: Array[int] = []
+var _player_infos: Array[Dictionary] = []
+var _run_seed: int = -1
 var _is_continue: bool = false
 var _transition_type: String = "descend"  # "descend" or "ascend"
 
@@ -47,9 +50,24 @@ const REGION_FLAVOR: Dictionary = {
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
+	if NetworkManager and NetworkManager.has_signal("disconnected"):
+		NetworkManager.disconnected.connect(_on_network_disconnected)
 	# Read metadata set by the calling scene
 	if has_meta("chosen_class"):
 		_chosen_class = get_meta("chosen_class") as int
+	if has_meta("party_classes"):
+		var raw_party: Variant = get_meta("party_classes")
+		if raw_party is Array:
+			for class_id: Variant in raw_party:
+				_party_classes.append(int(class_id))
+	if has_meta("player_infos"):
+		var raw_players: Variant = get_meta("player_infos")
+		if raw_players is Array:
+			for entry: Variant in raw_players:
+				if entry is Dictionary:
+					_player_infos.append((entry as Dictionary).duplicate(true))
+	if has_meta("run_seed"):
+		_run_seed = int(get_meta("run_seed"))
 	if has_meta("is_continue"):
 		_is_continue = get_meta("is_continue") as bool
 	if has_meta("transition_type"):
@@ -79,6 +97,15 @@ func _process(delta: float) -> void:
 		_transition_delay += delta
 		if _transition_delay >= 0.5:
 			_transition_to_game()
+
+func _on_network_disconnected(reason: String) -> void:
+	if reason != "Disconnected from host.":
+		return
+	if MessageLog:
+		MessageLog.add_warning("Lost connection to host during loading.")
+	var title_script: GDScript = load("res://src/scenes/title_scene.gd") as GDScript
+	if title_script:
+		SceneManager.go_to(title_script, "TitleScene")
 
 # ---------------------------------------------------------------------------
 # UI Construction
@@ -182,6 +209,8 @@ void fragment() {
 func _perform_generation() -> void:
 	if _is_continue:
 		# For continue, the GameManager already has state loaded
+		if _party_classes.is_empty() and GameManager and GameManager.has_method("get_party_classes"):
+			_party_classes = GameManager.get_party_classes()
 		# Just generate the level for current depth
 		_generate_current_level()
 	else:
@@ -194,20 +223,14 @@ func _perform_generation() -> void:
 		# Reset quest state for the new run
 		QuestHandler.reset()
 
-		GameManager.new_game(_chosen_class)
+		GameManager.new_game(_chosen_class, _run_seed)
+		if _party_classes.is_empty():
+			_party_classes = [_chosen_class]
+		GameManager.set_party_classes(_party_classes)
 
-		# Create hero
-		var hero_scene: GDScript = load("res://src/actors/hero/hero.gd") as GDScript
-		if hero_scene:
-			var hero: Node = hero_scene.new()
-			if hero.has_method("init_class"):
-				hero.init_class(GameManager.hero_class)
-			# Give starting items based on class
-			if hero.has_method("give_starting_items"):
-				hero.give_starting_items()
-			hero.set("pos", -1)
-			GameManager.hero = hero
-			GameManager.heroes = [hero]
+		# Create party heroes
+		GameManager.replace_party(GameManager.create_party_heroes())
+		_apply_online_party_assignments()
 
 		_generate_current_level()
 
@@ -269,14 +292,11 @@ func _generate_current_level() -> void:
 						keeper.pos = shop_pos
 						level.add_mob(keeper)
 
-		# Place hero at the correct staircase:
-		# - Descending (or new game): hero appears at entrance (stairs up)
-		# - Ascending: hero appears at exit (stairs down, where they came from)
-		if GameManager.hero:
-			if _transition_type == "ascend" and level.exit_pos >= 0:
-				GameManager.hero.set("pos", level.exit_pos)
-			elif level.entrance >= 0:
-				GameManager.hero.set("pos", level.entrance)
+		# Place party at the correct staircase:
+		# - Descending (or new game): appear at entrance (stairs up)
+		# - Ascending: appear at exit (stairs down, where they came from)
+		var anchor_pos: int = level.exit_pos if _transition_type == "ascend" and level.exit_pos >= 0 else level.entrance
+		_assign_party_positions(level, anchor_pos)
 	else:
 		# Level already loaded from save — just ensure hero references are set
 		if GameManager.hero:
@@ -285,6 +305,77 @@ func _generate_current_level() -> void:
 			if h is Node:
 				h.level = level
 
+func _apply_online_party_assignments() -> void:
+	if _player_infos.is_empty() or GameManager == null:
+		return
+	var local_peer_id: int = multiplayer.get_unique_id() if multiplayer != null and multiplayer.has_multiplayer_peer() else 1
+	for idx: int in range(mini(GameManager.heroes.size(), _player_infos.size())):
+		var hero_node: Variant = GameManager.heroes[idx]
+		if hero_node == null or not (hero_node is Node):
+			continue
+		var player_info: Dictionary = _player_infos[idx]
+		var player_name: String = str(player_info.get("name", "Player %d" % (idx + 1)))
+		hero_node.set("hero_name", player_name)
+		hero_node.set("owner_peer_id", int(player_info.get("peer_id", 1)))
+		hero_node.set("hero_slot_index", idx)
+		hero_node.name = player_name
+		if int(player_info.get("peer_id", -1)) == local_peer_id and GameManager.has_method("set_local_hero_index"):
+			GameManager.set_local_hero_index(idx)
+
+func _assign_party_positions(level: Level, anchor_pos: int) -> void:
+	if level == null or anchor_pos < 0:
+		return
+	var party: Array[Node] = GameManager.get_active_heroes() if GameManager and GameManager.has_method("get_active_heroes") else []
+	if party.is_empty():
+		return
+	var spawn_positions: Array[int] = _find_party_spawn_positions(level, anchor_pos, party.size())
+	for idx: int in range(mini(party.size(), spawn_positions.size())):
+		party[idx].set("pos", spawn_positions[idx])
+
+func _find_party_spawn_positions(level: Level, anchor_pos: int, party_size: int) -> Array[int]:
+	var found: Array[int] = []
+	var queue: Array[int] = [anchor_pos]
+	var visited: Dictionary[int, bool] = {anchor_pos: true}
+	while not queue.is_empty() and found.size() < party_size:
+		var pos: int = queue.pop_front()
+		if _can_spawn_party_member(level, pos, found):
+			found.append(pos)
+		for next_pos: int in _get_adjacent_spawn_cells(pos):
+			if visited.has(next_pos):
+				continue
+			visited[next_pos] = true
+			if level.passable[next_pos]:
+				queue.append(next_pos)
+	if found.is_empty():
+		found.append(anchor_pos)
+	return found
+
+func _get_adjacent_spawn_cells(pos: int) -> Array[int]:
+	var neighbors: Array[int] = []
+	var x: int = ConstantsData.pos_to_x(pos)
+	var y: int = ConstantsData.pos_to_y(pos)
+	for oy: int in range(-1, 2):
+		for ox: int in range(-1, 2):
+			if ox == 0 and oy == 0:
+				continue
+			var nx: int = x + ox
+			var ny: int = y + oy
+			if nx < 0 or nx >= ConstantsData.WIDTH or ny < 0 or ny >= ConstantsData.HEIGHT:
+				continue
+			neighbors.append(ConstantsData.xy_to_pos(nx, ny))
+	return neighbors
+
+func _can_spawn_party_member(level: Level, pos: int, reserved_positions: Array[int]) -> bool:
+	if not ConstantsData.is_valid_pos(pos):
+		return false
+	if reserved_positions.has(pos):
+		return false
+	if not level.passable[pos] and pos != level.entrance and pos != level.exit_pos:
+		return false
+	if level.has_method("find_char_at") and level.find_char_at(pos) != null:
+		return false
+	return true
+
 # ---------------------------------------------------------------------------
 # Transition
 # ---------------------------------------------------------------------------
@@ -292,23 +383,25 @@ func _generate_current_level() -> void:
 func _transition_to_game() -> void:
 	# --- Register actors with TurnManager ---
 	TurnManager.clear_actors()
-
-	# Register hero(es)
-	if GameManager.hero:
-		GameManager.hero.active = false
-		GameManager.hero.activate()
-	for h in GameManager.heroes:
-		if h is Node and h != GameManager.hero:
-			h.active = false
-			h.activate()
-
-	# Register mobs
+	var online_client: bool = NetworkManager != null and NetworkManager.has_method("is_client") and NetworkManager.is_client()
 	var level: Level = GameManager.current_level
-	if level:
-		for mob: Variant in level.mobs:
-			if mob is Node:
-				mob.active = false
-				mob.activate()
+
+	if not online_client:
+		# Register hero(es)
+		if GameManager.hero:
+			GameManager.hero.active = false
+			GameManager.hero.activate()
+		for h in GameManager.heroes:
+			if h is Node and h != GameManager.hero:
+				h.active = false
+				h.activate()
+
+		# Register mobs
+		if level:
+			for mob: Variant in level.mobs:
+				if mob is Node:
+					mob.active = false
+					mob.activate()
 
 	# --- Create and show the GameScene ---
 	var game_script: GDScript = load("res://src/scenes/game_scene.gd") as GDScript

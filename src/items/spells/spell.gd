@@ -75,7 +75,10 @@ func _cast_phase_shift(hero: Char) -> void:
 				if MessageLog:
 					MessageLog.add_positive("You teleport to a new location!")
 				if EventBus:
-					EventBus.hero_moved.emit(new_pos)
+					EventBus.hero_moved_detailed.emit(hero, new_pos)
+					var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+					if focused_hero == hero:
+						EventBus.hero_moved.emit(new_pos)
 				return
 	if MessageLog:
 		MessageLog.add("The spell fizzles... nowhere to go.")

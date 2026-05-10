@@ -391,6 +391,8 @@ func add_buff(buff_node: Node) -> Node:
 				if buff_node.has_method("get_duration"):
 					existing.set_duration(buff_node.get_duration())
 			buff_node.queue_free()
+			if EventBus and EventBus.has_signal("status_effect_applied"):
+				EventBus.status_effect_applied.emit(self, buff_type)
 			return existing
 
 	# New buff
@@ -399,6 +401,8 @@ func add_buff(buff_node: Node) -> Node:
 	if buff_node.has_method("attach"):
 		buff_node.attach(self)
 	buff_added.emit(buff_node)
+	if EventBus and EventBus.has_signal("status_effect_applied"):
+		EventBus.status_effect_applied.emit(self, buff_type)
 	return buff_node
 
 ## Remove a specific buff instance.

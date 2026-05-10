@@ -28,6 +28,7 @@ func save_full_game() -> bool:
 	data["game_manager"] = _serialize_game_manager()
 
 	# --- Hero state ---
+	data["heroes"] = _serialize_heroes()
 	data["hero"] = _serialize_hero()
 
 	# --- Current level state ---
@@ -100,8 +101,18 @@ func load_full_game() -> bool:
 	# --- Restore current level ---
 	_deserialize_current_level(save.get("current_level", {}))
 
-	# --- Restore hero ---
-	_deserialize_hero(save.get("hero", {}))
+	# --- Restore hero / party ---
+	var heroes_data: Variant = save.get("heroes", [])
+	if heroes_data is Array and not heroes_data.is_empty():
+		_deserialize_heroes(heroes_data)
+	else:
+		_deserialize_hero(save.get("hero", {}))
+
+	# Reattach restored heroes to the current level.
+	if GameManager.current_level != null:
+		for hero_node: Variant in GameManager.heroes:
+			if hero_node != null and hero_node is Node:
+				hero_node.set("level", GameManager.current_level)
 
 	if EventBus:
 		EventBus.game_loaded.emit()
@@ -133,6 +144,8 @@ func _serialize_game_manager() -> Dictionary:
 		"score": GameManager.score,
 		"hero_class": GameManager.hero_class,
 		"hero_subclass": GameManager.hero_subclass,
+		"party_classes": GameManager.get_party_classes() if GameManager.has_method("get_party_classes") else [GameManager.hero_class],
+		"local_hero_index": GameManager.local_hero_index,
 		"run_active": GameManager.run_active,
 		"stats": GameManager.stats.duplicate(true),
 		"item_appearance": ItemAppearance.serialize() if ItemAppearance else {},
@@ -148,6 +161,9 @@ func _deserialize_game_manager(data: Dictionary) -> void:
 	GameManager.score = data.get("score", 0)
 	GameManager.hero_class = data.get("hero_class", ConstantsData.HeroClass.WARRIOR)
 	GameManager.hero_subclass = data.get("hero_subclass", ConstantsData.HeroSubclass.NONE)
+	if GameManager.has_method("set_party_classes"):
+		GameManager.set_party_classes(data.get("party_classes", [GameManager.hero_class]))
+	GameManager.local_hero_index = int(data.get("local_hero_index", 0))
 	GameManager.run_active = data.get("run_active", false)
 	GameManager.stats = data.get("stats", {})
 	if ItemAppearance:
@@ -170,9 +186,26 @@ func _serialize_hero() -> Dictionary:
 	return {}
 
 
+func _serialize_heroes() -> Array[Dictionary]:
+	if GameManager == null:
+		return []
+	var heroes_data: Array[Dictionary] = []
+	var party: Array[Node] = GameManager.get_active_heroes() if GameManager.has_method("get_active_heroes") else GameManager.heroes
+	for hero_node: Variant in party:
+		if hero_node != null and hero_node.has_method("serialize"):
+			heroes_data.append(hero_node.serialize())
+	return heroes_data
+
+
 func _deserialize_hero(data: Dictionary) -> void:
 	if GameManager == null or data.is_empty():
 		return
+	for existing: Variant in GameManager.heroes:
+		if existing != null and is_instance_valid(existing) and existing is Node:
+			(existing as Node).free()
+	GameManager.heroes.clear()
+	GameManager.hero = null
+	GameManager.local_hero_index = 0
 	# Create hero if needed (cold start from saved game)
 	if GameManager.hero == null:
 		var hero_script: GDScript = load("res://src/actors/hero/hero.gd") as GDScript
@@ -182,6 +215,40 @@ func _deserialize_hero(data: Dictionary) -> void:
 			GameManager.heroes = [hero]
 	if GameManager.hero != null and GameManager.hero.has_method("deserialize"):
 		GameManager.hero.deserialize(data)
+		if GameManager.has_method("set_party_classes"):
+			GameManager.set_party_classes([GameManager.hero.get("hero_class")])
+
+
+func _deserialize_heroes(data: Array) -> void:
+	if GameManager == null or data.is_empty():
+		return
+
+	var hero_script: GDScript = load("res://src/actors/hero/hero.gd") as GDScript
+	if hero_script == null:
+		return
+
+	for existing: Variant in GameManager.heroes:
+		if existing != null and is_instance_valid(existing) and existing is Node:
+			(existing as Node).free()
+	GameManager.heroes.clear()
+	GameManager.hero = null
+
+	for hero_data: Variant in data:
+		if not hero_data is Dictionary:
+			continue
+		var hero_node: Node = hero_script.new()
+		if hero_node.has_method("deserialize"):
+			hero_node.deserialize(hero_data)
+		if GameManager.has_method("add_hero"):
+			GameManager.add_hero(hero_node)
+		else:
+			GameManager.heroes.append(hero_node)
+
+	GameManager.hero = GameManager.get_primary_hero() if GameManager.has_method("get_primary_hero") else (GameManager.heroes[0] if not GameManager.heroes.is_empty() else null)
+	if not GameManager.heroes.is_empty():
+		GameManager.local_hero_index = clampi(GameManager.local_hero_index, 0, GameManager.heroes.size() - 1)
+	else:
+		GameManager.local_hero_index = 0
 
 
 # ---------------------------------------------------------------------------

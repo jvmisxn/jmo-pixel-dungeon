@@ -393,6 +393,8 @@ func on_move(old_pos: int, new_pos: int) -> void:
 	did_visible_action = true
 	last_visible_action = "move"
 	last_visible_target_pos = new_pos
+	if EventBus and EventBus.has_signal("mob_moved_detailed"):
+		EventBus.mob_moved_detailed.emit(self, new_pos)
 	# Check if the mob stepped onto a closed door — open it
 	if level:
 		var terrain: int = level.terrain_at(new_pos)
@@ -406,7 +408,10 @@ func on_attack_hit(target_char: Char, damage: int) -> void:
 	last_visible_action = "attack"
 	last_visible_target_pos = target_char.pos if target_char != null else -1
 	if target_char.is_hero and EventBus:
-		EventBus.hero_damaged.emit(damage, self)
+		EventBus.hero_damaged_detailed.emit(target_char, damage, self)
+		var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+		if focused_hero == target_char:
+			EventBus.hero_damaged.emit(damage, self)
 
 func on_attack_miss(target_char: Char) -> void:
 	did_visible_action = true
@@ -509,6 +514,8 @@ func serialize() -> Dictionary:
 	data["max_level"] = max_level
 	data["awareness"] = awareness
 	data["aggro_range"] = aggro_range
+	data["last_visible_action"] = last_visible_action
+	data["last_visible_target_pos"] = last_visible_target_pos
 	data["buffs"] = _serialize_buffs()
 	return data
 
@@ -540,4 +547,6 @@ func deserialize(data: Dictionary) -> void:
 	max_level = int(data.get("max_level", max_level))
 	awareness = float(data.get("awareness", awareness))
 	aggro_range = int(data.get("aggro_range", aggro_range))
+	last_visible_action = str(data.get("last_visible_action", ""))
+	last_visible_target_pos = int(data.get("last_visible_target_pos", -1))
 	_deserialize_buffs(data.get("buffs", []))

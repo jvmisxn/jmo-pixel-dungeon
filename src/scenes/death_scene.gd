@@ -352,8 +352,9 @@ func _on_menu_pressed() -> void:
 
 
 func _on_try_again_pressed() -> void:
-	var hero_select_script: GDScript = preload("res://src/scenes/hero_select_scene.gd")
-	SceneManager.go_to(hero_select_script, "HeroSelectScene")
+	var hero_select_script: GDScript = load("res://src/scenes/hero_select_scene.gd") as GDScript
+	if hero_select_script:
+		SceneManager.go_to(hero_select_script, "HeroSelectScene")
 
 
 func _on_rankings_pressed() -> void:

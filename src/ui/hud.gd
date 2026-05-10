@@ -17,19 +17,65 @@ var toolbar: MarginContainer = null
 var window_layer: Control = null
 
 # --- Sub-components ---
-var _status_pane: StatusPane = null
-var _toolbar_bar: Toolbar = null
-var _game_log_display: GameLogDisplay = null
-var _boss_hp_bar: BossHPBar = null
-var _minimap: Minimap = null
+var _status_pane: Variant = null
+var _toolbar_bar: Variant = null
+var _game_log_display: Variant = null
+var _boss_hp_bar: Variant = null
+var _minimap: Variant = null
+var _party_row: HBoxContainer = null
+var _online_state_label: Label = null
 
 # --- Active popup window ---
 var _active_window: Control = null
 # Track sub-windows so they can be cleaned up properly
-var _sub_windows: Array[WndBase] = []
+var _sub_windows: Array[Variant] = []
 
 # --- Viewport size cache ---
 var _vp_size: Vector2 = Vector2(1280, 720)
+
+func _get_local_hero() -> Variant:
+	if GameManager == null:
+		return null
+	return GameManager.get_local_hero() if GameManager.has_method("get_local_hero") else GameManager.hero
+
+func _get_input_hero() -> Variant:
+	if GameManager == null:
+		return null
+	return GameManager.get_input_hero() if GameManager.has_method("get_input_hero") else _get_local_hero()
+
+func _get_local_owned_hero() -> Variant:
+	if GameManager == null:
+		return _get_local_hero()
+	return GameManager.get_local_owned_hero() if GameManager.has_method("get_local_owned_hero") else _get_local_hero()
+
+func _can_use_local_action_controls() -> bool:
+	if NetworkManager == null or not NetworkManager.has_method("is_online_session") or not NetworkManager.is_online_session():
+		return true
+	var input_hero: Variant = _get_input_hero()
+	var local_owned_hero: Variant = _get_local_owned_hero()
+	if input_hero == null or local_owned_hero == null:
+		return false
+	return input_hero == local_owned_hero and input_hero.get("is_alive") == true
+
+func _get_hero_identity(hero_node: Variant) -> String:
+	if hero_node == null:
+		return "Hero"
+	var slot_index: int = int(ConstantsData.get_prop(hero_node, "hero_slot_index", 0))
+	var hero_name: String = str(ConstantsData.get_prop(hero_node, "hero_name", "")).strip_edges()
+	if hero_name.is_empty():
+		hero_name = HeroClassData.get_class_name_str(int(ConstantsData.get_prop(hero_node, "hero_class", ConstantsData.HeroClass.WARRIOR)))
+	return "P%d %s" % [slot_index + 1, hero_name]
+
+func _get_hero_class_short(hero_node: Variant) -> String:
+	if hero_node == null:
+		return "Hero"
+	return HeroClassData.get_class_name_str(int(ConstantsData.get_prop(hero_node, "hero_class", ConstantsData.HeroClass.WARRIOR))).left(3)
+
+func _instantiate_script(path: String) -> Variant:
+	var script: GDScript = load(path) as GDScript
+	if script == null:
+		return null
+	return script.new()
 
 
 func _ready() -> void:
@@ -67,7 +113,7 @@ func _build_layout() -> void:
 	status_style.content_margin_top = 4.0
 	status_style.content_margin_bottom = 4.0
 	status_container.add_theme_stylebox_override("panel", status_style)
-	_status_pane = StatusPane.new()
+	_status_pane = _instantiate_script("res://src/ui/status_pane.gd")
 	status_container.add_child(_status_pane)
 	root.add_child(status_container)
 
@@ -89,7 +135,7 @@ func _build_layout() -> void:
 	log_style.content_margin_top = 2.0
 	log_style.content_margin_bottom = 2.0
 	log_panel.add_theme_stylebox_override("panel", log_style)
-	_game_log_display = GameLogDisplay.new()
+	_game_log_display = _instantiate_script("res://src/ui/game_log_display.gd")
 	_game_log_display.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	log_panel.add_child(_game_log_display)
 	log_container.add_child(log_panel)
@@ -112,7 +158,7 @@ func _build_layout() -> void:
 	toolbar_style.content_margin_top = 2.0
 	toolbar_style.content_margin_bottom = 2.0
 	toolbar_panel.add_theme_stylebox_override("panel", toolbar_style)
-	_toolbar_bar = Toolbar.new()
+	_toolbar_bar = _instantiate_script("res://src/ui/toolbar.gd")
 	toolbar_panel.add_child(_toolbar_bar)
 	toolbar.add_child(toolbar_panel)
 	root.add_child(toolbar)
@@ -147,8 +193,31 @@ func _build_layout() -> void:
 
 	root.add_child(info_row)
 
+	# --- Party Row (top-center, hidden in solo play) ---
+	_party_row = HBoxContainer.new()
+	_party_row.name = "PartyRow"
+	_party_row.add_theme_constant_override("separation", 6)
+	_party_row.position = Vector2(250, HUD_MARGIN)
+	_party_row.mouse_filter = Control.MOUSE_FILTER_STOP
+	_party_row.visible = false
+	root.add_child(_party_row)
+
+	# --- Online State Label (top-center, below party row) ---
+	_online_state_label = Label.new()
+	_online_state_label.name = "OnlineStateLabel"
+	_online_state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_online_state_label.add_theme_font_size_override("font_size", 12)
+	_online_state_label.add_theme_color_override("font_color", Color(0.82, 0.9, 1.0))
+	_online_state_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.8))
+	_online_state_label.add_theme_constant_override("shadow_offset_x", 1)
+	_online_state_label.add_theme_constant_override("shadow_offset_y", 1)
+	_online_state_label.position = Vector2(330, HUD_MARGIN + 38)
+	_online_state_label.custom_minimum_size = Vector2(620, 20)
+	_online_state_label.visible = false
+	root.add_child(_online_state_label)
+
 	# --- Minimap (top-right corner, below info row) ---
-	_minimap = Minimap.new()
+	_minimap = _instantiate_script("res://src/ui/minimap.gd")
 	_minimap.position = Vector2(_vp_size.x - 74, 28)
 	_minimap.custom_minimum_size = Vector2(64, 64)
 	_minimap.size = Vector2(64, 64)
@@ -163,7 +232,7 @@ func _build_layout() -> void:
 	root.add_child(window_layer)
 
 	# --- Boss HP Bar (separate CanvasLayer, above HUD) ---
-	_boss_hp_bar = BossHPBar.new()
+	_boss_hp_bar = _instantiate_script("res://src/ui/boss_hp_bar.gd")
 	_boss_hp_bar.name = "BossHPBar"
 	add_child(_boss_hp_bar)
 
@@ -187,6 +256,10 @@ func _connect_signals() -> void:
 		_toolbar_bar.rest_pressed.connect(_on_rest_pressed)
 		_toolbar_bar.settings_pressed.connect(_on_settings_pressed)
 		_toolbar_bar.quickslot_used.connect(_on_quickslot_used)
+	if GameManager and GameManager.has_signal("local_hero_changed"):
+		GameManager.local_hero_changed.connect(_on_local_hero_changed)
+	if TurnManager and TurnManager.has_signal("input_actor_changed"):
+		TurnManager.input_actor_changed.connect(_on_input_actor_changed)
 
 
 # --- Public API ---
@@ -197,18 +270,18 @@ func show_window(window_node: Control) -> void:
 	_active_window = window_node
 	_sub_windows.clear()
 	# Listen for sub-window requests ("signal up" pattern — avoids get_parent())
-	if window_node is WndBase:
-		var wnd: WndBase = window_node as WndBase
+	if window_node.has_signal("open_sub_window"):
+		var wnd: Variant = window_node
 		wnd.open_sub_window.connect(_on_sub_window_requested)
-		# Listen for the window closing itself (X button, Escape) so HUD can clean up
-		wnd.window_closed.connect(_on_active_window_self_closed)
+		if wnd.has_signal("window_closed"):
+			wnd.window_closed.connect(_on_active_window_self_closed)
 	window_layer.add_child(window_node)
 	window_layer.visible = true
 	window_layer.mouse_filter = Control.MOUSE_FILTER_STOP
 
 
 ## Handle sub-window open requests from active windows.
-func _on_sub_window_requested(wnd: WndBase) -> void:
+func _on_sub_window_requested(wnd: Variant) -> void:
 	# Also wire up the sub-window's own sub-window signal
 	wnd.open_sub_window.connect(_on_sub_window_requested)
 	_sub_windows.append(wnd)
@@ -220,7 +293,7 @@ func _on_sub_window_requested(wnd: WndBase) -> void:
 func _on_active_window_self_closed() -> void:
 	# The window will queue_free itself and its overlay via _finish_close().
 	# We just need to reset HUD tracking state.
-	for sub_wnd: WndBase in _sub_windows:
+	for sub_wnd: Variant in _sub_windows:
 		if is_instance_valid(sub_wnd):
 			sub_wnd.queue_free()
 	_sub_windows.clear()
@@ -232,7 +305,7 @@ func _on_active_window_self_closed() -> void:
 ## Close the active popup window and all sub-windows.
 func close_window() -> void:
 	# Clean up tracked sub-windows first
-	for sub_wnd: WndBase in _sub_windows:
+	for sub_wnd: Variant in _sub_windows:
 		if is_instance_valid(sub_wnd):
 			sub_wnd.queue_free()
 	_sub_windows.clear()
@@ -247,6 +320,9 @@ func close_window() -> void:
 func update_all() -> void:
 	_update_info_row()
 	_refresh_quickslots()
+	_refresh_party_row()
+	_refresh_online_state()
+	_refresh_action_controls()
 	if _status_pane:
 		_status_pane.update_all()
 	if _game_log_display:
@@ -304,8 +380,15 @@ func _on_level_changed(_new_depth: int) -> void:
 		var level_map: Array[int] = lvl.map if lvl.get("map") != null else []
 		var visited: Array[bool] = lvl.visited if lvl.get("visited") != null else []
 		var visible_cells: Array[bool] = lvl.visible if lvl.get("visible") != null else []
-		var hero_pos: int = GameManager.hero.pos if GameManager.get("hero") != null else -1
-		_minimap.update_map(level_map, visited, visible_cells, hero_pos)
+		var hero_ref: Variant = _get_local_hero()
+		var hero_pos: int = hero_ref.pos if hero_ref != null else -1
+		var mob_positions: Array[int] = []
+		var party_positions: Array[int] = []
+		if GameManager.has_method("get_active_heroes"):
+			for party_hero: Node in GameManager.get_active_heroes():
+				if party_hero != null:
+					party_positions.append(int(party_hero.pos))
+		_minimap.update_map(level_map, visited, visible_cells, hero_pos, mob_positions, party_positions)
 
 
 func _on_gold_collected(_amount: int, _total: int) -> void:
@@ -335,19 +418,108 @@ func _on_show_window_requested(window: Variant) -> void:
 	if window is Control:
 		show_window(window as Control)
 
+func _on_local_hero_changed(_hero_node: Node, _hero_index: int) -> void:
+	update_all()
+
+func _on_input_actor_changed(_hero_node: Variant) -> void:
+	update_all()
+
+func _refresh_online_state() -> void:
+	if _online_state_label == null:
+		return
+	if NetworkManager == null or not NetworkManager.has_method("is_online_session") or not NetworkManager.is_online_session():
+		_online_state_label.visible = false
+		return
+	var local_hero: Variant = _get_local_hero()
+	var local_owned_hero: Variant = _get_local_owned_hero()
+	var input_hero: Variant = _get_input_hero()
+	var state_text: String = ""
+	var state_color: Color = Color(0.82, 0.9, 1.0)
+	if GameManager != null and GameManager.has_method("is_local_player_spectating") and GameManager.is_local_player_spectating():
+		state_text = "Spectating %s" % _get_hero_identity(local_hero)
+		state_color = Color(0.9, 0.82, 0.62)
+	elif local_hero == null:
+		state_text = "Waiting for party state..."
+	elif input_hero != null and input_hero == local_hero:
+		state_text = "Your turn: %s" % _get_hero_identity(local_hero)
+		state_color = Color(0.72, 1.0, 0.72)
+	else:
+		var waiting_name: String = ""
+		if input_hero != null:
+			waiting_name = _get_hero_identity(input_hero)
+		state_text = "Waiting for %s" % (waiting_name if not waiting_name.is_empty() else "another player")
+		if local_owned_hero != null and local_owned_hero != local_hero and local_hero != null:
+			state_text += "  |  Focus: %s" % _get_hero_identity(local_hero)
+		state_color = Color(0.82, 0.9, 1.0)
+	_online_state_label.text = state_text
+	_online_state_label.add_theme_color_override("font_color", state_color)
+	_online_state_label.visible = not state_text.is_empty()
+
+func _refresh_party_row() -> void:
+	if _party_row == null or GameManager == null:
+		return
+	for child: Node in _party_row.get_children():
+		child.queue_free()
+	var heroes: Array[Node] = GameManager.get_active_heroes() if GameManager.has_method("get_active_heroes") else []
+	if heroes.size() <= 1:
+		_party_row.visible = false
+		return
+	_party_row.visible = true
+	var focused_hero: Variant = _get_local_hero()
+	var local_owned_hero: Variant = _get_local_owned_hero()
+	var input_hero: Variant = _get_input_hero()
+	for idx: int in range(heroes.size()):
+		var hero_ref: Node = heroes[idx]
+		if hero_ref == null:
+			continue
+		var btn: Button = Button.new()
+		btn.custom_minimum_size = Vector2(104, 34)
+		btn.clip_text = true
+		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		var is_alive: bool = hero_ref.get("is_alive") == true
+		var marker: String = ">" if hero_ref == input_hero else " "
+		var owner_suffix: String = " YOU" if hero_ref == local_owned_hero else ""
+		var focus_prefix: String = "*" if hero_ref == focused_hero else " "
+		var status_suffix: String = " DEAD" if not is_alive else ""
+		btn.text = "%s%s %s %d/%d%s%s" % [focus_prefix, marker, _get_hero_class_short(hero_ref), int(hero_ref.hp), int(hero_ref.hp_max), status_suffix, owner_suffix]
+		btn.tooltip_text = ("%s " % ("Spectate" if not is_alive else "Focus")) + _get_hero_identity(hero_ref)
+		btn.disabled = not is_alive
+		if hero_ref == focused_hero:
+			btn.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		elif hero_ref == local_owned_hero:
+			btn.modulate = Color(1.0, 0.92, 0.72, 0.96) if is_alive else Color(0.66, 0.56, 0.46, 0.82)
+		else:
+			btn.modulate = Color(0.82, 0.82, 0.88, 0.92) if is_alive else Color(0.58, 0.58, 0.62, 0.82)
+		if is_alive:
+			btn.pressed.connect(_on_party_focus_pressed.bind(idx))
+		_party_row.add_child(btn)
+
+func _refresh_action_controls() -> void:
+	if _toolbar_bar == null or not _toolbar_bar.has_method("set_action_controls_enabled"):
+		return
+	_toolbar_bar.set_action_controls_enabled(_can_use_local_action_controls())
+
+func _on_party_focus_pressed(hero_index: int) -> void:
+	if GameManager and GameManager.has_method("set_local_hero_index"):
+		GameManager.set_local_hero_index(hero_index)
+
 
 # --- Toolbar Signal Handlers ---
 
 func _on_inventory_pressed() -> void:
-	var wnd: WndBase = WndInventory.new()
+	if not _can_use_local_action_controls():
+		if MessageLog:
+			MessageLog.add_warning("Wait for your hero's turn to manage actions.")
+		return
+	var wnd: Variant = _instantiate_script("res://src/ui/windows/wnd_inventory.gd")
 	show_window(wnd)
 
 
 func _on_map_pressed() -> void:
-	if has_active_window() and _active_window is WndMap:
+	if has_active_window() and _active_window != null and _active_window.get_script() != null and str(_active_window.get_script().resource_path).ends_with("wnd_map.gd"):
 		close_window()
 		return
-	var wnd: WndBase = WndMap.new()
+	var wnd: Variant = _instantiate_script("res://src/ui/windows/wnd_map.gd")
 	show_window(wnd)
 
 
@@ -357,7 +529,12 @@ func _on_wait_pressed() -> void:
 
 
 func _on_rest_pressed() -> void:
-	if GameManager == null or GameManager.hero == null or TurnManager == null:
+	if not _can_use_local_action_controls():
+		if MessageLog:
+			MessageLog.add_warning("Wait for your hero's turn.")
+		return
+	var hero_ref: Variant = _get_local_hero()
+	if GameManager == null or hero_ref == null or TurnManager == null:
 		return
 	if not TurnManager.waiting_for_input or TurnManager.processing_mobs:
 		return
@@ -365,8 +542,8 @@ func _on_rest_pressed() -> void:
 		if MessageLog:
 			MessageLog.add_warning("You can't rest while enemies are in view.")
 		return
-	if GameManager.hero.has_method("rest"):
-		GameManager.hero.rest(true)
+	if hero_ref.has_method("rest"):
+		hero_ref.rest(true)
 
 
 func _on_search_pressed() -> void:
@@ -389,35 +566,43 @@ func _visible_enemy_present() -> bool:
 
 
 func _on_settings_pressed() -> void:
-	var wnd: WndBase = WndSettings.new()
+	var wnd: Variant = _instantiate_script("res://src/ui/windows/wnd_settings.gd")
 	show_window(wnd)
 
 
 func _on_quickslot_used(_slot_index: int, item: RefCounted) -> void:
-	if GameManager == null or GameManager.hero == null or item == null:
+	if not _can_use_local_action_controls():
+		if MessageLog:
+			MessageLog.add_warning("Wait for your hero's turn to use quickslots.")
 		return
-	if item is Wand:
-		var wand: Wand = item as Wand
+	var hero_ref: Variant = _get_local_hero()
+	if GameManager == null or hero_ref == null or item == null:
+		return
+	if item.has_method("zap") or (item is Object and ConstantsData.get_prop(item, "zap_range") != null):
+		var wand: Variant = item
 		if ConstantsData.get_prop(wand, "charges", 0) <= 0:
 			if MessageLog:
 				MessageLog.add_warning("The %s has no charges left!" % ConstantsData.get_prop(wand, "item_name", "wand"))
 			return
-		var hero_ref: Hero = GameManager.hero as Hero
 		var zap_callback: Callable = func(cell: int) -> void:
-			if hero_ref != null and hero_ref.has_method("submit_action"):
-				hero_ref.submit_action({"type": "zap_wand", "item": wand, "target_pos": cell})
+			if EventBus and EventBus.has_signal("request_hero_action"):
+				EventBus.request_hero_action.emit({"type": "zap_wand", "item": wand, "target_pos": cell})
 		if EventBus:
 			var max_range: int = ConstantsData.get_prop(wand, "zap_range", 8) if ConstantsData.get_prop(wand, "zap_range") else 8
 			EventBus.enter_targeting.emit(wand, max_range, zap_callback)
 		return
-	if item.has_method("execute"):
-		item.execute(GameManager.hero)
+	if EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "use_item", "item": item})
 
 func has_active_window() -> bool:
 	return _active_window != null and is_instance_valid(_active_window)
 
 func toggle_inventory() -> void:
-	if has_active_window() and _active_window is WndInventory:
+	if not _can_use_local_action_controls():
+		if MessageLog:
+			MessageLog.add_warning("Wait for your hero's turn to open inventory.")
+		return
+	if has_active_window() and _active_window != null and _active_window.get_script() != null and str(_active_window.get_script().resource_path).ends_with("wnd_inventory.gd"):
 		close_window()
 		return
 	_on_inventory_pressed()
@@ -426,27 +611,33 @@ func toggle_map() -> void:
 	_on_map_pressed()
 
 func open_settings() -> void:
-	if has_active_window() and _active_window is WndSettings:
+	if has_active_window() and _active_window != null and _active_window.get_script() != null and str(_active_window.get_script().resource_path).ends_with("wnd_settings.gd"):
 		close_window()
 		return
 	_on_settings_pressed()
 
 func use_quickslot(slot_index: int) -> void:
-	if slot_index < 0 or slot_index >= Belongings.QUICKSLOT_COUNT:
+	if not _can_use_local_action_controls():
+		if MessageLog:
+			MessageLog.add_warning("Wait for your hero's turn to use quickslots.")
 		return
-	var belongings: Variant = GameManager.hero.get("belongings") if GameManager and GameManager.hero else null
+	if slot_index < 0 or slot_index >= 6:
+		return
+	var hero_ref: Variant = _get_local_hero()
+	var belongings: Variant = hero_ref.get("belongings") if hero_ref != null else null
 	if belongings == null or not belongings.has_method("get_quickslot"):
 		return
 	var item: RefCounted = belongings.get_quickslot(slot_index)
 	_on_quickslot_used(slot_index, item)
 
 func _refresh_quickslots() -> void:
-	if _toolbar_bar == null or GameManager == null or GameManager.hero == null:
+	var hero_ref: Variant = _get_local_hero()
+	if _toolbar_bar == null or GameManager == null or hero_ref == null:
 		return
-	var belongings: Variant = GameManager.hero.get("belongings")
+	var belongings: Variant = hero_ref.get("belongings")
 	if belongings == null or not belongings.has_method("get_quickslot"):
 		return
-	for i: int in range(Belongings.QUICKSLOT_COUNT):
+	for i: int in range(6):
 		_toolbar_bar.set_quickslot_item(i, belongings.get_quickslot(i))
 
 
@@ -459,6 +650,7 @@ func _apply_responsive_layout() -> void:
 	var status_container: Control = root_node.get_node_or_null("StatusContainer") as Control
 	var log_container: Control = root_node.get_node_or_null("GameLog") as Control
 	var info_row: Control = root_node.get_node_or_null("InfoRow") as Control
+	var party_row: Control = root_node.get_node_or_null("PartyRow") as Control
 
 	if status_container:
 		status_container.position = Vector2(HUD_MARGIN, HUD_MARGIN)
@@ -474,6 +666,19 @@ func _apply_responsive_layout() -> void:
 	if info_row:
 		var info_width: float = 180.0
 		info_row.position = Vector2(maxf(HUD_MARGIN, _vp_size.x - info_width - HUD_MARGIN), HUD_MARGIN)
+
+	if party_row:
+		var party_width: float = minf(520.0, _vp_size.x - 420.0)
+		party_row.position = Vector2(
+			maxf(HUD_MARGIN + 190.0, (_vp_size.x - party_width) * 0.5),
+			HUD_MARGIN if not is_mobile_layout else HUD_MARGIN + 146.0
+		)
+
+	if _online_state_label:
+		_online_state_label.position = Vector2(
+			maxf(HUD_MARGIN + 200.0, (_vp_size.x - _online_state_label.custom_minimum_size.x) * 0.5),
+			(HUD_MARGIN + 38.0) if not is_mobile_layout else (HUD_MARGIN + 182.0)
+		)
 
 	if _minimap:
 		_minimap.visible = not is_mobile_layout

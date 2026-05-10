@@ -65,6 +65,10 @@ var sleeping: bool = false
 var _emo_type: EmoType = EmoType.NONE
 var _emo_label: Label = null
 var _emo_timer: float = 0.0
+var _ally_label: Label = null
+var _ground_ring_visible: bool = false
+var _ground_ring_color: Color = Color(1.0, 1.0, 1.0, 0.22)
+var _ground_ring_outline: Color = Color(1.0, 1.0, 1.0, 0.75)
 
 # --- Sprite-sheet support ---
 ## If set, the sprite uses this sheet instead of procedural generation.
@@ -102,6 +106,12 @@ func _process(delta: float) -> void:
 	if _emo_label != null and _emo_type != EmoType.NONE:
 		_emo_timer += delta
 		_emo_label.position.y = -TILE_SIZE - 4 + sin(_emo_timer * 3.0) * 1.5
+
+func _draw() -> void:
+	if not _ground_ring_visible:
+		return
+	draw_circle(Vector2(0, 5), 5.5, _ground_ring_color)
+	draw_arc(Vector2(0, 5), 5.5, 0.0, TAU, 20, _ground_ring_outline, 1.4)
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -376,6 +386,38 @@ func show_sleep() -> void:
 
 func show_alert() -> void:
 	_show_emo(EmoType.ALERT, "!")
+
+func set_ally_label(text: String, color: Color = Color.WHITE) -> void:
+	if text.strip_edges().is_empty():
+		clear_ally_label()
+		return
+	if _ally_label == null or not is_instance_valid(_ally_label):
+		_ally_label = Label.new()
+		_ally_label.custom_minimum_size = Vector2(60, 10)
+		_ally_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_ally_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_ally_label.position = Vector2(-30, -TILE_SIZE - 16)
+		add_child(_ally_label)
+	_ally_label.text = text
+	_ally_label.add_theme_font_size_override("font_size", 8)
+	_ally_label.add_theme_color_override("font_color", color)
+
+func clear_ally_label() -> void:
+	if _ally_label != null and is_instance_valid(_ally_label):
+		_ally_label.queue_free()
+	_ally_label = null
+
+func set_ground_ring(fill_color: Color, outline_color: Color = Color.WHITE) -> void:
+	_ground_ring_visible = true
+	_ground_ring_color = fill_color
+	_ground_ring_outline = outline_color
+	queue_redraw()
+
+func clear_ground_ring() -> void:
+	if not _ground_ring_visible:
+		return
+	_ground_ring_visible = false
+	queue_redraw()
 
 func hide_emo() -> void:
 	_emo_type = EmoType.NONE

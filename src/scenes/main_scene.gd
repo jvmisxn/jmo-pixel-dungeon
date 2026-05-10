@@ -3,7 +3,7 @@ extends Node2D
 ## Entry point scene. Launches the title screen (Phase 5 UI).
 ## Can also be used to directly start a game for testing via _start_new_game().
 
-var _game_scene: GameScene = null
+var _game_scene: Variant = null
 
 func _ready() -> void:
 	# Launch the title screen via SceneManager
@@ -11,43 +11,10 @@ func _ready() -> void:
 	SceneManager.go_to(title_script, "TitleScene")
 
 func _start_new_game() -> void:
-	# Initialize game state
-	GameManager.new_game(ConstantsData.HeroClass.WARRIOR)
-
-	# Create hero
-	var new_hero: Hero = Hero.new()
-	new_hero.init_class(GameManager.hero_class)
-	new_hero.give_starting_items()
-	new_hero.pos = -1  # Will be set by level load
-	GameManager.hero = new_hero
-	GameManager.heroes = [new_hero]
-
-	# Generate the first level
-	var level: Level = LevelFactory.create_for_depth(GameManager.depth)
-	GameManager.current_level = level
-
-	# Place hero at entrance
-	new_hero.pos = level.entrance
-
-	# Register hero with turn manager (use activate() so active flag is set)
-	TurnManager.clear_actors()
-	new_hero.active = false
-	new_hero.activate()
-
-	# Register mobs (use activate() so deactivate on death works properly)
-	for mob: Variant in level.mobs:
-		if mob is Node:
-			mob.active = false
-			mob.activate()
-
-	# Create and set up game scene
-	_game_scene = GameScene.new()
-	_game_scene.name = "GameScene"
-	add_child(_game_scene)
-
-	# Load level visuals
-	var region: int = ConstantsData.region_for_depth(GameManager.depth)
-	_game_scene.load_level(level, region)
-
-	# Start the turn loop
-	TurnManager.process_until_hero()
+	var loading_script: GDScript = load("res://src/scenes/loading_scene.gd") as GDScript
+	if loading_script == null:
+		return
+	SceneManager.go_to(loading_script, "LoadingScene", {
+		"chosen_class": ConstantsData.HeroClass.WARRIOR,
+		"is_continue": false,
+	})

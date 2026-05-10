@@ -17,6 +17,7 @@ const COLOR_WATER: Color = Color(0.2, 0.35, 0.7)
 const COLOR_ENTRANCE: Color = Color(0.2, 0.8, 0.3)
 const COLOR_EXIT: Color = Color(0.9, 0.2, 0.2)
 const COLOR_HERO: Color = Color.WHITE
+const COLOR_ALLY: Color = Color(0.45, 0.9, 1.0)
 const COLOR_MOB: Color = Color(1.0, 0.2, 0.2)
 const COLOR_UNEXPLORED: Color = Color(0.05, 0.05, 0.08)
 const COLOR_GRASS: Color = Color(0.25, 0.5, 0.2)
@@ -33,6 +34,7 @@ var _level_map: Array[int] = []        # Flat array of terrain ints
 var _visited: Array[bool] = []         # Bool array of visited cells
 var _visible_cells: Array[bool] = []   # Bool array of currently visible cells
 var _hero_pos: int = -1
+var _party_positions: Array[int] = []
 var _mob_positions: Array[int] = []
 
 
@@ -64,7 +66,10 @@ func _ensure_image_ready() -> void:
 func _connect_signals() -> void:
 	var event_bus: Node = EventBus
 	if event_bus:
-		event_bus.hero_moved.connect(_on_hero_moved)
+		if event_bus.has_signal("hero_moved_detailed"):
+			event_bus.hero_moved_detailed.connect(_on_hero_moved_detailed)
+		else:
+			event_bus.hero_moved.connect(_on_hero_moved)
 		event_bus.level_changed.connect(_on_level_changed)
 
 
@@ -91,22 +96,24 @@ func set_minimap_visible(vis: bool) -> void:
 
 
 ## Full redraw of the minimap from current level data.
-func update_map(level_map: Array[int], visited: Array[bool], visible_cells_arr: Array[bool], hero_pos: int, mob_positions: Array[int] = []) -> void:
+func update_map(level_map: Array[int], visited: Array[bool], visible_cells_arr: Array[bool], hero_pos: int, mob_positions: Array[int] = [], party_positions: Array[int] = []) -> void:
 	_ensure_image_ready()
 	_level_map = level_map
 	_visited = visited
 	_visible_cells = visible_cells_arr
 	_hero_pos = hero_pos
 	_mob_positions = mob_positions
+	_party_positions = party_positions
 	_redraw()
 
 
 ## Partial update when FOV changes (hero moves).
-func update_fov(visible_cells_arr: Array[bool], hero_pos: int, mob_positions: Array[int] = []) -> void:
+func update_fov(visible_cells_arr: Array[bool], hero_pos: int, mob_positions: Array[int] = [], party_positions: Array[int] = []) -> void:
 	_ensure_image_ready()
 	_visible_cells = visible_cells_arr
 	_hero_pos = hero_pos
 	_mob_positions = mob_positions
+	_party_positions = party_positions
 	_redraw()
 
 
@@ -151,6 +158,14 @@ func _redraw() -> void:
 				var mx: int = mob_pos % width
 				var my: int = mob_pos / width
 				_draw_cell(mx, my, COLOR_MOB)
+
+	# Draw allied heroes first so the focused hero can render on top.
+	for ally_pos: int in _party_positions:
+		if ally_pos < 0 or ally_pos == _hero_pos:
+			continue
+		var ax: int = ally_pos % width
+		var ay: int = ally_pos / width
+		_draw_cell(ax, ay, COLOR_ALLY)
 
 	# Draw hero
 	_draw_hero()
@@ -234,7 +249,26 @@ func _on_hero_moved(new_pos: int) -> void:
 		for m: Variant in level.get_mobs():
 			if m != null and m.get("pos") != null:
 				_mob_positions.append(m.pos)
+	_party_positions = _collect_party_positions()
 	_redraw()
+
+func _on_hero_moved_detailed(hero: Variant, new_pos: int) -> void:
+	var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+	_party_positions = _collect_party_positions()
+	if focused_hero != hero:
+		_redraw()
+		return
+	_on_hero_moved(new_pos)
+
+func _collect_party_positions() -> Array[int]:
+	var positions: Array[int] = []
+	if GameManager == null or not GameManager.has_method("get_active_heroes"):
+		return positions
+	for hero_node: Node in GameManager.get_active_heroes():
+		if hero_node == null:
+			continue
+		positions.append(int(hero_node.pos))
+	return positions
 
 
 func _on_level_changed(_new_depth: int = 0) -> void:
@@ -242,6 +276,7 @@ func _on_level_changed(_new_depth: int = 0) -> void:
 	_visited.clear()
 	_visible_cells.clear()
 	_hero_pos = -1
+	_party_positions.clear()
 	_mob_positions.clear()
 	_image.fill(COLOR_UNEXPLORED)
 	_image_texture.update(_image)

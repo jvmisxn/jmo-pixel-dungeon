@@ -31,7 +31,10 @@ func _do_effect(char: Variant, level: Variant) -> void:
 	elif char.get("pos") != null:
 		char.pos = new_pos
 	if char.get("is_hero") and EventBus:
-		EventBus.hero_moved.emit(new_pos)
+		EventBus.hero_moved_detailed.emit(char, new_pos)
+		var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+		if focused_hero == char:
+			EventBus.hero_moved.emit(new_pos)
 
 	if MessageLog:
 		if char.get("is_hero"):

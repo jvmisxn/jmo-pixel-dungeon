@@ -242,7 +242,10 @@ func _use_blink(hero: Char) -> void:
 				if MessageLog:
 					MessageLog.add_positive("You blink to a new position!")
 				if EventBus:
-					EventBus.hero_moved.emit(new_pos)
+					EventBus.hero_moved_detailed.emit(hero, new_pos)
+					var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+					if focused_hero == hero:
+						EventBus.hero_moved.emit(new_pos)
 				return
 	if MessageLog:
 		MessageLog.add("The stone crumbles, but there was nowhere to blink to.")

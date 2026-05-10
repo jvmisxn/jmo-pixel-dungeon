@@ -32,7 +32,10 @@ func _teleport_target(victim: Char) -> void:
 			if level.has_method("find_char_at") and level.find_char_at(random_pos) == null:
 				victim.pos = random_pos
 				if victim.is_hero and EventBus:
-					EventBus.hero_moved.emit(random_pos)
+					EventBus.hero_moved_detailed.emit(victim, random_pos)
+					var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+					if focused_hero == victim:
+						EventBus.hero_moved.emit(random_pos)
 				if MessageLog:
 					MessageLog.add_warning("The golem's blow teleports you!")
 				return

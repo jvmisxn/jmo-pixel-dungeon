@@ -169,7 +169,6 @@ func _can_feed_seed_to_sandals() -> bool:
 		return false
 	return str(ConstantsData.get_prop(artifact, "item_id", "")) == "sandals_of_nature" and artifact.has_method("feed_seed")
 
-
 # ---------------------------------------------------------------------------
 # Actions
 # ---------------------------------------------------------------------------
@@ -178,37 +177,8 @@ func _action_equip() -> void:
 	if not _hero or not _hero.belongings or not _item:
 		close_window()
 		return
-
-	var cat: int = ConstantsData.get_prop(_item, "category", -1)
-	# Remove from backpack first
-	_hero.belongings.remove_item(_item)
-
-	var old_item: Variant = null
-	match cat:
-		ConstantsData.ItemCategory.WEAPON:
-			if _item is SpiritBow:
-				old_item = _hero.belongings.equip_spirit_bow(_item)
-			else:
-				old_item = _hero.belongings.equip_weapon(_item)
-		ConstantsData.ItemCategory.ARMOR:
-			old_item = _hero.belongings.equip_armor(_item)
-		ConstantsData.ItemCategory.ARTIFACT:
-			old_item = _hero.belongings.equip_artifact(_item)
-		ConstantsData.ItemCategory.WAND:
-			old_item = _hero.belongings.equip_misc(_item)
-		ConstantsData.ItemCategory.RING:
-			# Default to left ring, use right if left is occupied
-			if _hero.belongings.ring_left == null:
-				old_item = _hero.belongings.equip_ring(_item, true)
-			else:
-				old_item = _hero.belongings.equip_ring(_item, false)
-
-	# Put old item back in backpack
-	if old_item:
-		_hero.belongings.add_item(old_item)
-
-	if EventBus:
-		EventBus.item_equipped.emit(ConstantsData.get_prop(_item, "item_name", ""), str(cat))
+	if EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "equip_item", "item": _item})
 	close_window()
 
 
@@ -245,12 +215,8 @@ func _action_unequip() -> void:
 	elif _hero.belongings.misc == _item:
 		slot = "misc"
 
-	if slot != "":
-		var removed: Variant = _hero.belongings.unequip(slot)
-		if removed:
-			_hero.belongings.add_item(removed)
-			if EventBus:
-				EventBus.item_unequipped.emit(ConstantsData.get_prop(removed, "item_name", ""), slot)
+	if slot != "" and EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "unequip_item", "slot": slot})
 	close_window()
 
 
@@ -267,24 +233,17 @@ func _action_use() -> void:
 			close_window()
 			return
 		var wand_ref: Variant = _item
-		var hero_ref: Hero = _hero
 		var zap_callback: Callable = func(cell: int) -> void:
-			if wand_ref and hero_ref and hero_ref.has_method("submit_action"):
-				hero_ref.submit_action({"type": "zap_wand", "item": wand_ref, "target_pos": cell})
+			if EventBus and EventBus.has_signal("request_hero_action"):
+				EventBus.request_hero_action.emit({"type": "zap_wand", "item": wand_ref, "target_pos": cell})
 		close_window()
 		if EventBus and EventBus.has_signal("enter_targeting"):
 			var max_range: int = ConstantsData.get_prop(wand_ref, "zap_range", 8) if ConstantsData.get_prop(wand_ref, "zap_range") else 8
 			EventBus.enter_targeting.emit(wand_ref, max_range, zap_callback)
 		return
 
-	# Call the item's own execute() method, which handles consumption internally.
-	# Potions call drink() + _consume(), Scrolls call read_scroll() + _consume(),
-	# Food calls eat() + _consume_one(). Do NOT consume again here — that would
-	# double-decrement quantity or double-remove from inventory.
-	if _item.has_method("execute"):
-		_item.execute(_hero)
-	elif _item.has_method("use"):
-		_item.use(_hero)
+	if EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "use_item", "item": _item})
 
 	close_window()
 
@@ -292,16 +251,8 @@ func _action_feed_to_sandals() -> void:
 	if not _can_feed_seed_to_sandals():
 		close_window()
 		return
-	var artifact: Variant = _hero.belongings.get_equipped_artifact()
-	var seed_name: String = ConstantsData.get_prop(_item, "item_name", "seed")
-	artifact.feed_seed(seed_name)
-	var qty: int = int(ConstantsData.get_prop(_item, "quantity", 1))
-	if qty > 1:
-		_item.quantity = qty - 1
-	else:
-		_hero.belongings.remove_item(_item)
-	if EventBus:
-		EventBus.item_used.emit(seed_name)
+	if EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "feed_seed_to_sandals", "item": _item})
 	close_window()
 
 
@@ -317,6 +268,7 @@ func _action_drop() -> void:
 		return
 
 	# Unequip first if equipped
+	var equip_slot: String = ""
 	if _is_equipped:
 		var slot: String = ""
 		if _hero.belongings.weapon == _item:
@@ -331,12 +283,9 @@ func _action_drop() -> void:
 			slot = "misc"
 		elif _hero.belongings.ring == _item:
 			slot = "ring"
-		if slot != "":
-			_hero.belongings.unequip(slot)
-		_hero.belongings.add_item(_item)
-		if MessageLog:
-			var item_name_str: String = ConstantsData.get_prop(_item, "item_name", "item")
-			MessageLog.add("You unequip the %s." % item_name_str)
+		equip_slot = slot
+	if EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "drop_item", "item": _item, "equip_slot": equip_slot})
 	close_window()
 
 func _action_throw() -> void:
@@ -352,8 +301,8 @@ func _action_throw() -> void:
 	close_window()
 
 func _execute_throw_callback(target_cell: int) -> void:
-	if _hero != null and _hero.has_method("submit_action"):
-		_hero.submit_action({"type": "throw_item", "item": _item, "target_pos": target_cell})
+	if EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "throw_item", "item": _item, "target_pos": target_cell})
 
 func _action_shoot() -> void:
 	var item_name_str: String = ConstantsData.get_prop(_item, "item_name", "item")

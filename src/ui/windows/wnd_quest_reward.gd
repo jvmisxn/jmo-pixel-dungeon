@@ -33,7 +33,7 @@ func _build_content() -> Control:
 		_title_label.text = _quest_name
 
 	if _hero == null and GameManager:
-		_hero = GameManager.hero
+		_hero = GameManager.get_local_hero() if GameManager.has_method("get_local_hero") else GameManager.hero
 
 	var main: VBoxContainer = VBoxContainer.new()
 	main.add_theme_constant_override("separation", 8)

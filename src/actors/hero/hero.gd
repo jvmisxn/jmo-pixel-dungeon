@@ -29,6 +29,12 @@ var peer_id: int = 0
 
 ## The hero's unique name/label for multiplayer.
 var hero_name: String = "Hero"
+## Online owner peer id for this hero slot. `1` is the host in Godot ENet.
+var owner_peer_id: int = 1
+## Stable slot index inside the party for multiplayer routing.
+var hero_slot_index: int = 0
+var last_visible_action: String = ""
+var last_visible_target_pos: int = -1
 
 ## Action queue for the command pattern. Each action is a Dictionary with
 ## "type" (String), "target" (int), and optional extra keys.
@@ -212,6 +218,8 @@ func execute_action() -> void:
 	if not _action_ready:
 		return
 	_action_ready = false
+	last_visible_action = ""
+	last_visible_target_pos = -1
 
 	# Process buffs at the start of each hero turn (hunger, regen, poison, etc.).
 	# TurnManager pauses before calling act() for heroes, so we must do it here.
@@ -226,7 +234,7 @@ func execute_action() -> void:
 		_pending_action = {}
 		spend_turn()
 		if TurnManager:
-			TurnManager.hero_action_complete()
+			TurnManager.hero_action_complete(self)
 		return
 
 	# Refresh cached speed in TurnManager after buffs may have changed it.
@@ -240,7 +248,7 @@ func execute_action() -> void:
 			MessageLog.add_negative("You are paralysed!")
 		spend_turn()
 		if TurnManager:
-			TurnManager.hero_action_complete()
+			TurnManager.hero_action_complete(self)
 		return
 
 	var action: Dictionary = _pending_action
@@ -300,7 +308,7 @@ func execute_action() -> void:
 
 	# Tell TurnManager we're done
 	if TurnManager:
-		TurnManager.hero_action_complete()
+		TurnManager.hero_action_complete(self)
 
 # ---------------------------------------------------------------------------
 # Action Implementations
@@ -333,8 +341,13 @@ func _do_move(target_pos: int) -> void:
 			if GameManager:
 				GameManager.record_stat("doors_opened")
 	if move_to(step_pos):
+		last_visible_action = "move"
+		last_visible_target_pos = step_pos
 		if EventBus:
-			EventBus.hero_moved.emit(step_pos)
+			EventBus.hero_moved_detailed.emit(self, step_pos)
+			var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+			if focused_hero == self:
+				EventBus.hero_moved.emit(step_pos)
 		# Check terrain effects at new position
 		_check_terrain_effects()
 
@@ -368,6 +381,8 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1) -> void:
 				atk_target = c as Char
 	if atk_target == null:
 		return
+	last_visible_action = "attack"
+	last_visible_target_pos = atk_target.pos
 	_pending_surprise_attack = invisible > 0 and can_surprise_attack()
 	# Check if target is a disguised mimic — reveal it
 	if atk_target is Mimic and (atk_target as Mimic).disguised:
@@ -384,6 +399,8 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1) -> void:
 func _do_search() -> void:
 	if level == null:
 		return
+	last_visible_action = "search"
+	last_visible_target_pos = pos
 	var door_feature: RefCounted = DoorFeature.new()
 	var found: int = int(door_feature.call("search", level, pos))
 	var equipped_artifact: Variant = belongings.get_equipped_artifact() if belongings != null else null
@@ -399,6 +416,8 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 		return
 	if item != belongings.weapon and item != belongings.get_equipped_spirit_bow() and not belongings.has_item(item):
 		return
+	last_visible_action = "throw_item"
+	last_visible_target_pos = target_pos
 
 	if item is Bomb:
 		var bomb: Bomb = item as Bomb
@@ -454,6 +473,8 @@ func _do_zap_wand(item: Variant, target_pos: int) -> void:
 		return
 	if item != belongings.misc and not belongings.has_item(item):
 		return
+	last_visible_action = "zap_wand"
+	last_visible_target_pos = target_pos
 	if item is Wand:
 		(item as Wand).zap(self, target_pos)
 	_patient_strike_ready = false
@@ -589,6 +610,8 @@ func _do_use_item(item: Variant) -> void:
 func _do_interact(target_pos: int) -> void:
 	if level == null:
 		return
+	last_visible_action = "interact"
+	last_visible_target_pos = target_pos
 	if level.has_method("find_char_at"):
 		var target_char: Variant = level.find_char_at(target_pos)
 		if target_char != null and target_char != self and target_char is NPC:
@@ -958,6 +981,10 @@ func serialize() -> Dictionary:
 	data["is_alive"] = is_alive
 	data["base_speed"] = base_speed
 	data["hero_name"] = hero_name
+	data["owner_peer_id"] = owner_peer_id
+	data["hero_slot_index"] = hero_slot_index
+	data["last_visible_action"] = last_visible_action
+	data["last_visible_target_pos"] = last_visible_target_pos
 	data["patient_strike_ready"] = _patient_strike_ready
 	data["backup_barrier_ready"] = _backup_barrier_ready
 	data["followup_strike_ready"] = _followup_strike_ready
@@ -986,6 +1013,10 @@ func deserialize(data: Dictionary) -> void:
 	is_alive = data.get("is_alive", true)
 	base_speed = data.get("base_speed", 1.0)
 	hero_name = data.get("hero_name", HeroClassData.get_class_name_str(hero_class))
+	owner_peer_id = int(data.get("owner_peer_id", 1))
+	hero_slot_index = int(data.get("hero_slot_index", 0))
+	last_visible_action = str(data.get("last_visible_action", ""))
+	last_visible_target_pos = int(data.get("last_visible_target_pos", -1))
 	_pending_surprise_attack = false
 	_patient_strike_ready = data.get("patient_strike_ready", false)
 	_backup_barrier_ready = data.get("backup_barrier_ready", true)
@@ -1038,7 +1069,10 @@ func heal(amount: int) -> void:
 func _on_death(source: Variant) -> void:
 	super._on_death(source)
 	if EventBus:
-		EventBus.hero_died.emit()
+		EventBus.hero_died_detailed.emit(self)
+		var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+		if focused_hero == self:
+			EventBus.hero_died.emit()
 
 # ---------------------------------------------------------------------------
 # View Distance

@@ -5,6 +5,9 @@
 - The game is playable now.
 - The codebase is broad and functional, with substantial systems already ported.
 - The project is best treated as a playable port that still needs hardening before it becomes a clean reusable framework.
+- Current milestone is `0.1.2`.
+- Co-op multiplayer is now an active roadmap item, targeting online host-authoritative play for up to 4 players.
+- Framework extraction for future spin-off games is now an active investigation track, with multiplayer hardening treated as part of that architectural work rather than a separate concern.
 
 ## Current Constraints
 
@@ -23,6 +26,7 @@
 
 - Finish hardening the port before major framework extraction or multi-game branching.
 - Prefer small durable notes over large historical narrative logs.
+- Multiplayer should start with single-process multi-hero simulation before any network transport work.
 
 ## Next Time Start Here
 
@@ -35,4 +39,6 @@
 
 - Save/load or floor-state work: read `persistence-notes.md`
 - Architecture or reuse work: read `framework-readiness.md`
+- Framework extraction planning: read `framework-extraction-roadmap.md`
 - Original-SPD parity work: read `spd-fidelity-notes.md`
+- Co-op multiplayer work: read `multiplayer-roadmap.md`

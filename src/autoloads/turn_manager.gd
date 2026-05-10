@@ -13,6 +13,8 @@ signal turn_processed(actor: Node, turn_number: int)
 ## Emitted when all actors in the current round have been processed.
 @warning_ignore("unused_signal")
 signal round_completed(round_number: int)
+@warning_ignore("unused_signal")
+signal input_actor_changed(actor: Variant)
 
 ## Base time unit. One standard-speed action costs TICK energy.
 const TICK: float = 1.0
@@ -22,8 +24,10 @@ var _actors: Array[Dictionary] = []
 
 ## Global turn counter (total individual actor turns taken).
 var _turn_count: int = 0
-## Round counter (increments each time the hero acts).
+## Round counter (increments each time all currently registered heroes act once).
 var _round_count: int = 0
+## Tracks which currently registered heroes still need to act this party round.
+var _round_hero_ids_pending: Array[int] = []
 
 ## Whether the system is currently processing (prevents re-entrant calls).
 var _processing: bool = false
@@ -42,13 +46,15 @@ const MOB_ACTION_DELAY: float = 0.0
 
 ## Cached reference to the active GameScene (cleared on level transitions).
 var _cached_game_scene: Node = null
+## The hero currently owning local input/focus.
+var current_input_actor: Node = null
 
 func _is_time_frozen_for_nonhero(actor_node: Node) -> bool:
 	if actor_node == null or actor_node.get("is_hero") == true:
 		return false
 	if GameManager == null:
 		return false
-	var hero_ref: Variant = GameManager.hero
+	var hero_ref: Variant = GameManager.get_primary_hero() if GameManager.has_method("get_primary_hero") else GameManager.hero
 	if hero_ref == null or not is_instance_valid(hero_ref):
 		return false
 	var belongings: Variant = hero_ref.get("belongings")
@@ -56,6 +62,38 @@ func _is_time_frozen_for_nonhero(actor_node: Node) -> bool:
 		return false
 	var artifact: Variant = belongings.get_equipped_artifact()
 	return artifact != null and artifact.has_method("is_time_frozen") and artifact.is_time_frozen()
+
+func get_input_hero() -> Node:
+	if current_input_actor != null and is_instance_valid(current_input_actor):
+		return current_input_actor
+	return null
+
+func _get_registered_hero_ids() -> Array[int]:
+	var hero_ids: Array[int] = []
+	for entry: Dictionary in _actors:
+		var actor_ref: Variant = entry.get("node")
+		if actor_ref == null or not is_instance_valid(actor_ref):
+			continue
+		var actor_node: Node = actor_ref as Node
+		if actor_node.get("is_hero") == true and actor_node.get("actor_id") != null:
+			hero_ids.append(int(actor_node.get("actor_id")))
+	return hero_ids
+
+func _remove_hero_from_round_pending(actor_node: Node) -> bool:
+	if actor_node == null or actor_node.get("actor_id") == null:
+		return false
+	var actor_id: int = int(actor_node.get("actor_id"))
+	var removed: bool = false
+	for idx: int in range(_round_hero_ids_pending.size() - 1, -1, -1):
+		if _round_hero_ids_pending[idx] == actor_id:
+			_round_hero_ids_pending.remove_at(idx)
+			removed = true
+	return removed
+
+func _reseed_round_pending_if_needed() -> void:
+	if not _round_hero_ids_pending.is_empty():
+		return
+	_round_hero_ids_pending = _get_registered_hero_ids()
 
 # ---------------------------------------------------------------------------
 # Actor Registration
@@ -85,6 +123,10 @@ func remove_actor(actor_node: Node) -> void:
 	for i: int in range(_actors.size() - 1, -1, -1):
 		if _actors[i]["node"] == actor_node:
 			_actors.remove_at(i)
+			_remove_hero_from_round_pending(actor_node)
+			if current_input_actor == actor_node:
+				current_input_actor = null
+				input_actor_changed.emit(null)
 			return
 
 ## Returns true if the given node is currently registered.
@@ -182,6 +224,8 @@ func process_turn() -> Node:
 
 	# If this is the hero, pause for player input.
 	if actor_node.get("is_hero") == true:
+		current_input_actor = actor_node
+		input_actor_changed.emit(actor_node)
 		waiting_for_input = true
 		_processing = false
 		return actor_node
@@ -211,14 +255,19 @@ func process_turn() -> Node:
 ## Called after the hero has chosen and executed their action.
 ## Processes non-hero actors one at a time with visual delays so the
 ## player can see each enemy act individually.
-func hero_action_complete() -> void:
+func hero_action_complete(actor_node: Node = null) -> void:
 	waiting_for_input = false
 	_turn_count += 1
-	_round_count += 1
-	# Update message log turn counter so messages group by round.
-	if MessageLog:
-		MessageLog.current_turn = _round_count
-	round_completed.emit(_round_count)
+	if actor_node != null and is_instance_valid(actor_node) and actor_node.get("is_hero") == true:
+		current_input_actor = actor_node
+		_reseed_round_pending_if_needed()
+		var removed_from_pending: bool = _remove_hero_from_round_pending(actor_node)
+		if removed_from_pending and _round_hero_ids_pending.is_empty():
+			_round_count += 1
+			# Update message log turn counter so messages group by party round.
+			if MessageLog:
+				MessageLog.current_turn = _round_count
+			round_completed.emit(_round_count)
 
 	# Start async mob processing
 	processing_mobs = true
@@ -239,7 +288,7 @@ func _get_game_scene_cached() -> Node:
 
 func _should_abort_async_processing(game_scene: Node) -> bool:
 	if GameManager != null:
-		var hero_ref: Variant = GameManager.hero
+		var hero_ref: Variant = GameManager.get_primary_hero() if GameManager.has_method("get_primary_hero") else GameManager.hero
 		if hero_ref != null and is_instance_valid(hero_ref) and hero_ref.get("is_alive") == false:
 			return true
 	if game_scene != null and game_scene.get("_game_ended") == true:
@@ -285,6 +334,9 @@ func clear_actors() -> void:
 	_actors.clear()
 	_turn_count = 0
 	_round_count = 0
+	_round_hero_ids_pending.clear()
+	current_input_actor = null
+	input_actor_changed.emit(null)
 	waiting_for_input = false
 	processing_mobs = false
 

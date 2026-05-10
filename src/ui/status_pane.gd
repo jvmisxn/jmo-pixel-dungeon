@@ -17,6 +17,7 @@ var _xp_label: Label = null
 var _str_label: Label = null
 var _depth_label: Label = null
 var _level_label: Label = null
+var _focus_label: Label = null
 var _equip_grid: GridContainer = null
 var _buffs_container: HFlowContainer = null
 var _hunger_bar: ProgressBar = null
@@ -154,6 +155,13 @@ func _build_ui() -> void:
 	_level_label.add_theme_font_size_override("font_size", 13)
 	_level_label.add_theme_color_override("font_color", Color(0.85, 0.8, 0.6))
 	add_child(_level_label)
+
+	_focus_label = Label.new()
+	_focus_label.text = ""
+	_focus_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_focus_label.add_theme_font_size_override("font_size", 10)
+	_focus_label.add_theme_color_override("font_color", Color(0.62, 0.78, 0.92))
+	add_child(_focus_label)
 
 	# --- HP Bar ---
 	_build_hp_section()
@@ -391,7 +399,9 @@ func _on_item_unequipped(_item_name: String, _slot: String) -> void:
 
 
 func _get_hero() -> Variant:
-	return GameManager.hero if GameManager else null
+	if GameManager == null:
+		return null
+	return GameManager.get_local_hero() if GameManager.has_method("get_local_hero") else GameManager.hero
 
 
 func _create_item_slot(tooltip: String) -> ItemSlot:
@@ -434,6 +444,18 @@ func update_all() -> void:
 		_xp_label.text = "%d / %d" % [xp, xp_max]
 	if _level_label:
 		_level_label.text = "Lv. %d" % hero_level
+	if _focus_label:
+		_focus_label.visible = false
+		if GameManager and GameManager.has_method("is_party_run") and GameManager.is_party_run() and GameManager.has_method("get_hero_index"):
+			var hero_index: int = GameManager.get_hero_index(hero)
+			if hero_index >= 0:
+				var focus_text: String = "Focus: P%d/%d" % [hero_index + 1, GameManager.heroes.size()]
+				if GameManager.has_method("is_local_player_spectating") and GameManager.is_local_player_spectating():
+					focus_text += "  Spectating"
+				elif hero.get("is_alive") != true:
+					focus_text += "  Down"
+				_focus_label.text = focus_text
+				_focus_label.visible = true
 
 	# STR
 	var hero_str: int = hero.str_val
@@ -534,7 +556,8 @@ func _set_slot_item(slot: ItemSlot, item: Variant) -> void:
 func _update_portrait() -> void:
 	if not _portrait_rect:
 		return
-	var class_idx: int = GameManager.hero_class if GameManager else 0
+	var hero: Variant = _get_hero()
+	var class_idx: int = hero.hero_class if hero != null and hero.get("hero_class") != null else (GameManager.hero_class if GameManager else 0)
 	if class_idx < 0:
 		# Fallback: show class name text
 		if _class_label:

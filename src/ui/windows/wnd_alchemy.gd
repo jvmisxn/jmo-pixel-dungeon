@@ -20,7 +20,7 @@ func _init() -> void:
 
 
 func _build_content() -> Control:
-	_hero = GameManager.hero if GameManager else null
+	_hero = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
 
 	var main: VBoxContainer = VBoxContainer.new()
 	main.add_theme_constant_override("separation", 10)

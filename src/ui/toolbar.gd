@@ -48,6 +48,7 @@ const ITEM_SHEET_COLUMNS: int = 16
 
 ## Tracks last known enabled state to avoid re-applying every frame.
 var _last_enabled: bool = true
+var _last_action_controls_enabled: bool = true
 var _compact_mode: bool = false
 
 static var _item_sheet_texture: Texture2D = null
@@ -292,6 +293,26 @@ func set_enabled(is_enabled: bool) -> void:
 		_btn_settings.disabled = not is_enabled
 	for qs: Button in _quickslots:
 		qs.disabled = not is_enabled
+
+func set_action_controls_enabled(is_enabled: bool) -> void:
+	if is_enabled == _last_action_controls_enabled:
+		return
+	_last_action_controls_enabled = is_enabled
+	if _btn_inventory:
+		_btn_inventory.disabled = not is_enabled
+		_btn_inventory.modulate = Color.WHITE if is_enabled else Color(0.72, 0.72, 0.72, 0.9)
+	if _btn_wait:
+		_btn_wait.disabled = not is_enabled
+		_btn_wait.modulate = Color.WHITE if is_enabled else Color(0.72, 0.72, 0.72, 0.9)
+	if _btn_rest:
+		_btn_rest.disabled = not is_enabled
+		_btn_rest.modulate = Color.WHITE if is_enabled else Color(0.72, 0.72, 0.72, 0.9)
+	if _btn_search:
+		_btn_search.disabled = not is_enabled
+		_btn_search.modulate = Color.WHITE if is_enabled else Color(0.72, 0.72, 0.72, 0.9)
+	for qs: Button in _quickslots:
+		qs.disabled = not is_enabled
+		qs.modulate = Color.WHITE if is_enabled else Color(0.72, 0.72, 0.72, 0.9)
 
 
 # --- Signal Callbacks ---

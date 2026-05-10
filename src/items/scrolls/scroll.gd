@@ -432,7 +432,10 @@ class ScrollTeleportation extends Scroll:
 			if MessageLog:
 				MessageLog.add_positive("You are teleported to a new location!")
 			if EventBus:
-				EventBus.hero_moved.emit(new_pos)
+				EventBus.hero_moved_detailed.emit(hero, new_pos)
+				var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+				if focused_hero == hero:
+					EventBus.hero_moved.emit(new_pos)
 		else:
 			if MessageLog:
 				MessageLog.add_warning("The scroll fails to find a suitable destination.")

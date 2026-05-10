@@ -56,6 +56,8 @@ Do not use them as the default first read unless the concise memory files are in
   - Short note on what still separates the playable port from a reusable framework.
 - `spd-fidelity-notes.md`
   - Short note on remaining parity-oriented work against original SPD.
+- `multiplayer-roadmap.md`
+  - Durable implementation plan for host-authoritative co-op multiplayer up to 4 players.
 
 ## Update Rules
 
