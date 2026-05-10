@@ -8,7 +8,10 @@ signal profile_updated
 const PROFILE_PATH: String = "user://player_profile.cfg"
 const DEFAULT_PLAYER_NAME: String = "Player"
 const DEFAULT_ICON_ID: String = "warrior"
-const PROFILE_ICON_IDS: Array[String] = ["warrior", "mage", "rogue", "huntress", "duelist"]
+const PROFILE_ICON_IDS: Array[String] = [
+	"warrior", "mage", "rogue", "huntress", "duelist",
+	"rat", "gnoll", "crab", "skeleton", "goo",
+]
 const HERO_CLASS_KEYS: Array[String] = ["warrior", "mage", "rogue", "huntress", "duelist"]
 const HERO_CLASS_ICON_IDS: Dictionary = {
 	ConstantsData.HeroClass.WARRIOR: "warrior",
@@ -25,6 +28,13 @@ const ICON_UNLOCK_BADGES: Dictionary = {
 	"huntress": "boss_slain_3",
 	"duelist": "first_victory",
 }
+const ENEMY_ICON_KILL_REQUIREMENTS: Dictionary = {
+	"rat": {"mob_id": "rat", "kills": 10, "label": "Rat"},
+	"gnoll": {"mob_id": "gnoll", "kills": 10, "label": "Gnoll"},
+	"crab": {"mob_id": "crab", "kills": 10, "label": "Crab"},
+	"skeleton": {"mob_id": "skeleton", "kills": 10, "label": "Skeleton"},
+	"goo": {"mob_id": "goo", "kills": 1, "label": "Goo"},
+}
 
 var player_name: String = ""
 var profile_initialized: bool = false
@@ -35,6 +45,7 @@ var unlocked_profile_icons: Dictionary[String, bool] = {
 var unlocked_hero_classes: Dictionary[String, bool] = {
 	"warrior": true,
 }
+var mob_kill_counts: Dictionary[String, int] = {}
 var _run_surprise_attacks: int = 0
 var _run_thrown_hits: int = 0
 
@@ -50,6 +61,8 @@ func _ready() -> void:
 		EventBus.item_equipped.connect(_on_item_equipped)
 	if EventBus and EventBus.has_signal("game_event"):
 		EventBus.game_event.connect(_on_game_event)
+	if EventBus and EventBus.has_signal("mob_defeated"):
+		EventBus.mob_defeated.connect(_on_mob_defeated)
 	if GameManager and GameManager.has_signal("game_started"):
 		GameManager.game_started.connect(_reset_run_unlock_progress)
 	if GameManager and GameManager.has_signal("game_ended"):
@@ -117,6 +130,26 @@ func unlock_profile_icon(icon_id: String) -> void:
 	_save_profile()
 	profile_updated.emit()
 
+func get_profile_icon_unlock_text(icon_id: String) -> String:
+	if icon_id == "warrior":
+		return "Available from the start."
+	if ENEMY_ICON_KILL_REQUIREMENTS.has(icon_id):
+		var enemy_rule: Dictionary = ENEMY_ICON_KILL_REQUIREMENTS[icon_id]
+		return "Kill %d %s%s." % [
+			int(enemy_rule.get("kills", 1)),
+			str(enemy_rule.get("label", icon_id)),
+			"" if int(enemy_rule.get("kills", 1)) == 1 else "s",
+		]
+	var hero_class_id: int = _hero_class_for_icon(icon_id)
+	if hero_class_id >= 0:
+		return "Unlock the %s class." % HeroClassData.get_class_name_str(hero_class_id)
+	return "Unlock through progress."
+
+func get_profile_icon_display_name(icon_id: String) -> String:
+	if ENEMY_ICON_KILL_REQUIREMENTS.has(icon_id):
+		return str((ENEMY_ICON_KILL_REQUIREMENTS[icon_id] as Dictionary).get("label", icon_id.capitalize()))
+	return icon_id.capitalize()
+
 func is_hero_class_unlocked(hero_class: int) -> bool:
 	var class_key: String = _hero_class_key(hero_class)
 	return bool(unlocked_hero_classes.get(class_key, false))
@@ -147,6 +180,47 @@ func get_hero_unlock_text(hero_class: int) -> String:
 		ConstantsData.HeroClass.DUELIST:
 			return "Equip an identified tier-2+ weapon with no strength penalty."
 	return ""
+
+func get_unlocked_hero_class_count() -> int:
+	var count: int = 0
+	for hero_class: int in [
+		ConstantsData.HeroClass.WARRIOR,
+		ConstantsData.HeroClass.MAGE,
+		ConstantsData.HeroClass.ROGUE,
+		ConstantsData.HeroClass.HUNTRESS,
+		ConstantsData.HeroClass.DUELIST,
+	]:
+		if is_hero_class_unlocked(hero_class):
+			count += 1
+	return count
+
+func get_unlocked_hero_class_names() -> Array[String]:
+	var names: Array[String] = []
+	for hero_class: int in [
+		ConstantsData.HeroClass.WARRIOR,
+		ConstantsData.HeroClass.MAGE,
+		ConstantsData.HeroClass.ROGUE,
+		ConstantsData.HeroClass.HUNTRESS,
+		ConstantsData.HeroClass.DUELIST,
+	]:
+		if is_hero_class_unlocked(hero_class):
+			names.append(HeroClassData.get_class_name_str(hero_class))
+	return names
+
+func get_remaining_hero_unlock_lines(limit: int = 4) -> Array[String]:
+	var lines: Array[String] = []
+	for hero_class: int in [
+		ConstantsData.HeroClass.MAGE,
+		ConstantsData.HeroClass.ROGUE,
+		ConstantsData.HeroClass.HUNTRESS,
+		ConstantsData.HeroClass.DUELIST,
+	]:
+		if is_hero_class_unlocked(hero_class):
+			continue
+		lines.append("%s: %s" % [HeroClassData.get_class_name_str(hero_class), get_hero_unlock_text(hero_class)])
+		if lines.size() >= limit:
+			break
+	return lines
 
 func get_badge_summary() -> String:
 	if Badges == null:
@@ -200,10 +274,15 @@ func _load_profile() -> void:
 	unlocked_hero_classes.clear()
 	if raw_classes is Dictionary:
 		for class_key: Variant in raw_classes.keys():
-			var class_name: String = str(class_key)
-			if HERO_CLASS_KEYS.has(class_name):
-				unlocked_hero_classes[class_name] = bool(raw_classes[class_key])
+			var hero_class_key: String = str(class_key)
+			if HERO_CLASS_KEYS.has(hero_class_key):
+				unlocked_hero_classes[hero_class_key] = bool(raw_classes[class_key])
 	unlocked_hero_classes["warrior"] = true
+	var raw_kill_counts: Variant = cfg.get_value("profile", "mob_kill_counts", {})
+	mob_kill_counts.clear()
+	if raw_kill_counts is Dictionary:
+		for mob_id_key: Variant in raw_kill_counts.keys():
+			mob_kill_counts[str(mob_id_key)] = int(raw_kill_counts[mob_id_key])
 
 func _save_profile() -> void:
 	var cfg: ConfigFile = ConfigFile.new()
@@ -212,6 +291,7 @@ func _save_profile() -> void:
 	cfg.set_value("profile", "selected_icon_id", get_selected_icon_id())
 	cfg.set_value("profile", "unlocked_profile_icons", unlocked_profile_icons.duplicate(true))
 	cfg.set_value("profile", "unlocked_hero_classes", unlocked_hero_classes.duplicate(true))
+	cfg.set_value("profile", "mob_kill_counts", mob_kill_counts.duplicate(true))
 	cfg.save(PROFILE_PATH)
 
 func _sync_network_name() -> void:
@@ -237,6 +317,13 @@ func _refresh_unlocks() -> void:
 			if not is_profile_icon_unlocked(hero_icon_id):
 				unlocked_profile_icons[hero_icon_id] = true
 				changed = true
+	for enemy_icon_id: String in ENEMY_ICON_KILL_REQUIREMENTS.keys():
+		var kill_rule: Dictionary = ENEMY_ICON_KILL_REQUIREMENTS[enemy_icon_id]
+		var target_mob_id: String = str(kill_rule.get("mob_id", ""))
+		var required_kills: int = int(kill_rule.get("kills", 0))
+		if required_kills > 0 and int(mob_kill_counts.get(target_mob_id, 0)) >= required_kills and not is_profile_icon_unlocked(enemy_icon_id):
+			unlocked_profile_icons[enemy_icon_id] = true
+			changed = true
 	if not is_profile_icon_unlocked(selected_icon_id):
 		selected_icon_id = DEFAULT_ICON_ID
 		changed = true
@@ -278,6 +365,13 @@ func _on_game_event(event_name: String, _event_data: Dictionary) -> void:
 			if _run_thrown_hits >= 10:
 				unlock_hero_class(ConstantsData.HeroClass.HUNTRESS)
 
+func _on_mob_defeated(_mob_pos: int, _mob_name: String, mob_id: String) -> void:
+	if mob_id.is_empty():
+		return
+	mob_kill_counts[mob_id] = int(mob_kill_counts.get(mob_id, 0)) + 1
+	_refresh_unlocks()
+	_save_profile()
+
 func _reset_run_unlock_progress() -> void:
 	_run_surprise_attacks = 0
 	_run_thrown_hits = 0
@@ -298,3 +392,9 @@ func _hero_class_key(hero_class: int) -> String:
 		ConstantsData.HeroClass.DUELIST:
 			return "duelist"
 	return ""
+
+func _hero_class_for_icon(icon_id: String) -> int:
+	for hero_class: int in HERO_CLASS_ICON_IDS.keys():
+		if str(HERO_CLASS_ICON_IDS[hero_class]) == icon_id:
+			return hero_class
+	return -1

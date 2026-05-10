@@ -47,6 +47,11 @@ const RIGHT_PANEL_SIZE: Vector2 = Vector2(360, 620)
 const LAYOUT_MARGIN_X: float = 24.0
 const LAYOUT_MARGIN_TOP: float = 20.0
 const COLUMN_GAP: float = 16.0
+const LEFT_INSET_X: float = 24.0
+const LEFT_INSET_Y: float = 24.0
+const LEFT_CONTENT_WIDTH: float = 292.0
+const STANDARD_ROW_WIDTH: float = 300.0
+const ACTION_BUTTON_WIDTH: float = 145.0
 
 # Hero class splash art paths (800x450 JPGs)
 const SPLASH_PATHS: Array[String] = [
@@ -242,22 +247,31 @@ void fragment() {
 	shader_material.shader = shader
 	_fade_overlay.material = shader_material
 
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	vbox.position = Vector2(LEFT_INSET_X, LEFT_INSET_Y)
+	vbox.custom_minimum_size = Vector2(LEFT_CONTENT_WIDTH, 592)
+	_left_panel.add_child(vbox)
+
 	# --- Title ---
 	_title_label = Label.new()
 	_title_label.text = "Choose Your Hero"
-	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title_label.add_theme_font_size_override("font_size", 20)
-	_title_label.add_theme_color_override("font_color", GOLD_COLOR)
-	_title_label.position = Vector2(40, 40)
-	_title_label.custom_minimum_size = Vector2(300, 30)
-	_left_panel.add_child(_title_label)
+	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_title_label.add_theme_font_size_override("font_size", 26)
+	_title_label.add_theme_color_override("font_color", Color(0.9, 0.92, 1.0))
+	vbox.add_child(_title_label)
+
+	var class_label: Label = Label.new()
+	class_label.text = "Hero Class"
+	class_label.add_theme_font_size_override("font_size", 12)
+	class_label.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85))
+	vbox.add_child(class_label)
 
 	# --- Hero buttons (icon buttons in a row, like original SPD) ---
 	_class_button_row = HBoxContainer.new()
-	_class_button_row.position = Vector2(40, 85)
-	_class_button_row.custom_minimum_size = Vector2(300, 50)
+	_class_button_row.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 48)
 	_class_button_row.add_theme_constant_override("separation", 4)
-	_left_panel.add_child(_class_button_row)
+	vbox.add_child(_class_button_row)
 
 	for i: int in range(CLASS_COUNT):
 		var btn: Button = _create_hero_button(i)
@@ -269,9 +283,8 @@ void fragment() {
 	_hero_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hero_name_label.add_theme_font_size_override("font_size", 16)
 	_hero_name_label.add_theme_color_override("font_color", GOLD_COLOR)
-	_hero_name_label.position = Vector2(40, 150)
-	_hero_name_label.custom_minimum_size = Vector2(300, 24)
-	_left_panel.add_child(_hero_name_label)
+	_hero_name_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 24)
+	vbox.add_child(_hero_name_label)
 
 	# --- Hero description ---
 	_hero_desc_label = Label.new()
@@ -279,18 +292,16 @@ void fragment() {
 	_hero_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hero_desc_label.add_theme_font_size_override("font_size", 12)
 	_hero_desc_label.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85))
-	_hero_desc_label.position = Vector2(30, 180)
-	_hero_desc_label.custom_minimum_size = Vector2(320, 120)
-	_left_panel.add_child(_hero_desc_label)
+	_hero_desc_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 120)
+	vbox.add_child(_hero_desc_label)
 
 	# --- Stats ---
 	_stats_label = Label.new()
 	_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_stats_label.add_theme_font_size_override("font_size", 12)
 	_stats_label.add_theme_color_override("font_color", Color(0.7, 0.9, 0.7))
-	_stats_label.position = Vector2(40, 310)
-	_stats_label.custom_minimum_size = Vector2(300, 40)
-	_left_panel.add_child(_stats_label)
+	_stats_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 40)
+	vbox.add_child(_stats_label)
 
 	# --- Party slots selector ---
 	_slots_title_label = Label.new()
@@ -298,16 +309,14 @@ void fragment() {
 	_slots_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_slots_title_label.add_theme_font_size_override("font_size", 12)
 	_slots_title_label.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85))
-	_slots_title_label.position = Vector2(40, 360)
-	_slots_title_label.custom_minimum_size = Vector2(300, 20)
-	_left_panel.add_child(_slots_title_label)
+	_slots_title_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 20)
+	vbox.add_child(_slots_title_label)
 
 	_party_slots_row = HBoxContainer.new()
-	_party_slots_row.position = Vector2(20, 388)
-	_party_slots_row.custom_minimum_size = Vector2(340, 42)
+	_party_slots_row.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 42)
 	_party_slots_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_party_slots_row.add_theme_constant_override("separation", 6)
-	_left_panel.add_child(_party_slots_row)
+	vbox.add_child(_party_slots_row)
 
 	for slot_index: int in range(GameManager.MAX_PARTY_SIZE):
 		var slot_button: Button = _create_party_chip_button("", Vector2(78, 38))
@@ -321,31 +330,34 @@ void fragment() {
 	_party_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_party_summary_label.add_theme_font_size_override("font_size", 11)
 	_party_summary_label.add_theme_color_override("font_color", Color(0.72, 0.76, 0.82))
-	_party_summary_label.position = Vector2(25, 445)
-	_party_summary_label.custom_minimum_size = Vector2(330, 48)
-	_left_panel.add_child(_party_summary_label)
+	_party_summary_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 48)
+	vbox.add_child(_party_summary_label)
 
 	_network_notice_label = Label.new()
 	_network_notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_network_notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_network_notice_label.add_theme_font_size_override("font_size", 11)
 	_network_notice_label.add_theme_color_override("font_color", Color(0.75, 0.82, 0.95))
-	_network_notice_label.position = Vector2(25, 492)
-	_network_notice_label.custom_minimum_size = Vector2(330, 36)
-	_left_panel.add_child(_network_notice_label)
+	_network_notice_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 36)
+	vbox.add_child(_network_notice_label)
+
+	var action_spacer: Control = Control.new()
+	action_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(action_spacer)
 
 	# --- Action buttons ---
 	_action_row = HBoxContainer.new()
-	_action_row.position = Vector2(60, 420)
-	_action_row.custom_minimum_size = Vector2(260, 44)
-	_action_row.add_theme_constant_override("separation", 20)
-	_left_panel.add_child(_action_row)
+	_action_row.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 44)
+	_action_row.add_theme_constant_override("separation", 12)
+	vbox.add_child(_action_row)
 
 	_back_button = _create_chrome_button("Back")
+	_back_button.custom_minimum_size = Vector2(ACTION_BUTTON_WIDTH, 42)
 	_back_button.pressed.connect(_on_back_pressed)
 	_action_row.add_child(_back_button)
 
 	_start_button = _create_chrome_button("Start")
+	_start_button.custom_minimum_size = Vector2(ACTION_BUTTON_WIDTH, 42)
 	_start_button.add_theme_color_override("font_color", Color(0.6, 0.9, 0.6))
 	_start_button.add_theme_color_override("font_hover_color", Color(0.7, 1.0, 0.7))
 	_start_button.pressed.connect(_on_start_pressed)
@@ -520,13 +532,13 @@ func _update_selection() -> void:
 
 	# Update hero name and description labels
 	if _hero_name_label:
-		var class_name: String = HeroClassData.get_class_name_str(_selected_class)
+		var hero_class_name: String = HeroClassData.get_class_name_str(_selected_class)
 		var unlocked: bool = _is_class_unlocked(_selected_class)
 		if online_party_locked:
 			var display_name: String = _get_party_slot_display_name(_editing_party_slot)
-			_hero_name_label.text = "%s: %s" % [display_name, class_name]
+			_hero_name_label.text = "%s: %s" % [display_name, hero_class_name]
 		else:
-			_hero_name_label.text = class_name if unlocked else "%s (Locked)" % class_name
+			_hero_name_label.text = hero_class_name if unlocked else "%s (Locked)" % hero_class_name
 	if _hero_desc_label:
 		var class_desc: String = HeroClassData.get_class_description(_selected_class)
 		if not _is_class_unlocked(_selected_class):
@@ -581,8 +593,6 @@ func _update_selection() -> void:
 			_network_notice_label.text = "Waiting for host %s to choose the class loadout and start the run." % host_name
 		else:
 			_network_notice_label.text = ""
-	if _action_row:
-		_action_row.position.y = 555 if online_party_locked else 420
 	if _start_button:
 		var selected_unlocked: bool = _is_class_unlocked(_selected_class)
 		_start_button.disabled = not selected_unlocked

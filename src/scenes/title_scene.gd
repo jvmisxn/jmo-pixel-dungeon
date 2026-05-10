@@ -14,6 +14,7 @@ var _profile_panel: PanelContainer = null
 var _profile_prompt_panel: PanelContainer = null
 var _settings_panel: PanelContainer = null
 var _badges_window: Variant = null
+var _profile_icon_picker_window: Variant = null
 var _network_status_label: Label = null
 var _network_name_edit: LineEdit = null
 var _network_address_edit: LineEdit = null
@@ -22,7 +23,7 @@ var _network_players_edit: LineEdit = null
 var _profile_name_edit: LineEdit = null
 var _profile_name_display_label: Label = null
 var _profile_name_edit_button: Button = null
-var _profile_icon_preview: TextureRect = null
+var _profile_icon_preview: Variant = null
 var _profile_icon_edit_button: Button = null
 var _profile_summary_label: RichTextLabel = null
 var _profile_prompt_name_edit: LineEdit = null
@@ -56,12 +57,22 @@ const BACK_CLUSTERS_PATH: String = "res://assets/spd/splashes/title/back_cluster
 const MID_MIXED_PATH: String = "res://assets/spd/splashes/title/mid_mixed.png"
 const ARCHS_PATH: String = "res://assets/spd/splashes/title/archs.png"
 const CHROME_PATH: String = "res://assets/spd/interfaces/chrome.png"
+const SUBMENU_PANEL_SIZE: Vector2 = Vector2(760, 680)
+const SUBMENU_PANEL_TOP: float = 20.0
+const SUBMENU_CONTENT_MARGIN: int = 24
+const SUBMENU_CONTENT_WIDTH: float = 712.0
+const SUBMENU_ACTION_WIDTH: float = 350.0
 const PROFILE_ICON_SPRITES: Dictionary = {
 	"warrior": "res://assets/spd/sprites/warrior.png",
 	"mage": "res://assets/spd/sprites/mage.png",
 	"rogue": "res://assets/spd/sprites/rogue.png",
 	"huntress": "res://assets/spd/sprites/huntress.png",
 	"duelist": "res://assets/spd/sprites/duelist.png",
+	"rat": "res://assets/spd/sprites/rat.png",
+	"gnoll": "res://assets/spd/sprites/gnoll.png",
+	"crab": "res://assets/spd/sprites/crab.png",
+	"skeleton": "res://assets/spd/sprites/skeleton.png",
+	"goo": "res://assets/spd/sprites/goo.png",
 }
 
 # ---------------------------------------------------------------------------
@@ -294,19 +305,20 @@ func _build_ui() -> void:
 	# --- Network panel (hidden) ---
 	_network_panel = PanelContainer.new()
 	_network_panel.visible = false
-	_network_panel.position = Vector2(350, 170)
-	_network_panel.custom_minimum_size = Vector2(580, 360)
+	_network_panel.position = _get_centered_submenu_position(SUBMENU_PANEL_SIZE)
+	_network_panel.custom_minimum_size = SUBMENU_PANEL_SIZE
 	var network_style: StyleBoxFlat = StyleBoxFlat.new()
 	network_style.bg_color = Color(0.08, 0.08, 0.12, 0.96)
 	network_style.border_color = Color(0.35, 0.42, 0.55)
 	network_style.set_border_width_all(2)
 	network_style.set_corner_radius_all(8)
-	network_style.set_content_margin_all(18)
+	network_style.set_content_margin_all(SUBMENU_CONTENT_MARGIN)
 	_network_panel.add_theme_stylebox_override("panel", network_style)
 	add_child(_network_panel)
 
 	var network_vbox: VBoxContainer = VBoxContainer.new()
-	network_vbox.add_theme_constant_override("separation", 10)
+	network_vbox.custom_minimum_size = Vector2(SUBMENU_CONTENT_WIDTH, SUBMENU_PANEL_SIZE.y - (SUBMENU_CONTENT_MARGIN * 2))
+	network_vbox.add_theme_constant_override("separation", 12)
 	_network_panel.add_child(network_vbox)
 
 	var network_title: Label = Label.new()
@@ -323,7 +335,7 @@ func _build_ui() -> void:
 	network_vbox.add_child(_network_status_label)
 
 	var host_btn: Button = _create_spd_button("Open Lobby")
-	host_btn.custom_minimum_size = Vector2(544, 40)
+	host_btn.custom_minimum_size = Vector2(SUBMENU_CONTENT_WIDTH, 40)
 	host_btn.pressed.connect(_on_network_start_host_pressed)
 	network_vbox.add_child(host_btn)
 
@@ -348,35 +360,40 @@ func _build_ui() -> void:
 	_network_port_edit.placeholder_text = "41234"
 	network_vbox.add_child(_network_port_edit)
 
+	var network_spacer: Control = Control.new()
+	network_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	network_vbox.add_child(network_spacer)
+
 	var network_buttons: HBoxContainer = HBoxContainer.new()
 	network_buttons.add_theme_constant_override("separation", 12)
 	network_vbox.add_child(network_buttons)
 
 	var close_network_btn: Button = _create_spd_button("Back")
-	close_network_btn.custom_minimum_size = Vector2(240, 40)
+	close_network_btn.custom_minimum_size = Vector2(SUBMENU_ACTION_WIDTH, 40)
 	close_network_btn.pressed.connect(func() -> void: _network_panel.visible = false)
 	network_buttons.add_child(close_network_btn)
 
 	var connect_btn: Button = _create_spd_button("Join Lobby")
-	connect_btn.custom_minimum_size = Vector2(240, 40)
+	connect_btn.custom_minimum_size = Vector2(SUBMENU_ACTION_WIDTH, 40)
 	connect_btn.pressed.connect(_on_network_join_host_pressed)
 	network_buttons.add_child(connect_btn)
 
 	_profile_panel = PanelContainer.new()
 	_profile_panel.visible = false
-	_profile_panel.position = Vector2(330, 150)
-	_profile_panel.custom_minimum_size = Vector2(620, 420)
+	_profile_panel.position = _get_centered_submenu_position(SUBMENU_PANEL_SIZE)
+	_profile_panel.custom_minimum_size = SUBMENU_PANEL_SIZE
 	var profile_style: StyleBoxFlat = StyleBoxFlat.new()
 	profile_style.bg_color = Color(0.08, 0.08, 0.12, 0.96)
 	profile_style.border_color = Color(0.4, 0.35, 0.25)
 	profile_style.set_border_width_all(2)
 	profile_style.set_corner_radius_all(8)
-	profile_style.set_content_margin_all(18)
+	profile_style.set_content_margin_all(SUBMENU_CONTENT_MARGIN)
 	_profile_panel.add_theme_stylebox_override("panel", profile_style)
 	add_child(_profile_panel)
 
 	var profile_vbox: VBoxContainer = VBoxContainer.new()
-	profile_vbox.add_theme_constant_override("separation", 10)
+	profile_vbox.custom_minimum_size = Vector2(SUBMENU_CONTENT_WIDTH, SUBMENU_PANEL_SIZE.y - (SUBMENU_CONTENT_MARGIN * 2))
+	profile_vbox.add_theme_constant_override("separation", 12)
 	_profile_panel.add_child(profile_vbox)
 
 	var profile_title: Label = Label.new()
@@ -386,32 +403,26 @@ func _build_ui() -> void:
 	profile_vbox.add_child(profile_title)
 
 	var profile_header: HBoxContainer = HBoxContainer.new()
-	profile_header.add_theme_constant_override("separation", 14)
+	profile_header.add_theme_constant_override("separation", 20)
 	profile_vbox.add_child(profile_header)
 
 	var icon_column: VBoxContainer = VBoxContainer.new()
-	icon_column.add_theme_constant_override("separation", 6)
+	icon_column.add_theme_constant_override("separation", 10)
 	profile_header.add_child(icon_column)
 
-	var icon_frame: Panel = Panel.new()
-	icon_frame.custom_minimum_size = Vector2(86, 86)
-	var icon_style: StyleBoxFlat = StyleBoxFlat.new()
-	icon_style.bg_color = Color(0.12, 0.11, 0.1, 0.92)
-	icon_style.border_color = Color(0.4, 0.36, 0.28)
-	icon_style.set_border_width_all(2)
-	icon_style.set_corner_radius_all(6)
-	icon_frame.add_theme_stylebox_override("panel", icon_style)
-	icon_column.add_child(icon_frame)
+	var icon_anchor: CenterContainer = CenterContainer.new()
+	icon_anchor.custom_minimum_size = Vector2(92, 92)
+	icon_column.add_child(icon_anchor)
 
-	_profile_icon_preview = TextureRect.new()
-	_profile_icon_preview.position = Vector2(11, 11)
-	_profile_icon_preview.custom_minimum_size = Vector2(64, 64)
-	_profile_icon_preview.size = Vector2(64, 64)
-	_profile_icon_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_profile_icon_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	icon_frame.add_child(_profile_icon_preview)
+	var circular_icon_script: GDScript = load("res://src/ui/components/circular_icon_view.gd") as GDScript
+	_profile_icon_preview = circular_icon_script.new() if circular_icon_script else TextureRect.new()
+	_profile_icon_preview.custom_minimum_size = Vector2(76, 76)
+	_profile_icon_preview.size = Vector2(76, 76)
+	if _profile_icon_preview.has_method("set_ring"):
+		_profile_icon_preview.set_ring(Color(0.5, 0.45, 0.35), 0.03)
+	icon_anchor.add_child(_profile_icon_preview)
 
-	_profile_icon_edit_button = _create_spd_button("Edit", Vector2(86, 28))
+	_profile_icon_edit_button = _create_spd_button("Edit", Vector2(92, 28))
 	_profile_icon_edit_button.pressed.connect(_on_profile_icon_edit_pressed)
 	icon_column.add_child(_profile_icon_edit_button)
 
@@ -435,7 +446,7 @@ func _build_ui() -> void:
 	name_row.add_child(_profile_name_edit_button)
 
 	var icon_note_label: Label = Label.new()
-	icon_note_label.text = "Profile icons unlock through progress. Warrior is available by default."
+	icon_note_label.text = "Profile icons unlock through class progress and enemy trophy milestones."
 	icon_note_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	icon_note_label.add_theme_font_size_override("font_size", 12)
 	icon_note_label.add_theme_color_override("font_color", Color(0.72, 0.76, 0.82))
@@ -447,36 +458,41 @@ func _build_ui() -> void:
 
 	_profile_summary_label = RichTextLabel.new()
 	_profile_summary_label.bbcode_enabled = true
-	_profile_summary_label.fit_content = true
-	_profile_summary_label.custom_minimum_size = Vector2(0, 180)
+	_profile_summary_label.fit_content = false
+	_profile_summary_label.scroll_active = false
+	_profile_summary_label.custom_minimum_size = Vector2(0, 148)
 	_profile_summary_label.add_theme_color_override("default_color", Color(0.82, 0.84, 0.9))
 	profile_vbox.add_child(_profile_summary_label)
 
+	var profile_spacer: Control = Control.new()
+	profile_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	profile_vbox.add_child(profile_spacer)
+
 	var profile_links: HBoxContainer = HBoxContainer.new()
-	profile_links.add_theme_constant_override("separation", 10)
+	profile_links.add_theme_constant_override("separation", 12)
 	profile_vbox.add_child(profile_links)
 
 	var badges_btn: Button = _create_spd_button("Achievements")
-	badges_btn.custom_minimum_size = Vector2(260, 40)
+	badges_btn.custom_minimum_size = Vector2(SUBMENU_ACTION_WIDTH, 40)
 	badges_btn.pressed.connect(_on_badges_pressed)
 	profile_links.add_child(badges_btn)
 
 	var rankings_btn: Button = _create_spd_button("View Rankings")
-	rankings_btn.custom_minimum_size = Vector2(260, 40)
+	rankings_btn.custom_minimum_size = Vector2(SUBMENU_ACTION_WIDTH, 40)
 	rankings_btn.pressed.connect(_on_rankings_pressed)
 	profile_links.add_child(rankings_btn)
 
 	var profile_actions: HBoxContainer = HBoxContainer.new()
-	profile_actions.add_theme_constant_override("separation", 10)
+	profile_actions.add_theme_constant_override("separation", 12)
 	profile_vbox.add_child(profile_actions)
 
 	var close_profile_btn: Button = _create_spd_button("Back")
-	close_profile_btn.custom_minimum_size = Vector2(260, 40)
+	close_profile_btn.custom_minimum_size = Vector2(SUBMENU_ACTION_WIDTH, 40)
 	close_profile_btn.pressed.connect(func() -> void: _profile_panel.visible = false)
 	profile_actions.add_child(close_profile_btn)
 
 	var save_profile_btn: Button = _create_spd_button("Save")
-	save_profile_btn.custom_minimum_size = Vector2(260, 40)
+	save_profile_btn.custom_minimum_size = Vector2(SUBMENU_ACTION_WIDTH, 40)
 	save_profile_btn.pressed.connect(_on_save_profile_pressed)
 	profile_actions.add_child(save_profile_btn)
 
@@ -521,18 +537,19 @@ func _build_ui() -> void:
 
 	_settings_panel = PanelContainer.new()
 	_settings_panel.visible = false
-	_settings_panel.position = Vector2(330, 120)
-	_settings_panel.custom_minimum_size = Vector2(620, 480)
+	_settings_panel.position = _get_centered_submenu_position(SUBMENU_PANEL_SIZE)
+	_settings_panel.custom_minimum_size = SUBMENU_PANEL_SIZE
 	var settings_style: StyleBoxFlat = StyleBoxFlat.new()
 	settings_style.bg_color = Color(0.08, 0.08, 0.12, 0.96)
 	settings_style.border_color = Color(0.4, 0.35, 0.25)
 	settings_style.set_border_width_all(2)
 	settings_style.set_corner_radius_all(8)
-	settings_style.set_content_margin_all(18)
+	settings_style.set_content_margin_all(SUBMENU_CONTENT_MARGIN)
 	_settings_panel.add_theme_stylebox_override("panel", settings_style)
 	add_child(_settings_panel)
 
 	var settings_vbox: VBoxContainer = VBoxContainer.new()
+	settings_vbox.custom_minimum_size = Vector2(SUBMENU_CONTENT_WIDTH, SUBMENU_PANEL_SIZE.y - (SUBMENU_CONTENT_MARGIN * 2))
 	settings_vbox.add_theme_constant_override("separation", 12)
 	_settings_panel.add_child(settings_vbox)
 
@@ -603,17 +620,21 @@ func _build_ui() -> void:
 	var settings_separator: HSeparator = HSeparator.new()
 	settings_vbox.add_child(settings_separator)
 
+	var settings_spacer: Control = Control.new()
+	settings_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	settings_vbox.add_child(settings_spacer)
+
 	var settings_actions: HBoxContainer = HBoxContainer.new()
-	settings_actions.add_theme_constant_override("separation", 10)
+	settings_actions.add_theme_constant_override("separation", 12)
 	settings_vbox.add_child(settings_actions)
 
 	var close_settings_btn: Button = _create_spd_button("Back")
-	close_settings_btn.custom_minimum_size = Vector2(260, 40)
+	close_settings_btn.custom_minimum_size = Vector2(SUBMENU_ACTION_WIDTH, 40)
 	close_settings_btn.pressed.connect(func() -> void: _settings_panel.visible = false)
 	settings_actions.add_child(close_settings_btn)
 
 	var save_settings_btn: Button = _create_spd_button("Save")
-	save_settings_btn.custom_minimum_size = Vector2(260, 40)
+	save_settings_btn.custom_minimum_size = Vector2(SUBMENU_ACTION_WIDTH, 40)
 	save_settings_btn.pressed.connect(_on_save_settings_pressed)
 	settings_actions.add_child(save_settings_btn)
 
@@ -634,6 +655,14 @@ func _check_has_save() -> bool:
 	if GameManager and GameManager.has_method("has_save"):
 		return GameManager.has_save()
 	return false
+
+
+func _get_centered_submenu_position(panel_size: Vector2) -> Vector2:
+	var viewport_size: Vector2 = get_viewport_rect().size
+	return Vector2(
+		floor((viewport_size.x - panel_size.x) * 0.5),
+		SUBMENU_PANEL_TOP
+	)
 
 
 func _create_spd_button(text: String, min_size: Vector2 = Vector2(400, 44)) -> Button:
@@ -708,10 +737,35 @@ func _get_profile_icon_texture(icon_id: String) -> Texture2D:
 	var sheet: Texture2D = load(sheet_path) as Texture2D
 	if sheet == null:
 		return null
-	var atlas: AtlasTexture = AtlasTexture.new()
-	atlas.atlas = sheet
-	atlas.region = Rect2(0, 90, 12, 15)
-	return atlas
+	var region: Rect2i = Rect2i(0, 90, 12, 15)
+	match icon_id:
+		"warrior", "mage", "rogue", "huntress", "duelist":
+			region = Rect2i(0, 90, 12, 15)
+		"rat":
+			region = Rect2i(0, 0, 16, 15)
+		"gnoll":
+			region = Rect2i(0, 0, 12, 15)
+		"crab":
+			region = Rect2i(0, 0, 16, 16)
+		"skeleton":
+			region = Rect2i(0, 0, 12, 15)
+		"goo":
+			region = Rect2i(0, 0, 16, 14)
+		_:
+			region = Rect2i(0, 90, 12, 15)
+	var source_image: Image = sheet.get_image()
+	if source_image == null:
+		return sheet
+	var cropped_image: Image = source_image.get_region(region)
+	return ImageTexture.create_from_image(cropped_image)
+
+func _apply_profile_icon_crop(icon_view: Variant, icon_id: String) -> void:
+	if icon_view == null or not icon_view.has_method("set_crop_adjustment"):
+		return
+	if ["warrior", "mage", "rogue", "huntress", "duelist"].has(icon_id):
+		icon_view.set_crop_adjustment(1.24, Vector2(0.035, -0.03))
+	else:
+		icon_view.set_crop_adjustment(1.35, Vector2.ZERO)
 
 func _is_accept_input(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed:
@@ -801,13 +855,27 @@ func _on_profile_name_edit_pressed() -> void:
 	_open_profile_prompt()
 
 func _on_profile_icon_edit_pressed() -> void:
-	if PlayerProfile == null or not PlayerProfile.has_method("cycle_selected_icon"):
+	if PlayerProfile == null:
 		return
-	PlayerProfile.cycle_selected_icon(1)
+	if _profile_icon_picker_window != null and is_instance_valid(_profile_icon_picker_window):
+		return
+	var picker_script: GDScript = load("res://src/ui/windows/wnd_profile_icon_picker.gd") as GDScript
+	if picker_script == null:
+		return
+	_profile_icon_picker_window = picker_script.new()
+	_profile_icon_picker_window.icon_selected.connect(_on_profile_icon_selected)
+	_profile_icon_picker_window.window_closed.connect(func() -> void:
+		_profile_icon_picker_window = null
+	)
+	add_child(_profile_icon_picker_window)
+
+func _on_profile_icon_selected(icon_id: String) -> void:
+	if PlayerProfile == null or not PlayerProfile.has_method("set_selected_icon_id"):
+		return
+	PlayerProfile.set_selected_icon_id(icon_id)
 	if NetworkManager and NetworkManager.has_method("set_local_profile_icon_id"):
 		NetworkManager.set_local_profile_icon_id(PlayerProfile.get_selected_icon_id())
-	if MessageLog:
-		MessageLog.add("Profile icon updated.")
+	_refresh_profile_ui()
 
 func _on_badges_pressed() -> void:
 	if _badges_window != null and is_instance_valid(_badges_window):
@@ -925,21 +993,23 @@ func _refresh_profile_ui() -> void:
 	if _profile_prompt_name_edit and PlayerProfile and PlayerProfile.has_player_name():
 		_profile_prompt_name_edit.text = PlayerProfile.get_player_name()
 	if _profile_icon_preview and PlayerProfile:
-		_profile_icon_preview.texture = _get_profile_icon_texture(PlayerProfile.get_selected_icon_id())
+		var selected_icon_id: String = PlayerProfile.get_selected_icon_id()
+		_profile_icon_preview.texture = _get_profile_icon_texture(selected_icon_id)
+		_apply_profile_icon_crop(_profile_icon_preview, selected_icon_id)
 	if _profile_icon_edit_button and PlayerProfile and PlayerProfile.has_method("get_unlocked_profile_icon_ids"):
 		var unlocked_count: int = PlayerProfile.get_unlocked_profile_icon_ids().size()
-		_profile_icon_edit_button.disabled = unlocked_count <= 1
-		_profile_icon_edit_button.tooltip_text = "Cycle unlocked icons (%d available)" % unlocked_count
+		_profile_icon_edit_button.disabled = false
+		_profile_icon_edit_button.tooltip_text = "Choose profile icon (%d unlocked)" % unlocked_count
 	if _profile_summary_label == null or PlayerProfile == null:
 		return
 	var ranking_summary: Dictionary = PlayerProfile.get_rankings_summary()
 	var unlocked_icons: int = 0
 	if PlayerProfile.has_method("get_unlocked_profile_icon_ids"):
 		unlocked_icons = PlayerProfile.get_unlocked_profile_icon_ids().size()
-	_profile_summary_label.text = "[b]%s[/b]\n[b]Profile Icons:[/b] %d/%d\n[b]Runs:[/b] %d\n[b]Victories:[/b] %d\n[b]Best Score:[/b] %d\n[b]Deepest Depth:[/b] %d" % [
+	_profile_summary_label.text = "[center][b]%s[/b][/center]\n\n[table=2]\n[cell][b]Profile Icons[/b][/cell][cell]%d/%d[/cell]\n[cell][b]Runs[/b][/cell][cell]%d[/cell]\n[cell][b]Victories[/b][/cell][cell]%d[/cell]\n[cell][b]Best Score[/b][/cell][cell]%d[/cell]\n[cell][b]Deepest Depth[/b][/cell][cell]%d[/cell]\n[/table]" % [
 		PlayerProfile.get_badge_summary(),
 		unlocked_icons,
-		5,
+		PlayerProfile.PROFILE_ICON_IDS.size() if PlayerProfile else 0,
 		int(ranking_summary.get("runs", 0)),
 		int(ranking_summary.get("wins", 0)),
 		int(ranking_summary.get("best_score", 0)),

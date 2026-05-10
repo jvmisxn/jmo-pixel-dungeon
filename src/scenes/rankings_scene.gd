@@ -18,7 +18,13 @@ const RANKINGS_PATH: String = "user://rankings.dat"
 const BACK_CLUSTERS_PATH: String = "res://assets/spd/splashes/title/back_clusters.png"
 const MID_MIXED_PATH: String = "res://assets/spd/splashes/title/mid_mixed.png"
 const ARCHS_PATH: String = "res://assets/spd/splashes/title/archs.png"
-const PANEL_SIZE: Vector2 = Vector2(980, 620)
+const PANEL_SIZE: Vector2 = Vector2(760, 680)
+const PANEL_TOP: float = 20.0
+const PANEL_PADDING_X: float = 24.0
+const PANEL_PADDING_Y: float = 22.0
+const LIST_WIDTH: float = 696.0
+const LIST_HEIGHT: float = 530.0
+const ACTION_BUTTON_WIDTH: float = 342.0
 const CLASS_ICONS: Array[String] = ["W", "M", "R", "H", "D"]
 const CLASS_COLORS: Array[Color] = [
 	Color(0.8, 0.3, 0.2),   # Warrior
@@ -36,6 +42,8 @@ func _ready() -> void:
 	_load_rankings()
 	_build_background()
 	_build_ui()
+	_apply_layout()
+	get_viewport().size_changed.connect(_apply_layout)
 	# Play title theme music (matches original RankingsScene.java)
 	if AudioManager:
 		AudioManager.play_theme_music()
@@ -163,7 +171,6 @@ func _build_ui() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	_main_panel = Panel.new()
-	_main_panel.position = Vector2(150, 60)
 	_main_panel.custom_minimum_size = PANEL_SIZE
 	_main_panel.size = PANEL_SIZE
 	var main_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -177,21 +184,21 @@ func _build_ui() -> void:
 	var title: Label = Label.new()
 	title.text = "Rankings"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-	title.position = Vector2(340, 18)
-	title.custom_minimum_size = Vector2(300, 50)
+	title.position = Vector2(PANEL_PADDING_X, PANEL_PADDING_Y)
+	title.custom_minimum_size = Vector2(LIST_WIDTH, 42)
 	_main_panel.add_child(title)
 
 	# Scroll container for rankings list
 	_scroll_container = ScrollContainer.new()
-	_scroll_container.position = Vector2(30, 78)
-	_scroll_container.custom_minimum_size = Vector2(920, 460)
-	_scroll_container.size = Vector2(920, 460)
+	_scroll_container.position = Vector2(PANEL_PADDING_X, 74)
+	_scroll_container.custom_minimum_size = Vector2(LIST_WIDTH, LIST_HEIGHT)
+	_scroll_container.size = Vector2(LIST_WIDTH, LIST_HEIGHT)
 	_main_panel.add_child(_scroll_container)
 
 	_list_container = VBoxContainer.new()
-	_list_container.custom_minimum_size = Vector2(900, 0)
+	_list_container.custom_minimum_size = Vector2(LIST_WIDTH - 12.0, 0)
 	_list_container.add_theme_constant_override("separation", 4)
 	_scroll_container.add_child(_list_container)
 
@@ -199,26 +206,25 @@ func _build_ui() -> void:
 
 	# Bottom buttons
 	var btn_container: HBoxContainer = HBoxContainer.new()
-	btn_container.position = Vector2(270, 552)
-	btn_container.custom_minimum_size = Vector2(440, 50)
-	btn_container.add_theme_constant_override("separation", 20)
+	btn_container.position = Vector2(PANEL_PADDING_X, PANEL_SIZE.y - 64)
+	btn_container.custom_minimum_size = Vector2(LIST_WIDTH, 44)
+	btn_container.add_theme_constant_override("separation", 12)
 	_main_panel.add_child(btn_container)
 
 	var back_btn: Button = WndBase.create_spd_button("Back")
-	back_btn.custom_minimum_size = Vector2(210, 44)
+	back_btn.custom_minimum_size = Vector2(ACTION_BUTTON_WIDTH, 44)
 	back_btn.pressed.connect(_on_back_pressed)
 	btn_container.add_child(back_btn)
 
 	var clear_btn: Button = WndBase.create_spd_button("Clear Rankings")
-	clear_btn.custom_minimum_size = Vector2(210, 44)
+	clear_btn.custom_minimum_size = Vector2(ACTION_BUTTON_WIDTH, 44)
 	clear_btn.pressed.connect(_on_clear_pressed)
 	btn_container.add_child(clear_btn)
 
 	# Confirmation panel (hidden)
 	_confirm_panel = PanelContainer.new()
 	_confirm_panel.visible = false
-	_confirm_panel.position = Vector2(240, 230)
-	_confirm_panel.custom_minimum_size = Vector2(500, 160)
+	_confirm_panel.custom_minimum_size = Vector2(500, 180)
 	var confirm_style: StyleBoxFlat = StyleBoxFlat.new()
 	confirm_style.bg_color = Color(0.12, 0.1, 0.16)
 	confirm_style.border_width_left = 2
@@ -243,18 +249,16 @@ func _build_ui() -> void:
 	confirm_btns.alignment = BoxContainer.ALIGNMENT_CENTER
 	confirm_vbox.add_child(confirm_btns)
 
-	var yes_btn: Button = Button.new()
-	yes_btn.text = "Yes, Clear"
-	yes_btn.custom_minimum_size = Vector2(140, 38)
+	var yes_btn: Button = WndBase.create_spd_button("Clear")
+	yes_btn.custom_minimum_size = Vector2(160, 40)
 	yes_btn.pressed.connect(func() -> void:
 		_clear_rankings()
 		_confirm_panel.visible = false
 	)
 	confirm_btns.add_child(yes_btn)
 
-	var no_btn: Button = Button.new()
-	no_btn.text = "Cancel"
-	no_btn.custom_minimum_size = Vector2(140, 38)
+	var no_btn: Button = WndBase.create_spd_button("Back")
+	no_btn.custom_minimum_size = Vector2(160, 40)
 	no_btn.pressed.connect(func() -> void:
 		_confirm_panel.visible = false
 	)
@@ -273,7 +277,7 @@ func _rebuild_list() -> void:
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.add_theme_font_size_override("font_size", 18)
 		empty_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.6))
-		empty_label.custom_minimum_size = Vector2(900, 100)
+		empty_label.custom_minimum_size = Vector2(LIST_WIDTH - 12.0, 100)
 		_list_container.add_child(empty_label)
 		return
 
@@ -300,8 +304,8 @@ func _rebuild_list() -> void:
 		if i % 2 == 0:
 			var bg: ColorRect = ColorRect.new()
 			bg.color = Color(0.08, 0.07, 0.11, 0.5)
-			bg.custom_minimum_size = Vector2(980, 36)
-			bg.size = Vector2(980, 36)
+			bg.custom_minimum_size = Vector2(LIST_WIDTH - 12.0, 36)
+			bg.size = Vector2(LIST_WIDTH - 12.0, 36)
 			bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			row.add_child(bg)
 			row.move_child(bg, 0)
@@ -309,13 +313,13 @@ func _rebuild_list() -> void:
 
 func _create_entry_row(rank: String, player_name: String, cls: String, depth: String, result: String, score: String, gold: String, is_header: bool) -> HBoxContainer:
 	var row: HBoxContainer = HBoxContainer.new()
-	row.custom_minimum_size = Vector2(980, 36)
+	row.custom_minimum_size = Vector2(LIST_WIDTH - 12.0, 36)
 	row.add_theme_constant_override("separation", 0)
 
 	var font_size: int = 16 if is_header else 15
 	var font_color: Color = Color(0.9, 0.85, 0.6) if is_header else Color(0.8, 0.8, 0.85)
 
-	var widths: Array[int] = [50, 170, 110, 70, 260, 100, 100]
+	var widths: Array[int] = [50, 138, 88, 60, 200, 78, 66]
 	var texts: Array[String] = [rank, player_name, cls, depth, result, score, gold]
 
 	for j: int in range(texts.size()):
@@ -330,6 +334,20 @@ func _create_entry_row(rank: String, player_name: String, cls: String, depth: St
 		row.add_child(lbl)
 
 	return row
+
+func _apply_layout() -> void:
+	if _main_panel == null:
+		return
+	var viewport_size: Vector2 = get_viewport_rect().size
+	_main_panel.position = Vector2(
+		floor((viewport_size.x - PANEL_SIZE.x) * 0.5),
+		PANEL_TOP
+	)
+	if _confirm_panel != null:
+		_confirm_panel.position = Vector2(
+			floor((PANEL_SIZE.x - _confirm_panel.custom_minimum_size.x) * 0.5),
+			230
+		)
 
 # ---------------------------------------------------------------------------
 # Button Callbacks

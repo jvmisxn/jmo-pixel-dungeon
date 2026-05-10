@@ -63,12 +63,18 @@ const PROFILE_ICON_SPRITES: Dictionary = {
 	"rogue": "res://assets/spd/sprites/rogue.png",
 	"huntress": "res://assets/spd/sprites/huntress.png",
 	"duelist": "res://assets/spd/sprites/duelist.png",
+	"rat": "res://assets/spd/sprites/rat.png",
+	"gnoll": "res://assets/spd/sprites/gnoll.png",
+	"crab": "res://assets/spd/sprites/crab.png",
+	"skeleton": "res://assets/spd/sprites/skeleton.png",
+	"goo": "res://assets/spd/sprites/goo.png",
 }
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	RenderingServer.set_default_clear_color(Color.BLACK)
 	_selected_class = NetworkManager.get_local_lobby_class() if NetworkManager and NetworkManager.has_method("get_local_lobby_class") else ConstantsData.HeroClass.WARRIOR
+	_selected_class = _ensure_unlocked_local_class(_selected_class)
 	_build_background()
 	_build_ui()
 	_apply_layout()
@@ -239,8 +245,8 @@ func _build_ui() -> void:
 
 	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
-	vbox.position = Vector2(22, 18)
-	vbox.custom_minimum_size = Vector2(300, 604)
+	vbox.position = Vector2(24, 24)
+	vbox.custom_minimum_size = Vector2(292, 592)
 	_left_panel.add_child(vbox)
 
 	var title: Label = Label.new()
@@ -272,7 +278,7 @@ func _build_ui() -> void:
 	vbox.add_child(_status_label)
 
 	var players_panel: Panel = Panel.new()
-	players_panel.custom_minimum_size = Vector2(0, 300)
+	players_panel.custom_minimum_size = Vector2(0, 272)
 	var players_panel_style: StyleBoxFlat = StyleBoxFlat.new()
 	players_panel_style.bg_color = Color(0.03, 0.03, 0.05, 0.25)
 	players_panel_style.border_color = Color(0.2, 0.18, 0.14, 0.7)
@@ -283,7 +289,7 @@ func _build_ui() -> void:
 
 	_players_list_container = VBoxContainer.new()
 	_players_list_container.position = Vector2(10, 10)
-	_players_list_container.custom_minimum_size = Vector2(280, 280)
+	_players_list_container.custom_minimum_size = Vector2(280, 252)
 	_players_list_container.add_theme_constant_override("separation", 8)
 	players_panel.add_child(_players_list_container)
 
@@ -294,39 +300,24 @@ func _build_ui() -> void:
 	action_grid.add_theme_constant_override("v_separation", 8)
 	vbox.add_child(action_grid)
 
-	var settings_button: Button = Button.new()
-	settings_button.text = "Settings"
-	settings_button.custom_minimum_size = Vector2(145, 42)
+	var settings_button: Button = _create_menu_button("Settings", Vector2(145, 42))
 	settings_button.pressed.connect(_on_settings_pressed)
 	action_grid.add_child(settings_button)
 
-	_join_button = Button.new()
-	_join_button.text = "Join"
-	_join_button.custom_minimum_size = Vector2(145, 42)
+	_join_button = _create_menu_button("Join", Vector2(145, 42))
 	_join_button.pressed.connect(_on_open_join_panel_pressed)
 	action_grid.add_child(_join_button)
 
-	_leave_button = Button.new()
-	_leave_button.text = "Back"
-	_leave_button.custom_minimum_size = Vector2(145, 42)
+	_leave_button = _create_menu_button("Back", Vector2(145, 42))
 	_leave_button.pressed.connect(_on_leave_pressed)
 	action_grid.add_child(_leave_button)
 
-	_ready_button = Button.new()
-	_ready_button.text = "Ready Up"
-	_ready_button.custom_minimum_size = Vector2(145, 42)
+	_ready_button = _create_menu_button("Ready Up", Vector2(145, 42))
 	_ready_button.pressed.connect(_on_ready_pressed)
 	action_grid.add_child(_ready_button)
 
-	var note: Label = Label.new()
-	note.text = "Hosts open a lobby automatically here. Ready up first, then start once the whole party is ready. Clients can join another lobby from the Join button."
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.add_theme_font_size_override("font_size", 12)
-	note.add_theme_color_override("font_color", Color(0.65, 0.7, 0.76))
-	vbox.add_child(note)
-
 	var bottom_margin_spacer: Control = Control.new()
-	bottom_margin_spacer.custom_minimum_size = Vector2(0, 20)
+	bottom_margin_spacer.custom_minimum_size = Vector2(0, 36)
 	vbox.add_child(bottom_margin_spacer)
 
 	_settings_panel = PanelContainer.new()
@@ -392,15 +383,11 @@ func _build_ui() -> void:
 	settings_buttons.add_theme_constant_override("separation", 8)
 	settings_vbox.add_child(settings_buttons)
 
-	var apply_settings_button: Button = Button.new()
-	apply_settings_button.text = "Apply"
-	apply_settings_button.custom_minimum_size = Vector2(140, 38)
+	var apply_settings_button: Button = _create_menu_button("Apply", Vector2(140, 38))
 	apply_settings_button.pressed.connect(_on_apply_settings_pressed)
 	settings_buttons.add_child(apply_settings_button)
 
-	var close_settings_button: Button = Button.new()
-	close_settings_button.text = "Close"
-	close_settings_button.custom_minimum_size = Vector2(140, 38)
+	var close_settings_button: Button = _create_menu_button("Back", Vector2(140, 38))
 	close_settings_button.pressed.connect(func() -> void: _settings_panel.visible = false)
 	settings_buttons.add_child(close_settings_button)
 
@@ -451,15 +438,11 @@ func _build_ui() -> void:
 	join_buttons.add_theme_constant_override("separation", 8)
 	join_vbox.add_child(join_buttons)
 
-	var close_join_button: Button = Button.new()
-	close_join_button.text = "Back"
-	close_join_button.custom_minimum_size = Vector2(140, 38)
+	var close_join_button: Button = _create_menu_button("Back", Vector2(140, 38))
 	close_join_button.pressed.connect(func() -> void: _join_panel.visible = false)
 	join_buttons.add_child(close_join_button)
 
-	var confirm_join_button: Button = Button.new()
-	confirm_join_button.text = "Join"
-	confirm_join_button.custom_minimum_size = Vector2(140, 38)
+	var confirm_join_button: Button = _create_menu_button("Join", Vector2(140, 38))
 	confirm_join_button.pressed.connect(_on_join_lobby_pressed)
 	join_buttons.add_child(confirm_join_button)
 
@@ -508,6 +491,40 @@ func _create_hero_button(class_index: int) -> Button:
 	_apply_class_button_style(btn, class_index == _selected_class)
 	return btn
 
+func _create_menu_button(text: String, min_size: Vector2) -> Button:
+	var btn: Button = Button.new()
+	btn.text = text
+	btn.custom_minimum_size = min_size
+	btn.add_theme_font_size_override("font_size", 16)
+	btn.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
+	btn.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.8))
+	btn.add_theme_color_override("font_pressed_color", Color(0.7, 0.65, 0.5))
+
+	var normal: StyleBoxFlat = StyleBoxFlat.new()
+	normal.bg_color = Color(0.15, 0.14, 0.12, 0.9)
+	normal.border_color = Color(0.4, 0.36, 0.30)
+	normal.set_border_width_all(2)
+	normal.set_corner_radius_all(2)
+	normal.content_margin_left = 12.0
+	normal.content_margin_right = 12.0
+	normal.content_margin_top = 6.0
+	normal.content_margin_bottom = 6.0
+	btn.add_theme_stylebox_override("normal", normal)
+
+	var hover: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.22, 0.20, 0.16, 0.95)
+	hover.border_color = Color(0.55, 0.50, 0.40)
+	btn.add_theme_stylebox_override("hover", hover)
+
+	var pressed: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.10, 0.09, 0.07)
+	btn.add_theme_stylebox_override("pressed", pressed)
+
+	var focus: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	focus.border_color = Color(1.0, 0.85, 0.3)
+	btn.add_theme_stylebox_override("focus", focus)
+	return btn
+
 func _get_hero_icon(class_index: int) -> Texture2D:
 	if class_index < 0 or class_index >= SPRITE_PATHS.size():
 		return null
@@ -529,28 +546,83 @@ func _get_profile_icon(icon_id: String) -> Texture2D:
 	var sheet: Texture2D = load(sheet_path) as Texture2D
 	if sheet == null:
 		return null
-	var atlas: AtlasTexture = AtlasTexture.new()
-	atlas.atlas = sheet
-	atlas.region = Rect2(0, 90, 12, 15)
-	return atlas
+	var region: Rect2i = Rect2i(0, 90, 12, 15)
+	match icon_id:
+		"warrior", "mage", "rogue", "huntress", "duelist":
+			region = Rect2i(0, 90, 12, 15)
+		"rat":
+			region = Rect2i(0, 0, 16, 15)
+		"gnoll":
+			region = Rect2i(0, 0, 12, 15)
+		"crab":
+			region = Rect2i(0, 0, 16, 16)
+		"skeleton":
+			region = Rect2i(0, 0, 12, 15)
+		"goo":
+			region = Rect2i(0, 0, 16, 14)
+		_:
+			region = Rect2i(0, 90, 12, 15)
+	var source_image: Image = sheet.get_image()
+	if source_image == null:
+		return sheet
+	var cropped_image: Image = source_image.get_region(region)
+	return ImageTexture.create_from_image(cropped_image)
+
+func _apply_profile_icon_crop(icon_view: Variant, icon_id: String) -> void:
+	if icon_view == null or not icon_view.has_method("set_crop_adjustment"):
+		return
+	if ["warrior", "mage", "rogue", "huntress", "duelist"].has(icon_id):
+		icon_view.set_crop_adjustment(1.24, Vector2(0.035, -0.03))
+	else:
+		icon_view.set_crop_adjustment(1.35, Vector2.ZERO)
+
+func _is_class_unlocked(class_index: int) -> bool:
+	if PlayerProfile == null or not PlayerProfile.has_method("is_hero_class_unlocked"):
+		return true
+	return PlayerProfile.is_hero_class_unlocked(class_index)
+
+func _ensure_unlocked_local_class(class_index: int) -> int:
+	var resolved_class: int = class_index
+	if not _is_class_unlocked(resolved_class):
+		resolved_class = ConstantsData.HeroClass.WARRIOR
+	if NetworkManager and NetworkManager.has_method("get_local_lobby_class") and NetworkManager.get_local_lobby_class() != resolved_class:
+		NetworkManager.set_local_lobby_class(resolved_class)
+	return resolved_class
 
 func _apply_class_button_style(btn: Button, is_selected: bool) -> void:
 	var normal: StyleBoxFlat = StyleBoxFlat.new()
-	normal.bg_color = Color(0.18, 0.16, 0.14, 0.9) if is_selected else Color(0.12, 0.11, 0.10, 0.85)
-	normal.border_color = Color(1.0, 0.85, 0.3) if is_selected else Color(0.3, 0.28, 0.25)
-	normal.set_border_width_all(2 if is_selected else 1)
+	var unlocked: bool = _is_class_unlocked(_hero_buttons.find(btn))
+	if not unlocked:
+		normal.bg_color = Color(0.08, 0.08, 0.08, 0.72)
+		normal.border_color = Color(0.24, 0.24, 0.24)
+	else:
+		normal.bg_color = Color(0.18, 0.16, 0.14, 0.9) if is_selected else Color(0.12, 0.11, 0.10, 0.85)
+		normal.border_color = Color(1.0, 0.85, 0.3) if is_selected else Color(0.3, 0.28, 0.25)
+	normal.set_border_width_all(2 if is_selected and unlocked else 1)
 	normal.set_corner_radius_all(2)
 	normal.content_margin_left = 4.0
 	normal.content_margin_right = 4.0
 	normal.content_margin_top = 4.0
 	normal.content_margin_bottom = 4.0
 	btn.add_theme_stylebox_override("normal", normal)
+	btn.modulate = Color(1, 1, 1, 1) if unlocked else Color(0.65, 0.65, 0.65, 0.95)
+	btn.disabled = not unlocked
 
 func _cycle_class(step: int) -> void:
-	var next_class: int = posmod(_selected_class + step, SPRITE_PATHS.size())
-	_on_class_button_pressed(next_class)
+	if _hero_buttons.is_empty():
+		return
+	var start_class: int = _selected_class
+	var next_class: int = start_class
+	for _i: int in range(SPRITE_PATHS.size()):
+		next_class = posmod(next_class + step, SPRITE_PATHS.size())
+		if _is_class_unlocked(next_class):
+			_on_class_button_pressed(next_class)
+			return
+	_on_class_button_pressed(start_class)
 
 func _on_class_button_pressed(class_index: int) -> void:
+	if not _is_class_unlocked(class_index):
+		return
 	_selected_class = class_index
 	if NetworkManager and NetworkManager.has_method("set_local_lobby_class"):
 		NetworkManager.set_local_lobby_class(class_index)
@@ -593,7 +665,7 @@ func _refresh() -> void:
 	if _status_label == null or _players_list_container == null:
 		return
 	if NetworkManager and NetworkManager.has_method("get_local_lobby_class"):
-		_selected_class = NetworkManager.get_local_lobby_class()
+		_selected_class = _ensure_unlocked_local_class(NetworkManager.get_local_lobby_class())
 	if _class_label:
 		_class_label.text = "Your Class: %s" % HeroClassData.get_class_name_str(_selected_class)
 	for idx: int in range(_hero_buttons.size()):
@@ -628,23 +700,15 @@ func _refresh() -> void:
 		row.add_theme_constant_override("separation", 8)
 		_players_list_container.add_child(row)
 
-		var icon_holder: Panel = Panel.new()
-		icon_holder.custom_minimum_size = Vector2(28, 28)
-		var icon_holder_style: StyleBoxFlat = StyleBoxFlat.new()
-		icon_holder_style.bg_color = Color(0.12, 0.11, 0.1, 0.9)
-		icon_holder_style.border_color = Color(0.35, 0.31, 0.24)
-		icon_holder_style.set_border_width_all(1)
-		icon_holder_style.set_corner_radius_all(4)
-		icon_holder.add_theme_stylebox_override("panel", icon_holder_style)
-		row.add_child(icon_holder)
-
-		var icon_rect: TextureRect = TextureRect.new()
-		icon_rect.position = Vector2(5, 5)
-		icon_rect.size = Vector2(18, 18)
-		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		var circular_icon_script: GDScript = load("res://src/ui/components/circular_icon_view.gd") as GDScript
+		var icon_rect: Variant = circular_icon_script.new() if circular_icon_script else TextureRect.new()
+		icon_rect.custom_minimum_size = Vector2(24, 24)
+		icon_rect.size = Vector2(24, 24)
 		icon_rect.texture = _get_profile_icon(profile_icon_id)
-		icon_holder.add_child(icon_rect)
+		if icon_rect.has_method("set_ring"):
+			icon_rect.set_ring(Color(0.38, 0.34, 0.28), 0.04)
+		_apply_profile_icon_crop(icon_rect, profile_icon_id)
+		row.add_child(icon_rect)
 
 		var row_label: Label = Label.new()
 		row_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
