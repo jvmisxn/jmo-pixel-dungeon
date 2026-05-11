@@ -240,18 +240,10 @@ func _on_save_close() -> void:
 
 func _on_exit_to_menu() -> void:
 	close_window()
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return
 	var title_script: GDScript = load("res://src/scenes/title_scene.gd") as GDScript
 	if title_script == null:
 		return
-	var game_scene: Node = tree.root.get_node_or_null("GameScene")
-	if game_scene != null:
-		game_scene.queue_free()
-	var title_scene: Control = title_script.new()
-	title_scene.name = "TitleScene"
-	tree.root.add_child(title_scene)
+	SceneManager.go_to(title_script, "TitleScene")
 
 
 # --- Helpers ---

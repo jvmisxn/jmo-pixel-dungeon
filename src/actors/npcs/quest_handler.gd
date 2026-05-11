@@ -73,9 +73,6 @@ static func spawn_quest_npc(level_ref: Variant, depth: int) -> Variant:
 	if not _initialized:
 		reset()
 
-	if not is_quest_depth(depth):
-		return null
-
 	var npc: Variant = null
 
 	# Sad Ghost — Sewers (depth 2-4)
@@ -174,7 +171,7 @@ static func get_quest_status(quest_id: String) -> String:
 
 ## Shop depths: one shop per region, on the first floor of each new region.
 ## Original SPD: Sewers->Prison: 6, Prison->Caves: 11, Caves->City: 16, City->Halls: 21
-const SHOP_DEPTHS: Array[int] = [6, 11, 16, 20, 21]
+const SHOP_DEPTHS: Array[int] = [6, 11, 16, 21]
 
 ## Returns true if this depth should have a shopkeeper.
 static func is_shop_depth(depth: int) -> bool:
@@ -224,13 +221,8 @@ static func _find_spawn_pos(level_ref: Variant) -> int:
 # ---------------------------------------------------------------------------
 
 static func serialize() -> Dictionary:
-	var npc_data: Array[Dictionary] = []
-	for npc: Variant in active_npcs:
-		if npc != null and npc.has_method("serialize"):
-			npc_data.append(npc.serialize())
 	return {
 		"quest_states": quest_states.duplicate(),
-		"active_npcs": npc_data,
 		"initialized": _initialized,
 	}
 

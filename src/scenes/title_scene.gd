@@ -650,11 +650,7 @@ func _load_texture(path: String) -> Texture2D:
 
 
 func _check_has_save() -> bool:
-	if SaveManager and SaveManager.has_method("has_save"):
-		return SaveManager.has_save()
-	if GameManager and GameManager.has_method("has_save"):
-		return GameManager.has_save()
-	return false
+	return SaveManager != null and SaveManager.has_method("has_save") and SaveManager.has_save()
 
 
 func _get_centered_submenu_position(panel_size: Vector2) -> Vector2:
@@ -820,8 +816,6 @@ func _on_continue_pressed() -> void:
 	var success: bool = false
 	if SaveManager and SaveManager.has_method("load_full_game"):
 		success = SaveManager.load_full_game()
-	elif GameManager and GameManager.has_method("load_game"):
-		success = GameManager.load_game()
 	if success:
 		var loading_script: GDScript = load("res://src/scenes/loading_scene.gd") as GDScript
 		if loading_script:

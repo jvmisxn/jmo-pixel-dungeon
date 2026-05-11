@@ -10,6 +10,12 @@ signal scene_changed(new_scene: Node)
 ## The currently active scene (top-level game screen).
 var current_scene: Node = null
 
+func _ready() -> void:
+	if current_scene == null:
+		var tree: SceneTree = get_tree()
+		if tree != null:
+			current_scene = tree.current_scene
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -44,4 +50,9 @@ func _do_transition(new_scene: Node) -> void:
 	# Defer add_child so it works even when called from _ready()
 	root.add_child.call_deferred(new_scene)
 	current_scene = new_scene
+	call_deferred("_finalize_transition", new_scene)
+
+func _finalize_transition(new_scene: Node) -> void:
+	if new_scene == null or not is_instance_valid(new_scene):
+		return
 	scene_changed.emit(new_scene)

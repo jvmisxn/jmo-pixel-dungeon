@@ -22,8 +22,6 @@ func _ready() -> void:
 		GameManager.end_game(true)
 	if SaveManager:
 		SaveManager.delete_save()
-	elif GameManager:
-		GameManager.delete_save()
 
 	# --- Center container for responsive layout ---
 	var center: CenterContainer = CenterContainer.new()

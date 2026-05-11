@@ -193,113 +193,6 @@ func _instantiate_script(path: String) -> Variant:
 		return null
 	return script.new()
 
-func _make_item_ref(hero_node: Variant, item: Variant) -> Dictionary:
-	if hero_node == null or item == null:
-		return {}
-	var belongings: Variant = hero_node.get("belongings")
-	if belongings == null:
-		return {}
-	var ref: Dictionary = {"item_id": str(ConstantsData.get_prop(item, "item_id", ""))}
-	var backpack: Variant = belongings.get("backpack")
-	if backpack is Array:
-		for idx: int in range(backpack.size()):
-			if backpack[idx] == item:
-				ref["backpack_index"] = idx
-				return ref
-	for slot_name: String in _EQUIP_SLOT_NAMES:
-		if belongings.get(slot_name) == item:
-			ref["equip_slot"] = slot_name
-			return ref
-	return ref
-
-func _resolve_item_ref(hero_node: Variant, item_ref: Variant) -> Variant:
-	if hero_node == null or not (item_ref is Dictionary):
-		return null
-	var ref: Dictionary = item_ref
-	var belongings: Variant = hero_node.get("belongings")
-	if belongings == null:
-		return null
-	var expected_item_id: String = str(ref.get("item_id", ""))
-	if ref.has("backpack_index"):
-		var backpack: Variant = belongings.get("backpack")
-		var backpack_index: int = int(ref.get("backpack_index", -1))
-		if backpack is Array and backpack_index >= 0 and backpack_index < backpack.size():
-			var backpack_item: Variant = backpack[backpack_index]
-			if backpack_item != null and (expected_item_id.is_empty() or str(ConstantsData.get_prop(backpack_item, "item_id", "")) == expected_item_id):
-				return backpack_item
-	if ref.has("equip_slot"):
-		var equipped_item: Variant = belongings.get(str(ref.get("equip_slot", "")))
-		if equipped_item != null and (expected_item_id.is_empty() or str(ConstantsData.get_prop(equipped_item, "item_id", "")) == expected_item_id):
-			return equipped_item
-	if expected_item_id.is_empty():
-		return null
-	return belongings.find_item(expected_item_id) if belongings.has_method("find_item") else null
-
-func _encode_network_action(hero_node: Variant, action: Dictionary) -> Dictionary:
-	var encoded: Dictionary = action.duplicate(true)
-	if encoded.has("item"):
-		var item_ref: Dictionary = _make_item_ref(hero_node, encoded.get("item"))
-		encoded.erase("item")
-		encoded["item_ref"] = item_ref
-	if encoded.has("item_a"):
-		var item_a_ref: Dictionary = _make_item_ref(hero_node, encoded.get("item_a"))
-		encoded.erase("item_a")
-		encoded["item_a_ref"] = item_a_ref
-	if encoded.has("item_b"):
-		var item_b_ref: Dictionary = _make_item_ref(hero_node, encoded.get("item_b"))
-		encoded.erase("item_b")
-		encoded["item_b_ref"] = item_b_ref
-	if encoded.has("source_item"):
-		var source_item_ref: Dictionary = _make_item_ref(hero_node, encoded.get("source_item"))
-		encoded.erase("source_item")
-		encoded["source_item_ref"] = source_item_ref
-	if encoded.has("ingredient_items"):
-		var ingredient_refs: Array[Dictionary] = []
-		var source_ingredients: Variant = encoded.get("ingredient_items", [])
-		if source_ingredients is Array:
-			for ingredient_item: Variant in source_ingredients:
-				ingredient_refs.append(_make_item_ref(hero_node, ingredient_item))
-		encoded.erase("ingredient_items")
-		encoded["ingredient_refs"] = ingredient_refs
-	if encoded.has("target"):
-		encoded.erase("target")
-	return encoded
-
-func _normalize_action_for_hero(hero_node: Variant, action: Dictionary) -> Dictionary:
-	var normalized: Dictionary = action.duplicate(true)
-	if not normalized.has("item") and normalized.has("item_ref"):
-		var resolved_item: Variant = _resolve_item_ref(hero_node, normalized.get("item_ref"))
-		if resolved_item != null:
-			normalized["item"] = resolved_item
-	if not normalized.has("item_a") and normalized.has("item_a_ref"):
-		var resolved_item_a: Variant = _resolve_item_ref(hero_node, normalized.get("item_a_ref"))
-		if resolved_item_a != null:
-			normalized["item_a"] = resolved_item_a
-	if not normalized.has("item_b") and normalized.has("item_b_ref"):
-		var resolved_item_b: Variant = _resolve_item_ref(hero_node, normalized.get("item_b_ref"))
-		if resolved_item_b != null:
-			normalized["item_b"] = resolved_item_b
-	if not normalized.has("source_item") and normalized.has("source_item_ref"):
-		var resolved_source_item: Variant = _resolve_item_ref(hero_node, normalized.get("source_item_ref"))
-		if resolved_source_item != null:
-			normalized["source_item"] = resolved_source_item
-	if not normalized.has("ingredient_items") and normalized.has("ingredient_refs"):
-		var resolved_ingredients: Array = []
-		var ingredient_refs: Variant = normalized.get("ingredient_refs", [])
-		if ingredient_refs is Array:
-			for ingredient_ref: Variant in ingredient_refs:
-				var resolved_ingredient: Variant = _resolve_item_ref(hero_node, ingredient_ref)
-				if resolved_ingredient != null:
-					resolved_ingredients.append(resolved_ingredient)
-		normalized["ingredient_items"] = resolved_ingredients
-	if normalized.get("type", "") == "attack" and not normalized.has("target"):
-		var target_pos: int = int(normalized.get("target_pos", -1))
-		if _current_level != null and target_pos >= 0 and _current_level.has_method("find_char_at"):
-			var target_char: Variant = _current_level.find_char_at(target_pos)
-			if target_char != null and target_char != hero_node:
-				normalized["target"] = target_char
-	return normalized
-
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
@@ -617,71 +510,13 @@ func load_level(level: Variant, region: int) -> void:
 
 ## Refresh visuals after a turn completes (FOV, sprites, items).
 func refresh_after_turn() -> void:
-	var local_hero: Variant = _get_focused_hero()
-	if _current_level == null or local_hero == null:
-		return
-
-	_ensure_mob_sprites()
-
-	# Update FOV (use hero's actual view distance for Huntress bonus, MindVision, etc.)
-	var _vd: int = local_hero.get_view_distance() if local_hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
-	_current_level.update_fov(local_hero.pos, _vd)
-	fog_of_war.update_visibility()
-
-	# Update terrain changes
-	tile_map.render_changed()
-	tile_map.update_tile_visibility()
-
-	# Update entity visibility
-	_update_entity_visibility()
-
-	# Update camera target
-	var hero_world: Vector2 = tile_map.cell_to_world(local_hero.pos)
-	game_camera.set_target(hero_world)
-
-	# Check for dead mobs and remove their sprites
-	_cleanup_dead_mobs()
-
-	# Refresh item sprites
-	_refresh_item_sprites()
-	_refresh_plant_sprites()
-	_refresh_armed_bomb_sprites()
-	_interrupt_rest_if_needed()
-	_sync_online_snapshot()
+	SceneFeedbackCoordinator.refresh_after_turn(self)
 
 ## Called by TurnManager after each visible mob action (move, attack) so the
 ## player can see the mob act in real time. Updates the mob's sprite position,
 ## plays attack animation if it attacked the hero, and refreshes FOV/visibility.
 func on_mob_action(actor: Node) -> void:
-	if actor == null or not is_instance_valid(actor):
-		return
-	var actor_id: int = actor.get("actor_id") if actor.get("actor_id") != null else -1
-	var sprite: Variant = _mob_sprites.get(actor_id) if actor_id >= 0 else null
-
-	if sprite and is_instance_valid(sprite):
-		var mob_pos: int = actor.get("pos") if actor.get("pos") != null else -1
-		var action_name: String = str(actor.get("last_visible_action"))
-		var action_target_pos: int = int(actor.get("last_visible_target_pos")) if actor.get("last_visible_target_pos") != null else -1
-		# Sync sprite to mob's current logical position (animate move)
-		if mob_pos >= 0 and mob_pos != sprite.cell_pos:
-			sprite.move_to(mob_pos)
-		# Attack animation must use explicit action data; inferring from the
-		# mob's current target after resolution is unreliable.
-		if action_name == "attack" and action_target_pos >= 0:
-			sprite.play_attack(action_target_pos)
-		# Update HP bar
-		if actor.get("hp") != null and actor.get("ht") != null:
-			sprite.update_hp_bar(actor.hp, actor.ht)
-
-	# Refresh FOV and visibility so the player sees the mob and terrain updates
-	var local_hero: Variant = _get_focused_hero()
-	if _current_level and local_hero:
-		var _vd: int = local_hero.get_view_distance() if local_hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
-		_current_level.update_fov(local_hero.pos, _vd)
-		fog_of_war.update_visibility()
-		_update_entity_visibility()
-		_interrupt_rest_if_needed()
-	_queue_online_snapshot_sync(true)
+	SceneFeedbackCoordinator.on_mob_action(self, actor)
 
 
 ## Get the EffectManager for external systems to trigger effects.
@@ -689,20 +524,7 @@ func get_effects() -> Variant:
 	return effect_manager
 
 func _serialize_online_snapshot() -> Dictionary:
-	var heroes_data: Array[Dictionary] = []
-	for hero_node: Variant in GameManager.heroes:
-		if hero_node != null and is_instance_valid(hero_node) and hero_node.has_method("serialize"):
-			heroes_data.append(hero_node.serialize())
-	var current_input_slot: int = -1
-	var input_hero: Variant = _get_input_hero()
-	if input_hero != null and input_hero.get("hero_slot_index") != null:
-		current_input_slot = int(input_hero.get("hero_slot_index"))
-	return {
-		"depth": GameManager.depth,
-		"heroes": heroes_data,
-		"level": _current_level.serialize() if _current_level != null and _current_level.has_method("serialize") else {},
-		"current_input_slot": current_input_slot,
-	}
+	return OnlineSnapshotUtils.serialize_online_snapshot(GameManager.heroes, _get_input_hero(), _current_level)
 
 func _queue_online_snapshot_sync(force: bool = false) -> void:
 	if not _is_online_host():
@@ -711,71 +533,16 @@ func _queue_online_snapshot_sync(force: bool = false) -> void:
 	_pending_online_snapshot_force = _pending_online_snapshot_force or force
 
 func _sync_online_snapshot(force: bool = false) -> void:
-	if not _is_online_host():
-		return
-	if NetworkManager == null or not NetworkManager.has_method("broadcast_run_snapshot"):
-		return
-	if not force and TurnManager != null and not TurnManager.waiting_for_input:
-		return
-	NetworkManager.broadcast_run_snapshot(_serialize_online_snapshot())
+	OnlineSyncCoordinator.sync_snapshot(self, force)
 
 func _capture_hero_snapshot_state() -> Dictionary:
-	var snapshot_state: Dictionary = {}
-	if GameManager == null:
-		return snapshot_state
-	for hero_node: Variant in GameManager.heroes:
-		if hero_node == null or not is_instance_valid(hero_node):
-			continue
-		var hero_key: int = int(hero_node.get("actor_id")) if hero_node.get("actor_id") != null else -1
-		if hero_key < 0:
-			continue
-		snapshot_state[hero_key] = {
-			"pos": int(ConstantsData.get_prop(hero_node, "pos", -1)),
-			"hp": int(ConstantsData.get_prop(hero_node, "hp", 0)),
-			"action": str(ConstantsData.get_prop(hero_node, "last_visible_action", "")),
-			"target_pos": int(ConstantsData.get_prop(hero_node, "last_visible_target_pos", -1)),
-		}
-	return snapshot_state
+	return {} if GameManager == null else OnlineSnapshotUtils.capture_hero_snapshot_state(GameManager.heroes)
 
 func _capture_mob_snapshot_state() -> Dictionary:
-	var snapshot_state: Dictionary = {}
-	if _current_level == null or _current_level.get("mobs") == null:
-		return snapshot_state
-	for mob_node: Variant in _current_level.mobs:
-		if mob_node == null or not is_instance_valid(mob_node):
-			continue
-		var mob_key: int = int(mob_node.get("actor_id")) if mob_node.get("actor_id") != null else mob_node.get_instance_id()
-		snapshot_state[mob_key] = {
-			"pos": int(ConstantsData.get_prop(mob_node, "pos", -1)),
-			"hp": int(ConstantsData.get_prop(mob_node, "hp", 0)),
-			"action": str(ConstantsData.get_prop(mob_node, "last_visible_action", "")),
-			"target_pos": int(ConstantsData.get_prop(mob_node, "last_visible_target_pos", -1)),
-		}
-	return snapshot_state
+	return OnlineSnapshotUtils.capture_mob_snapshot_state(_current_level)
 
 func _capture_level_snapshot_state() -> Dictionary:
-	var snapshot_state: Dictionary = {
-		"map": [],
-		"heaps": {},
-	}
-	if _current_level == null:
-		return snapshot_state
-	if _current_level.get("map") is Array:
-		snapshot_state["map"] = _current_level.map.duplicate()
-	var heaps_by_pos: Dictionary = {}
-	for heap: Dictionary in _current_level.heaps:
-		var heap_pos: int = int(heap.get("pos", -1))
-		if heap_pos < 0:
-			continue
-		var item: Variant = heap.get("item")
-		var item_name: String = ""
-		if item is Object:
-			item_name = str(ConstantsData.get_prop(item, "item_name", ConstantsData.get_prop(item, "item_id", "item")))
-		if item_name.is_empty():
-			item_name = "item"
-		heaps_by_pos[heap_pos] = item_name
-	snapshot_state["heaps"] = heaps_by_pos
-	return snapshot_state
+	return OnlineSnapshotUtils.capture_level_snapshot_state(_current_level)
 
 func _tick_snapshot_feedback_suppression() -> void:
 	_tick_suppression_dict(_suppressed_snapshot_pickups)
@@ -817,21 +584,22 @@ func _apply_online_snapshot(snapshot: Dictionary) -> void:
 		var fresh_level: Variant = LevelFactory.instantiate_for_depth(snapshot_depth)
 		if fresh_level != null:
 			GameManager.current_level = fresh_level
+	var level_data: Variant = snapshot.get("level", {})
+	if level_data is Dictionary and GameManager.current_level != null and GameManager.current_level.has_method("deserialize"):
+		GameManager.current_level.deserialize(level_data)
+	_current_level = GameManager.current_level
 	var heroes_data: Variant = snapshot.get("heroes", [])
 	if heroes_data is Array:
 		for idx: int in range(mini(GameManager.heroes.size(), heroes_data.size())):
 			var hero_node: Variant = GameManager.heroes[idx]
 			var hero_data: Variant = heroes_data[idx]
 			if hero_node != null and is_instance_valid(hero_node) and hero_data is Dictionary and hero_node.has_method("deserialize"):
-				hero_node.deserialize(hero_data)
-				hero_node.level = GameManager.current_level
-	var level_data: Variant = snapshot.get("level", {})
-	if level_data is Dictionary and GameManager.current_level != null and GameManager.current_level.has_method("deserialize"):
-		GameManager.current_level.deserialize(level_data)
-		_current_level = GameManager.current_level
-		for hero_node: Variant in GameManager.heroes:
-			if hero_node != null and is_instance_valid(hero_node):
 				hero_node.level = _current_level
+				hero_node.deserialize(hero_data)
+				hero_node.level = _current_level
+	for hero_node: Variant in GameManager.heroes:
+		if hero_node != null and is_instance_valid(hero_node):
+			hero_node.level = _current_level
 	_network_input_slot = int(snapshot.get("current_input_slot", -1))
 	_rebuild_scene_from_state(depth_changed, previous_hero_state, previous_mob_state, previous_level_state)
 
@@ -881,8 +649,7 @@ func _rebuild_scene_from_state(force_full_rebuild: bool = false, previous_hero_s
 	if _network_input_slot >= 0 and _network_input_slot < GameManager.heroes.size():
 		var acting_hero: Variant = GameManager.heroes[_network_input_slot]
 		if acting_hero != null and is_instance_valid(acting_hero):
-			var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager and NetworkManager.has_method("get_local_peer_id") else 1
-			_awaiting_hero_input = int(ConstantsData.get_prop(acting_hero, "owner_peer_id", 1)) == local_peer_id
+			_awaiting_hero_input = OnlineEventCodec.is_local_hero(NetworkManager, acting_hero)
 	if _hud:
 		_hud.update_all()
 
@@ -929,162 +696,21 @@ func _apply_snapshot_world_feedback(previous_level_state: Dictionary) -> void:
 			if _suppressed_snapshot_pickups.has(heap_pos):
 				_suppressed_snapshot_pickups.erase(heap_pos)
 				continue
-			var pickup_hero: Variant = _find_hero_at_position(heap_pos)
+			var pickup_hero: Variant = OnlineSnapshotUtils.find_hero_at_position(GameManager.heroes, heap_pos)
 			if pickup_hero != null and effect_manager != null:
 				effect_manager.show_status(heap_pos, "Pickup", Color(1.0, 0.9, 0.45))
 
-func _find_hero_at_position(target_pos: int) -> Variant:
-	if GameManager == null:
-		return null
-	for hero_node: Variant in GameManager.heroes:
-		if hero_node == null or not is_instance_valid(hero_node):
-			continue
-		if int(ConstantsData.get_prop(hero_node, "pos", -1)) == target_pos:
-			return hero_node
-	return null
-
 func _remove_local_heap_at_pos(target_pos: int) -> void:
-	if _current_level == null:
-		return
-	for idx: int in range(_current_level.heaps.size() - 1, -1, -1):
-		var heap: Dictionary = _current_level.heaps[idx]
-		if int(heap.get("pos", -1)) == target_pos:
-			_current_level.heaps.remove_at(idx)
-			return
+	OnlineSnapshotUtils.remove_heap_at_pos(_current_level, target_pos)
 
 func _make_item_from_data(item_data: Dictionary) -> Variant:
-	if item_data.is_empty():
-		return null
-	var item_id: String = str(item_data.get("item_id", ""))
-	if item_id.is_empty():
-		return null
-	var item: Variant = Generator.create_item(item_id)
-	if item != null and item.has_method("deserialize"):
-		item.deserialize(item_data)
-	return item
+	return OnlineSnapshotUtils.make_item_from_data(item_data)
 
 func _find_hero_by_actor_id(actor_id: int) -> Variant:
-	if GameManager == null or actor_id < 0:
-		return null
-	for hero_node: Variant in GameManager.heroes:
-		if hero_node == null or not is_instance_valid(hero_node):
-			continue
-		if int(ConstantsData.get_prop(hero_node, "actor_id", -1)) == actor_id:
-			return hero_node
-	return null
+	return null if GameManager == null else OnlineSnapshotUtils.find_hero_by_actor_id(GameManager.heroes, actor_id)
 
 func _find_mob_by_actor_id(actor_id: int) -> Variant:
-	if _current_level == null or actor_id < 0:
-		return null
-	for mob_node: Variant in _current_level.mobs:
-		if mob_node == null or not is_instance_valid(mob_node):
-			continue
-		if int(ConstantsData.get_prop(mob_node, "actor_id", -1)) == actor_id:
-			return mob_node
-	return null
-
-func _serialize_shop_items(shopkeeper_node: Variant) -> Array[Dictionary]:
-	var shop_data: Array[Dictionary] = []
-	if shopkeeper_node == null or not shopkeeper_node.has_method("get_shop_items"):
-		return shop_data
-	for entry: Dictionary in shopkeeper_node.get_shop_items():
-		var serialized_entry: Dictionary = {"price": int(entry.get("price", 0))}
-		var item: Variant = entry.get("item")
-		if item != null and item.has_method("serialize"):
-			serialized_entry["item_data"] = item.serialize()
-		shop_data.append(serialized_entry)
-	return shop_data
-
-func _get_npc_reward_choices(npc_node: Variant) -> Array:
-	var rewards: Array = []
-	if npc_node == null:
-		return rewards
-	var reward_weapon: Variant = ConstantsData.get_prop(npc_node, "reward_weapon", null)
-	var reward_armor: Variant = ConstantsData.get_prop(npc_node, "reward_armor", null)
-	var reward_ring: Variant = ConstantsData.get_prop(npc_node, "reward_ring", null)
-	var wand_choice_a: Variant = ConstantsData.get_prop(npc_node, "wand_choice_a", null)
-	var wand_choice_b: Variant = ConstantsData.get_prop(npc_node, "wand_choice_b", null)
-	if reward_weapon != null:
-		rewards.append(reward_weapon)
-	if reward_armor != null:
-		rewards.append(reward_armor)
-	if reward_ring != null:
-		rewards.append(reward_ring)
-	if wand_choice_a != null:
-		rewards.append(wand_choice_a)
-	if wand_choice_b != null:
-		rewards.append(wand_choice_b)
-	return rewards
-
-func _make_plant_from_type(plant_type: String) -> Variant:
-	var normalized_type: String = plant_type.to_lower()
-	var plant_script_path: String = ""
-	match normalized_type:
-		"sungrass":
-			plant_script_path = "res://src/plants/sungrass.gd"
-		"earthroot":
-			plant_script_path = "res://src/plants/earthroot.gd"
-		"fadeleaf":
-			plant_script_path = "res://src/plants/fadeleaf.gd"
-		"firebloom":
-			plant_script_path = "res://src/plants/firebloom.gd"
-		"icecap":
-			plant_script_path = "res://src/plants/icecap.gd"
-		"sorrowmoss":
-			plant_script_path = "res://src/plants/sorrowmoss.gd"
-		"dreamfoil":
-			plant_script_path = "res://src/plants/dreamfoil.gd"
-		"stormvine":
-			plant_script_path = "res://src/plants/stormvine.gd"
-		"blindweed":
-			plant_script_path = "res://src/plants/blindweed.gd"
-		"rotberry":
-			plant_script_path = "res://src/plants/rotberry.gd"
-		"starflower":
-			plant_script_path = "res://src/plants/starflower.gd"
-		"swiftthistle":
-			plant_script_path = "res://src/plants/swiftthistle.gd"
-		_:
-			return null
-	var plant_script: Variant = load(plant_script_path)
-	return plant_script.new() if plant_script != null else null
-
-func _get_status_effect_feedback(effect_id: String) -> Dictionary:
-	match effect_id.to_lower():
-		"poison":
-			return {"text": "Poison", "color": Color(0.45, 0.82, 0.38), "burst": 8}
-		"burning":
-			return {"text": "Burn!", "color": Color(1.0, 0.42, 0.12), "burst": 9}
-		"paralysis":
-			return {"text": "Paralyzed", "color": Color(1.0, 0.92, 0.35), "burst": 7}
-		"blindness":
-			return {"text": "Blind", "color": Color(0.72, 0.72, 0.72), "burst": 6}
-		"chill":
-			return {"text": "Chill", "color": Color(0.45, 0.74, 1.0), "burst": 7}
-		"frozen":
-			return {"text": "Frozen", "color": Color(0.55, 0.82, 1.0), "burst": 8}
-		"rooted":
-			return {"text": "Rooted", "color": Color(0.42, 0.72, 0.28), "burst": 7}
-		"cripple":
-			return {"text": "Crippled", "color": Color(0.82, 0.72, 0.38), "burst": 6}
-		"weakness":
-			return {"text": "Weak", "color": Color(0.74, 0.56, 0.82), "burst": 6}
-		"ooze":
-			return {"text": "Ooze", "color": Color(0.56, 0.82, 0.42), "burst": 6}
-		_:
-			return {}
-
-func _show_status_effect_feedback(pos: int, effect_id: String) -> void:
-	if pos < 0 or effect_manager == null:
-		return
-	var feedback: Dictionary = _get_status_effect_feedback(effect_id)
-	if feedback.is_empty():
-		return
-	var effect_color: Color = feedback.get("color", Color.WHITE) as Color
-	var effect_text: String = str(feedback.get("text", effect_id.capitalize()))
-	var burst_count: int = int(feedback.get("burst", 6))
-	effect_manager.particle_burst(pos, effect_color, burst_count)
-	effect_manager.show_status(pos, effect_text, effect_color)
+	return OnlineSnapshotUtils.find_mob_by_actor_id(_current_level, actor_id)
 
 func _sync_hero_sprites_from_state(previous_hero_state: Dictionary = {}) -> void:
 	if GameManager == null:
@@ -1366,68 +992,7 @@ func _spawn_hero_sprites() -> void:
 	_refresh_hero_identifiers()
 
 func _refresh_hero_identifiers() -> void:
-	if GameManager == null:
-		return
-	var party_size: int = GameManager.get_active_heroes().size() if GameManager.has_method("get_active_heroes") else GameManager.heroes.size()
-	var focused_hero: Variant = _get_focused_hero()
-	var local_owned_hero: Variant = GameManager.get_local_owned_hero() if GameManager.has_method("get_local_owned_hero") else null
-	var input_hero: Variant = _get_input_hero()
-	for hero_node: Variant in GameManager.heroes:
-		if hero_node == null or not is_instance_valid(hero_node):
-			continue
-		var hero_key: int = int(hero_node.get("actor_id")) if hero_node.get("actor_id") != null else -1
-		var hero_sprite: Variant = _hero_sprites.get(hero_key) if hero_key >= 0 else null
-		if hero_sprite == null or not is_instance_valid(hero_sprite) or not hero_sprite.has_method("set_ally_label"):
-			continue
-		if party_size <= 1:
-			hero_sprite.clear_ally_label()
-			if hero_sprite.has_method("clear_ground_ring"):
-				hero_sprite.clear_ground_ring()
-			continue
-		var label_text: String = _get_hero_identifier_text(hero_node)
-		var label_color: Color = _get_hero_identifier_color(hero_node, focused_hero, local_owned_hero)
-		hero_sprite.set_ally_label(label_text, label_color)
-		_apply_hero_identifier_ring(hero_sprite, hero_node, focused_hero, local_owned_hero, input_hero)
-
-func _apply_hero_identifier_ring(hero_sprite: Variant, hero_node: Variant, focused_hero: Variant, local_owned_hero: Variant, input_hero: Variant) -> void:
-	if hero_sprite == null or not is_instance_valid(hero_sprite) or not hero_sprite.has_method("set_ground_ring"):
-		return
-	if hero_node == null:
-		hero_sprite.clear_ground_ring()
-		return
-	if hero_node.get("is_alive") != true:
-		hero_sprite.set_ground_ring(FALLEN_RING_FILL, FALLEN_RING_OUTLINE)
-		return
-	if hero_node == input_hero:
-		hero_sprite.set_ground_ring(INPUT_RING_FILL, INPUT_RING_OUTLINE)
-		return
-	if hero_node == focused_hero:
-		hero_sprite.set_ground_ring(FOCUSED_RING_FILL, FOCUSED_RING_OUTLINE)
-		return
-	if hero_node == local_owned_hero:
-		hero_sprite.set_ground_ring(LOCAL_RING_FILL, LOCAL_RING_OUTLINE)
-		return
-	hero_sprite.set_ground_ring(ALLY_RING_FILL, ALLY_RING_OUTLINE)
-
-func _get_hero_identifier_text(hero_node: Variant) -> String:
-	if hero_node == null:
-		return ""
-	var base_name: String = str(ConstantsData.get_prop(hero_node, "hero_name", "")).strip_edges()
-	if base_name.is_empty():
-		base_name = HeroClassData.get_class_name_str(int(ConstantsData.get_prop(hero_node, "hero_class", ConstantsData.HeroClass.WARRIOR)))
-	var slot_index: int = int(ConstantsData.get_prop(hero_node, "hero_slot_index", GameManager.get_hero_index(hero_node) if GameManager and GameManager.has_method("get_hero_index") else 0))
-	return "P%d %s" % [slot_index + 1, base_name.left(10)]
-
-func _get_hero_identifier_color(hero_node: Variant, focused_hero: Variant, local_owned_hero: Variant) -> Color:
-	if hero_node == null:
-		return ALLY_LABEL_COLOR
-	if hero_node.get("is_alive") != true:
-		return FALLEN_LABEL_COLOR
-	if hero_node == focused_hero:
-		return FOCUSED_LABEL_COLOR
-	if hero_node == local_owned_hero:
-		return LOCAL_LABEL_COLOR
-	return ALLY_LABEL_COLOR
+	SceneVisualCoordinator.refresh_hero_identifiers(self)
 
 func _spawn_mob_sprites() -> void:
 	if _current_level == null:
@@ -1530,192 +1095,24 @@ func _clear_entity_sprites() -> void:
 		_blob_layer.clear_cells()
 
 func _cleanup_dead_mobs() -> void:
-	var to_remove: Array[int] = []
-	for key: int in _mob_sprites.keys():
-		var sprite: Variant = _mob_sprites[key]
-		if sprite == null:
-			continue  # Disguised mimic placeholder
-		if not (sprite is Node2D) or not sprite.has_method("play_death"):
-			continue
-		if not is_instance_valid(sprite.character):
-			# Character was freed (died and call_deferred("free") ran)
-			to_remove.append(key)
-		elif sprite.character is Object:
-			if sprite.character.get("is_alive") == false:
-				sprite.play_death()
-				to_remove.append(key)
-	for key: Variant in to_remove:
-		_mob_sprites.erase(key)
+	SceneVisualCoordinator.cleanup_dead_mobs(self)
 
 func _refresh_item_sprites() -> void:
-	if _current_level == null:
-		return
-	# Remove sprites for picked-up items
-	var valid_positions: Dictionary[int, bool] = {}
-	for heap: Dictionary in _current_level.heaps:
-		valid_positions[heap.get("pos", -1)] = true
-	var to_remove: Array[int] = []
-	for pos: int in _item_sprites.keys():
-		if not valid_positions.has(pos):
-			var sprite: Variant = _item_sprites[pos]
-			if is_instance_valid(sprite):
-				sprite.play_pickup()
-			to_remove.append(pos)
-	for pos: int in to_remove:
-		_item_sprites.erase(pos)
-	# Add sprites for new items
-	for heap: Dictionary in _current_level.heaps:
-		var pos: int = heap.get("pos", -1)
-		if pos >= 0 and not _item_sprites.has(pos):
-			var sprite: Variant = _instantiate_script("res://src/sprites/item_sprite.gd")
-			sprite.setup_from_item(heap.get("item"))
-			sprite.place_at(pos)
-			sprite.play_drop()
-			_entity_layer.add_child(sprite)
-			_item_sprites[pos] = sprite
+	SceneVisualCoordinator.refresh_item_sprites(self)
 
 func _refresh_armed_bomb_sprites() -> void:
-	if _current_level == null:
-		return
-	var valid_positions: Dictionary[int, bool] = {}
-	for bomb_entry: Dictionary in _current_level.pending_bombs:
-		var bomb_pos: int = bomb_entry.get("pos", -1)
-		valid_positions[bomb_pos] = true
-	var to_remove: Array[int] = []
-	for pos: int in _armed_bomb_sprites.keys():
-		if not valid_positions.has(pos):
-			var stale_sprite: Variant = _armed_bomb_sprites[pos]
-			if is_instance_valid(stale_sprite):
-				stale_sprite.play_pickup(0.15)
-			to_remove.append(pos)
-	for pos: int in to_remove:
-		_armed_bomb_sprites.erase(pos)
-	for bomb_entry: Dictionary in _current_level.pending_bombs:
-		var bomb_pos: int = bomb_entry.get("pos", -1)
-		if bomb_pos < 0 or _armed_bomb_sprites.has(bomb_pos):
-			continue
-		var bomb: Variant = bomb_entry.get("bomb")
-		var sprite: Variant = _instantiate_script("res://src/sprites/item_sprite.gd")
-		if bomb is Object:
-			sprite.setup_from_item(bomb)
-		else:
-			sprite.setup_manual(ConstantsData.ItemCategory.MISC, Color(0.8, 0.3, 0.2))
-		sprite.place_at(bomb_pos)
-		sprite.play_drop()
-		_entity_layer.add_child(sprite)
-		_armed_bomb_sprites[bomb_pos] = sprite
-		if effect_manager:
-			effect_manager.show_status(bomb_pos, "Fuse", Color(1.0, 0.7, 0.2))
+	SceneVisualCoordinator.refresh_armed_bomb_sprites(self)
 
 func _refresh_plant_sprites() -> void:
-	if _current_level == null:
-		return
-	var valid_positions: Dictionary[int, bool] = {}
-	for plant_pos_variant: Variant in _current_level.plants.keys():
-		var plant_pos: int = int(plant_pos_variant)
-		valid_positions[plant_pos] = true
-	var to_remove: Array[int] = []
-	for pos: int in _plant_sprites.keys():
-		if not valid_positions.has(pos):
-			var stale_sprite: Variant = _plant_sprites[pos]
-			if is_instance_valid(stale_sprite):
-				stale_sprite.queue_free()
-			to_remove.append(pos)
-	for pos: int in to_remove:
-		_plant_sprites.erase(pos)
-	for plant_pos_variant: Variant in _current_level.plants.keys():
-		var plant_pos: int = int(plant_pos_variant)
-		if plant_pos < 0 or _plant_sprites.has(plant_pos):
-			continue
-		var plant: Variant = _current_level.plants[plant_pos]
-		var sprite: Variant = _instantiate_script("res://src/sprites/plant_sprite.gd")
-		var plant_key: String = str(plant.get("plant_id")) if plant != null and plant.get("plant_id") != null else ""
-		sprite.setup_for_plant(plant_key)
-		sprite.place_at(plant_pos)
-		_entity_layer.add_child(sprite)
-		_plant_sprites[plant_pos] = sprite
+	SceneVisualCoordinator.refresh_plant_sprites(self)
 
 func _refresh_blob_overlays() -> void:
-	if _current_level == null or _blob_layer == null:
-		return
-
-	var cells_by_pos: Dictionary[int, Dictionary] = {}
-	for blob_entry: Dictionary in _current_level.blobs:
-		var blob: Variant = blob_entry.get("blob")
-		if blob == null or not blob.has_method("get_density"):
-			continue
-		var blob_id: String = str(blob.get("blob_id"))
-		var style: String = _blob_style_for_id(blob_id)
-		var color: Color = _blob_color_for_id(blob_id)
-		var active_cells: Variant = blob.get("active_cells")
-		if not (active_cells is Array):
-			continue
-		for cell_variant: Variant in active_cells:
-			var cell: int = int(cell_variant)
-			if cell < 0 or cell >= Level.LEN:
-				continue
-			var density: float = float(blob.call("get_density", cell))
-			if density <= 0.0:
-				continue
-			var alpha: float = _blob_alpha_for_cell(cell, density)
-			if alpha <= 0.0:
-				continue
-			if cells_by_pos.has(cell):
-				var existing: Dictionary = cells_by_pos[cell]
-				existing["alpha"] = maxf(float(existing.get("alpha", 0.0)), alpha)
-				existing["color"] = (existing.get("color", color) as Color).lerp(color, 0.45)
-				cells_by_pos[cell] = existing
-			else:
-				cells_by_pos[cell] = {
-					"pos": cell,
-					"color": color,
-					"alpha": alpha,
-					"style": style,
-				}
-
-	var render_cells: Array[Dictionary] = []
-	for pos: int in cells_by_pos.keys():
-		render_cells.append(cells_by_pos[pos])
-	_blob_layer.set_cells(render_cells)
-
-func _blob_alpha_for_cell(cell: int, density: float) -> float:
-	if _current_level == null:
-		return 0.0
-	if cell < 0 or cell >= _current_level.visible.size():
-		return 0.0
-	if _current_level.visible[cell]:
-		return clampf(0.18 + density * 0.22, 0.18, 0.68)
-	return 0.0
-
-func _blob_color_for_id(blob_id: String) -> Color:
-	match blob_id:
-		"toxic_gas":
-			return Color(0.33, 0.8, 0.33)
-		"paralytic_gas":
-			return Color(0.95, 0.84, 0.26)
-		"confusion_gas":
-			return Color(0.72, 0.45, 0.95)
-		"fire":
-			return Color(1.0, 0.42, 0.12)
-		"web":
-			return Color(0.88, 0.88, 0.96)
-		"water_of_health":
-			return Color(0.32, 0.86, 0.94)
-		"smoke_screen":
-			return Color(0.55, 0.55, 0.6)
-		_:
-			return Color(0.7, 0.7, 0.7)
-
-func _blob_style_for_id(blob_id: String) -> String:
-	match blob_id:
-		"fire":
-			return "fire"
-		"web":
-			return "web"
-		_:
-			return "gas"
+	SceneVisualCoordinator.refresh_blob_overlays(self)
 
 func _update_entity_visibility() -> void:
+	SceneVisualCoordinator.update_entity_visibility(self)
+	return
+
 	if _current_level == null:
 		return
 	_refresh_hero_identifiers()
@@ -1762,6 +1159,9 @@ func _update_entity_visibility() -> void:
 # ---------------------------------------------------------------------------
 
 func _handle_cell_click(cell: int) -> void:
+	InputCoordinator.handle_cell_click(self, cell)
+	return
+
 	var hero: Variant = _get_input_hero()
 	if hero == null:
 		return
@@ -1818,6 +1218,8 @@ func _handle_cell_click(cell: int) -> void:
 			_submit_hero_action({"type": "move", "target_pos": cell})
 
 func _handle_key_input(keycode: int) -> bool:
+	return InputCoordinator.handle_key_input(self, keycode)
+
 	# ESC cancels targeting mode
 	if _targeting_active and keycode == KEY_ESCAPE:
 		_cancel_targeting_mode()
@@ -1907,6 +1309,9 @@ func _handle_key_input(keycode: int) -> bool:
 	return false
 
 func _move_direction(dir_offset: int) -> void:
+	InputCoordinator.move_direction(self, dir_offset)
+	return
+
 	var hero: Variant = _get_input_hero()
 	if hero == null:
 		return
@@ -1931,6 +1336,9 @@ func _move_direction(dir_offset: int) -> void:
 			_submit_hero_action({"type": "move", "target_pos": target})
 
 func _attack_adjacent_enemy() -> void:
+	InputCoordinator.attack_adjacent_enemy(self)
+	return
+
 	var hero: Variant = _get_input_hero()
 	if hero == null or _current_level == null:
 		return
@@ -1950,24 +1358,12 @@ func _attack_adjacent_enemy() -> void:
 		MessageLog.add_warning("No adjacent enemy to attack.")
 
 func _submit_hero_action(action: Dictionary) -> void:
-	var hero: Variant = _get_input_hero()
-	if hero == null:
-		return
-
-	if _should_route_online_action(hero):
-		_preview_online_local_action(hero, action)
-		var slot_index: int = int(hero.get("hero_slot_index"))
-		if NetworkManager and NetworkManager.has_method("request_online_action"):
-			NetworkManager.request_online_action(slot_index, _encode_network_action(hero, action))
-		_awaiting_hero_input = false
-		return
-
-	_apply_action_for_hero(hero, action)
+	OnlineSyncCoordinator.submit_hero_action(self, action, _EQUIP_SLOT_NAMES)
 
 func _apply_action_for_hero(hero: Variant, action: Dictionary) -> void:
 	if hero == null:
 		return
-	var resolved_action: Dictionary = _normalize_action_for_hero(hero, action)
+	var resolved_action: Dictionary = OnlineActionCodec.normalize_action_for_hero(hero, action, _current_level)
 	if _apply_inventory_action_for_hero(hero, resolved_action):
 		_awaiting_hero_input = true
 		call_deferred("refresh_after_turn")
@@ -2031,23 +1427,14 @@ func _preview_online_local_action(hero: Variant, action: Dictionary) -> void:
 				hero_sprite.play_attack(interact_target)
 
 func _should_route_online_action(hero_node: Variant) -> bool:
-	if NetworkManager == null or not NetworkManager.has_method("is_online_session") or not NetworkManager.is_online_session():
-		return false
-	if hero_node == null:
-		return false
-	var owner_peer_id: int = int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1))
-	var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
-	if owner_peer_id != local_peer_id:
-		if MessageLog:
-			MessageLog.add_warning("It is not your hero's turn.")
-		return true
-	if NetworkManager.has_method("is_host") and NetworkManager.is_host():
-		return false
-	# Clients send command envelopes to the host; host-authoritative state sync
-	# will be layered on top of this channel next.
-	if MessageLog:
-		MessageLog.add("Action sent to host.")
-	return true
+	var routing: Dictionary = OnlineEventCodec.should_route_online_action(NetworkManager, hero_node)
+	var message: String = str(routing.get("message", ""))
+	if not message.is_empty() and MessageLog:
+		if message == "It is not your hero's turn.":
+			MessageLog.add_warning(message)
+		else:
+			MessageLog.add(message)
+	return bool(routing.get("route", false))
 
 func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) -> bool:
 	if hero_node == null:
@@ -2118,14 +1505,8 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 				if item_to_drop.has_method("on_drop"):
 					item_to_drop.on_drop(hero_node)
 				_deliver_hero_message(hero_node, "Dropped %s." % ConstantsData.get_prop(item_to_drop, "item_name", "item"))
-				if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event") and item_to_drop.has_method("serialize"):
-					NetworkManager.broadcast_world_event({
-						"type": "item_dropped",
-						"pos": drop_pos,
-						"item_name": str(ConstantsData.get_prop(item_to_drop, "item_name", "item")),
-						"hero_name": str(ConstantsData.get_prop(hero_node, "hero_name", "Hero")),
-						"item_data": item_to_drop.serialize(),
-					})
+				if _is_online_host() and item_to_drop.has_method("serialize"):
+					OnlineEventCodec.emit_world_event(NetworkManager, OnlineEventCodec.build_item_dropped_world_event_payload(drop_pos, item_to_drop, hero_node))
 			return true
 		"set_quickslot":
 			if belongings != null and belongings.has_method("set_quickslot"):
@@ -2164,14 +1545,8 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 			var shopkeeper_node: Variant = _find_mob_by_actor_id(shopkeeper_actor_id)
 			if shopkeeper_node != null and shopkeeper_node.has_method("buy_item"):
 				var buy_success: bool = shopkeeper_node.buy_item(hero_node, item_index)
-				if buy_success and _is_online_host() and NetworkManager and NetworkManager.has_method("send_ui_event_to_peer"):
-					var owner_peer_id: int = int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1))
-					NetworkManager.send_ui_event_to_peer(owner_peer_id, {
-						"type": "shop_refresh",
-						"hero_actor_id": int(ConstantsData.get_prop(hero_node, "actor_id", -1)),
-						"shopkeeper_actor_id": shopkeeper_actor_id,
-						"shop_items": _serialize_shop_items(shopkeeper_node),
-					})
+				if buy_success and _is_online_host():
+					OnlineEventCodec.send_shop_refresh(NetworkManager, hero_node, shopkeeper_actor_id, shopkeeper_node)
 			return true
 		"shop_sell":
 			var selling_item: Variant = action.get("item")
@@ -2179,20 +1554,14 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 			var selling_shopkeeper: Variant = _find_mob_by_actor_id(selling_shopkeeper_actor_id)
 			if selling_item != null and selling_shopkeeper != null and selling_shopkeeper.has_method("sell_item"):
 				var sell_gold: int = selling_shopkeeper.sell_item(hero_node, selling_item)
-				if sell_gold > 0 and _is_online_host() and NetworkManager and NetworkManager.has_method("send_ui_event_to_peer"):
-					var owner_peer_id_sell: int = int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1))
-					NetworkManager.send_ui_event_to_peer(owner_peer_id_sell, {
-						"type": "shop_refresh",
-						"hero_actor_id": int(ConstantsData.get_prop(hero_node, "actor_id", -1)),
-						"shopkeeper_actor_id": selling_shopkeeper_actor_id,
-						"shop_items": _serialize_shop_items(selling_shopkeeper),
-					})
+				if sell_gold > 0 and _is_online_host():
+					OnlineEventCodec.send_shop_refresh(NetworkManager, hero_node, selling_shopkeeper_actor_id, selling_shopkeeper)
 			return true
 		"claim_quest_reward":
 			var npc_actor_id: int = int(action.get("npc_actor_id", -1))
 			var reward_index: int = int(action.get("reward_index", -1))
 			var npc_node: Variant = _find_mob_by_actor_id(npc_actor_id)
-			var reward_choices: Array = _get_npc_reward_choices(npc_node)
+			var reward_choices: Array = OnlineEventCodec.get_npc_reward_choices(npc_node)
 			if npc_node == null or reward_index < 0 or reward_index >= reward_choices.size():
 				return true
 			var chosen_reward: Variant = reward_choices[reward_index]
@@ -2291,14 +1660,8 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 			var augment_pick_item: Variant = action.get("item")
 			if augment_pick_item == null:
 				return true
-			if _is_online_host() and NetworkManager != null and NetworkManager.has_method("send_ui_event_to_peer") and augment_pick_item.has_method("serialize"):
-				var owner_peer_id_augment: int = int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1))
-				NetworkManager.send_ui_event_to_peer(owner_peer_id_augment, {
-					"type": "augment_select_open",
-					"hero_actor_id": int(ConstantsData.get_prop(hero_node, "actor_id", -1)),
-					"action_type": "stone_augmentation_apply",
-					"item": augment_pick_item.serialize(),
-				})
+			if _is_online_host():
+				OnlineEventCodec.send_augment_select_open(NetworkManager, hero_node, augment_pick_item, "stone_augmentation_apply")
 			return true
 		"stone_augmentation_apply":
 			var augment_item: Variant = action.get("item")
@@ -2421,8 +1784,9 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 			if blacksmith_node == null or not blacksmith_node.has_method("reforge"):
 				return true
 			var reforge_success: bool = blacksmith_node.reforge(hero_node, item_a, item_b)
-			if not reforge_success and _is_online_host() and NetworkManager and NetworkManager.has_method("reject_online_action"):
-				NetworkManager.reject_online_action(
+			if not reforge_success and _is_online_host():
+				OnlineEventCodec.reject_online_action(
+					NetworkManager,
 					int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1)),
 					int(ConstantsData.get_prop(hero_node, "hero_slot_index", -1)),
 					"Blacksmith refused the reforge."
@@ -2464,20 +1828,12 @@ func _animate_action_for_hero(hero: Variant, action: Dictionary) -> void:
 				hero_sprite.play_attack(target)
 
 func _on_online_action_requested(peer_id: int, slot_index: int, action: Dictionary) -> void:
-	if NetworkManager == null or not NetworkManager.has_method("is_host") or not NetworkManager.is_host():
-		return
 	var input_hero: Variant = _get_input_hero()
-	if input_hero == null:
-		if NetworkManager.has_method("reject_online_action"):
-			NetworkManager.reject_online_action(peer_id, slot_index, "No hero is ready to act yet.")
+	var validation_error: String = OnlineEventCodec.validate_online_action_request(NetworkManager, input_hero, slot_index)
+	if validation_error == "__not_host__":
 		return
-	if int(ConstantsData.get_prop(input_hero, "hero_slot_index", -1)) != slot_index:
-		if NetworkManager.has_method("reject_online_action"):
-			NetworkManager.reject_online_action(peer_id, slot_index, "It is not that hero's turn.")
-		return
-	if input_hero.get("is_alive") != true:
-		if NetworkManager.has_method("reject_online_action"):
-			NetworkManager.reject_online_action(peer_id, slot_index, "That hero cannot act right now.")
+	if not validation_error.is_empty():
+		OnlineEventCodec.reject_online_action(NetworkManager, peer_id, slot_index, validation_error)
 		return
 	_apply_action_for_hero(input_hero, action)
 
@@ -2497,16 +1853,8 @@ func _deliver_hero_message(hero_node: Variant, text: String, kind: String = "inf
 	var trimmed_text: String = text.strip_edges()
 	if trimmed_text.is_empty():
 		return
-	if _is_online_host() and NetworkManager != null and NetworkManager.has_method("send_ui_event_to_peer"):
-		var owner_peer_id: int = int(ConstantsData.get_prop(hero_node, "owner_peer_id", 1))
-		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
-		if owner_peer_id != local_peer_id:
-			NetworkManager.send_ui_event_to_peer(owner_peer_id, {
-				"type": "npc_message",
-				"text": trimmed_text,
-				"message_kind": kind,
-			})
-			return
+	if _is_online_host() and OnlineEventCodec.send_remote_hero_message(NetworkManager, hero_node, trimmed_text, kind):
+		return
 	if MessageLog == null:
 		return
 	match kind:
@@ -2552,321 +1900,11 @@ func _refresh_client_visibility_preview() -> void:
 			bomb_sprite.visible = _current_level.visible[pos] or _current_level.visited[pos]
 	_refresh_blob_overlays()
 
-func _apply_remote_hero_move_event(actor_id: int, new_pos: int) -> void:
-	if actor_id < 0 or new_pos < 0:
-		return
-	var hero_sprite: Variant = _hero_sprites.get(actor_id)
-	if hero_sprite != null and is_instance_valid(hero_sprite):
-		hero_sprite.move_to(new_pos, 0.12)
-	var focused_hero: Variant = _get_focused_hero()
-	if focused_hero == null or int(ConstantsData.get_prop(focused_hero, "actor_id", -1)) != actor_id:
-		return
-	if _current_level != null and _current_level.has_method("update_fov"):
-		var view_distance: int = focused_hero.get_view_distance() if focused_hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
-		_current_level.update_fov(new_pos, view_distance)
-	if fog_of_war:
-		fog_of_war.update_visibility()
-	if tile_map:
-		tile_map.update_tile_visibility()
-		if game_camera:
-			game_camera.set_target(tile_map.cell_to_world(new_pos), true)
-	_refresh_client_visibility_preview()
-	if _hud and _hud.has_method("update_all"):
-		_hud.update_all()
-	if AudioManager:
-		AudioManager.play_sfx("step")
-
-func _apply_remote_mob_move_event(actor_id: int, new_pos: int) -> void:
-	if actor_id < 0 or new_pos < 0:
-		return
-	var mob_sprite: Variant = _mob_sprites.get(actor_id)
-	if mob_sprite == null or not is_instance_valid(mob_sprite):
-		return
-	mob_sprite.move_to(new_pos, 0.12)
-	if mob_sprite.has_method("set_visible_state") and _current_level != null and new_pos < _current_level.visible.size():
-		mob_sprite.set_visible_state(_current_level.visible[new_pos])
-
 func _on_online_world_event_received(event: Dictionary) -> void:
-	if not _is_online_client() or event.is_empty():
-		return
-	var event_type: String = str(event.get("type", ""))
-	match event_type:
-		"pickup":
-			var pickup_pos: int = int(event.get("pos", -1))
-			var item_name: String = str(event.get("item_name", "item"))
-			var actor_name: String = str(event.get("hero_name", "Hero"))
-			if pickup_pos >= 0:
-				_suppress_snapshot_feedback(_suppressed_snapshot_pickups, pickup_pos)
-				_remove_local_heap_at_pos(pickup_pos)
-				var item_sprite: Variant = _item_sprites.get(pickup_pos)
-				if item_sprite != null and is_instance_valid(item_sprite):
-					item_sprite.play_pickup(0.18)
-					_item_sprites.erase(pickup_pos)
-				if effect_manager != null:
-					effect_manager.show_status(pickup_pos, "Pickup", Color(1.0, 0.9, 0.45))
-			if MessageLog:
-				MessageLog.add("%s picks up %s." % [actor_name, item_name])
-			if AudioManager:
-				AudioManager.play_sfx("item_pickup")
-		"hero_moved":
-			var moved_hero_id: int = int(event.get("actor_id", -1))
-			var moved_hero_pos: int = int(event.get("pos", -1))
-			_apply_remote_hero_move_event(moved_hero_id, moved_hero_pos)
-		"mob_moved":
-			var moved_mob_id: int = int(event.get("actor_id", -1))
-			var moved_mob_pos: int = int(event.get("pos", -1))
-			_apply_remote_mob_move_event(moved_mob_id, moved_mob_pos)
-		"door_opened":
-			var door_pos: int = int(event.get("pos", -1))
-			if door_pos >= 0:
-				_suppress_snapshot_feedback(_suppressed_snapshot_doors, door_pos)
-				if _current_level != null and _current_level.has_method("set_terrain"):
-					_current_level.set_terrain(door_pos, ConstantsData.Terrain.OPEN_DOOR)
-				_on_door_opened(door_pos)
-				if effect_manager != null:
-					effect_manager.show_status(door_pos, "Open", Color(0.82, 0.72, 0.5))
-		"item_dropped":
-			var drop_pos: int = int(event.get("pos", -1))
-			var drop_item_name: String = str(event.get("item_name", "item"))
-			var drop_actor_name: String = str(event.get("hero_name", "Hero"))
-			var drop_item_data: Variant = event.get("item_data", {})
-			if drop_pos >= 0:
-				var dropped_item: Variant = drop_item_data if not (drop_item_data is Dictionary) else _make_item_from_data(drop_item_data)
-				if dropped_item != null and _current_level != null:
-					_remove_local_heap_at_pos(drop_pos)
-					_current_level.drop_item(drop_pos, dropped_item)
-					var existing_sprite: Variant = _item_sprites.get(drop_pos)
-					if existing_sprite != null and is_instance_valid(existing_sprite):
-						existing_sprite.queue_free()
-						_item_sprites.erase(drop_pos)
-					var drop_sprite: Variant = _instantiate_script("res://src/sprites/item_sprite.gd")
-					if dropped_item is Object:
-						drop_sprite.setup_from_item(dropped_item)
-					else:
-						drop_sprite.setup_manual(ConstantsData.ItemCategory.MISC)
-					drop_sprite.place_at(drop_pos)
-					drop_sprite.play_drop()
-					_entity_layer.add_child(drop_sprite)
-					_item_sprites[drop_pos] = drop_sprite
-				if effect_manager != null:
-					effect_manager.show_status(drop_pos, "Drop", Color(0.85, 0.82, 0.65))
-			if MessageLog:
-				MessageLog.add("%s drops %s." % [drop_actor_name, drop_item_name])
-		"seed_planted":
-			var plant_pos: int = int(event.get("pos", -1))
-			var plant_type: String = str(event.get("plant_type", ""))
-			var plant_persists: bool = bool(event.get("persists", false))
-			if plant_pos >= 0 and _current_level != null:
-				if plant_persists:
-					var planted_plant: Variant = _make_plant_from_type(plant_type)
-					if planted_plant != null and _current_level.get("plants") is Dictionary:
-						planted_plant.pos = plant_pos
-						_current_level.plants[plant_pos] = planted_plant
-					if _current_level.has_method("set_terrain"):
-						_current_level.set_terrain(plant_pos, ConstantsData.Terrain.HIGH_GRASS)
-				_on_seed_planted(plant_pos, plant_type)
-		"plant_activated":
-			var activated_pos: int = int(event.get("pos", -1))
-			var activated_plant_name: String = str(event.get("plant_name", ""))
-			if activated_pos >= 0 and _current_level != null:
-				if _current_level.get("plants") is Dictionary:
-					_current_level.plants.erase(activated_pos)
-				if _current_level.has_method("set_terrain"):
-					_current_level.set_terrain(activated_pos, ConstantsData.Terrain.GRASS)
-				_on_plant_activated_vfx(activated_pos, activated_plant_name)
-		"status_effect":
-			var effect_pos: int = int(event.get("pos", -1))
-			var effect_id: String = str(event.get("effect_id", "")).to_lower()
-			if effect_pos >= 0:
-				_show_status_effect_feedback(effect_pos, effect_id)
-		"hero_attack_missed":
-			var miss_pos: int = int(event.get("pos", -1))
-			if miss_pos >= 0 and effect_manager != null:
-				effect_manager.show_status(miss_pos, "0", Color(0.7, 0.7, 0.7))
-			if AudioManager:
-				AudioManager.play_sfx("miss")
-		"mob_revealed":
-			var revealed_actor_id: int = int(event.get("actor_id", -1))
-			var revealed_pos: int = int(event.get("pos", -1))
-			var revealed_name: String = str(event.get("mob_name", "Mob"))
-			if _current_level != null:
-				for mob_node: Variant in _current_level.mobs:
-					if mob_node == null or not is_instance_valid(mob_node):
-						continue
-					if int(ConstantsData.get_prop(mob_node, "actor_id", -1)) != revealed_actor_id:
-						continue
-					_spawn_single_mob_sprite(mob_node)
-					break
-			if revealed_pos >= 0 and effect_manager != null:
-				effect_manager.show_status(revealed_pos, "Revealed!", Color(1.0, 0.62, 0.28))
-			if MessageLog:
-				MessageLog.add_warning("%s revealed!" % revealed_name)
-		"mob_defeated":
-			var defeat_pos: int = int(event.get("pos", -1))
-			if defeat_pos >= 0:
-				if effect_manager != null:
-					effect_manager.particle_burst(defeat_pos, Color(0.8, 0.2, 0.1), 6)
-				if AudioManager:
-					AudioManager.play_sfx("hit")
-		"trap_triggered":
-			var trap_pos: int = int(event.get("pos", -1))
-			var trap_name: String = str(event.get("trap_name", "Trap"))
-			if AudioManager:
-				AudioManager.play_sfx("trap")
-			if _current_level != null:
-				if tile_map:
-					tile_map.level = _current_level
-					tile_map.render_changed()
-				var focused_hero: Variant = _get_focused_hero()
-				if GameManager and focused_hero and _current_level.has_method("update_fov"):
-					var view_distance: int = focused_hero.get_view_distance() if focused_hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
-					_current_level.update_fov(focused_hero.pos, view_distance)
-				if fog_of_war:
-					fog_of_war.update_visibility()
-				_update_entity_visibility()
-			if trap_pos >= 0 and effect_manager != null:
-				effect_manager.show_status(trap_pos, "Trap!", Color(1.0, 0.55, 0.25))
-			if MessageLog and not trap_name.is_empty():
-				MessageLog.add_warning("%s triggered!" % trap_name.capitalize())
+	OnlineSyncCoordinator.handle_world_event(self, event)
 
 func _on_online_ui_event_received(event: Dictionary) -> void:
-	var event_type: String = str(event.get("type", ""))
-	match event_type:
-		"npc_message":
-			var message_text: String = str(event.get("text", "")).strip_edges()
-			var message_kind: String = str(event.get("message_kind", "info"))
-			if message_text.is_empty() or MessageLog == null:
-				return
-			match message_kind:
-				"positive":
-					MessageLog.add_positive(message_text)
-				"warning":
-					MessageLog.add_warning(message_text)
-				"negative":
-					MessageLog.add_negative(message_text)
-				_:
-					MessageLog.add_info(message_text)
-		"shop_open", "shop_refresh":
-			var hero_actor_id: int = int(event.get("hero_actor_id", -1))
-			var shopkeeper_actor_id: int = int(event.get("shopkeeper_actor_id", -1))
-			var hero_node: Variant = _find_hero_by_actor_id(hero_actor_id)
-			if hero_node == null:
-				return
-			var items_data: Variant = event.get("shop_items", [])
-			var items: Array[Dictionary] = []
-			if items_data is Array:
-				for entry: Variant in items_data:
-					if not (entry is Dictionary):
-						continue
-					var item_entry: Dictionary = entry
-					var item_dict: Dictionary = {"price": int(item_entry.get("price", 0))}
-					var item_data: Variant = item_entry.get("item_data", {})
-					if item_data is Dictionary:
-						var item_node: Variant = _make_item_from_data(item_data)
-						if item_node != null:
-							item_dict["item"] = item_node
-					items.append(item_dict)
-			var active_window: Variant = _hud.get("_active_window") if _hud != null else null
-			if event_type == "shop_refresh" and active_window != null and is_instance_valid(active_window) and active_window.has_method("refresh_shop"):
-				if int(ConstantsData.get_prop(active_window, "_shopkeeper_actor_id", -1)) == shopkeeper_actor_id:
-					active_window.refresh_shop(items)
-					return
-			if event_type == "shop_refresh":
-				return
-			var wnd: Variant = load("res://src/ui/windows/wnd_shop.gd").new()
-			if wnd != null and wnd.has_method("setup") and EventBus and EventBus.has_signal("show_window"):
-				wnd.setup(items, hero_node, null, shopkeeper_actor_id)
-				EventBus.show_window.emit(wnd)
-		"quest_reward_open":
-			var reward_hero_actor_id: int = int(event.get("hero_actor_id", -1))
-			var reward_npc_actor_id: int = int(event.get("npc_actor_id", -1))
-			var reward_hero: Variant = _find_hero_by_actor_id(reward_hero_actor_id)
-			if reward_hero == null:
-				return
-			var reward_items_data: Variant = event.get("reward_items", [])
-			var reward_items: Array = []
-			if reward_items_data is Array:
-				for reward_entry: Variant in reward_items_data:
-					if reward_entry is Dictionary:
-						var reward_item: Variant = _make_item_from_data(reward_entry)
-						if reward_item != null:
-							reward_items.append(reward_item)
-			var reward_wnd: Variant = load("res://src/ui/windows/wnd_quest_reward.gd").new()
-			if reward_wnd != null and reward_wnd.has_method("setup") and EventBus and EventBus.has_signal("show_window"):
-				reward_wnd.setup(
-					str(event.get("quest_name", "Reward")),
-					str(event.get("quest_description", "")),
-					reward_items,
-					reward_hero,
-					reward_npc_actor_id
-				)
-				EventBus.show_window.emit(reward_wnd)
-		"item_select_open":
-			var select_hero_actor_id: int = int(event.get("hero_actor_id", -1))
-			var select_hero: Variant = _find_hero_by_actor_id(select_hero_actor_id)
-			if select_hero == null:
-				return
-			var select_items_data: Variant = event.get("items", [])
-			var select_items: Array = []
-			if select_items_data is Array:
-				for select_entry: Variant in select_items_data:
-					if select_entry is Dictionary:
-						var select_item: Variant = _make_item_from_data(select_entry)
-						if select_item != null:
-							select_items.append(select_item)
-			var select_wnd: Variant = load("res://src/ui/windows/wnd_item_select.gd").new()
-			if select_wnd != null and select_wnd.has_method("setup_online") and EventBus and EventBus.has_signal("show_window"):
-				select_wnd.setup_online(select_items, str(event.get("prompt", "Select an item:")), str(event.get("action_type", "")))
-				EventBus.show_window.emit(select_wnd)
-		"augment_select_open":
-			var augment_hero_actor_id: int = int(event.get("hero_actor_id", -1))
-			var augment_hero: Variant = _find_hero_by_actor_id(augment_hero_actor_id)
-			if augment_hero == null:
-				return
-			var augment_item_data: Variant = event.get("item", {})
-			var augment_item_node: Variant = null
-			if augment_item_data is Dictionary:
-				augment_item_node = _make_item_from_data(augment_item_data)
-			if augment_item_node == null:
-				return
-			var augment_wnd: Variant = load("res://src/ui/windows/wnd_augment_select.gd").new()
-			if augment_wnd != null and augment_wnd.has_method("setup_online") and EventBus and EventBus.has_signal("show_window"):
-				augment_wnd.setup_online(augment_item_node, str(event.get("action_type", "")))
-				EventBus.show_window.emit(augment_wnd)
-		"transmute_open":
-			var transmute_hero_actor_id: int = int(event.get("hero_actor_id", -1))
-			var transmute_hero: Variant = _find_hero_by_actor_id(transmute_hero_actor_id)
-			if transmute_hero == null:
-				return
-			var scroll_item_id: String = str(event.get("scroll_item_id", "transmutation"))
-			var transmute_scroll: Variant = null
-			var transmute_belongings: Variant = transmute_hero.get("belongings")
-			if transmute_belongings != null and transmute_belongings.has_method("find_item"):
-				transmute_scroll = transmute_belongings.find_item(scroll_item_id)
-			if transmute_scroll == null:
-				return
-			var transmute_wnd: Variant = load("res://src/ui/windows/wnd_transmute.gd").new()
-			if transmute_wnd != null and transmute_wnd.has_method("setup") and EventBus and EventBus.has_signal("show_window"):
-				transmute_wnd.setup(transmute_scroll, transmute_hero)
-				EventBus.show_window.emit(transmute_wnd)
-		"alchemy_open":
-			var alchemy_hero_actor_id: int = int(event.get("hero_actor_id", -1))
-			var alchemy_hero: Variant = _find_hero_by_actor_id(alchemy_hero_actor_id)
-			if alchemy_hero == null:
-				return
-			var alchemy_wnd: Variant = load("res://src/ui/windows/wnd_alchemy.gd").new()
-			if alchemy_wnd != null and EventBus and EventBus.has_signal("show_window"):
-				EventBus.show_window.emit(alchemy_wnd)
-		"reforge_open":
-			var reforge_hero_actor_id: int = int(event.get("hero_actor_id", -1))
-			var reforge_npc_actor_id: int = int(event.get("npc_actor_id", -1))
-			var reforge_hero: Variant = _find_hero_by_actor_id(reforge_hero_actor_id)
-			if reforge_hero == null:
-				return
-			var reforge_wnd: Variant = load("res://src/ui/windows/wnd_reforge.gd").new()
-			if reforge_wnd != null and reforge_wnd.has_method("setup") and EventBus and EventBus.has_signal("show_window"):
-				reforge_wnd.setup(reforge_hero, null, reforge_npc_actor_id)
-				EventBus.show_window.emit(reforge_wnd)
+	OnlineSyncCoordinator.handle_ui_event(self, event)
 
 func _on_online_level_transition_requested(config: Dictionary) -> void:
 	if not _is_online_client():
@@ -2890,21 +1928,7 @@ func _on_online_level_transition_requested(config: Dictionary) -> void:
 			_pending_online_arrival_feedback = "Descended"
 
 func _on_online_run_ended(victory: bool, payload: Dictionary) -> void:
-	if not _is_online_client():
-		return
-	_game_ended = true
-	_cancel_auto_walk()
-	_detach_persistent_actors()
-	if victory:
-		var victory_script: GDScript = load("res://src/scenes/victory_scene.gd") as GDScript
-		if victory_script:
-			SceneManager.go_to(victory_script, "VictoryScene")
-		return
-	var death_script: GDScript = load("res://src/scenes/death_scene.gd") as GDScript
-	if death_script:
-		SceneManager.go_to(death_script, "DeathScene", {
-			"cause_of_death": str(payload.get("cause_of_death", "the dungeon")),
-		})
+	RunTransitionCoordinator.handle_online_run_ended(self, victory, payload)
 
 func _on_network_disconnected(reason: String) -> void:
 	if reason != "Disconnected from host." or not _is_online_client():
@@ -2955,28 +1979,16 @@ func _check_item_pickup(hero_node: Variant, hero_pos: int) -> void:
 				MessageLog.add("%s picks up %d gold." % [hero_name, amount])
 			if EventBus:
 				EventBus.item_picked_up.emit("gold")
-			if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-				NetworkManager.broadcast_world_event({
-					"type": "pickup",
-					"pos": hero_pos,
-					"item_name": "gold",
-					"hero_slot_index": hero_slot_index,
-					"hero_name": pickup_actor_name,
-				})
+			if _is_online_host():
+				OnlineEventCodec.emit_world_event(NetworkManager, OnlineEventCodec.build_pickup_world_event_payload(hero_pos, "gold", pickup_actor_name, hero_slot_index))
 		elif item is Object and item.get("item_id") == "dewdrop":
 			var dewdrop: Variant = _current_level.pickup_item(hero_pos)
 			if dewdrop != null and dewdrop.has_method("on_pickup"):
 				dewdrop.on_pickup(hero_node)
 			if EventBus:
 				EventBus.item_picked_up.emit("Dewdrop")
-			if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-				NetworkManager.broadcast_world_event({
-					"type": "pickup",
-					"pos": hero_pos,
-					"item_name": "Dewdrop",
-					"hero_slot_index": hero_slot_index,
-					"hero_name": pickup_actor_name,
-				})
+			if _is_online_host():
+				OnlineEventCodec.emit_world_event(NetworkManager, OnlineEventCodec.build_pickup_world_event_payload(hero_pos, "Dewdrop", pickup_actor_name, hero_slot_index))
 		else:
 			# Add non-gold items to hero inventory
 			var picked: Variant = _current_level.pickup_item(hero_pos)
@@ -2991,14 +2003,8 @@ func _check_item_pickup(hero_node: Variant, hero_pos: int) -> void:
 				if MessageLog:
 					var hero_name: String = ConstantsData.get_prop(hero_node, "hero_name", "The hero")
 					MessageLog.add("%s picks up %s." % [hero_name, item_name])
-				if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-					NetworkManager.broadcast_world_event({
-						"type": "pickup",
-						"pos": hero_pos,
-						"item_name": item_name,
-						"hero_slot_index": hero_slot_index,
-						"hero_name": pickup_actor_name,
-					})
+				if _is_online_host():
+					OnlineEventCodec.emit_world_event(NetworkManager, OnlineEventCodec.build_pickup_world_event_payload(hero_pos, item_name, pickup_actor_name, hero_slot_index))
 
 ## Check for plants at the given hero's position and activate them.
 func _check_plant_activation(hero_node: Variant, hero_pos: int) -> void:
@@ -3025,12 +2031,8 @@ func _on_hero_moved(new_pos: int) -> void:
 func _on_hero_moved_detailed(hero_node: Variant, new_pos: int) -> void:
 	_check_item_pickup(hero_node, new_pos)
 	_check_plant_activation(hero_node, new_pos)
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-		NetworkManager.broadcast_world_event({
-			"type": "hero_moved",
-			"actor_id": int(ConstantsData.get_prop(hero_node, "actor_id", -1)),
-			"pos": new_pos,
-		})
+	if _is_online_host():
+		OnlineEventCodec.emit_world_event(NetworkManager, OnlineEventCodec.build_move_world_event_payload("hero_moved", hero_node, new_pos))
 	_queue_online_snapshot_sync(true)
 	var focused_hero: Variant = _get_focused_hero()
 	if focused_hero != hero_node:
@@ -3038,64 +2040,36 @@ func _on_hero_moved_detailed(hero_node: Variant, new_pos: int) -> void:
 	_on_hero_moved(new_pos)
 
 func _on_mob_moved_detailed(mob_node: Variant, new_pos: int) -> void:
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-		NetworkManager.broadcast_world_event({
-			"type": "mob_moved",
-			"actor_id": int(ConstantsData.get_prop(mob_node, "actor_id", -1)),
-			"pos": new_pos,
-		})
+	if _is_online_host():
+		OnlineEventCodec.emit_world_event(NetworkManager, OnlineEventCodec.build_move_world_event_payload("mob_moved", mob_node, new_pos))
 	_queue_online_snapshot_sync()
 
 func _on_local_hero_changed(hero_node: Node, _hero_index: int) -> void:
-	if hero_node == null or _current_level == null:
-		return
-	if _current_level.has_method("update_fov"):
-		var view_distance: int = hero_node.get_view_distance() if hero_node.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
-		_current_level.update_fov(hero_node.pos, view_distance)
-	if fog_of_war:
-		fog_of_war.update_visibility()
-	_update_entity_visibility()
-	_refresh_hero_identifiers()
-	if tile_map and game_camera:
-		var hero_world: Vector2 = tile_map.cell_to_world(hero_node.pos)
-		game_camera.set_target(hero_world)
-		game_camera.global_position = hero_world
-	if _hud and _hud.has_method("update_all"):
-		_hud.update_all()
+	EnvironmentFeedbackCoordinator.on_local_hero_changed(self, hero_node, _hero_index)
 
 func _on_mob_defeated(mob_pos: int, _mob_name: String, _mob_id: String) -> void:
+	SceneFeedbackCoordinator.on_mob_defeated(self, mob_pos, _mob_name, _mob_id)
+	return
+
 	# Particle burst at death location
 	if effect_manager:
 		effect_manager.particle_burst(mob_pos, Color(0.8, 0.2, 0.1), 6)
 	# Hit sound
 	if AudioManager:
 		AudioManager.play_sfx("hit")
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-		NetworkManager.broadcast_world_event({
-			"type": "mob_defeated",
-			"pos": mob_pos,
-			"mob_name": _mob_name,
-			"mob_id": _mob_id,
-		})
+	if _is_online_host():
+		OnlineEventCodec.emit_world_event(NetworkManager, OnlineEventCodec.build_mob_defeated_world_event_payload(mob_pos, _mob_name, _mob_id))
 
 func _on_item_picked_up(_item_name: String) -> void:
-	if AudioManager:
-		AudioManager.play_sfx("item_pickup")
-	_queue_online_snapshot_sync(true)
+	EnvironmentFeedbackCoordinator.on_item_picked_up(self, _item_name)
 
 func _on_door_opened(pos: int) -> void:
-	# Update the tile at door position
-	if tile_map:
-		tile_map.update_tile_at(pos)
-	if AudioManager:
-		AudioManager.play_sfx("door_open")
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-		NetworkManager.broadcast_world_event({
-			"type": "door_opened",
-			"pos": pos,
-		})
+	EnvironmentFeedbackCoordinator.on_door_opened(self, pos)
 
 func _on_hero_damaged(amount: int, _source: Variant) -> void:
+	SceneFeedbackCoordinator.on_hero_damaged(self, amount, _source)
+	return
+
 	var hero: Variant = _get_focused_hero()
 	# Interrupt auto-walk on damage
 	_cancel_auto_walk()
@@ -3123,30 +2097,32 @@ func _on_hero_damaged(amount: int, _source: Variant) -> void:
 					AudioManager.play_sfx("health_warn")
 
 func _on_hero_damaged_detailed(hero_node: Variant, amount: int, source: Variant) -> void:
+	SceneFeedbackCoordinator.on_hero_damaged_detailed(self, hero_node, amount, source)
+	return
+
 	var focused_hero: Variant = _get_focused_hero()
 	if focused_hero != hero_node:
 		return
 	_on_hero_damaged(amount, source)
 	if source is Buff:
-		_show_status_effect_feedback(hero_node.pos, str((source as Buff).buff_id))
+		OnlineEventCodec.show_status_effect_feedback(effect_manager, hero_node.pos, str((source as Buff).buff_id))
 
 func _on_status_effect_applied(target: Variant, effect_id: String) -> void:
+	SceneFeedbackCoordinator.on_status_effect_applied(self, target, effect_id)
+	return
+
 	if target == null or not is_instance_valid(target):
 		return
 	var normalized_effect: String = effect_id.to_lower()
 	var target_pos: int = int(ConstantsData.get_prop(target, "pos", -1))
 	if target_pos < 0:
 		return
-	var feedback: Dictionary = _get_status_effect_feedback(normalized_effect)
+	var feedback: Dictionary = OnlineEventCodec.get_status_effect_feedback(normalized_effect)
 	if feedback.is_empty():
 		return
-	_show_status_effect_feedback(target_pos, normalized_effect)
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-		NetworkManager.broadcast_world_event({
-			"type": "status_effect",
-			"pos": target_pos,
-			"effect_id": normalized_effect,
-		})
+	OnlineEventCodec.show_status_effect_feedback(effect_manager, target_pos, normalized_effect)
+	if _is_online_host():
+		OnlineEventCodec.emit_world_event(NetworkManager, OnlineEventCodec.build_status_effect_world_event_payload(target_pos, normalized_effect))
 
 func _find_best_spectate_hero() -> Variant:
 	if GameManager == null or not GameManager.has_method("get_living_heroes"):
@@ -3154,113 +2130,51 @@ func _find_best_spectate_hero() -> Variant:
 	var living: Array[Node] = GameManager.get_living_heroes()
 	if living.is_empty():
 		return null
-	if NetworkManager != null and NetworkManager.has_method("is_online_session") and NetworkManager.is_online_session():
-		var local_peer_id: int = NetworkManager.get_local_peer_id() if NetworkManager.has_method("get_local_peer_id") else 1
-		for hero_node: Node in living:
-			if int(ConstantsData.get_prop(hero_node, "owner_peer_id", -1)) == local_peer_id:
-				return hero_node
+	var local_spectate_hero: Variant = OnlineEventCodec.choose_local_spectate_hero(NetworkManager, living)
+	if local_spectate_hero != null:
+		return local_spectate_hero
 	return living[0]
 
 func _handle_party_hero_death(hero_node: Variant) -> void:
-	if hero_node == null:
-		return
-	var hero_key: int = hero_node.get("actor_id") if hero_node.get("actor_id") != null else -1
-	var hero_sprite: Variant = _hero_sprites.get(hero_key) if hero_key >= 0 else null
-	if is_instance_valid(hero_sprite) and hero_sprite.has_method("play_hero_death"):
-		hero_sprite.play_hero_death(0.7)
-	var hero_name: String = ConstantsData.get_prop(hero_node, "hero_name", "A hero")
-	if MessageLog:
-		MessageLog.add_warning("%s has fallen." % hero_name)
-	var focused_hero: Variant = _get_focused_hero()
-	if focused_hero == hero_node:
-		var spectate_hero: Variant = _find_best_spectate_hero()
-		if spectate_hero != null and GameManager != null and GameManager.has_method("set_local_hero_index"):
-			var new_index: int = GameManager.get_hero_index(spectate_hero) if GameManager.has_method("get_hero_index") else -1
-			if new_index >= 0:
-				GameManager.set_local_hero_index(new_index)
-		else:
-			refresh_after_turn()
-	_sync_online_snapshot()
+	RunTransitionCoordinator.handle_party_hero_death(self, hero_node)
 
 func _on_hero_died() -> void:
-	_game_ended = true
-	_cancel_auto_walk()
-	if TurnManager:
-		TurnManager.processing_mobs = false
-		TurnManager.waiting_for_input = false
-	var hero: Variant = _get_focused_hero()
-	if hero != null:
-		var hero_key: int = hero.get("actor_id") if hero.get("actor_id") != null else -1
-		var hero_sprite: Variant = _hero_sprites.get(hero_key) if hero_key >= 0 else null
-		if is_instance_valid(hero_sprite) and hero_sprite.has_method("play_hero_death"):
-			hero_sprite.play_hero_death()
-	# Play death sound
-	if AudioManager:
-		AudioManager.play_sfx("death")
-		AudioManager.stop_music()
-	# Transition to DeathScene after a brief delay
-	var timer: SceneTreeTimer = get_tree().create_timer(1.15)
-	timer.timeout.connect(_transition_to_death)
+	RunTransitionCoordinator.handle_hero_died(self)
 
 func _on_hero_died_detailed(hero_node: Variant) -> void:
-	if GameManager != null and GameManager.has_method("are_all_heroes_dead") and not GameManager.are_all_heroes_dead():
-		_handle_party_hero_death(hero_node)
-		return
-	var focused_hero: Variant = _get_focused_hero()
-	if focused_hero != hero_node and focused_hero != null:
-		var spectate_index: int = GameManager.get_hero_index(hero_node) if GameManager and GameManager.has_method("get_hero_index") else -1
-		if spectate_index >= 0 and GameManager.has_method("set_local_hero_index"):
-			GameManager.set_local_hero_index(spectate_index)
-	_on_hero_died()
+	RunTransitionCoordinator.handle_hero_died_detailed(self, hero_node)
 
 func _transition_to_death() -> void:
-	_detach_persistent_actors()
-	var cause: String = "the dungeon"
-	var hero: Variant = _get_focused_hero()
-	if hero and hero.get("last_damage_source") != null:
-		var src: Variant = hero.last_damage_source
-		if src is Object and src.get("mob_name"):
-			cause = src.mob_name
-		elif src is String:
-			cause = src
-		else:
-			cause = str(src)
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_run_end"):
-		NetworkManager.broadcast_run_end(false, {"cause_of_death": cause})
-	var death_script: GDScript = load("res://src/scenes/death_scene.gd") as GDScript
-	if death_script:
-		SceneManager.go_to(death_script, "DeathScene", {"cause_of_death": cause})
+	RunTransitionCoordinator.transition_to_death(self)
 
 func _on_mob_revealed(mob: Variant) -> void:
 	# A previously hidden mob (mimic, sleeping mob) was revealed — add its sprite
 	if mob is Object and mob.get("is_alive") == true:
 		_spawn_single_mob_sprite(mob)
-		if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-			NetworkManager.broadcast_world_event({
-				"type": "mob_revealed",
-				"actor_id": int(ConstantsData.get_prop(mob, "actor_id", -1)),
-				"pos": int(ConstantsData.get_prop(mob, "pos", -1)),
-				"mob_name": str(ConstantsData.get_prop(mob, "mob_name", "Mob")),
-			})
+		if _is_online_host():
+			OnlineEventCodec.emit_world_event(NetworkManager, OnlineEventCodec.build_mob_revealed_world_event_payload(mob))
 
 func _on_mob_damaged(mob_pos: int, amount: int) -> void:
+	SceneFeedbackCoordinator.on_mob_damaged(self, mob_pos, amount)
+	return
+
 	# Show floating damage number over the mob
 	if effect_manager:
 		effect_manager.show_damage(mob_pos, amount)
 	_queue_online_snapshot_sync(true)
 
 func _on_hero_attack_missed(mob_pos: int) -> void:
+	SceneFeedbackCoordinator.on_hero_attack_missed(self, mob_pos)
+	return
+
 	# Show "0" over the mob when attack does no damage (dodge or absorbed)
 	if effect_manager:
 		effect_manager.show_status(mob_pos, "0", Color(0.7, 0.7, 0.7))
 	# Miss whoosh sound
 	if AudioManager:
 		AudioManager.play_sfx("miss")
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-		NetworkManager.broadcast_world_event({
-			"type": "hero_attack_missed",
-			"pos": mob_pos,
-		})
+	if _is_online_host():
+		OnlineEventCodec.emit_world_event(NetworkManager, {"type": "hero_attack_missed", "pos": mob_pos})
 
 func _on_gold_collected(_amount: int, _total: int) -> void:
 	if AudioManager:
@@ -3280,6 +2194,9 @@ func _on_request_hero_action(action: Dictionary) -> void:
 	_submit_hero_action(action)
 
 func _on_round_completed(_round_number: int) -> void:
+	SceneFeedbackCoordinator.on_round_completed(self, _round_number)
+	return
+
 	if _current_level == null:
 		return
 	if _current_level.has_method("tick_pending_bombs"):
@@ -3289,6 +2206,9 @@ func _on_round_completed(_round_number: int) -> void:
 	_queue_online_snapshot_sync()
 
 func _on_trap_triggered(_pos: int, _trap_name: String) -> void:
+	SceneFeedbackCoordinator.on_trap_triggered(self, _pos, _trap_name)
+	return
+
 	if AudioManager:
 		AudioManager.play_sfx("trap")
 	if _current_level != null:
@@ -3302,115 +2222,24 @@ func _on_trap_triggered(_pos: int, _trap_name: String) -> void:
 		if fog_of_war:
 			fog_of_war.update_visibility()
 		_update_entity_visibility()
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-		NetworkManager.broadcast_world_event({
-			"type": "trap_triggered",
-			"pos": _pos,
-			"trap_name": _trap_name,
-		})
+	if _is_online_host():
+		OnlineEventCodec.emit_world_event(NetworkManager, {"type": "trap_triggered", "pos": _pos, "trap_name": _trap_name})
 	_queue_online_snapshot_sync(true)
 
 func _on_item_used_sfx(item_name: String) -> void:
-	if AudioManager == null:
-		return
-	# Map item types to appropriate SFX
-	var lower: String = item_name.to_lower()
-	if "potion" in lower:
-		AudioManager.play_sfx("drink")
-	elif "scroll" in lower:
-		AudioManager.play_sfx("read")
-	elif "food" in lower or "ration" in lower or "pasty" in lower or "meat" in lower:
-		AudioManager.play_sfx("eat")
-	elif "bomb" in lower:
-		AudioManager.play_sfx("blast")
-	elif "honeypot" in lower:
-		AudioManager.play_sfx("shatter")
-	else:
-		AudioManager.play_sfx("click")
+	EnvironmentFeedbackCoordinator.on_item_used_sfx(item_name)
 
 func _on_grass_trampled_sfx(_pos: int) -> void:
-	if AudioManager:
-		AudioManager.play_sfx("trample")
+	EnvironmentFeedbackCoordinator.on_grass_trampled()
 
 func _on_seed_planted(pos: int, plant_type: String) -> void:
-	if effect_manager:
-		effect_manager.particle_burst(pos, _plant_color_for(plant_type), 6)
-		effect_manager.show_status(pos, "Planted", Color(0.8, 0.95, 0.7))
-	_refresh_plant_sprites()
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-		var plant_persists: bool = _current_level != null and _current_level.get("plants") is Dictionary and _current_level.plants.has(pos)
-		NetworkManager.broadcast_world_event({
-			"type": "seed_planted",
-			"pos": pos,
-			"plant_type": plant_type,
-			"persists": plant_persists,
-		})
-	_queue_online_snapshot_sync(true)
+	EnvironmentFeedbackCoordinator.on_seed_planted(self, pos, plant_type)
 
 func _on_plant_activated_vfx(pos: int, plant_name: String) -> void:
-	if effect_manager:
-		var color: Color = _plant_color_for(plant_name)
-		effect_manager.particle_burst(pos, color, 10)
-		effect_manager.ring_effect(pos, color, 22.0, 0.35)
-		match plant_name.to_lower():
-			"sungrass":
-				effect_manager.show_status(pos, "Regen", Color(1.0, 0.95, 0.45))
-			"earthroot":
-				effect_manager.show_status(pos, "Armor", Color(0.72, 0.58, 0.32))
-			"firebloom":
-				effect_manager.show_status(pos, "Burn!", Color(1.0, 0.4, 0.1))
-			"icecap":
-				effect_manager.show_status(pos, "Frozen", Color(0.55, 0.82, 1.0))
-			"sorrowmoss":
-				effect_manager.show_status(pos, "Poison", Color(0.45, 0.82, 0.38))
-			"stormvine":
-				effect_manager.show_status(pos, "Rooted", Color(0.7, 0.75, 0.35))
-			"blindweed":
-				effect_manager.show_status(pos, "Blind", Color(0.88, 0.88, 0.72))
-			"dreamfoil":
-				effect_manager.show_status(pos, "Sleep", Color(0.72, 0.58, 0.92))
-			"fadeleaf":
-				effect_manager.show_status(pos, "Warp", Color(0.62, 0.92, 0.72))
-			"starflower":
-				effect_manager.show_status(pos, "XP", Color(1.0, 0.94, 0.35))
-			"swiftthistle":
-				effect_manager.show_status(pos, "Haste", Color(0.96, 0.7, 0.95))
-	_refresh_plant_sprites()
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_world_event"):
-		NetworkManager.broadcast_world_event({
-			"type": "plant_activated",
-			"pos": pos,
-			"plant_name": plant_name,
-		})
+	EnvironmentFeedbackCoordinator.on_plant_activated_vfx(self, pos, plant_name)
 
 func _plant_color_for(plant_name: String) -> Color:
-	match plant_name.to_lower():
-		"firebloom":
-			return Color(0.96, 0.42, 0.1)
-		"icecap":
-			return Color(0.55, 0.82, 1.0)
-		"sorrowmoss":
-			return Color(0.45, 0.82, 0.38)
-		"stormvine":
-			return Color(0.72, 0.7, 0.95)
-		"sungrass":
-			return Color(0.95, 0.92, 0.38)
-		"earthroot":
-			return Color(0.62, 0.48, 0.24)
-		"fadeleaf":
-			return Color(0.62, 0.92, 0.72)
-		"rotberry":
-			return Color(0.82, 0.24, 0.34)
-		"blindweed":
-			return Color(0.88, 0.88, 0.72)
-		"dreamfoil":
-			return Color(0.72, 0.58, 0.92)
-		"starflower":
-			return Color(1.0, 0.94, 0.35)
-		"swiftthistle":
-			return Color(0.96, 0.7, 0.95)
-		_:
-			return Color(0.62, 0.86, 0.48)
+	return EnvironmentFeedbackCoordinator.plant_color_for(plant_name)
 
 func _on_badge_unlocked_sfx(_badge_id: String) -> void:
 	if AudioManager:
@@ -3498,147 +2327,25 @@ func _on_glyph_proc(glyph_id: String, wearer_pos: int, attacker_pos: int) -> voi
 
 ## Handle descending to the next depth via stairs down.
 func _handle_descend() -> void:
-	var hero: Variant = _get_input_hero()
-	if hero == null:
-		return
-	# Check we're actually on the exit
-	if _current_level and hero.pos != _current_level.exit_pos:
-		if MessageLog:
-			MessageLog.add_warning("You need to be on the stairs down to descend.")
-		_awaiting_hero_input = true
-		return
-	if not _party_ready_for_stairs(_current_level.exit_pos, "All party members must be on the stairs down to descend."):
-		_awaiting_hero_input = true
-		return
-
-	if MessageLog:
-		MessageLog.add("You descend deeper into the dungeon...")
-	if AudioManager:
-		AudioManager.play_sfx("descend")
-
-	_notify_party_floor_change()
-
-	# Cache current level before leaving
-	GameManager._cache_current_level()
-	GameManager.depth += 1
-	GameManager._on_depth_changed()
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_level_transition"):
-		NetworkManager.broadcast_level_transition({
-			"depth": GameManager.depth,
-			"transition_type": "descend",
-		})
-
-	_transition_to_loading("descend")
+	FloorTransitionCoordinator.handle_descend(self)
 
 ## Handle ascending to the previous depth via stairs up.
 func _handle_ascend() -> void:
-	var hero: Variant = _get_input_hero()
-	if hero == null:
-		return
-	# Check we're actually on the entrance
-	if _current_level and hero.pos != _current_level.entrance:
-		if MessageLog:
-			MessageLog.add_warning("You need to be on the stairs up to ascend.")
-		_awaiting_hero_input = true
-		return
-	if not _party_ready_for_stairs(_current_level.entrance, "All party members must be on the stairs up to ascend."):
-		_awaiting_hero_input = true
-		return
-
-	# Can't ascend from depth 1 (surface)
-	if GameManager.depth <= 1:
-		if MessageLog:
-			MessageLog.add_warning("The way to the surface is sealed.")
-		_awaiting_hero_input = true
-		return
-
-	if MessageLog:
-		MessageLog.add("You ascend the staircase...")
-	if AudioManager:
-		AudioManager.play_sfx("descend")
-
-	_notify_party_floor_change()
-
-	# Cache current level before leaving
-	GameManager._cache_current_level()
-	GameManager.depth -= 1
-	GameManager._on_depth_changed()
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_level_transition"):
-		NetworkManager.broadcast_level_transition({
-			"depth": GameManager.depth,
-			"transition_type": "ascend",
-		})
-
-	_transition_to_loading("ascend")
+	FloorTransitionCoordinator.handle_ascend(self)
 
 func _party_ready_for_stairs(stair_pos: int, failure_message: String) -> bool:
-	if GameManager == null or not GameManager.has_method("get_active_heroes"):
-		return true
-	var party: Array[Node] = GameManager.get_active_heroes()
-	if party.size() <= 1:
-		return true
-	var missing_count: int = 0
-	for party_hero: Variant in party:
-		if party_hero == null or not party_hero.get("is_alive"):
-			continue
-		if int(party_hero.get("pos")) != stair_pos:
-			missing_count += 1
-	if missing_count <= 0:
-		return true
-	if MessageLog:
-		MessageLog.add_warning("%s (%d missing)" % [failure_message, missing_count])
-	return false
+	return FloorTransitionCoordinator.party_ready_for_stairs(self, stair_pos, failure_message)
 
 func _notify_party_floor_change() -> void:
-	if GameManager == null or not GameManager.has_method("get_active_heroes"):
-		return
-	for party_hero: Variant in GameManager.get_active_heroes():
-		if party_hero == null:
-			continue
-		var belongings: Variant = party_hero.get("belongings")
-		if belongings != null and belongings.has_method("get_equipped_artifact"):
-			var artifact: Variant = belongings.get_equipped_artifact()
-			if artifact != null and artifact.has_method("on_floor_change"):
-				artifact.on_floor_change()
+	FloorTransitionCoordinator.notify_party_floor_change(self)
 
 ## Transition to the LoadingScene for level generation.
 func _transition_to_loading(transition_type: String = "descend") -> void:
-	_game_ended = true
-	_cancel_auto_walk()
-	_detach_persistent_actors()
-
-	var loading_script: GDScript = load("res://src/scenes/loading_scene.gd") as GDScript
-	if loading_script:
-		SceneManager.go_to(loading_script, "LoadingScene", {
-			"is_continue": true,
-			"transition_type": transition_type,
-		})
+	FloorTransitionCoordinator.transition_to_loading(self, transition_type)
 
 ## Transition to the victory scene (Amulet of Yendor).
 func _transition_to_victory() -> void:
-	_game_ended = true
-	_cancel_auto_walk()
-	_detach_persistent_actors()
-
-	if AudioManager:
-		AudioManager.play_sfx("victory")
-		AudioManager.stop_music()
-
-	# Try to load a victory scene; fall back to a simple message
-	if _is_online_host() and NetworkManager and NetworkManager.has_method("broadcast_run_end"):
-		NetworkManager.broadcast_run_end(true, {})
-	var victory_script: GDScript = load("res://src/scenes/victory_scene.gd") as GDScript
-	if victory_script:
-		SceneManager.go_to(victory_script, "VictoryScene")
-	else:
-		if MessageLog:
-			MessageLog.add_positive("You obtained the Amulet of Yendor! You win!")
-		var timer: SceneTreeTimer = get_tree().create_timer(3.0)
-		timer.timeout.connect(func() -> void:
-			var title_script: GDScript = load("res://src/scenes/title_scene.gd") as GDScript
-			if title_script:
-				SceneManager.go_to(title_script, "TitleScene")
-		)
+	RunTransitionCoordinator.transition_to_victory(self)
 
 # ---------------------------------------------------------------------------
 # Actor Management for Scene Transitions
@@ -3665,102 +2372,23 @@ func _detach_persistent_actors() -> void:
 ## Start auto-walking toward a target cell. The hero will move one step per
 ## turn until reaching the destination or being interrupted.
 func _start_auto_walk(target: int) -> void:
-	_auto_walk_target = target
-	_auto_walk_known_mobs = _get_visible_mob_positions()
-	var hero: Variant = _get_input_hero()
-	_auto_walk_prev_hp = hero.hp if hero else -1
+	AutoWalkCoordinator.start(self, target)
 
 ## Cancel auto-walk (enemy spotted, damage taken, manual input, etc.).
 func _cancel_auto_walk() -> void:
-	_auto_walk_target = -1
-	_auto_walk_known_mobs.clear()
-	_auto_walk_prev_hp = -1
-	_auto_walk_cooldown = 0.0
+	AutoWalkCoordinator.cancel(self)
 
 ## Process one auto-walk step. Called from _process when it's the hero's turn
 ## and auto-walk is active.
 func _process_auto_walk() -> void:
-	var hero: Variant = _get_input_hero()
-	if hero == null or not hero.is_alive:
-		_cancel_auto_walk()
-		return
-
-	# --- Check interrupt conditions ---
-
-	# 1. Reached destination
-	if hero.pos == _auto_walk_target:
-		_cancel_auto_walk()
-		return
-
-	# 2. Hero took damage since last step
-	if _auto_walk_prev_hp >= 0 and hero.hp < _auto_walk_prev_hp:
-		_cancel_auto_walk()
-		return
-
-	# 3. New enemy came into view
-	var current_mobs: Dictionary = _get_visible_mob_positions()
-	for mob_key: Variant in current_mobs.keys():
-		if not _auto_walk_known_mobs.has(mob_key):
-			_cancel_auto_walk()
-			return
-
-	# 4. Hero is standing on an item (auto-walk pauses so player notices)
-	if _current_level:
-		var heaps_here: Array[Dictionary] = _current_level.heaps_at(hero.pos)
-		if not heaps_here.is_empty():
-			_cancel_auto_walk()
-			return
-
-	# 5. Hero is on stairs
-	if _current_level:
-		var terrain: int = _current_level.terrain_at(hero.pos)
-		if terrain == ConstantsData.Terrain.EXIT or terrain == ConstantsData.Terrain.ENTRANCE:
-			_cancel_auto_walk()
-			return
-
-	# 6. Check if adjacent to any enemy
-	if _current_level:
-		for dir: int in ConstantsData.DIRS_8:
-			var adj_pos: int = hero.pos + dir
-			var char_at: Variant = _current_level.find_char_at(adj_pos)
-			if char_at != null and char_at != hero:
-				_cancel_auto_walk()
-				return
-
-	# --- Take the next step ---
-	_auto_walk_known_mobs = current_mobs
-	_auto_walk_prev_hp = hero.hp
-
-	var pre_move_pos: int = hero.pos
-	_submit_hero_action({"type": "move", "target_pos": _auto_walk_target})
-
-	# If hero didn't move (blocked or no path), cancel auto-walk
-	if hero.pos == pre_move_pos:
-		_cancel_auto_walk()
-	else:
-		# Pace auto-walk so the movement tween is visible
-		_auto_walk_cooldown = AUTO_WALK_STEP_DELAY
+	AutoWalkCoordinator.process_step(self, AUTO_WALK_STEP_DELAY)
 
 ## Return a dictionary of currently visible mob positions (for interrupt detection).
 func _get_visible_mob_positions() -> Dictionary[int, bool]:
-	var result: Dictionary[int, bool] = {}
-	if _current_level == null:
-		return result
-	for mob: Node in _current_level.mobs:
-		if is_instance_valid(mob) and mob.get("is_alive") == true:
-			var mob_pos: int = mob.get("pos") as int
-			if mob_pos >= 0 and mob_pos < _current_level.visible.size():
-				if _current_level.visible[mob_pos]:
-					result[mob_pos] = true
-	return result
+	return AutoWalkCoordinator.get_visible_mob_positions(self)
 
 func _interrupt_rest_if_needed() -> void:
-	var hero: Variant = _get_input_hero()
-	if hero == null or not hero.get("resting"):
-		return
-	var visible_mobs: Dictionary[int, bool] = _get_visible_mob_positions()
-	if not visible_mobs.is_empty() and hero.has_method("interrupt"):
-		hero.interrupt()
+	AutoWalkCoordinator.interrupt_rest_if_needed(self)
 
 # ---------------------------------------------------------------------------
 # Targeting Mode
@@ -3768,33 +2396,21 @@ func _interrupt_rest_if_needed() -> void:
 
 ## Enter targeting mode via signal from inventory/item windows.
 func _on_enter_targeting(item: Variant, max_range: int, callback: Callable) -> void:
-	_targeting_active = true
-	_targeting_item = item
-	_targeting_max_range = max_range
-	_targeting_callback = callback
-	_cancel_auto_walk()
-	if MessageLog:
-		var item_name: String = ConstantsData.get_prop(item, "item_name", "item") if item is Object else "item"
-		MessageLog.add("Select a target for the %s. (Press Escape to cancel)" % item_name)
+	TargetingCoordinator.enter(self, item, max_range, callback)
 
 ## Cancel targeting mode via signal.
 func _on_cancel_targeting() -> void:
-	_cancel_targeting_mode()
+	TargetingCoordinator.cancel(self)
 
 ## Cancel targeting and inform the player.
 func _cancel_targeting_mode() -> void:
-	if not _targeting_active:
-		return
-	_targeting_active = false
-	_targeting_item = null
-	_targeting_max_range = 0
-	_targeting_callback = Callable()
-	_awaiting_hero_input = true
-	if MessageLog:
-		MessageLog.add("Targeting cancelled.")
+	TargetingCoordinator.cancel(self)
 
 ## Resolve targeting — the player clicked a cell while in targeting mode.
 func _resolve_targeting(cell: int) -> void:
+	TargetingCoordinator.resolve(self, cell)
+	return
+
 	if not _targeting_active:
 		return
 

@@ -50,10 +50,9 @@ func _ready() -> void:
 
 	# End game
 	GameManager.end_game(false)
-	# Delete saves from both systems
+	# Delete the active save
 	if SaveManager:
 		SaveManager.delete_save()
-	GameManager.delete_save()
 
 # ---------------------------------------------------------------------------
 # Rankings

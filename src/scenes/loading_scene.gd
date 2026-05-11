@@ -214,12 +214,7 @@ func _perform_generation() -> void:
 		# Just generate the level for current depth
 		_generate_current_level()
 	else:
-		# New game flow — free the old hero to prevent memory leak
-		if GameManager.hero != null and GameManager.hero is Node:
-			GameManager.hero.free()
-			GameManager.hero = null
-			GameManager.heroes.clear()
-
+		# New game flow
 		# Reset quest state for the new run
 		QuestHandler.reset()
 

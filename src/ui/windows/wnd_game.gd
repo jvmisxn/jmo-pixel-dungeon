@@ -85,11 +85,8 @@ func _on_settings() -> void:
 
 
 func _on_save_quit() -> void:
-	# Use SaveManager for full game state persistence
 	if SaveManager:
 		SaveManager.save_full_game()
-	elif GameManager:
-		GameManager.save_game()
 	_return_to_title()
 
 
@@ -99,16 +96,6 @@ func _on_quit_no_save() -> void:
 
 func _return_to_title() -> void:
 	close_window()
-	var tree: SceneTree = get_tree()
-	if tree == null:
-		return
-	# Load and switch to the title scene
 	var title_script: GDScript = load("res://src/scenes/title_scene.gd") as GDScript
 	if title_script:
-		var title_scene: Control = title_script.new()
-		title_scene.name = "TitleScene"
-		# Free all children of root except autoloads, then add title
-		var game_scene: Node = tree.root.get_node_or_null("GameScene")
-		if game_scene:
-			game_scene.queue_free()
-		tree.root.add_child(title_scene)
+		SceneManager.go_to(title_script, "TitleScene")

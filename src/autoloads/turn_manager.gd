@@ -296,11 +296,9 @@ func _should_abort_async_processing(game_scene: Node) -> bool:
 	return false
 
 func _process_mobs_async() -> void:
-	var safety: int = 200
 	var game_scene: Node = _get_game_scene_cached()
 
-	while safety > 0:
-		safety -= 1
+	while true:
 		if _should_abort_async_processing(game_scene):
 			break
 		if _actors.is_empty():

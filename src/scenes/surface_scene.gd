@@ -134,10 +134,9 @@ func _save_ranking() -> void:
 
 	# End the game in GameManager
 	GameManager.end_game(true)
-	# Delete saves from both systems
+	# Delete the active save
 	if SaveManager:
 		SaveManager.delete_save()
-	GameManager.delete_save()
 
 # ---------------------------------------------------------------------------
 # UI Construction

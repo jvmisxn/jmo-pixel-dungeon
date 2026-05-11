@@ -484,72 +484,6 @@ func is_boss_depth() -> bool:
 # Save / Load
 # ---------------------------------------------------------------------------
 
-const SAVE_PATH: String = "user://save_game.dat"
-
-## Serialize the entire game state to a dictionary.
-func _to_save_dict() -> Dictionary:
-	return {
-		"depth": depth,
-		"gold": gold,
-		"run_seed": run_seed,
-		"score": score,
-		"hero_class": hero_class,
-		"hero_subclass": hero_subclass,
-		"stats": stats.duplicate(),
-		"run_active": run_active,
-		"item_appearance": ItemAppearance.serialize() if ItemAppearance else {},
-		"level_cache_keys": _level_cache.keys(),
-		# Hero and level data would be serialized by their own systems.
-	}
-
-## Save the current game to disk.
-func save_game() -> bool:
-	var file: FileAccess = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if file == null:
-		push_error("GameManager: Failed to open save file for writing.")
-		return false
-	var data: Dictionary = _to_save_dict()
-	file.store_var(data)
-	file.close()
-	if EventBus:
-		EventBus.game_saved.emit()
-	return true
-
-## Load a saved game from disk. Returns true on success.
-func load_game() -> bool:
-	if not FileAccess.file_exists(SAVE_PATH):
-		push_warning("GameManager: No save file found.")
-		return false
-	var file: FileAccess = FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if file == null:
-		push_error("GameManager: Failed to open save file for reading.")
-		return false
-	var data: Variant = file.get_var()
-	file.close()
-	if data == null or not data is Dictionary:
-		push_error("GameManager: Save data is corrupt.")
-		return false
-
-	var save: Dictionary = data as Dictionary
-	depth = save.get("depth", 1)
-	gold = save.get("gold", 0)
-	run_seed = save.get("run_seed", 0)
-	score = save.get("score", 0)
-	hero_class = save.get("hero_class", ConstantsData.HeroClass.WARRIOR)
-	hero_subclass = save.get("hero_subclass", ConstantsData.HeroSubclass.NONE)
-	stats = save.get("stats", {})
-	run_active = save.get("run_active", false)
-	if ItemAppearance:
-		var appearance_data: Dictionary = save.get("item_appearance", {})
-		if appearance_data.is_empty():
-			ItemAppearance.reset_for_new_run(run_seed)
-		else:
-			ItemAppearance.deserialize(appearance_data)
-
-	if EventBus:
-		EventBus.game_loaded.emit()
-	return true
-
 ## End the current run. Called on hero death or victory.
 func end_game(victory: bool) -> void:
 	run_active = false
@@ -557,13 +491,4 @@ func end_game(victory: bool) -> void:
 		score = compute_final_score()
 		score_changed.emit(score)
 	game_ended.emit(victory)
-
-## Delete the save file (permadeath).
-func delete_save() -> void:
-	if FileAccess.file_exists(SAVE_PATH):
-		DirAccess.remove_absolute(SAVE_PATH)
-
-## Check whether a save file exists.
-func has_save() -> bool:
-	return FileAccess.file_exists(SAVE_PATH)
 	

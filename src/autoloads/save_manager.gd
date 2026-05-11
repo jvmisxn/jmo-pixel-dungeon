@@ -82,6 +82,13 @@ func load_full_game() -> bool:
 		push_error("SaveManager: Save file is from a newer version (%d > %d)." % [version, SAVE_VERSION])
 		return false
 
+	# Start from a clean runtime state before rehydrating saved objects.
+	if TurnManager != null and TurnManager.has_method("clear_actors"):
+		TurnManager.clear_actors()
+	if GameManager != null and GameManager.has_method("_cleanup_previous_run"):
+		GameManager._cleanup_previous_run()
+	QuestHandler.reset()
+
 	# --- Restore GameManager state ---
 	_deserialize_game_manager(save.get("game_manager", {}))
 
