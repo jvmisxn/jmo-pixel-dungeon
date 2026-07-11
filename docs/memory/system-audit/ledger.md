@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S16**
+Pointer (next to evaluate): **S17**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -22,7 +22,7 @@ Pointer (next to evaluate): **S16**
 | S13 | Weapons / armor / glyphs / enchants | `src/items/weapons/`, `src/items/armor/` | done | needs-hardening — [report](reports/S13-weapons-armor.md). Core damage/DR/STR/augment math faithful, but same-tier weapons are identical except reach (delay_factor never set + tier-only damage), SpiritBow.deserialize is `pass` (bow upgrades lost on load), random armor never gets glyphs, and curse-enchant/Flow/Entanglement procs are inert. Auto-fixed: removed 2 no-op overrides. |
 | S14 | Wands & staffs | `src/items/wands/` | done | fragile — [report](reports/S14-wands.md). All 13 wands live in one file; recharge formula is faithful but **never called per-turn** (no Charger → wands never recharge over time, `Recharging` buff dead), plus Frost always-paralyzes (has_buff check after add), wands un-identifiable after 5 zaps, Corruption applies Amok (attacks hero) instead of `CorruptionBuff`, Disintegration bypasses `take_damage`, and Warding is fully inert. No safe auto-fixes (wand.gd in TRUNCATED_FILES.txt; all behavioral). |
 | S15 | Potions & scrolls | `src/items/potions/`, `src/items/scrolls/` | done | needs-hardening — [report](reports/S15-potions-scrolls.md). Drink/read paths faithful & clean, but thrown potions never shatter (all 13 `shatter()` overrides dead — throw pipeline lacks a Potion branch), `duplicate_item()` returns base `Potion`/`Scroll` so `split()` yields inert items, and gas/flame/frost apply one-shot 3×3 buffs instead of spreading Blobs (couples S20). Auto-fixed: removed stray potion_ending_fix.txt + merged a split string literal. |
-| S16 | Rings & artifacts | `src/items/rings/`, `src/items/artifacts/` | pending | — |
+| S16 | Rings & artifacts | `src/items/rings/`, `src/items/artifacts/` | done | needs-hardening — [report](reports/S16-rings-artifacts.md). Buff/curve math faithful, but equipped rings/artifacts lose all passives on save/load (belongings raw-assigns slots, buffs don't survive serialize), Ring of Might corrupts base stats across reload, and Furor/Haste (dead `modify_speed` hook), Wealth (no loot reader), Cape of Thorns (`on_hero_damaged` never called), and Force-unarmed are all inert. No safe auto-fixes (all behavioral / artifact.gd truncated). |
 | S17 | Consumables & misc items | `src/items/seeds/`, `src/items/food/`, `src/items/bombs/`, `src/items/stones/`, `src/items/spells/` | pending | — |
 | S18 | Bags & inventory containers | `src/items/bags/`, `src/items/keys/` | pending | — |
 | S19 | Plants | `src/plants/` | pending | — |
@@ -45,4 +45,4 @@ Pointer (next to evaluate): **S16**
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 15 / 37.
+37 systems. Completed: 16 / 37.
