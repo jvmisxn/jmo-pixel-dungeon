@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S13**
+Pointer (next to evaluate): **S14**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -19,7 +19,7 @@ Pointer (next to evaluate): **S13**
 | S10 | Traps | `src/levels/traps/` | done | needs-hardening — [report](reports/S10-traps.md). Base lifecycle + script-path serialize faithful, but `disarming_trap` fires `drop_item` with swapped args (permanent weapon loss), paralytic/fire traps have inert `pass` buffs (Paralysis/Burning never applied), and 7 trap classes (Frost/Blazing/Disarming/Pitfall/Cursing/Flock/Paralytic) are wired into no generation pool = dead content. No safe auto-fixes (all behavioral). |
 | S11 | Level features | `src/levels/features/` | done | needs-hardening — [report](reports/S11-level-features.md). `door.gd` is live but opens LOCKED_DOOR with the wrong key (`golden`, should be `iron` → iron keys useless) and door-open logic is triplicated; `chasm.gd` is entirely dead while the live inline chasm path (`hero.gd:662`) is instant-death instead of SPD fall-to-next-floor. No safe auto-fixes (both files in TRUNCATED_FILES.txt, all findings behavioral). |
 | S12 | Item base & Generator | `src/items/item.gd`, `src/items/generator.gd`, `src/items/heap.gd` | done | needs-hardening — [report](reports/S12-item-base-generator.md). Factory chokepoint + item contract clean, but `split()` downgrades any override-less stackable (missiles/bombs/stones/seeds/food/spells) to base `Item` via factory-less `duplicate_item()` (theft/recycle-reachable); + serialize drops bones/kept flags, Generator puts GOLD at top of the random category table (non-SPD), and `_generated_artifacts` uniqueness isn't saved. No safe auto-fixes (all behavioral / generator.gd truncated). |
-| S13 | Weapons / armor / glyphs / enchants | `src/items/weapons/`, `src/items/armor/` | pending | — |
+| S13 | Weapons / armor / glyphs / enchants | `src/items/weapons/`, `src/items/armor/` | done | needs-hardening — [report](reports/S13-weapons-armor.md). Core damage/DR/STR/augment math faithful, but same-tier weapons are identical except reach (delay_factor never set + tier-only damage), SpiritBow.deserialize is `pass` (bow upgrades lost on load), random armor never gets glyphs, and curse-enchant/Flow/Entanglement procs are inert. Auto-fixed: removed 2 no-op overrides. |
 | S14 | Wands & staffs | `src/items/wands/` | pending | — |
 | S15 | Potions & scrolls | `src/items/potions/`, `src/items/scrolls/` | pending | — |
 | S16 | Rings & artifacts | `src/items/rings/`, `src/items/artifacts/` | pending | — |
@@ -45,4 +45,4 @@ Pointer (next to evaluate): **S13**
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 12 / 37.
+37 systems. Completed: 13 / 37.
