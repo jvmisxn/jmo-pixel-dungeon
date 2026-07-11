@@ -3,14 +3,14 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S04**
+Pointer (next to evaluate): **S05**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
 | S01 | Persistence / SaveManager | `src/autoloads/save_manager.gd`, `docs/memory/persistence-notes.md` | done | needs-hardening — [report](reports/S01-persistence.md). Object graph solid; durability thin (non-atomic write, no autosave) + ~200 lines dead serialization. |
 | S02 | Hero & belongings | `src/actors/hero/` | done | needs-hardening — [report](reports/S02-hero.md). Turn loop/leveling/save graph solid; class-subclass identity largely stubbed (Mage no staff, Warrior/Rogue passives `pass`, Champion dual-wield unwired) + inert groundwork talents. |
 | S03 | Actor / Char combat core | `src/actors/actor.gd`, `src/actors/char.gd` | done | needs-hardening — [report](reports/S03-combat-core.md). Combat resolution faithful & clean, but Char has no combat-state serializer (subclasses hand-roll hp/stats) + two SPD-fidelity gaps: uniform damage roll (not NormalIntRange) and invisible-only surprise hits. |
-| S04 | Turn scheduling | `src/autoloads/turn_manager.gd` | pending | — |
+| S04 | Turn scheduling | `src/autoloads/turn_manager.gd` | done | needs-hardening — [report](reports/S04-turn-scheduling.md). Cooldown rebasing + hero-pause loop correct, but no persisted scheduling state (cooldowns reset on save/load), cached `speed` can go stale silently, and the async mob-pacing layer is dead code (`MOB_ACTION_DELAY` const 0.0). |
 | S05 | Mobs & AI | `src/actors/mobs/` | pending | — |
 | S06 | Buffs | `src/actors/buffs/` | pending | — |
 | S07 | Level base & grid | `src/levels/level.gd`, `src/levels/regular_level.gd` | pending | — |
@@ -45,4 +45,4 @@ Pointer (next to evaluate): **S04**
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 3 / 37.
+37 systems. Completed: 4 / 37.
