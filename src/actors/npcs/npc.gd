@@ -15,7 +15,6 @@ var dialogue_lines: Array[String] = []
 
 # --- NPC Identity ---
 var npc_name: String = "NPC"
-var _last_interacting_hero_actor_id: int = -1
 var _last_interacting_owner_peer_id: int = 1
 
 # ---------------------------------------------------------------------------
@@ -102,7 +101,6 @@ func _on_death(source: Variant) -> void:
 func _remember_interacting_hero(hero: Variant) -> void:
 	if hero == null:
 		return
-	_last_interacting_hero_actor_id = int(ConstantsData.get_prop(hero, "actor_id", -1))
 	_last_interacting_owner_peer_id = int(ConstantsData.get_prop(hero, "owner_peer_id", 1))
 
 func _deliver_message(text: String, kind: String = "info", hero: Variant = null) -> void:
