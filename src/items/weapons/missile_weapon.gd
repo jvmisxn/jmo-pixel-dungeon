@@ -231,18 +231,6 @@ static func create(weapon_id: String) -> MissileWeapon:
 	return w
 
 # ---------------------------------------------------------------------------
-# Damage Override
-# ---------------------------------------------------------------------------
-
-## Missile weapons use a slightly different damage formula:
-## They deal less base damage than melee weapons of the same tier.
-func get_damage_range() -> Array[int]:
-	# Use parent formula but scale down slightly for balance
-	var base: Array[int] = super.get_damage_range()
-	# Missile weapons keep the parent formula; specific values are set by tier
-	return base
-
-# ---------------------------------------------------------------------------
 # Value
 # ---------------------------------------------------------------------------
 
