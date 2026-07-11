@@ -39,7 +39,9 @@ static func _init_rounding() -> void:
 ## [width] is the grid width (columns).
 ## [view_distance] is the maximum sight radius.
 ## Returns an Array[bool] of the same length where true = visible.
-static func cast_fov(origin: int, blocking: Array[bool], width: int, view_distance: int) -> Array[bool]:
+static func cast_fov(
+	origin: int, blocking: Array[bool], width: int, view_distance: int
+) -> Array[bool]:
 	_init_rounding()
 
 	var length: int = blocking.size()
