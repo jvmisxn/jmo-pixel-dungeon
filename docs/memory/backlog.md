@@ -85,3 +85,15 @@ Filed by the system-audit loop (`docs/memory/system-audit/`). Tag `[audit:<id>]`
 - [P3][audit:S06] barkskin/arcane_armor `delay()` is a no-op `pass` stub whose docstring promises a cooldown adjustment.
 - [P3][audit:S06] Dead no-op `MonkFlurry.on_turn()` override — AUTO-FIXED this run (removed on `audit/autofix`, PR #1).
 - [P3][audit:S06] No buff unit tests (poison/bleed/corrosion decay curves, barrier depletion, hunger thresholds, serialize round-trips) — pure logic, cheap to cover.
+- [P1][audit:S07] `mob_spawn_positions` under-spawns mobs — `remaining` decremented on failed placements too (`regular_level.gd:411`, no-op `pass` :410); empty-`std_rooms` fallback returns one pos not `count` (:378-382); "25% second mob same room" (:359) never implemented. Loop on successful placements.
+- [P1][audit:S07] No periodic mob respawn (SPD `RegularLevel.respawner`) — mobs spawn once in `_build`; killed mobs never replaced → floors deplete, diverges from SPD balance. Add a rooms-weighted respawn timer.
+- [P2][audit:S07] Mimic spawn discards its item — `regular_level.gd:115-122` throws away the rolled `item` instead of giving it to the mimic (also no `scale_to_depth`) → silent item loss, mimic drops nothing.
+- [P2][audit:S07] `rooms` not serialized (`level.gd:717/777`) — empty after load; blocks respawn/room-based post-load features; SPD persists room bounds/types.
+- [P2][audit:S07] `is_visible_from`/`has_los` (`level.gd:591-609`) allocate a full LEN `Array[bool]` via `ShadowCaster.cast_fov` per point LOS query (5 sites incl. mob targeting); route through existing `Ballistica` (O(distance)).
+- [P2][audit:S07] O(n) linear scans on hot paths — `mob_at`/`find_char_at`/`heaps_at`/`pickup_item` (`level.gd:478-516`) scan all mobs/heaps per call; add a `pos->mob`/`pos->heap` index.
+- [P3][audit:S07] `update_fov` runs 3–4 full-grid (LEN) passes per hero move (`level.gd:355-369`) — fusable if FOV ever profiles hot.
+- [P3][audit:S07] `unlock_exit` (`level.gd:624-631`) opens every LOCKED_DOOR on the level rather than the exit-gating door.
+- [P3][audit:S07] `static var _recent_specials` (`regular_level.gd:505`) is process-global, not per-run/not reset on new game → special-room-variety tracking bleeds across games; move to per-dungeon state.
+- [P3][audit:S07] Grid constants duplicated: `level.gd:10-12` hardcodes `W/H/LEN` vs `ConstantsData.WIDTH/LENGTH` in `regular_level.gd` (equal today) — derive from ConstantsData.
+- [P3][audit:S07] DARK feeling is visual-only (fog dim, `game_scene.gd:439`) — never reduces view distance; low-confidence fidelity note, verify vs SPD before acting.
+- [P3][audit:S07] Several `pos / W` int divisions lack `@warning_ignore("integer_division")` (`level.gd:298-299,381-382,405-406`) — cosmetic warnings.
