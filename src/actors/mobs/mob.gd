@@ -34,10 +34,6 @@ var _resistances: Array[String] = []
 @warning_ignore("unused_private_class_variable")
 var _immunities: Array[String] = []
 
-# --- Movement ---
-@warning_ignore("unused_private_class_variable")
-var _path: Array[int] = []
-
 ## Set to true during act() when the mob does something the player should see
 ## (moves, attacks, opens a door). TurnManager checks this to decide whether
 ## to add a visual delay and refresh the screen.
