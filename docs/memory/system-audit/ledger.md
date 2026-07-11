@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S21**
+Pointer (next to evaluate): **S22**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -27,7 +27,7 @@ Pointer (next to evaluate): **S21**
 | S18 | Bags & inventory containers | `src/items/bags/`, `src/items/keys/` | done | fragile — [report](reports/S18-bags-keys.md). Per-item logic is clean but the container half is inert: bags store nothing (`add_to_bag`/`can_hold` have zero callers, belongings has no `bags` array, `Bag.deserialize` silently drops `data["items"]`), and iron + skeleton keys are dead (no `has_key("iron"/"skeleton")` caller; LOCKED_DOOR uses `golden`, boss seal opens on death). Auto-fixed: removed redundant no-op `is_stackable()` overrides in bag.gd + key.gd. |
 | S19 | Plants | `src/plants/` | done | needs-hardening — [report](reports/S19-plants.md). Per-plant effects clean & save/load solid, but plants apply one-shot buffs/terrain instead of SPD's spreading Blobs (Fire/ToxicGas/StormCloud/Freezing), Icecap/Dreamfoil use generic `Paralysis` where `Frozen`/`SleepBuff` exist, and Firebloom/Icecap AoE has a column edge-wrap bug (`level.adjacent` unused). Auto-fixed: deleted orphaned duplicate `seed.gd` (class `Seed`, superseded by `SeedItem`) + stray fuse artifact. |
 | S20 | Blobs (gases/liquids) | `src/actors/blobs/` | done | fragile — [report](reports/S20-blobs.md). Base spread/decay sim mirrors SPD but is **never driven**: `Blob.act()` is uncalled (TurnManager registers only mobs; no `tick_blobs`) → all gas is inert overlay that never spreads/affects/decays (root of S15/S19 one-shot workarounds). Plus fetid_rat seeder crashes on arg mismatch, ConfusionGas/ParalyticGas/WaterOfHealth have no seeders, serialize()/factory dead (relies on store_var full_objects), and a `smoke_screen` LOS branch with no class. No safe auto-fixes (behavioral / level.gd truncated). |
-| S21 | NPCs & quests | `src/actors/npcs/` | pending | — |
+| S21 | NPCs & quests | `src/actors/npcs/` | done | needs-hardening — [report](reports/S21-npcs-quests.md). Base lifecycle/dialogue/save-load/network-routing clean, but the Blacksmith quest is uncompletable (`dark_gold_ore` has no drop source anywhere), Ghost double-subscribes `mob_defeated` + rolls an unused `reward_enchanted`, quest depth/spawn tables are duplicated, and Ghost/Imp/Wandmaker re-generate rewards (burning RNG) on every load. Auto-fixed: removed write-only dead field `_last_interacting_hero_actor_id`. |
 | S22 | Movement / pathfinding / FOV | `src/mechanics/pathfinder.gd`, `ballistica.gd`, `shadow_caster.gd`, `auto_walk_coordinator.gd` | pending | — |
 | S23 | Input & targeting | `src/mechanics/input_coordinator.gd`, `targeting_coordinator.gd` | pending | — |
 | S24 | Transitions (floor/run) | `src/mechanics/floor_transition_coordinator.gd`, `run_transition_coordinator.gd` | pending | — |
@@ -45,4 +45,4 @@ Pointer (next to evaluate): **S21**
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 20 / 37.
+37 systems. Completed: 21 / 37.

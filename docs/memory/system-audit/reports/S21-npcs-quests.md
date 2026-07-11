@@ -1,0 +1,30 @@
+# NPCs & Quests — Audit
+
+- Files: `src/actors/npcs/` — `npc.gd`, `quest_handler.gd`, `ghost.gd`, `wandmaker.gd`, `blacksmith.gd`, `imp.gd`*, `shopkeeper.gd`*  (* = in `TRUNCATED_FILES.txt`, read-only this run)
+- Read in full: yes (all 7 files)
+- Verdict: **needs-hardening** — base lifecycle, dialogue-state, save/load and network-routing are clean and consistent, but one quest is uncompletable (no ore drop), quest depth/spawn logic is duplicated, and two subclasses churn RNG + re-generate rewards on every load.
+
+## Improvements
+- [P1] **Blacksmith quest is uncompletable — `dark_gold_ore` has no source.** `blacksmith.gd:22,74` requires 15 `dark_gold_ore`; `_spawn_blacksmith` (`quest_handler.gd:126`) comments "drops from bats naturally — handled by bat loot tables," but a repo-wide grep finds `dark_gold_ore` **only** in `blacksmith.gd`. No mob, loot table, generator, or terrain produces it → the hero can never deliver, quest dead-ends and the reforge reward is unreachable. Fix: give bats (or Caves mining terrain + a Pickaxe, per SPD) a `dark_gold_ore` drop, or lower/replace the delivery gate.
+- [P2] **Ghost double-subscribes to `mob_defeated`.** `ghost.gd:48-50` self-connects `on_mob_defeated` to `EventBus.mob_defeated` in `_init`, *and* `QuestHandler._register_npc` (`quest_handler.gd:143`) connects the static `_on_mob_defeated` which fans out to every active NPC's `on_mob_defeated`. So the ghost's handler runs twice per kill (once direct, once routed). Guards (`target_slain`/`quest_complete`) make it idempotent today, but it double-emits `quest_updated` on the completing kill and is a fragile pattern. Imp/Wandmaker rely on routing only — make Ghost consistent: drop the self-connect and let QuestHandler route.
+- [P2] **Ghost `reward_enchanted` is rolled, saved, and never applied.** `ghost.gd:155` rolls a 20% enchant chance and persists it (`:351,363`), but the weapon/armor rewards are never enchanted in `_generate_rewards`. SPD's ghost rewards can come enchanted; here the field is inert. Either apply an enchantment when true or remove the dead roll.
+- [P2] **Ghost/Imp/Wandmaker regenerate rewards + re-pick targets on every instantiation, including load.** `_init` runs `_pick_quest_target`/`_pick_requested_seed` + `_generate_rewards`/`_generate_wand_rewards`/`_generate_reward` (burns RNG, allocates reward items), then `deserialize` overwrites them from the save. Wasteful allocation and — more importantly — it advances the global RNG stream every load, so any later same-frame RNG (level/mob gen order) is perturbed by whether an NPC was reconstructed. Gate generation behind "not deserializing," or make `_init` cheap and generate lazily on first interaction.
+
+## Optimizations
+- [P2] **Quest depth + availability logic is duplicated** between `is_quest_depth` (`quest_handler.gd:43-56`) and `spawn_quest_npc` (`:72-97`) — two parallel copies of the same depth-range/`_quest_available` tables, called back-to-back by `loading_scene.gd:274-275`. If one edits (depth band, new quest) they silently diverge → NPC passes the gate but fails to spawn or vice-versa. Collapse to a single source: have the caller use `spawn_quest_npc` (returns null when nothing spawns) and derive/drop the separate gate.
+- [P3] **NPC placement is fully random, room-agnostic.** `_find_spawn_pos`/`_find_quest_spawn_pos` scan up to 100/80 random cells with per-cell method probes; SPD places quest NPCs in a room away from the entrance. Cheap, but NPCs can land in corridors and the probing is O(attempts × has_method). Prefer a room-based candidate list.
+- [P3] **Shopkeeper stocks a duplicate healing potion.** `shopkeeper.gd:71` always adds Potion of Healing, then Caves/City/Halls branches add an identical second one (`:91,96,101`). Harmless but non-SPD listing noise. (File truncated — backlog only.)
+
+## Additions
+- [P2] **Blacksmith is a stub vs SPD.** No Pickaxe/mining, no CRYSTAL/GNOLL quest variants or quest boss, no favor system, single reforge only (acknowledged in the file header). Track as a parity feature once the ore-source fix lands.
+- [P3] **Wandmaker quest items are half-implemented.** Only `seed_of_rotberry` becomes a real `SeedItem`; `corpse_dust`/`elemental_embers` are generic MISC items (`wandmaker.gd:270-284`) with no dedicated quest rooms (MassGrave/RitualSite) — the seed is just dropped somewhere on the floor.
+- [P3] **No NPC/quest tests.** Dialogue-state transitions, `QuestHandler` availability gating, and serialize/deserialize round-trips are pure and headless-testable.
+
+## Save/load & coupling notes
+- Persistence is solid and correctly wired: `SaveManager` serializes `QuestHandler` (`save_manager.gd:41`) and restores it *before* level/NPC reconstruction (`:97-105`), while each NPC re-registers via `resolve_post_load` → `_register_npc`. `QuestHandler.deserialize` calls `reset()` (clears `active_npcs`) then overlays `quest_states`; NPCs re-add themselves afterward, so ordering is safe.
+- Autoload coupling: `EventBus` (interaction/quest signals + `mob_defeated` routing), `GameManager` (depth/gold/hero), `NetworkManager` (host→peer UI-event forwarding for messages/reward/shop windows), `MessageLog`, `Generator`, `MobFactory`, `TurnManager`. NPC combat is fully neutralized in `npc.gd` (invuln, infinite evasion, no attack, no buffs, forced PASSIVE) — clean.
+- Auto-fixed this run: removed write-only dead field `_last_interacting_hero_actor_id` (declared + assigned once in `npc.gd`, never read/serialized).
+
+## Research notes
+- SPD reference: Sad Ghost (Sewers 2-4, kill quest → weapon/armor choice, 20% enchant), Wandmaker (Prison 6-9, corpse-dust/embers/rotberry quest rooms → 2-wand choice), Troll Blacksmith (Caves, Pickaxe + dark gold ore mining + favor + reforge/upgrade/harden), Ambitious Imp (City 17-19, monk/golem DwarfTokens → ring). Depth bands and probabilistic spawn (`Random.Int(N-depth)==0`) match the port's `is_quest_depth`.
+- Godot 4.5: reward regeneration during `_init` before `deserialize` is a known "constructor side-effect vs load" smell; the standard fix is lazy/guarded generation so load restores rather than re-rolls.
