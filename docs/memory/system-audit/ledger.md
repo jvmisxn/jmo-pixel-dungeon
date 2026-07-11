@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S06**
+Pointer (next to evaluate): **S07**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -12,7 +12,7 @@ Pointer (next to evaluate): **S06**
 | S03 | Actor / Char combat core | `src/actors/actor.gd`, `src/actors/char.gd` | done | needs-hardening — [report](reports/S03-combat-core.md). Combat resolution faithful & clean, but Char has no combat-state serializer (subclasses hand-roll hp/stats) + two SPD-fidelity gaps: uniform damage roll (not NormalIntRange) and invisible-only surprise hits. |
 | S04 | Turn scheduling | `src/autoloads/turn_manager.gd` | done | needs-hardening — [report](reports/S04-turn-scheduling.md). Cooldown rebasing + hero-pause loop correct, but no persisted scheduling state (cooldowns reset on save/load), cached `speed` can go stale silently, and the async mob-pacing layer is dead code (`MOB_ACTION_DELAY` const 0.0). |
 | S05 | Mobs & AI | `src/actors/mobs/` | done | needs-hardening — [report](reports/S05-mobs-ai.md). State machine + save/relink (necromancer↔skeleton) faithful, but Swarm split *duplicates* HP instead of halving (balance/XP bug), `heroes[0]` targeting ignores distance, and several inert fields. Auto-fixed: removed dead `_path`. |
-| S06 | Buffs | `src/actors/buffs/` | pending | — |
+| S06 | Buffs | `src/actors/buffs/` | done | needs-hardening — [report](reports/S06-buffs.md). Base lifecycle + save/relink solid, but modifier dispatch is inconsistent: Fury 1.5× double-applies (2.25× melee), `get_speed()` ignores `modify_speed()` (Sleep/Dread/MonkFlurry speed hooks dead), Doom is a wrong timer-kill, Gladiator Combo inert, Frozen freezes multiple potions. Auto-fixed: removed dead no-op MonkFlurry.on_turn. |
 | S07 | Level base & grid | `src/levels/level.gd`, `src/levels/regular_level.gd` | pending | — |
 | S08 | Level generation | `src/levels/builders/`, `src/levels/painters/`, `src/levels/rooms/` | pending | — |
 | S09 | Region & boss levels | `src/levels/*_level.gd`, `src/levels/*_boss_level.gd` | pending | — |
@@ -45,4 +45,4 @@ Pointer (next to evaluate): **S06**
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 5 / 37.
+37 systems. Completed: 6 / 37.
