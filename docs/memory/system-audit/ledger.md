@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S10**
+Pointer (next to evaluate): **S11**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -16,7 +16,7 @@ Pointer (next to evaluate): **S10**
 | S07 | Level base & grid | `src/levels/level.gd`, `src/levels/regular_level.gd` | done | needs-hardening — [report](reports/S07-level-base-grid.md). Grid/FOV/AStar core faithful & clean, but mob population is thin: `mob_spawn_positions` under-spawns (decrements on failed placements, single-pos fallback, unimplemented 2nd-mob roll), no periodic respawn, mimic spawn discards its item. Perf: point LOS casts a full FOV (Ballistica exists), O(n) mob/heap scans. `rooms` not serialized. No auto-fixes (both files in TRUNCATED_FILES.txt). |
 | S08 | Level generation | `src/levels/builders/`, `src/levels/painters/`, `src/levels/rooms/` | done | needs-hardening — [report](reports/S08-level-generation.md). Geometry/painting clean, but the door layer is dead: builder always leaves a 2-tile gap so `connect_adjacent` never fires → `connected` empty → no DOOR/LOCKED_DOOR painted (vaults/armories unlocked, shop/garden doors missing). Plus tunnel `pair_key` int64 overflow risk + dead doorframe helpers. No safe auto-fixes. |
 | S09 | Region & boss levels | `src/levels/*_level.gd`, `src/levels/*_boss_level.gd` | done | needs-hardening — [report](reports/S09-region-boss-levels.md). Depth→class routing + boss seal/unlock (`unlock_exit` on death) faithful, but HallsLevel drops its whole trap tier (no `_create_random_trap` → tier-1 fallback), boss arenas skip traversability validation (unconditional `return true`, no factory retry), Halls/Last chasm-ring lets knockback eject the hero mid-fight, and the seal is down-exit-only (ascent unblocked, `goo.floor_sealed` dead). No safe auto-fixes (P1 fix is behavioral + halls_level.gd truncated). |
-| S10 | Traps | `src/levels/traps/` | pending | — |
+| S10 | Traps | `src/levels/traps/` | done | needs-hardening — [report](reports/S10-traps.md). Base lifecycle + script-path serialize faithful, but `disarming_trap` fires `drop_item` with swapped args (permanent weapon loss), paralytic/fire traps have inert `pass` buffs (Paralysis/Burning never applied), and 7 trap classes (Frost/Blazing/Disarming/Pitfall/Cursing/Flock/Paralytic) are wired into no generation pool = dead content. No safe auto-fixes (all behavioral). |
 | S11 | Level features | `src/levels/features/` | pending | — |
 | S12 | Item base & Generator | `src/items/item.gd`, `src/items/generator.gd`, `src/items/heap.gd` | pending | — |
 | S13 | Weapons / armor / glyphs / enchants | `src/items/weapons/`, `src/items/armor/` | pending | — |
@@ -45,4 +45,4 @@ Pointer (next to evaluate): **S10**
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 9 / 37.
+37 systems. Completed: 10 / 37.

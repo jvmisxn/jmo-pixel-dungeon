@@ -115,3 +115,15 @@ Filed by the system-audit loop (`docs/memory/system-audit/`). Tag `[audit:<id>]`
 - [P3][audit:S09] Region `_roll_feeling()` mutates `num_standard_rooms += 2` in place for LARGE (`caves_level.gd:17`, `city_level.gd:15`, `halls_level.gd:21`) — safe today (fresh instance per gen attempt) but a footgun on regeneration.
 - [P3][audit:S09] Boss arenas hardcode bounds (4..27, radii 11/5) assuming 32-wide map, untied to `ConstantsData.WIDTH/HEIGHT` — derive/assert against constants to prevent silent out-of-bounds writes if map size changes.
 - [P3][audit:S09] No tests for `LevelFactory.create_for_depth` depth→class mapping or boss-death→`unlock_exit` seal flow; both are cheap to cover.
+- [P1][audit:S10] `disarming_trap.gd:44-47` calls `drop_item(weapon, drop_pos)` with args swapped vs canonical `drop_item(pos, item)` (10 other callers) → disarmed weapon becomes an uncollectable heap keyed by an object = permanent item loss. Fix: `drop_item(drop_pos, weapon)`.
+- [P1][audit:S10] `paralytic_trap.gd:14-15` paralysis effect is `pass`; `Paralysis` buff class exists but is never applied — trap only logs a message. (TRUNCATED file — manual fix.)
+- [P1][audit:S10] `fire_trap.gd:14-16` burning buff is `pass`; only raw damage + ember spread run. Apply `Burning` like `blazing_trap.gd:15-18` does. (TRUNCATED file — manual fix.)
+- [P2][audit:S10] Trap generation pools incomplete — 7 implemented classes referenced by no `_create_random_trap`: ParalyticTrap, FrostTrap, BlazingTrap, FlockTrap, CursingTrap, DisarmingTrap, PitfallTrap. Wire into region trap tiers (per SPD) or delete dead classes.
+- [P2][audit:S10] `disarming_trap.gd:18-21` weapon detection dead on hero (no `Hero.get_weapon()`/`weapon`; weapons live on `belongings.get_equipped_weapon()`) → always "nothing to disarm."
+- [P2][audit:S10] `cursing_trap.gd:17` equipment path dead (no `Hero.get_equipped_items()`) → always falls back to `Hex`.
+- [P2][audit:S10] `pitfall_trap.gd:31-39` doesn't descend a depth; proxies with same-level teleport (TODO). SPD PitfallTrap forces chasm depth-drop with fall damage.
+- [P3][audit:S10] Trap neighbor loops (`adj = pos + dir`, bounded only by `0<=adj<LEN`) wrap rows at grid edges; add a `cell_valid`/adjacency guard instead of relying on the wall border.
+- [P3][audit:S10] `storm_trap.gd:34-39` re-fetches `mob_at(cell)` for water amplification when the value is already in scope — redundant O(mobs) scan per water cell.
+- [P3][audit:S10] `explosive_trap.gd:24-41` double-hits a mob triggerer (via `mob_at(pos)` and the direct `triggerer` damage).
+- [P3][audit:S10] `disarming_trap.gd:46` `elif level.has_method("add_heap")` references a non-existent Level method — permanently dead branch.
+- [P3][audit:S10] `grim_trap.gd:32-39` bespoke "≤50% HP → lethal" rule deviates from SPD GrimTrap damage model; no unit coverage for trap activate/one-shot/serialize round-trip.
