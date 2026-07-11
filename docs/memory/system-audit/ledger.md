@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S20**
+Pointer (next to evaluate): **S21**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -26,7 +26,7 @@ Pointer (next to evaluate): **S20**
 | S17 | Consumables & misc items | `src/items/seeds/`, `src/items/food/`, `src/items/bombs/`, `src/items/stones/`, `src/items/spells/` | done | needs-hardening — [report](reports/S17-consumables-misc.md). Factories + per-item logic clean, but the whole category shares the `split()`→base-`Item` downgrade (no `duplicate_item()` overrides), runestones never use SPD's thrown/targeting model (all act at hero.pos/adjacent), and Frost-bomb/Deepened-Sleep reach for `Paralysis` where `Frozen`/`SleepBuff` exist. No safe auto-fixes (all behavioral; bomb.gd truncated). |
 | S18 | Bags & inventory containers | `src/items/bags/`, `src/items/keys/` | done | fragile — [report](reports/S18-bags-keys.md). Per-item logic is clean but the container half is inert: bags store nothing (`add_to_bag`/`can_hold` have zero callers, belongings has no `bags` array, `Bag.deserialize` silently drops `data["items"]`), and iron + skeleton keys are dead (no `has_key("iron"/"skeleton")` caller; LOCKED_DOOR uses `golden`, boss seal opens on death). Auto-fixed: removed redundant no-op `is_stackable()` overrides in bag.gd + key.gd. |
 | S19 | Plants | `src/plants/` | done | needs-hardening — [report](reports/S19-plants.md). Per-plant effects clean & save/load solid, but plants apply one-shot buffs/terrain instead of SPD's spreading Blobs (Fire/ToxicGas/StormCloud/Freezing), Icecap/Dreamfoil use generic `Paralysis` where `Frozen`/`SleepBuff` exist, and Firebloom/Icecap AoE has a column edge-wrap bug (`level.adjacent` unused). Auto-fixed: deleted orphaned duplicate `seed.gd` (class `Seed`, superseded by `SeedItem`) + stray fuse artifact. |
-| S20 | Blobs (gases/liquids) | `src/actors/blobs/` | pending | — |
+| S20 | Blobs (gases/liquids) | `src/actors/blobs/` | done | fragile — [report](reports/S20-blobs.md). Base spread/decay sim mirrors SPD but is **never driven**: `Blob.act()` is uncalled (TurnManager registers only mobs; no `tick_blobs`) → all gas is inert overlay that never spreads/affects/decays (root of S15/S19 one-shot workarounds). Plus fetid_rat seeder crashes on arg mismatch, ConfusionGas/ParalyticGas/WaterOfHealth have no seeders, serialize()/factory dead (relies on store_var full_objects), and a `smoke_screen` LOS branch with no class. No safe auto-fixes (behavioral / level.gd truncated). |
 | S21 | NPCs & quests | `src/actors/npcs/` | pending | — |
 | S22 | Movement / pathfinding / FOV | `src/mechanics/pathfinder.gd`, `ballistica.gd`, `shadow_caster.gd`, `auto_walk_coordinator.gd` | pending | — |
 | S23 | Input & targeting | `src/mechanics/input_coordinator.gd`, `targeting_coordinator.gd` | pending | — |
@@ -45,4 +45,4 @@ Pointer (next to evaluate): **S20**
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 19 / 37.
+37 systems. Completed: 20 / 37.
