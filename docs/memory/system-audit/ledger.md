@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S24**
+Pointer (next to evaluate): **S25**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -30,7 +30,7 @@ Pointer (next to evaluate): **S24**
 | S21 | NPCs & quests | `src/actors/npcs/` | done | needs-hardening — [report](reports/S21-npcs-quests.md). Base lifecycle/dialogue/save-load/network-routing clean, but the Blacksmith quest is uncompletable (`dark_gold_ore` has no drop source anywhere), Ghost double-subscribes `mob_defeated` + rolls an unused `reward_enchanted`, quest depth/spawn tables are duplicated, and Ghost/Imp/Wandmaker re-generate rewards (burning RNG) on every load. Auto-fixed: removed write-only dead field `_last_interacting_hero_actor_id`. |
 | S22 | Movement / pathfinding / FOV | `src/mechanics/pathfinder.gd`, `ballistica.gd`, `shadow_caster.gd`, `auto_walk_coordinator.gd` | done | needs-hardening — [report](reports/S22-movement-pathfinding-fov.md). Ballistica/ShadowCaster faithful & live, but the hand-written `Pathfinder` A* is dead code — runtime pathing uses Godot `AStar2D` (`level.gd`), only `get_neighbors` is live → duplicated corner-cut logic that can drift. Plus SPFA distance-map diverges from SPD's integer BFS, no geometry-core tests, inert `IGNORE_SOFT_SOLID`. Auto-fixed: wrapped over-length `cast_fov` signature (gdlint). |
 | S23 | Input & targeting | `src/mechanics/input_coordinator.gd`, `targeting_coordinator.gd` | done | needs-hardening — [report](reports/S23-input-targeting.md). Coordinators are clean & SPD-faithful (Chebyshev+FOV range gate), but extraction left ~185 lines of dead, already-drifted duplicate input code in `game_scene.gd` (SPACE/PERIOD split proves divergence), and targeting mode blocks only ESC — other keys leak through and move the hero mid-target. Missing auto-aim/last-target. Auto-fixed: dropped redundant null guards in resolve. |
-| S24 | Transitions (floor/run) | `src/mechanics/floor_transition_coordinator.gd`, `run_transition_coordinator.gd` | pending | — |
+| S24 | Transitions (floor/run) | `src/mechanics/floor_transition_coordinator.gd`, `run_transition_coordinator.gd` | done | needs-hardening — [report](reports/S24-transitions.md). Flow is clean & SPD-faithful, but `handle_descend` re-implements GameManager's depth mutation *without* its `MAX_DEPTH` cap (descend past floor 26 possible) + duplicated depth logic drifting, `handle_ascend` plays the `descend` SFX (no `ascend` cue exists), floor-change notify hits only the equipped artifact, and depth-1 ascent is sealed though a surface scene exists. No safe auto-fixes (all behavioral). |
 | S25 | Feedback coordinators | `src/mechanics/scene_feedback_coordinator.gd`, `scene_visual_coordinator.gd`, `environment_feedback_coordinator.gd` | pending | — |
 | S26 | GameManager & run lifecycle | `src/autoloads/game_manager.gd` | pending | — |
 | S27 | EventBus | `src/autoloads/event_bus.gd` | pending | — |
@@ -45,4 +45,4 @@ Pointer (next to evaluate): **S24**
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 23 / 37.
+37 systems. Completed: 24 / 37.
