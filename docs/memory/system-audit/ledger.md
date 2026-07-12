@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S33**
+Pointer (next to evaluate): **S34**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -39,10 +39,10 @@ Pointer (next to evaluate): **S33**
 | S30 | Audio & MessageLog | `src/autoloads/audio_manager.gd`, `message_log.gd` | done | needs-hardening — [report](reports/S30-audio-messagelog.md). Region music + weighted selection faithful, but the boss-finale music path is fully dead (finale tracks never triggered), the procedural SFX fallback returns pure silence while advertising tones, and MessageLog is a process-lifetime singleton never reset/persisted → prior-run scrollback bleeds into new games. No safe auto-fixes (all behavioral / message_log.gd truncated). |
 | S31 | Networking & online sync | `src/autoloads/network_manager.gd`, `src/mechanics/online_*.gd` | done | needs-hardening — [report](reports/S31-networking-online-sync.md). Host-authoritative transport + clean codec/utils/coordinator split, but the client re-sanitizes the host's authoritative run config from its own lobby state (party/class desync risk), sync is a per-turn full `level.serialize()`+all-heroes broadcast (no deltas), and `set_local_ready` drops the icon arg so a host ready-toggle resets their profile icon to "warrior". No safe auto-fixes (all behavioral/perf). |
 | S32 | Sprites | `src/sprites/` | done | needs-hardening — [report](reports/S32-sprites.md). View layer is clean & correctly transient (never serialized), but the whole `VisualState` buff-feedback system + SPD animation hooks (`die`/`fall`/`jump`/`zap`/`turn_to`/`read`) are wired to no caller → buffs and special moves show no sprite feedback. Auto-fixed: removed orphaned tracked fuse artifact. |
-| S33 | Tiles & fog | `src/tiles/` | pending | — |
+| S33 | Tiles & fog | `src/tiles/` | done | needs-hardening — [report](reports/S33-tiles-fog.md). TileMapLayer render + GPU fog shader are clean, correct & correctly transient (never serialized); water edge-mask matches SPD's shore convention. But `terrain_visuals.gd` is ~180/265 lines dead (its entire public API is orphaned — renderer builds tiles straight from the SPD sheet), `TileMapManager` couples to its private `_terrain_to_tile` dict, and water-bg path/crop is duplicated. No correctness bugs. No safe auto-fixes (dead code all in TRUNCATED_FILES.txt; the one non-truncated dead method is plausibly-intended public API). |
 | S34 | Effects | `src/effects/` | pending | — |
 | S35 | HUD / toolbar / status | `src/ui/hud.gd`, `toolbar.gd`, `status_pane.gd`, `minimap.gd`, `boss_hp_bar.gd` | pending | — |
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 32 / 37.
+37 systems. Completed: 33 / 37.
