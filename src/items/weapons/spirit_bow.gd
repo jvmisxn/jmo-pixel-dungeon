@@ -140,5 +140,5 @@ func serialize() -> Dictionary:
 	data["is_spirit_bow"] = true
 	return data
 
-func deserialize(_data: Dictionary) -> void:
-	pass
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
