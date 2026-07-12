@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S31**
+Pointer (next to evaluate): **S32**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -37,7 +37,7 @@ Pointer (next to evaluate): **S31**
 | S28 | Scene flow | `src/autoloads/scene_manager.gd`, `src/scenes/` | done | needs-hardening — [report](reports/S28-scene-flow.md). Routing is centralized/clean, but SceneManager bypasses Godot's `current_scene` (uses raw `root.add_child`) → `tree.current_scene` stays pinned to MainScene; TurnManager's only reader gets the wrong node so `on_mob_action` (per-visible-mob refresh) never fires. Plus MainScene leaks, no re-entrancy guard, dead `scene_changed` signal. No safe auto-fixes (P1 behavioral; rest judgment). |
 | S29 | Catalogs & profile | `src/autoloads/badges.gd`, `discovery_catalog.gd`, `item_catalog.gd`, `item_appearance.gd`, `player_profile.gd`, `constants.gd` | done | needs-hardening — [report](reports/S29-catalogs-profile.md). Persistence + event wiring solid, but `get_total_badge_count()` omits 3 unlockable badges (count can read `26/23`), `ItemCatalog._load` skips the key-coercion its sibling catalogs use (load-time type risk), `champion_win` duplicates `all_classes_won`, `death_by_goo` fires on any depth-5 death, + eager per-record disk saves. No safe auto-fixes (constants.gd truncated; all editable findings behavioral or judgment). |
 | S30 | Audio & MessageLog | `src/autoloads/audio_manager.gd`, `message_log.gd` | done | needs-hardening — [report](reports/S30-audio-messagelog.md). Region music + weighted selection faithful, but the boss-finale music path is fully dead (finale tracks never triggered), the procedural SFX fallback returns pure silence while advertising tones, and MessageLog is a process-lifetime singleton never reset/persisted → prior-run scrollback bleeds into new games. No safe auto-fixes (all behavioral / message_log.gd truncated). |
-| S31 | Networking & online sync | `src/autoloads/network_manager.gd`, `src/mechanics/online_*.gd` | pending | — |
+| S31 | Networking & online sync | `src/autoloads/network_manager.gd`, `src/mechanics/online_*.gd` | done | needs-hardening — [report](reports/S31-networking-online-sync.md). Host-authoritative transport + clean codec/utils/coordinator split, but the client re-sanitizes the host's authoritative run config from its own lobby state (party/class desync risk), sync is a per-turn full `level.serialize()`+all-heroes broadcast (no deltas), and `set_local_ready` drops the icon arg so a host ready-toggle resets their profile icon to "warrior". No safe auto-fixes (all behavioral/perf). |
 | S32 | Sprites | `src/sprites/` | pending | — |
 | S33 | Tiles & fog | `src/tiles/` | pending | — |
 | S34 | Effects | `src/effects/` | pending | — |
@@ -45,4 +45,4 @@ Pointer (next to evaluate): **S31**
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 30 / 37.
+37 systems. Completed: 31 / 37.
