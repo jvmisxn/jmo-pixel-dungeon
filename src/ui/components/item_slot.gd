@@ -78,7 +78,10 @@ func _draw() -> void:
 		border_color = EMPTY_BORDER_COLOR
 
 	var border_width: float = 2.0 if (selected or (item and _is_cursed())) else 1.0
-	draw_rect(Rect2(Vector2.ONE, Vector2(SLOT_SIZE - 2, SLOT_SIZE - 2)), border_color, false, border_width)
+	draw_rect(
+		Rect2(Vector2.ONE, Vector2(SLOT_SIZE - 2, SLOT_SIZE - 2)),
+		border_color, false, border_width
+	)
 
 	# Hover overlay
 	if _hovered:
