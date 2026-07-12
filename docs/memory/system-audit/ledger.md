@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S36**
+Pointer (next to evaluate): **S37**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -42,7 +42,7 @@ Pointer (next to evaluate): **S36**
 | S33 | Tiles & fog | `src/tiles/` | done | needs-hardening — [report](reports/S33-tiles-fog.md). TileMapLayer render + GPU fog shader are clean, correct & correctly transient (never serialized); water edge-mask matches SPD's shore convention. But `terrain_visuals.gd` is ~180/265 lines dead (its entire public API is orphaned — renderer builds tiles straight from the SPD sheet), `TileMapManager` couples to its private `_terrain_to_tile` dict, and water-bg path/crop is duplicated. No correctness bugs. No safe auto-fixes (dead code all in TRUNCATED_FILES.txt; the one non-truncated dead method is plausibly-intended public API). |
 | S34 | Effects | `src/effects/` | done | healthy — [report](reports/S34-effects.md). Clean, correctly-transient view layer (nothing serialized; all spawns from view/coordinators, never game logic). Only debt is polish: `_cell_to_world` is a 3rd hand-rolled copy hardcoding tile size 16, and `screen_flash` bypasses the effect pool cap. Auto-fixed: 2 gdlint over-length signatures. |
 | S35 | HUD / toolbar / status | `src/ui/hud.gd`, `toolbar.gd`, `status_pane.gd`, `minimap.gd`, `boss_hp_bar.gd` | done | needs-hardening — [report](reports/S35-hud-toolbar-status.md). View layer renders cleanly & is correctly transient, but the whole boss HP bar is dead (no `boss_fight_started` emitter anywhere → no boss ever shows a bar), the minimap's per-move FOV refresh reads a non-existent `level.visible_cells` so live visibility freezes after level entry, HUD+minimap both drive `level_changed` with an order-dependent clear, and buff icons are flat ColorRects (`buffs.png` unused). Auto-fixed: removed 2 dead never-connected HUD wait/search stubs. |
-| S36 | Windows | `src/ui/windows/` | pending | — |
+| S36 | Windows | `src/ui/windows/` | done | needs-hardening — [report](reports/S36-windows.md). WndBase chrome + open_sub_window decoupling are clean, but dropping an equipped ring crashes (`belongings.ring` doesn't exist), offline action paths mutate game state in the view layer (diverging from the online request_hero_action path), and transmute hardcodes ring/wand ID lists because Ring/Wand lack all_ids(). Auto-fixed: dropped a dead `cat` local + underscored an unused reforge signal arg. |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 35 / 37.
+37 systems. Completed: 36 / 37.
