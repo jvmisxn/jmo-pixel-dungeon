@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S26**
+Pointer (next to evaluate): **S27**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -32,7 +32,7 @@ Pointer (next to evaluate): **S26**
 | S23 | Input & targeting | `src/mechanics/input_coordinator.gd`, `targeting_coordinator.gd` | done | needs-hardening — [report](reports/S23-input-targeting.md). Coordinators are clean & SPD-faithful (Chebyshev+FOV range gate), but extraction left ~185 lines of dead, already-drifted duplicate input code in `game_scene.gd` (SPACE/PERIOD split proves divergence), and targeting mode blocks only ESC — other keys leak through and move the hero mid-target. Missing auto-aim/last-target. Auto-fixed: dropped redundant null guards in resolve. |
 | S24 | Transitions (floor/run) | `src/mechanics/floor_transition_coordinator.gd`, `run_transition_coordinator.gd` | done | needs-hardening — [report](reports/S24-transitions.md). Flow is clean & SPD-faithful, but `handle_descend` re-implements GameManager's depth mutation *without* its `MAX_DEPTH` cap (descend past floor 26 possible) + duplicated depth logic drifting, `handle_ascend` plays the `descend` SFX (no `ascend` cue exists), floor-change notify hits only the equipped artifact, and depth-1 ascent is sealed though a surface scene exists. No safe auto-fixes (all behavioral). |
 | S25 | Feedback coordinators | `src/mechanics/scene_feedback_coordinator.gd`, `scene_visual_coordinator.gd`, `environment_feedback_coordinator.gd` | done | needs-hardening — [report](reports/S25-feedback-coordinators.md). What it shows is clean & SPD-faithful, but `on_mob_action` does a full FOV+visibility+blob rebuild per acting mob (SPD observes once/turn), this-turn sprites flash through fog (visibility applied before sprite refresh), blob overlay rebuilt twice per refresh, plus ~47 lines of dead inline code behind the extraction in game_scene.gd. No safe auto-fixes (perf/ordering are behavioral; dead block is in a truncated file). |
-| S26 | GameManager & run lifecycle | `src/autoloads/game_manager.gd` | pending | — |
+| S26 | GameManager & run lifecycle | `src/autoloads/game_manager.gd` | done | needs-hardening — [report](reports/S26-game-manager.md). Run-state model clean & MP-aware, but canonical `descend`/`ascend` (with MAX_DEPTH cap) and `spend_gold` are dead — the live paths open-code the mutations minus the safety rails (uncapped depth, stale-gold HUD), and no run-state serializer means SaveManager hand-copies 11 fields (already dropped `quest_flags`). No safe auto-fixes (file in TRUNCATED_FILES.txt; all findings behavioral). |
 | S27 | EventBus | `src/autoloads/event_bus.gd` | pending | — |
 | S28 | Scene flow | `src/autoloads/scene_manager.gd`, `src/scenes/` | pending | — |
 | S29 | Catalogs & profile | `src/autoloads/badges.gd`, `discovery_catalog.gd`, `item_catalog.gd`, `item_appearance.gd`, `player_profile.gd`, `constants.gd` | pending | — |
@@ -45,4 +45,4 @@ Pointer (next to evaluate): **S26**
 | S36 | Windows | `src/ui/windows/` | pending | — |
 | S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
 
-37 systems. Completed: 25 / 37.
+37 systems. Completed: 26 / 37.
