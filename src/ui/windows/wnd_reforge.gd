@@ -189,7 +189,7 @@ func _get_eligible_items() -> Array:
 # Slot Interaction
 # ---------------------------------------------------------------------------
 
-func _on_inventory_item_clicked(clicked_ref: RefCounted, item: Variant) -> void:
+func _on_inventory_item_clicked(_clicked_ref: RefCounted, item: Variant) -> void:
 	# Determine which slot to fill
 	var target: int = _active_target
 	if target == 0:
