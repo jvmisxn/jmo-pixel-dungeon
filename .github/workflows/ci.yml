@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  static:
+    name: Static (gdparse / gdlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install gdtoolkit
+        run: pip install "gdtoolkit==4.*"
+      - name: gdparse — syntax / truncation gate (blocking)
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if ! gdparse "$f" >/dev/null 2>err.txt; then
+              echo "::error file=$f::gdparse failed to parse"
+              sed 's/^/    /' err.txt
+              fail=1
+            fi
+          done < <(find src tests -name '*.gd')
+          if [ "$fail" -ne 0 ]; then
+            echo "One or more GDScript files failed to parse (possible truncation)."
+            exit 1
+          fi
+          echo "All GDScript files parsed cleanly."
+      - name: gdlint — style (advisory, non-blocking)
+        continue-on-error: true
+        run: gdlint src tests
+
+  godot:
+    name: Godot 4.5 — import + headless tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Godot 4.5
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: "4.5.0"
+          use-dotnet: false
+          include-templates: false
+      - name: Import project (compiles scripts, builds class registry)
+        run: |
+          godot --headless --path . --import 2>&1 | tee import.log || true
+          if grep -qE "SCRIPT ERROR|Parse Error|Failed to load script|Cannot open file" import.log; then
+            echo "::error::Script/parse errors during import — see log above."
+            exit 1
+          fi
+          echo "Import completed without script errors."
+      - name: Run headless test suite
+        run: |
+          godot --headless --path . -s res://tests/run_tests.gd 2>&1 | tee test.log
+          if grep -qE "SCRIPT ERROR|Parse Error" test.log; then
+            echo "::error::Script errors emitted during test run."
+            exit 1
+          fi
