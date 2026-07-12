@@ -61,7 +61,9 @@ func show_status(pos: int, text: String, color: Color = Color.WHITE) -> void:
 # ---------------------------------------------------------------------------
 
 ## Fire a projectile from one cell to another.
-func shoot_projectile(from_pos: int, to_pos: int, color: Color = Color.WHITE, speed: float = 300.0) -> void:
+func shoot_projectile(
+	from_pos: int, to_pos: int, color: Color = Color.WHITE, speed: float = 300.0
+) -> void:
 	if _active_effects >= MAX_EFFECTS:
 		return
 	var proj: ProjectileEffect = ProjectileEffect.new()

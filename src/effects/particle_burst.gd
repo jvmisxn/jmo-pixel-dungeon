@@ -20,7 +20,9 @@ var _ring_color: Color = Color.WHITE
 # ---------------------------------------------------------------------------
 
 ## Set up as a burst of particles.
-func setup(color: Color, count: int = 8, speed: float = DEFAULT_SPEED, duration: float = DEFAULT_DURATION) -> void:
+func setup(
+	color: Color, count: int = 8, speed: float = DEFAULT_SPEED, duration: float = DEFAULT_DURATION
+) -> void:
 	_duration = duration
 	for i: int in range(count):
 		var angle: float = float(i) / float(count) * TAU + randf_range(-0.2, 0.2)
