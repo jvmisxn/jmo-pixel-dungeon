@@ -3,7 +3,7 @@
 Methodical pass over every system. Process in order (top = highest priority).
 Status: `pending` | `in-progress` | `done`. When done, add report link + verdict.
 
-Pointer (next to evaluate): **S37**
+Pointer (next to evaluate): **— (all 37 systems evaluated; loop complete)**
 
 | ID | System | Primary paths | Status | Verdict / report |
 |----|--------|---------------|--------|------------------|
@@ -43,6 +43,6 @@ Pointer (next to evaluate): **S37**
 | S34 | Effects | `src/effects/` | done | healthy — [report](reports/S34-effects.md). Clean, correctly-transient view layer (nothing serialized; all spawns from view/coordinators, never game logic). Only debt is polish: `_cell_to_world` is a 3rd hand-rolled copy hardcoding tile size 16, and `screen_flash` bypasses the effect pool cap. Auto-fixed: 2 gdlint over-length signatures. |
 | S35 | HUD / toolbar / status | `src/ui/hud.gd`, `toolbar.gd`, `status_pane.gd`, `minimap.gd`, `boss_hp_bar.gd` | done | needs-hardening — [report](reports/S35-hud-toolbar-status.md). View layer renders cleanly & is correctly transient, but the whole boss HP bar is dead (no `boss_fight_started` emitter anywhere → no boss ever shows a bar), the minimap's per-move FOV refresh reads a non-existent `level.visible_cells` so live visibility freezes after level entry, HUD+minimap both drive `level_changed` with an order-dependent clear, and buff icons are flat ColorRects (`buffs.png` unused). Auto-fixed: removed 2 dead never-connected HUD wait/search stubs. |
 | S36 | Windows | `src/ui/windows/` | done | needs-hardening — [report](reports/S36-windows.md). WndBase chrome + open_sub_window decoupling are clean, but dropping an equipped ring crashes (`belongings.ring` doesn't exist), offline action paths mutate game state in the view layer (diverging from the online request_hero_action path), and transmute hardcodes ring/wand ID lists because Ring/Wand lack all_ids(). Auto-fixed: dropped a dead `cat` local + underscored an unused reforge signal arg. |
-| S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | pending | — |
+| S37 | UI components | `src/ui/components/`, `src/ui/ui_utils.gd` | done | fragile — [report](reports/S37-ui-components.md). 7-piece component library but only `ItemSlot` is wired in; the other six (BuffIcon, HealthBar, Toast, CircularIconView, IconButton, UIUtils) have zero external refs, and status_pane hand-rolls an inferior flat-ColorRect buff row instead of the purpose-built BuffIcon. Auto-fixed: removed orphaned fuse artifact + wrapped over-length line. |
 
-37 systems. Completed: 36 / 37.
+37 systems. Completed: 37 / 37. 🎉 Loop complete — every system evaluated.
