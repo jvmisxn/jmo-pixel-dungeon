@@ -50,9 +50,9 @@ static func resolve(scene: Variant, cell: int) -> void:
 	scene._targeting_callback = Callable()
 	if item != null and (
 		(item is Object and item.get("item_id") == "spirit_bow") or
-		(item != null and item.has_method("proc")) or
-		(item != null and item.has_method("explode")) or
-		(item != null and item.has_method("zap"))
+		item.has_method("proc") or
+		item.has_method("explode") or
+		item.has_method("zap")
 	):
 		var acting_hero: Variant = scene._get_input_hero()
 		var hero_sprite: Variant = scene._hero_sprites.get(acting_hero.actor_id) if acting_hero != null else null

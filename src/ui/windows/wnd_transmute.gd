@@ -304,7 +304,6 @@ func _on_transmute_pressed() -> void:
 	if original.has_method("get_display_name"):
 		original_name = original.get_display_name()
 	var original_level: int = ConstantsData.get_prop(original, "level", 0)
-	var cat: int = ConstantsData.get_prop(original, "category", -1)
 
 	# Perform the transmutation — create a new item of the same category/tier
 	var result: Variant = _transmute_item(original)

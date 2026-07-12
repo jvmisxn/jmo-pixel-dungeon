@@ -435,7 +435,7 @@ class PotionToxicGas extends Potion:
 		var poison_buff: Poison = Poison.create(5.0)
 		hero.add_buff(poison_buff)
 		if MessageLog:
-			MessageLog.add_negative("That tasted " + "terrible! You feel sick...")
+			MessageLog.add_negative("That tasted terrible! You feel sick...")
 
 	func shatter(spos: int, lvl: Variant) -> void:
 		super.shatter(spos, lvl)

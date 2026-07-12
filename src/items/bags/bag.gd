@@ -25,9 +25,6 @@ func _init() -> void:
 func is_upgradeable() -> bool:
 	return false
 
-func is_stackable() -> bool:
-	return false
-
 # ---------------------------------------------------------------------------
 # Bag Interface
 # ---------------------------------------------------------------------------

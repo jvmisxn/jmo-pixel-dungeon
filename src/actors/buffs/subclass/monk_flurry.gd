@@ -21,11 +21,6 @@ func on_damage_dealt(amount: int, _target: Node) -> void:
 		if has_focus:
 			has_focus = false
 
-func on_turn() -> void:
-	# Reset consecutive hits if not attacking
-	# (This is actually called each turn; the on_damage_dealt increments it)
-	pass
-
 func on_damage_taken(amount: int, _source: Variant) -> void:
 	if amount == 0:
 		# Dodged! Gain focus

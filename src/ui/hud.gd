@@ -523,11 +523,6 @@ func _on_map_pressed() -> void:
 	show_window(wnd)
 
 
-func _on_wait_pressed() -> void:
-	# Gameplay wait input is owned by GameScene so it only fires while hero input is active.
-	pass
-
-
 func _on_rest_pressed() -> void:
 	if not _can_use_local_action_controls():
 		if MessageLog:
@@ -545,10 +540,6 @@ func _on_rest_pressed() -> void:
 	if hero_ref.has_method("rest"):
 		hero_ref.rest(true)
 
-
-func _on_search_pressed() -> void:
-	# Gameplay search input is owned by GameScene so it only fires while hero input is active.
-	pass
 
 func _visible_enemy_present() -> bool:
 	var level_ref: Variant = GameManager.current_level if GameManager else null
