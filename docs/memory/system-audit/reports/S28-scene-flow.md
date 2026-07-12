@@ -1,0 +1,30 @@
+# Scene flow — Audit
+
+- Files: `src/autoloads/scene_manager.gd`, `src/scenes/` (main/title/hero_select/loading/game/death/victory/rankings/surface/lobby scenes + game_camera)
+- Read in full: scene_manager.gd, main_scene.gd/.tscn, loading_scene.gd yes; the large scene bodies (game_scene 2458, lobby 910, hero_select 825, title 1192) were read at their transition sites (all routing goes through `SceneManager.go_to*`). Many scene files are in TRUNCATED_FILES.txt (game_scene, hero_select, loading, main, surface, game_camera).
+- Verdict: needs-hardening — routing is centralized and clean, but SceneManager is disconnected from Godot's own `current_scene`, and its one live consumer (TurnManager) resolves to the wrong node, silently killing the per-mob-action screen refresh.
+
+## Improvements
+- [P1] SceneManager never updates `get_tree().current_scene`; its only live reader gets the wrong node. `_do_transition` (scene_manager.gd:45-53) does `root.add_child()` directly and tracks its own `SceneManager.current_scene` var, but never calls `set_current_scene`/`change_scene_to_*`. So Godot's `tree.current_scene` stays pinned to `MainScene` for the whole session. `turn_manager.gd:286` (`_cached_game_scene = tree.current_scene`) therefore caches MainScene, not GameScene → in `_process_mobs_async` the `game_scene.has_method("on_mob_action")` guard (turn_manager.gd:318) is false, so `on_mob_action` (game_scene.gd:518 → SceneFeedbackCoordinator) is the loop's *only* caller and never fires → visible mob moves/attacks during the mob phase don't trigger the intended per-action FOV/sprite refresh (mobs visually "jump" between hero turns). The `_game_ended` abort check (turn_manager.gd:294) is likewise read off the wrong node (harmless — GameManager.hero covers it). Fix direction: have SceneManager call `get_tree().root.set_current_scene(new_scene)` in `_finalize_transition`, OR point TurnManager at `SceneManager.current_scene` / `root.get_node_or_null("GameScene")` (the pattern wnd_settings.gd:121 already uses). Verify against Godot 4.5 in-engine (no engine on this box).
+- [P2] `MainScene` leaks and Godot's `current_scene` is never re-homed. `_ready` (scene_manager.gd:13-17) captures `tree.current_scene` during autoload init, when it is still `null` (autoloads ready before the main scene is set). So on the first transition `if current_scene and is_instance_valid(current_scene)` (line 48) is false and MainScene is never `queue_free`d — it lingers as an inert root child for the entire run. Fix: lazily capture `current_scene` on first `_do_transition` if null, or set it from the incoming main scene.
+- [P2] No transition guard / re-entrancy hazard. `_do_transition` immediately `queue_free`s the old scene and sets `current_scene = new_scene` before the *deferred* `add_child` runs. Two `go_to` calls in one frame (double-click, rapid signal) would `queue_free` a scene that was only scheduled to be added, then add a freed node. Add an in-flight guard (ignore/queue a second transition until the deferred add completes).
+- [P3] `go_to` has no null guard on `scene_script`; `scene_script.new()` crashes if a `load()` returned null. Every caller guards individually — fold the guard into the API and return null on failure.
+
+## Optimizations
+- [P3] `_get_game_scene_cached()` (turn_manager.gd:280) exists to avoid per-turn scene lookups; once the P1 wiring is fixed, cache invalidation on scene change should hang off `scene_changed` rather than an `is_instance_valid` recheck.
+
+## Additions
+- [P2] `scene_changed` signal (scene_manager.gd:8,58) has zero consumers repo-wide — dead API. Either wire the intended listeners (TurnManager cache reset, audio/music per-screen, analytics) or drop it; leaving a declared-but-unemitted-purpose signal invites the exact drift seen in S27.
+- [P2] No tests for SceneManager despite it being the single chokepoint for every screen transition — a small headless test (go_to frees prior, sets current_scene, applies meta before `_ready`) would lock the contract.
+- [P3] Two divergent parameter-passing conventions: everything uses the `meta` dict, but game_scene is configured via `go_to_node` + direct `_pending_level`/`_pending_region` properties (loading_scene.gd:404-408 / game_scene.gd:151,206). Pick one (meta is the documented path) for framework extraction.
+- [P3] No visual transition/fade — `scene_changed` fires instantly; loading_scene is the only "transition screen." A shared fade would smooth title↔menu hops.
+
+## Save/load & coupling notes
+- SceneManager holds no persisted state — pure runtime router; no save contract. Good.
+- Coupling is the story: SceneManager tracks `current_scene` in its own var but bypasses `get_tree().current_scene`, so the two disagree. `SceneManager.current_scene` (the var) has **no external readers**; `tree.current_scene` has exactly one (TurnManager) and it's wrong. Scenes locate GameScene by node *name* (`root.get_node_or_null("GameScene")`, wnd_settings.gd) — works only because `go_to_node` names it "GameScene", another implicit contract.
+- Parameter passing to `_ready`: `go_to` sets meta before the deferred `add_child`, so children can read meta in `_ready` (loading_scene.gd:56-74 relies on this) — correct and order-safe.
+
+## Research notes
+- Godot 4.5: the supported way to change the active scene is `SceneTree.change_scene_to_packed/_file` or `set_current_scene`, which keep `get_tree().current_scene` authoritative. Direct `root.add_child()` (this impl) does not, which is the root of the P1 mismatch.
+- SPD reference: mob turns resolve one-at-a-time with a visible actor acting and the view updating per action (`Actor.processTurn` + `GameScene` observers). The port's async loop mirrors that intent, but the broken `game_scene` handle defeats the per-action refresh.
+- No auto-fixes applied this run: the P1 wiring fix is behavioral, and the P2/P3 items (dead-signal removal, re-entrancy guard) are judgment calls on the core transition path — backlogged for approval per RUNBOOK Step 4.
