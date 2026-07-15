@@ -6,11 +6,18 @@ extends Node
 
 # --- File Paths ---
 const SAVE_PATH: String = "user://save_game_full.dat"
+const SAVE_TMP_PATH: String = "user://save_game_full.dat.tmp"
+const SAVE_BAK_PATH: String = "user://save_game_full.dat.bak"
 const RANKINGS_PATH: String = "user://rankings.dat"
 const SETTINGS_PATH: String = "user://settings.dat"
 
 # --- Save Format Version (for future migration) ---
 const SAVE_VERSION: int = 1
+
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_WM_CLOSE_REQUEST, NOTIFICATION_APPLICATION_PAUSED:
+			autosave_if_active()
 
 # ---------------------------------------------------------------------------
 # Full Game Save / Load
@@ -41,18 +48,23 @@ func save_full_game() -> bool:
 	var _qh: GDScript = load("res://src/actors/npcs/quest_handler.gd")
 	data["quest_state"] = _qh.serialize() if _qh.has_method("serialize") else {}
 
-	# Write to disk
-	var file: FileAccess = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if file == null:
-		push_error("SaveManager: Failed to open save file for writing: %s" % FileAccess.get_open_error())
+	if not _write_atomic_var(SAVE_PATH, SAVE_TMP_PATH, SAVE_BAK_PATH, data):
 		return false
-
-	file.store_var(data, true)  # full_objects = true for nested Dictionaries
-	file.close()
 
 	if EventBus:
 		EventBus.game_saved.emit()
 	return true
+
+
+func autosave_if_active() -> bool:
+	if GameManager == null or not GameManager.get("run_active"):
+		return false
+	if GameManager.current_level == null:
+		return false
+	var level_depth: int = int(GameManager.current_level.get("depth"))
+	if level_depth != int(GameManager.depth):
+		return false
+	return save_full_game()
 
 
 ## Load a complete game state. Restores hero, level, GameManager, caches.
@@ -62,29 +74,27 @@ func load_full_game() -> bool:
 		push_warning("SaveManager: No save file found.")
 		return false
 
-	var file: FileAccess = FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if file == null:
-		push_error("SaveManager: Failed to open save file for reading: %s" % FileAccess.get_open_error())
-		return false
-
-	var data: Variant = file.get_var(true)
-	file.close()
-
-	if data == null or not data is Dictionary:
+	var save: Dictionary = _read_save_dictionary(SAVE_PATH)
+	if save.is_empty() and FileAccess.file_exists(SAVE_BAK_PATH):
+		push_warning("SaveManager: Primary save is unreadable, trying backup.")
+		save = _read_save_dictionary(SAVE_BAK_PATH)
+	if save.is_empty():
 		push_error("SaveManager: Save data is corrupt or unreadable.")
 		return false
-
-	var save: Dictionary = data as Dictionary
 
 	# Check version for future migration
 	var version: int = save.get("save_version", 0)
 	if version > SAVE_VERSION:
 		push_error("SaveManager: Save file is from a newer version (%d > %d)." % [version, SAVE_VERSION])
 		return false
+	save = _migrate_save(save, version)
 
 	# Start from a clean runtime state before rehydrating saved objects.
 	if TurnManager != null and TurnManager.has_method("clear_actors"):
 		TurnManager.clear_actors()
+	if MessageLog != null and MessageLog.has_method("clear"):
+		MessageLog.clear()
+		MessageLog.current_turn = 0
 	if GameManager != null and GameManager.has_method("_cleanup_previous_run"):
 		GameManager._cleanup_previous_run()
 	QuestHandler.reset()
@@ -128,13 +138,98 @@ func load_full_game() -> bool:
 
 ## Check whether a full save file exists on disk.
 func has_save() -> bool:
-	return FileAccess.file_exists(SAVE_PATH)
+	return FileAccess.file_exists(SAVE_PATH) or FileAccess.file_exists(SAVE_BAK_PATH)
 
 
 ## Delete the save file (permadeath — run is over).
 func delete_save() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
+	if FileAccess.file_exists(SAVE_TMP_PATH):
+		DirAccess.remove_absolute(SAVE_TMP_PATH)
+	if FileAccess.file_exists(SAVE_BAK_PATH):
+		DirAccess.remove_absolute(SAVE_BAK_PATH)
+
+
+func _read_save_dictionary(path: String) -> Dictionary:
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_warning(
+			"SaveManager: Failed to open save file '%s' for reading: %s"
+			% [path, FileAccess.get_open_error()]
+		)
+		return {}
+	var data: Variant = file.get_var(true)
+	file.close()
+	if data == null or not data is Dictionary:
+		push_warning("SaveManager: Save file '%s' did not contain a Dictionary." % path)
+		return {}
+	return data as Dictionary
+
+
+func _write_atomic_var(
+	path: String,
+	tmp_path: String,
+	bak_path: String,
+	data: Variant
+) -> bool:
+	if FileAccess.file_exists(tmp_path):
+		var tmp_remove_error: Error = DirAccess.remove_absolute(tmp_path)
+		if tmp_remove_error != OK:
+			push_error(
+				"SaveManager: Failed to remove stale temp save '%s': %s"
+				% [tmp_path, tmp_remove_error]
+			)
+			return false
+
+	var file: FileAccess = FileAccess.open(tmp_path, FileAccess.WRITE)
+	if file == null:
+		push_error("SaveManager: Failed to open temp save for writing: %s" % FileAccess.get_open_error())
+		return false
+	file.store_var(data, true)
+	file.flush()
+	file.close()
+
+	if FileAccess.file_exists(bak_path):
+		var bak_remove_error: Error = DirAccess.remove_absolute(bak_path)
+		if bak_remove_error != OK:
+			DirAccess.remove_absolute(tmp_path)
+			push_error(
+				"SaveManager: Failed to remove old backup save '%s': %s"
+				% [bak_path, bak_remove_error]
+			)
+			return false
+
+	if FileAccess.file_exists(path):
+		var rotate_error: Error = DirAccess.rename_absolute(path, bak_path)
+		if rotate_error != OK:
+			DirAccess.remove_absolute(tmp_path)
+			push_error("SaveManager: Failed to rotate existing save to backup: %s" % rotate_error)
+			return false
+
+	var promote_error: Error = DirAccess.rename_absolute(tmp_path, path)
+	if promote_error != OK:
+		if FileAccess.file_exists(bak_path) and not FileAccess.file_exists(path):
+			DirAccess.rename_absolute(bak_path, path)
+		push_error("SaveManager: Failed to promote temp save into place: %s" % promote_error)
+		return false
+	return true
+
+
+func _migrate_save(save: Dictionary, from_version: int) -> Dictionary:
+	var migrated: Dictionary = save.duplicate(true)
+	var version: int = from_version
+	if version <= 0:
+		version = 1
+
+	while version < SAVE_VERSION:
+		match version:
+			_:
+				push_warning("SaveManager: No migration step registered for save version %d." % version)
+				version += 1
+
+	migrated["save_version"] = SAVE_VERSION
+	return migrated
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +239,8 @@ func delete_save() -> void:
 func _serialize_game_manager() -> Dictionary:
 	if GameManager == null:
 		return {}
+	if GameManager.has_method("serialize_run_state"):
+		return GameManager.serialize_run_state()
 	return {
 		"depth": GameManager.depth,
 		"gold": GameManager.gold,
@@ -155,12 +252,16 @@ func _serialize_game_manager() -> Dictionary:
 		"local_hero_index": GameManager.local_hero_index,
 		"run_active": GameManager.run_active,
 		"stats": GameManager.stats.duplicate(true),
+		"quest_flags": GameManager.quest_flags.duplicate(true),
 		"item_appearance": ItemAppearance.serialize() if ItemAppearance else {},
 	}
 
 
 func _deserialize_game_manager(data: Dictionary) -> void:
 	if GameManager == null or data.is_empty():
+		return
+	if GameManager.has_method("apply_run_state"):
+		GameManager.apply_run_state(data)
 		return
 	GameManager.depth = data.get("depth", 1)
 	GameManager.gold = data.get("gold", 0)
@@ -173,6 +274,7 @@ func _deserialize_game_manager(data: Dictionary) -> void:
 	GameManager.local_hero_index = int(data.get("local_hero_index", 0))
 	GameManager.run_active = data.get("run_active", false)
 	GameManager.stats = data.get("stats", {})
+	GameManager.quest_flags = data.get("quest_flags", {})
 	if ItemAppearance:
 		var appearance_data: Dictionary = data.get("item_appearance", {})
 		if appearance_data.is_empty():
@@ -300,241 +402,6 @@ func _deserialize_level_cache(data: Dictionary) -> void:
 	GameManager._level_cache.clear()
 	for depth_key in data:
 		GameManager._level_cache[depth_key] = data[depth_key]
-
-
-# ---------------------------------------------------------------------------
-# Mobs Serialization
-# ---------------------------------------------------------------------------
-
-func _serialize_mobs() -> Array[Dictionary]:
-	if GameManager == null or GameManager.current_level == null:
-		return []
-	var mobs_data: Array[Dictionary] = []
-	if GameManager.current_level.get("mobs") != null:
-		for mob in GameManager.current_level.mobs:
-			if mob != null and mob.has_method("serialize"):
-				mobs_data.append(mob.serialize())
-	return mobs_data
-
-
-func _deserialize_mobs(data: Array[Dictionary]) -> void:
-	if GameManager == null or GameManager.current_level == null or data.is_empty():
-		return
-	# Clear existing mobs
-	if GameManager.current_level.get("mobs") != null:
-		GameManager.current_level.mobs.clear()
-		for mob_data in data:
-			if mob_data is Dictionary:
-				# Attempt to reconstruct mob from saved type
-				var mob_type: String = mob_data.get("type", "")
-				var mob: Variant = _create_entity_by_type(mob_type, "mob")
-				if mob != null and mob.has_method("deserialize"):
-					mob.deserialize(mob_data)
-					GameManager.current_level.mobs.append(mob)
-
-
-# ---------------------------------------------------------------------------
-# Heaps (Item piles) Serialization
-# ---------------------------------------------------------------------------
-
-func _serialize_heaps() -> Array[Dictionary]:
-	if GameManager == null or GameManager.current_level == null:
-		return []
-	# Heaps are already Array[Dictionary], so just duplicate them
-	var heaps_data: Array[Dictionary] = []
-	for heap: Dictionary in GameManager.current_level.heaps:
-		heaps_data.append(heap.duplicate(true))
-	return heaps_data
-
-
-func _deserialize_heaps(data: Array[Dictionary]) -> void:
-	if GameManager == null or GameManager.current_level == null or data.is_empty():
-		return
-	GameManager.current_level.heaps.clear()
-	for heap_data: Variant in data:
-		if heap_data is Dictionary:
-			GameManager.current_level.heaps.append(heap_data.duplicate(true))
-
-
-# ---------------------------------------------------------------------------
-# Traps Serialization
-# ---------------------------------------------------------------------------
-
-func _serialize_traps() -> Array[Dictionary]:
-	if GameManager == null or GameManager.current_level == null:
-		return []
-	var traps_data: Array[Dictionary] = []
-	# traps is Dictionary { pos: int -> Trap object }
-	for pos: Variant in GameManager.current_level.traps:
-		var trap: Variant = GameManager.current_level.traps[pos]
-		if trap != null and trap.has_method("serialize"):
-			var d: Dictionary = trap.serialize()
-			d["pos"] = pos
-			traps_data.append(d)
-	return traps_data
-
-
-func _deserialize_traps(data: Array[Dictionary]) -> void:
-	if GameManager == null or GameManager.current_level == null or data.is_empty():
-		return
-	GameManager.current_level.traps.clear()
-	for trap_data: Variant in data:
-		if trap_data is Dictionary:
-			var trap_type: String = trap_data.get("type", "")
-			var trap_pos: int = trap_data.get("pos", -1)
-			var trap: Variant = _create_entity_by_type(trap_type, "trap")
-			if trap != null and trap.has_method("deserialize"):
-				trap.deserialize(trap_data)
-				if trap_pos >= 0:
-					GameManager.current_level.traps[trap_pos] = trap
-
-
-# ---------------------------------------------------------------------------
-# Plants Serialization
-# ---------------------------------------------------------------------------
-
-func _serialize_plants() -> Array[Dictionary]:
-	if GameManager == null or GameManager.current_level == null:
-		return []
-	var plants_data: Array[Dictionary] = []
-	# plants is Dictionary { pos: int -> Plant object }
-	for pos: Variant in GameManager.current_level.plants:
-		var plant: Variant = GameManager.current_level.plants[pos]
-		if plant != null and plant.has_method("serialize"):
-			var d: Dictionary = plant.serialize()
-			d["pos"] = pos
-			plants_data.append(d)
-	return plants_data
-
-
-func _deserialize_plants(data: Array[Dictionary]) -> void:
-	if GameManager == null or GameManager.current_level == null or data.is_empty():
-		return
-	GameManager.current_level.plants.clear()
-	for plant_data: Variant in data:
-		if plant_data is Dictionary:
-			var plant_type: String = plant_data.get("type", "")
-			var plant_pos: int = plant_data.get("pos", -1)
-			var plant: Variant = _create_entity_by_type(plant_type, "plant")
-			if plant != null and plant.has_method("deserialize"):
-				plant.deserialize(plant_data)
-				if plant_pos >= 0:
-					GameManager.current_level.plants[plant_pos] = plant
-
-
-# ---------------------------------------------------------------------------
-# Blobs Serialization
-# ---------------------------------------------------------------------------
-
-func _serialize_blobs() -> Array[Dictionary]:
-	if GameManager == null or GameManager.current_level == null:
-		return []
-	# blobs is Array[Dictionary], just duplicate them
-	var blobs_data: Array[Dictionary] = []
-	for blob: Dictionary in GameManager.current_level.blobs:
-		blobs_data.append(blob.duplicate(true))
-	return blobs_data
-
-
-func _deserialize_blobs(data: Array[Dictionary]) -> void:
-	if GameManager == null or GameManager.current_level == null or data.is_empty():
-		return
-	GameManager.current_level.blobs.clear()
-	for blob_data: Variant in data:
-		if blob_data is Dictionary:
-			GameManager.current_level.blobs.append(blob_data.duplicate(true))
-
-
-# ---------------------------------------------------------------------------
-# Entity Factory Helper
-# ---------------------------------------------------------------------------
-
-## Attempt to create an entity by its type string. Returns null if unknown.
-## This uses a simple mapping approach — entities store their class name in "type".
-func _create_entity_by_type(type_name: String, category: String) -> Variant:
-	if type_name.is_empty():
-		return null
-
-	# Try to find the class in Godot's global class registry
-	# If the class has a class_name, we can instantiate it
-	var script_path: String = _find_script_for_type(type_name, category)
-	if script_path.is_empty():
-		push_warning("SaveManager: Cannot find script for type '%s' in category '%s'" % [type_name, category])
-		return null
-
-	var script: Script = load(script_path) as Script
-	if script == null:
-		push_warning("SaveManager: Failed to load script at '%s'" % script_path)
-		return null
-
-	return script.new()
-
-
-## Map type names to script paths. Provides a lookup for known entity types.
-## This is populated based on the project's class structure.
-func _find_script_for_type(type_name: String, category: String) -> String:
-	# Build the path based on category and type_name conventions
-	# Types are stored as PascalCase class names, file names are snake_case
-	var snake_name: String = _pascal_to_snake(type_name)
-
-	var search_dirs: Array[String] = []
-	match category:
-		"mob":
-			search_dirs = [
-				"res://src/actors/mobs/%s.gd" % snake_name,
-				"res://src/actors/mobs/standard/%s.gd" % snake_name,
-				"res://src/actors/mobs/bosses/%s.gd" % snake_name,
-			]
-		"trap":
-			search_dirs = [
-				"res://src/levels/traps/%s.gd" % snake_name,
-			]
-		"plant":
-			search_dirs = [
-				"res://src/plants/%s.gd" % snake_name,
-			]
-		"blob":
-			search_dirs = [
-				"res://src/actors/blobs/%s.gd" % snake_name,
-			]
-		"heap":
-			search_dirs = [
-				"res://src/items/%s.gd" % snake_name,
-			]
-		"item":
-			search_dirs = [
-				"res://src/items/%s.gd" % snake_name,
-				"res://src/items/weapons/%s.gd" % snake_name,
-				"res://src/items/armor/%s.gd" % snake_name,
-				"res://src/items/potions/%s.gd" % snake_name,
-				"res://src/items/scrolls/%s.gd" % snake_name,
-				"res://src/items/rings/%s.gd" % snake_name,
-				"res://src/items/wands/%s.gd" % snake_name,
-				"res://src/items/artifacts/%s.gd" % snake_name,
-				"res://src/items/food/%s.gd" % snake_name,
-				"res://src/items/keys/%s.gd" % snake_name,
-				"res://src/items/bags/%s.gd" % snake_name,
-				"res://src/items/bombs/%s.gd" % snake_name,
-				"res://src/items/stones/%s.gd" % snake_name,
-				"res://src/items/spells/%s.gd" % snake_name,
-			]
-
-	for path in search_dirs:
-		if ResourceLoader.exists(path):
-			return path
-
-	return ""
-
-
-## Convert PascalCase to snake_case.
-func _pascal_to_snake(pascal: String) -> String:
-	var result: String = ""
-	for i in pascal.length():
-		var ch: String = pascal[i]
-		if ch == ch.to_upper() and ch != ch.to_lower() and i > 0:
-			result += "_"
-		result += ch.to_lower()
-	return result
 
 
 # ---------------------------------------------------------------------------
