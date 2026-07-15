@@ -11,6 +11,7 @@ extends SceneTree
 const CASES: Array[String] = [
 	"res://tests/cases/test_compile.gd",
 	"res://tests/cases/test_event_bus.gd",
+	"res://tests/cases/test_wand_recharge.gd",
 ]
 
 var _checks: int = 0
