@@ -35,14 +35,20 @@ func on_attach() -> void:
 		if hero.belongings and hero.belongings.has_method("get_backpack_items"):
 			var freezable: Array = []
 			for item: Variant in hero.belongings.get_backpack_items():
-				if item and item.get("category") == ConstantsData.ItemCategory.POTION:
+				if (
+					item
+					and (
+						item.get("category") == ConstantsData.ItemCategory.POTION
+						or item.get("item_id") == "mystery_meat"
+					)
+				):
 					freezable.append(item)
-				if freezable.size() > 0:
-					var frozen_item: Variant = freezable[randi() % freezable.size()]
-					if MessageLog:
-						MessageLog.add_warning("The cold shatters your %s!" % frozen_item.item_name)
-					if hero.belongings.has_method("remove_item"):
-						hero.belongings.remove_item(frozen_item)
+			if freezable.size() > 0:
+				var frozen_item: Variant = freezable[randi() % freezable.size()]
+				if MessageLog:
+					MessageLog.add_warning("The cold shatters your %s!" % frozen_item.item_name)
+				if hero.belongings.has_method("remove_item"):
+					hero.belongings.remove_item(frozen_item)
 
 	if MessageLog:
 		MessageLog.add_negative("%s is frozen solid!" % target.name)
