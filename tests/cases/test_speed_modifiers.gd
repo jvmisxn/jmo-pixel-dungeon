@@ -29,7 +29,15 @@ func run(t: Object) -> void:
 	runner.add_buff(momentum)
 	t.check(is_equal_approx(runner.get_speed(), 1.5), "Freerunner momentum speed hook is active")
 
+	var monk: Char = Char.new()
+	monk.base_speed = 1.0
+	var flurry: MonkFlurry = MonkFlurry.new()
+	flurry.consecutive_hits = MonkFlurry.MAX_CONSECUTIVE
+	monk.add_buff(flurry)
+	t.check(is_equal_approx(monk.get_speed(), 1.0), "Monk Flurry does not change movement speed")
+
 	ch.free()
 	dread_target.free()
 	sleeping.free()
 	runner.free()
+	monk.free()
