@@ -44,11 +44,6 @@ func _init() -> void:
 
 	setup(1, 0, 0, 0, 0, 0, 1.0)
 
-	# Connect to mob_defeated so we can track quest target kills
-	if EventBus and EventBus.has_signal("mob_defeated"):
-		if not EventBus.mob_defeated.is_connected(on_mob_defeated):
-			EventBus.mob_defeated.connect(on_mob_defeated)
-
 	dialogue_lines = [
 		"Please... avenge me... slay the %s that took my life...",
 		"The %s still lurks nearby... please, end it...",
@@ -333,8 +328,6 @@ func _on_reward_window_closed(_chosen_item: Variant) -> void:
 func _depart() -> void:
 	is_alive = false
 	deactivate()
-	if EventBus and EventBus.has_signal("mob_defeated") and EventBus.mob_defeated.is_connected(on_mob_defeated):
-		EventBus.mob_defeated.disconnect(on_mob_defeated)
 	if QuestHandler:
 		QuestHandler.unregister_npc(self)
 		QuestHandler.complete_quest(quest_id)
