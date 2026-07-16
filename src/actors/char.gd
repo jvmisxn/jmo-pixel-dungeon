@@ -103,10 +103,6 @@ func attack(target: Char, dmg_multi: float = 1.0, dmg_bonus: float = 0.0, acc_mu
 		if berserk_buff and berserk_buff.has_method("damage_factor"):
 			dmg = berserk_buff.damage_factor(dmg)
 
-		# Fury: 1.5x damage when below 50% HP
-		if has_buff("Fury"):
-			dmg *= 1.5
-
 		# Weakness: 0.67x damage
 		if has_buff("Weakness"):
 			dmg *= 0.67
