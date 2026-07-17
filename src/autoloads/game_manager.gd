@@ -46,6 +46,8 @@ var hero_class: int = ConstantsData.HeroClass.WARRIOR  # default
 var hero_subclass: int = ConstantsData.HeroSubclass.NONE
 ## Whether a run is currently in progress.
 var run_active: bool = false
+const DESKTOP_CONTENT_SCALE_SIZE: Vector2i = Vector2i(1280, 720)
+const MOBILE_CONTENT_SCALE_SIZE: Vector2i = Vector2i(960, 540)
 
 # --- Statistics ---
 var stats: Dictionary[String, int] = {}
@@ -72,6 +74,7 @@ func get_quest_flag(flag_name: String, default_val: Variant = false) -> Variant:
 
 
 func _ready() -> void:
+	_apply_platform_content_scale()
 	_reset_stats()
 
 # ---------------------------------------------------------------------------
@@ -111,6 +114,16 @@ func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: i
 
 	# Immediately descend to depth 1.
 	descend()
+
+
+func _apply_platform_content_scale() -> void:
+	var window: Window = get_window()
+	if window == null:
+		return
+	if OS.get_name() == "Web" and DisplayServer.is_touchscreen_available():
+		window.content_scale_size = MOBILE_CONTENT_SCALE_SIZE
+	else:
+		window.content_scale_size = DESKTOP_CONTENT_SCALE_SIZE
 
 
 ## Free stale Nodes from the previous run so nothing holds a freed-instance ref.
