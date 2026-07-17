@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: mobile, hud, web, playtesting
+- Fixed mobile web HUD layouts that used the visible browser viewport but still rendered into a larger Godot backing canvas. `HUD` now scales its `CanvasLayer` by backing-canvas size over CSS-visible layout size, so the status strip and toolbar keep their intended on-screen size when mobile browsers expose a large canvas behind a phone-sized viewport. Extended `test_mobile_hud_input.gd` with a 393x852 visible viewport / 1179x1704 backing-canvas regression that asserts the scaled toolbar remains full-width. Local headless suite green (311 checks, Godot 4.7.1); GitHub CI and Pages deploy green for commit `4fa7201`. Browser smoke: live page and `index.js`/`index.pck`/`index.wasm` returned 200, and Chromium mobile-width screenshot loaded the name prompt; no real-device/iPhone in-run touch confirmation yet.
+
 - Tags: potions, throwing, source-fidelity, audit-S15
 - Wired thrown potions into the existing shatter path. `Hero._do_throw_item()` now detects `Potion`, resolves the projectile collision cell, calls `Potion.shatter(collision_pos, level)`, identifies the potion, records potion usage, and consumes one stack item instead of falling through to generic ranged-miss logic. Added `test_thrown_potion_shatter.gd` covering Toxic Gas shatter effects, stack consumption, identification, and last-item removal. Follow-up: offensive potion shatter effects still use current one-shot 3x3 buff/terrain behavior; the next fidelity pass should re-point Toxic Gas/Paralytic Gas/Liquid Flame/Frost at real blobs.
 
