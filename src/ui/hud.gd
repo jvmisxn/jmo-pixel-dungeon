@@ -12,7 +12,7 @@ const DESKTOP_TOOLBAR_HEIGHT: int = 40
 const MOBILE_TOOLBAR_HEIGHT: int = 72
 const MOBILE_BREAKPOINT: float = 720.0
 const HUD_MARGIN: float = 6.0
-const MOBILE_STATUS_HEIGHT: float = 84.0
+const MOBILE_STATUS_HEIGHT: float = 132.0
 
 # --- Child panels ---
 var toolbar: MarginContainer = null

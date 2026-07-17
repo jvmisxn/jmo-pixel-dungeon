@@ -506,21 +506,23 @@ func set_compact_mode(is_compact: bool) -> void:
 	if _compact_mode == is_compact:
 		return
 	_compact_mode = is_compact
-	custom_minimum_size = COMPACT_MINIMUM_SIZE if _compact_mode else Vector2.ZERO
-	add_theme_constant_override("separation", 3 if _compact_mode else 6)
+	custom_minimum_size = Vector2.ZERO
+	add_theme_constant_override("separation", 2 if _compact_mode else 6)
 	if _level_label:
-		_level_label.visible = not _compact_mode
-		_level_label.add_theme_font_size_override("font_size", 12 if _compact_mode else 13)
+		_level_label.visible = true
+		_level_label.add_theme_font_size_override("font_size", 16 if _compact_mode else 13)
 	if _compact_strip:
-		_compact_strip.visible = _compact_mode
+		_compact_strip.visible = false
 	if _portrait_container:
 		_portrait_container.visible = not _compact_mode
 	if _focus_label:
 		_focus_label.visible = false if _compact_mode else _focus_label.visible
 	if _str_label:
-		_str_label.visible = not _compact_mode
+		_str_label.visible = true
+		_str_label.add_theme_font_size_override("font_size", 12 if _compact_mode else 11)
 	if _depth_label:
-		_depth_label.visible = not _compact_mode
+		_depth_label.visible = true
+		_depth_label.add_theme_font_size_override("font_size", 12 if _compact_mode else 11)
 	if _separator_equipment:
 		_separator_equipment.visible = not _compact_mode
 	if _equip_label:
@@ -534,19 +536,21 @@ func set_compact_mode(is_compact: bool) -> void:
 	if _buffs_container:
 		_buffs_container.visible = not _compact_mode
 	if _hp_section:
-		_hp_section.visible = not _compact_mode
-		_hp_section.add_theme_constant_override("separation", 0 if _compact_mode else 1)
+		_hp_section.visible = true
+		_hp_section.add_theme_constant_override("separation", 1)
 	if _hp_header:
-		_hp_header.add_theme_font_size_override("font_size", 9 if _compact_mode else 10)
+		_hp_header.add_theme_font_size_override("font_size", 11 if _compact_mode else 10)
 	if _hp_label:
-		_hp_label.visible = not _compact_mode
+		_hp_label.visible = true
+		_hp_label.add_theme_font_size_override("font_size", 12 if _compact_mode else 11)
 	if _xp_section:
-		_xp_section.visible = not _compact_mode
-		_xp_section.add_theme_constant_override("separation", 0 if _compact_mode else 1)
+		_xp_section.visible = true
+		_xp_section.add_theme_constant_override("separation", 1)
 	if _xp_header:
-		_xp_header.add_theme_font_size_override("font_size", 9 if _compact_mode else 10)
+		_xp_header.add_theme_font_size_override("font_size", 11 if _compact_mode else 10)
 	if _xp_label:
-		_xp_label.visible = not _compact_mode
+		_xp_label.visible = true
+		_xp_label.add_theme_font_size_override("font_size", 12 if _compact_mode else 11)
 	if _hunger_section:
 		_hunger_section.visible = not _compact_mode
 	minimum_size_changed()

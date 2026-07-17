@@ -265,7 +265,6 @@ func _input(event: InputEvent) -> void:
 		if touch.pressed:
 			if _is_screen_position_over_hud(touch.position):
 				_ui_touch_points[touch.index] = true
-				get_viewport().set_input_as_handled()
 				return
 			_active_touch_points[touch.index] = touch.position
 			if _active_touch_points.size() >= 2:
@@ -274,7 +273,6 @@ func _input(event: InputEvent) -> void:
 		else:
 			if _ui_touch_points.has(touch.index):
 				_ui_touch_points.erase(touch.index)
-				get_viewport().set_input_as_handled()
 				return
 			var should_tap: bool = not _touch_gesture_started \
 					and _active_touch_points.size() == 1 \
@@ -297,7 +295,7 @@ func _input(event: InputEvent) -> void:
 				_cancel_auto_walk()
 	elif event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT and _is_synthesized_touch_mouse_suppressed():
+		if mb.button_index == MOUSE_BUTTON_LEFT and _is_synthesized_touch_mouse_suppressed() and not _is_screen_position_over_hud(mb.position):
 			get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -305,6 +303,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.pressed:
+			if mb.button_index == MOUSE_BUTTON_LEFT and _is_screen_position_over_hud(mb.position):
+				get_viewport().set_input_as_handled()
+				return
 			if not _awaiting_hero_input:
 				if mb.button_index == MOUSE_BUTTON_LEFT and _is_online_client():
 					_show_local_action_blocked_feedback()
