@@ -65,9 +65,15 @@ func evasion() -> int:
 			eva = b.modify_evasion(eva)
 	return eva
 
-## Roll damage for an attack.
+## Roll damage for an attack. Uses triangular distribution approximating SPD's
+## Random.NormalIntRange(min, max) — a bell curve favoring the middle, matching
+## the original Mob.damageRoll(). dr_roll() and Weapon.damage_roll() share this shape.
 func damage_roll() -> int:
-	var dmg: int = randi_range(damage_roll_min, damage_roll_max)
+	# Triangular distribution: average of two uniform rolls approximates NormalIntRange
+	var roll_a: int = randi_range(damage_roll_min, damage_roll_max)
+	var roll_b: int = randi_range(damage_roll_min, damage_roll_max)
+	@warning_ignore("integer_division")
+	var dmg: int = (roll_a + roll_b) / 2
 	for b: Node in _buffs:
 		if b.has_method("modify_damage"):
 			dmg = b.modify_damage(dmg)
