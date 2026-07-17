@@ -12,7 +12,10 @@ const RANKINGS_PATH: String = "user://rankings.dat"
 const SETTINGS_PATH: String = "user://settings.dat"
 
 # --- Save Format Version (for future migration) ---
-const SAVE_VERSION: int = 1
+# v2: Ring of Might no longer bakes its STR/HP bonus into the hero's persisted
+#     base stats. Older saves un-bake the bonus during migration so the rebuilt
+#     passive buff does not double-count it. See _migrate_might_ring_stats.
+const SAVE_VERSION: int = 2
 
 func _notification(what: int) -> void:
 	match what:
@@ -224,12 +227,87 @@ func _migrate_save(save: Dictionary, from_version: int) -> Dictionary:
 
 	while version < SAVE_VERSION:
 		match version:
+			1:
+				# v1 -> v2: un-bake Ring of Might's STR/HP bonus from persisted
+				# base stats (the old buff mutated them in place) so the rebuilt
+				# passive does not double-apply on load.
+				_migrate_v1_to_v2(migrated)
+				version = 2
 			_:
 				push_warning("SaveManager: No migration step registered for save version %d." % version)
 				version += 1
 
 	migrated["save_version"] = SAVE_VERSION
 	return migrated
+
+
+## v1 -> v2 migration: strip the (formerly persisted) Ring of Might buff and
+## remove its STR/HP contribution from each hero's saved base stats. STR un-bake
+## is exact; HP un-bake reconstructs the base HT the multiplier was applied to,
+## which is exact unless the hero levelled up while the ring was worn (a bounded,
+## one-time HP discrepancy).
+func _migrate_v1_to_v2(save: Dictionary) -> void:
+	var hero_single: Variant = save.get("hero", null)
+	if hero_single is Dictionary:
+		_migrate_might_ring_stats(hero_single as Dictionary)
+	var heroes: Variant = save.get("heroes", null)
+	if heroes is Array:
+		for hero_entry: Variant in heroes:
+			if hero_entry is Dictionary:
+				_migrate_might_ring_stats(hero_entry as Dictionary)
+
+
+func _migrate_might_ring_stats(hero: Dictionary) -> void:
+	# Drop any persisted Ring of Might buff; it is now rebuilt from the ring.
+	var buffs: Variant = hero.get("buffs", null)
+	if buffs is Array:
+		var kept: Array = []
+		for entry: Variant in buffs:
+			if entry is Dictionary and str((entry as Dictionary).get("buff_id", "")) == "RingOfMight":
+				continue
+			kept.append(entry)
+		hero["buffs"] = kept
+
+	var belongings: Variant = hero.get("belongings", null)
+	if not (belongings is Dictionary):
+		return
+	for slot_name: String in ["ring_left", "ring_right"]:
+		var ring: Variant = (belongings as Dictionary).get(slot_name, null)
+		if not (ring is Dictionary):
+			continue
+		if str((ring as Dictionary).get("item_id", "")) != "ring_of_might":
+			continue
+		var level: int = int((ring as Dictionary).get("level", 0))
+		var cursed: bool = bool((ring as Dictionary).get("cursed", false))
+		var ring_bonus: int = -1 if (cursed and level == 0) else level
+
+		# STR: old buff added exactly ring_bonus.
+		hero["str_val"] = int(hero.get("str_val", 10)) - ring_bonus
+
+		# HP: old buff added int(base_ht * m) - base_ht, i.e. saved_ht = int(base_ht * m).
+		var saved_ht: int = int(hero.get("ht", hero.get("hp_max", 0)))
+		var multiplier: float = pow(1.035, float(maxi(0, ring_bonus)))
+		var base_ht: int = _invert_ht_multiplier(saved_ht, multiplier)
+		var hp_bonus: int = saved_ht - base_ht
+		hero["ht"] = int(hero.get("ht", saved_ht)) - hp_bonus
+		hero["hp_max"] = int(hero.get("hp_max", saved_ht)) - hp_bonus
+		hero["hp"] = mini(int(hero.get("hp", 0)), int(hero["hp_max"]))
+		# The old buff de-duplicated by id, so at most one Might bonus was ever
+		# baked in even with two rings equipped; un-bake only once.
+		return
+
+
+## Recover the base HT the runtime multiplied to reach saved_ht, i.e. the largest
+## base with int(base * multiplier) == saved_ht. Returns saved_ht when multiplier
+## is <= 1 (no HP bonus was applied).
+func _invert_ht_multiplier(saved_ht: int, multiplier: float) -> int:
+	if multiplier <= 1.0 or saved_ht <= 0:
+		return saved_ht
+	var guess: int = int(float(saved_ht) / multiplier)
+	for candidate: int in range(guess + 2, maxi(0, guess - 3), -1):
+		if int(float(candidate) * multiplier) == saved_ht:
+			return candidate
+	return saved_ht
 
 
 # ---------------------------------------------------------------------------

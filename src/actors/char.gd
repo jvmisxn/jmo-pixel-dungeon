@@ -446,8 +446,11 @@ func process_buffs() -> void:
 func _serialize_buffs() -> Array[Dictionary]:
 	var buff_data: Array[Dictionary] = []
 	for buff_node: Node in _buffs:
-		if buff_node != null and is_instance_valid(buff_node) and buff_node.has_method("serialize"):
-			buff_data.append(buff_node.serialize())
+		if buff_node == null or not is_instance_valid(buff_node) or not buff_node.has_method("serialize"):
+			continue
+		if buff_node.has_method("is_persistent") and not buff_node.is_persistent():
+			continue
+		buff_data.append(buff_node.serialize())
 	return buff_data
 
 func _deserialize_buffs(data: Variant) -> void:

@@ -469,6 +469,22 @@ class MightBuff extends Buff:
 	func on_detach() -> void:
 		_remove_bonus()
 
+	# This buff is a live modifier owned by the equipped ring: it mutates the
+	# hero's str_val/hp_max/ht while worn. Persisting it would let the bonus be
+	# baked into the hero's saved base stats (double-counted on reload), so it is
+	# not serialized -- the ring rebuilds it via resolve_post_load() after a load.
+	func is_persistent() -> bool:
+		return false
+
+	# Amount this buff currently adds to str_val, so the hero can persist a clean
+	# base value (see Hero.serialize).
+	func get_str_contribution() -> int:
+		return _str_bonus
+
+	# Amount this buff currently adds to both hp_max and ht.
+	func get_ht_contribution() -> int:
+		return _hp_bonus
+
 	func _apply_bonus() -> void:
 		if ring == null or target == null:
 			return
@@ -703,6 +719,16 @@ class RingOfMight extends Ring:
 		var b: MightBuff = MightBuff.new()
 		b.ring = self
 		return b
+
+	# Equipped rings are assigned directly during load (bypassing on_equip), and
+	# the MightBuff is intentionally not serialized. Rebuild the passive buff here
+	# so the STR/HP bonus is re-applied on top of the persisted clean base stats.
+	# Called by Hero.deserialize for each equipped ring.
+	func resolve_post_load(hero: Char) -> void:
+		if hero == null:
+			return
+		_passive_buff = null
+		_apply_passive(hero)
 
 
 class RingOfSharpshooting extends Ring:

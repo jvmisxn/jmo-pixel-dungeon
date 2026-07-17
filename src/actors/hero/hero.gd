@@ -976,10 +976,25 @@ func serialize() -> Dictionary:
 	data["xp_to_next"] = xp_to_next
 	data["talent_points_available"] = talent_points_available
 	data["talent_levels"] = talent_levels.duplicate(true)
+	# Persist BASE str/hp without live equipped-ring passive bonuses baked in, so
+	# reloading (which re-applies those passives) does not double-count them and
+	# permanently inflate the hero. See RingOfMight.MightBuff.
+	var base_str: int = str_val
+	var base_hp_max: int = hp_max
+	var base_ht: int = ht
+	for b: Node in _buffs:
+		if b == null or not is_instance_valid(b):
+			continue
+		if b.has_method("get_str_contribution"):
+			base_str -= int(b.get_str_contribution())
+		if b.has_method("get_ht_contribution"):
+			var ht_contrib: int = int(b.get_ht_contribution())
+			base_hp_max -= ht_contrib
+			base_ht -= ht_contrib
 	data["hp"] = hp
-	data["hp_max"] = hp_max
-	data["ht"] = ht
-	data["str_val"] = str_val
+	data["hp_max"] = base_hp_max
+	data["ht"] = base_ht
+	data["str_val"] = base_str
 	data["attack_skill"] = attack_skill
 	data["defense_skill"] = defense_skill
 	data["damage_roll_min"] = damage_roll_min
@@ -1039,6 +1054,13 @@ func deserialize(data: Dictionary) -> void:
 	var level_ref: Variant = level if level != null else GameManager.current_level
 	if artifact_item != null and artifact_item.has_method("resolve_post_load") and level_ref != null:
 		artifact_item.resolve_post_load(self, level_ref)
+	# Equipped rings are assigned directly during load, so their passive stat
+	# modifiers (e.g. Ring of Might) must be rebuilt on top of the clean base
+	# stats that were just restored. See Hero.serialize / RingOfMight.
+	if belongings != null:
+		for ring_item: Variant in [belongings.ring_left, belongings.ring_right]:
+			if ring_item != null and ring_item.has_method("resolve_post_load"):
+				ring_item.resolve_post_load(self)
 
 # ---------------------------------------------------------------------------
 # Damage & Death Overrides

@@ -21,6 +21,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_frozen.gd",
 	"res://tests/cases/test_barrier_shielding.gd",
 	"res://tests/cases/test_interval_armor_buffs.gd",
+	"res://tests/cases/test_ring_of_might_state.gd",
 ]
 
 var _checks: int = 0

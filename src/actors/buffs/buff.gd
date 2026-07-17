@@ -171,6 +171,12 @@ func evasion_modifier(eva: int) -> int:
 # Serialization
 # ---------------------------------------------------------------------------
 
+## Whether this buff should be written to the save file. Buffs that are fully
+## owned and rebuilt by another persisted object (e.g. a ring's passive stat
+## modifier) return false so their effect is not double-applied on reload.
+func is_persistent() -> bool:
+	return true
+
 func serialize() -> Dictionary:
 	return {
 		"_script_path": get_script().resource_path,
