@@ -200,11 +200,8 @@ func buy_item(hero: Variant, item_index: int) -> bool:
 		return false
 
 	# Deduct gold only after the item was accepted.
-	if GameManager:
-		GameManager.gold -= price
-		GameManager.gold_changed.emit(GameManager.gold)
-		if EventBus:
-			EventBus.gold_collected.emit(-price, GameManager.gold)
+	if GameManager and not GameManager.spend_gold(price):
+		return false
 
 	shop_inventory.remove_at(item_index)
 

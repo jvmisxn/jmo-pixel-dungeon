@@ -42,7 +42,7 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 		triggerer.unequip_weapon()
 
 	if level.has_method("drop_item"):
-		level.drop_item(weapon, drop_pos)
+		level.drop_item(drop_pos, weapon)
 	elif level.has_method("add_heap"):
 		level.add_heap(weapon, drop_pos)
 

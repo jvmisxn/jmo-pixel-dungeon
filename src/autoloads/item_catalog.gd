@@ -107,4 +107,4 @@ func _load() -> void:
 	var data: Variant = file.get_var(true)
 	file.close()
 	if data is Dictionary:
-		_identified_items = data.get("identified_items", {})
+		_identified_items.assign(data.get("identified_items", {}))
