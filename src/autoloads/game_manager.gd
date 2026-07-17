@@ -50,6 +50,8 @@ const DESKTOP_CONTENT_SCALE_SIZE: Vector2i = Vector2i(1280, 720)
 const MOBILE_LANDSCAPE_CONTENT_SCALE_SIZE: Vector2i = Vector2i(932, 430)
 const MOBILE_PORTRAIT_CONTENT_SCALE_SIZE: Vector2i = Vector2i(430, 932)
 const MOBILE_WEB_MAX_VIEWPORT: int = 960
+const MOBILE_WEB_MIN_CONTENT_SCALE: int = 320
+const MOBILE_WEB_MAX_CONTENT_SCALE: int = 960
 const MOBILE_ORIENTATION_AUTO: String = "auto"
 const MOBILE_ORIENTATION_PORTRAIT: String = "portrait"
 const MOBILE_ORIENTATION_LANDSCAPE: String = "landscape"
@@ -185,6 +187,9 @@ func _is_mobile_web() -> bool:
 
 
 func _get_mobile_content_scale_size() -> Vector2i:
+	var browser_viewport_size: Vector2i = _get_mobile_web_viewport_size()
+	if browser_viewport_size != Vector2i.ZERO:
+		return _clamp_mobile_content_scale_size(browser_viewport_size)
 	var mode: String = _normalize_mobile_orientation_mode(mobile_orientation_mode)
 	if mode == MOBILE_ORIENTATION_PORTRAIT:
 		return MOBILE_PORTRAIT_CONTENT_SCALE_SIZE
@@ -194,6 +199,33 @@ func _get_mobile_content_scale_size() -> Vector2i:
 	if window != null and window.size.y > window.size.x:
 		return MOBILE_PORTRAIT_CONTENT_SCALE_SIZE
 	return MOBILE_LANDSCAPE_CONTENT_SCALE_SIZE
+
+
+func _get_mobile_web_viewport_size() -> Vector2i:
+	if OS.get_name() != "Web":
+		return Vector2i.ZERO
+	var js_result: Variant = JavaScriptBridge.eval(
+		"(function(){return Math.round(window.innerWidth) + 'x' + Math.round(window.innerHeight);})()",
+		true
+	)
+	if js_result is String:
+		var parts: PackedStringArray = str(js_result).split("x")
+		if parts.size() == 2:
+			var width: int = int(parts[0])
+			var height: int = int(parts[1])
+			if width > 0 and height > 0:
+				return Vector2i(width, height)
+	var window: Window = get_window()
+	if window != null and window.size.x > 0 and window.size.y > 0:
+		return window.size
+	return Vector2i.ZERO
+
+
+func _clamp_mobile_content_scale_size(viewport_size: Vector2i) -> Vector2i:
+	return Vector2i(
+		clampi(viewport_size.x, MOBILE_WEB_MIN_CONTENT_SCALE, MOBILE_WEB_MAX_CONTENT_SCALE),
+		clampi(viewport_size.y, MOBILE_WEB_MIN_CONTENT_SCALE, MOBILE_WEB_MAX_CONTENT_SCALE)
+	)
 
 
 func _normalize_mobile_orientation_mode(mode: String) -> String:
