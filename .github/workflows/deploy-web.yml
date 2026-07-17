@@ -1,0 +1,74 @@
+name: Deploy Web
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Godot Web export
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Godot 4.5
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: "4.5.0"
+          use-dotnet: false
+          include-templates: true
+
+      - name: Import project
+        run: |
+          godot --headless --path . --import 2>&1 | tee import.log || true
+          if grep -qE "SCRIPT ERROR|Parse Error|Failed to load script|Cannot open file" import.log; then
+            echo "::error::Script/parse errors during import; see log above."
+            exit 1
+          fi
+
+      - name: Export Web build
+        run: |
+          mkdir -p build/web
+          godot --headless --path . --export-release Web build/web/index.html 2>&1 | tee export.log
+          if grep -qE "SCRIPT ERROR|Parse Error|Export failed|No export template" export.log; then
+            echo "::error::Web export failed; see log above."
+            exit 1
+          fi
+          test -f build/web/index.html
+
+      - name: Upload PR Web artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixel-dungeon-web
+          path: build/web
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
