@@ -14,6 +14,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_headless_save_descend_reload.gd",
 	"res://tests/cases/test_game_manager_run_state.gd",
 	"res://tests/cases/test_save_manager.gd",
+	"res://tests/cases/test_wand_recharge.gd",
 ]
 
 var _checks: int = 0
