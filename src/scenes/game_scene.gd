@@ -116,6 +116,7 @@ var _held_move_dir: int = 0
 var _held_move_keys: Array[int] = []
 var _held_move_repeat_cooldown: float = 0.0
 var _active_touch_points: Dictionary = {}
+var _ui_touch_points: Dictionary = {}
 var _touch_gesture_started: bool = false
 var _suppress_touch_mouse_until_msec: int = 0
 const HELD_MOVE_REPEAT_DELAY: float = 0.25
@@ -262,11 +263,19 @@ func _input(event: InputEvent) -> void:
 		var touch: InputEventScreenTouch = event as InputEventScreenTouch
 		_suppress_synthesized_touch_mouse()
 		if touch.pressed:
+			if _is_screen_position_over_hud(touch.position):
+				_ui_touch_points[touch.index] = true
+				get_viewport().set_input_as_handled()
+				return
 			_active_touch_points[touch.index] = touch.position
 			if _active_touch_points.size() >= 2:
 				_touch_gesture_started = true
 				_cancel_auto_walk()
 		else:
+			if _ui_touch_points.has(touch.index):
+				_ui_touch_points.erase(touch.index)
+				get_viewport().set_input_as_handled()
+				return
 			var should_tap: bool = not _touch_gesture_started \
 					and _active_touch_points.size() == 1 \
 					and _active_touch_points.has(touch.index)
@@ -278,6 +287,9 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag:
 		var drag: InputEventScreenDrag = event as InputEventScreenDrag
 		_suppress_synthesized_touch_mouse()
+		if _ui_touch_points.has(drag.index):
+			get_viewport().set_input_as_handled()
+			return
 		if _active_touch_points.has(drag.index):
 			_active_touch_points[drag.index] = drag.position
 			if _active_touch_points.size() >= 2:
@@ -349,6 +361,13 @@ func _suppress_synthesized_touch_mouse() -> void:
 
 func _is_synthesized_touch_mouse_suppressed() -> bool:
 	return Time.get_ticks_msec() <= _suppress_touch_mouse_until_msec
+
+func _is_screen_position_over_hud(screen_pos: Vector2) -> bool:
+	if _hud == null or not is_instance_valid(_hud):
+		return false
+	if _hud.has_method("contains_screen_position"):
+		return bool(_hud.contains_screen_position(screen_pos))
+	return false
 
 func _handle_touch_tap(screen_pos: Vector2) -> void:
 	if not _awaiting_hero_input:

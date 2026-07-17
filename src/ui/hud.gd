@@ -12,7 +12,7 @@ const DESKTOP_TOOLBAR_HEIGHT: int = 40
 const MOBILE_TOOLBAR_HEIGHT: int = 72
 const MOBILE_BREAKPOINT: float = 720.0
 const HUD_MARGIN: float = 6.0
-const MOBILE_STATUS_SIZE: Vector2 = Vector2(150, 70)
+const MOBILE_STATUS_HEIGHT: float = 84.0
 
 # --- Child panels ---
 var toolbar: MarginContainer = null
@@ -238,6 +238,30 @@ func _build_layout() -> void:
 	_boss_hp_bar = _instantiate_script("res://src/ui/boss_hp_bar.gd")
 	_boss_hp_bar.name = "BossHPBar"
 	add_child(_boss_hp_bar)
+
+
+func contains_screen_position(screen_pos: Vector2) -> bool:
+	var root_node: Control = get_node_or_null("HUDRoot") as Control
+	if root_node == null:
+		return false
+	if window_layer != null and window_layer.visible:
+		return true
+	if toolbar != null and _control_contains_screen_position(toolbar, screen_pos):
+		return true
+	var status_container: Control = root_node.get_node_or_null("StatusContainer") as Control
+	if status_container != null and _control_contains_screen_position(status_container, screen_pos):
+		return true
+	var party_row: Control = root_node.get_node_or_null("PartyRow") as Control
+	if party_row != null and party_row.visible and _control_contains_screen_position(party_row, screen_pos):
+		return true
+	return false
+
+
+func _control_contains_screen_position(control: Control, screen_pos: Vector2) -> bool:
+	if control == null or not control.visible:
+		return false
+	var rect: Rect2 = control.get_global_rect()
+	return rect.has_point(screen_pos)
 
 
 func _connect_signals() -> void:
@@ -649,7 +673,11 @@ func _apply_responsive_layout() -> void:
 	if status_container:
 		status_container.position = Vector2(HUD_MARGIN, HUD_MARGIN)
 		var is_portrait_mobile: bool = _is_mobile_portrait_layout()
-		status_container.custom_minimum_size = MOBILE_STATUS_SIZE if is_portrait_mobile else Vector2(180 if is_mobile_layout else 220, 140)
+		status_container.custom_minimum_size = (
+			Vector2(maxf(0.0, _vp_size.x - (HUD_MARGIN * 2.0)), MOBILE_STATUS_HEIGHT)
+			if is_portrait_mobile
+			else Vector2(180 if is_mobile_layout else 220, 140)
+		)
 		status_container.size = status_container.custom_minimum_size
 		if _status_pane and _status_pane.has_method("set_compact_mode"):
 			_status_pane.set_compact_mode(is_portrait_mobile)

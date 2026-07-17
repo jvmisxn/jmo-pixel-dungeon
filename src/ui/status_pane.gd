@@ -32,6 +32,13 @@ var _equip_label: Label = null
 var _buffs_label: Label = null
 var _separator_equipment: HSeparator = null
 var _separator_buffs: HSeparator = null
+var _compact_strip: HBoxContainer = null
+var _compact_level_label: Label = null
+var _compact_hp_bar: ProgressBar = null
+var _compact_shield_bar: ProgressBar = null
+var _compact_hp_label: Label = null
+var _compact_xp_bar: ProgressBar = null
+var _compact_xp_label: Label = null
 
 # Equipment slot references (ItemSlot components for proper sprite rendering)
 var _slot_weapon: ItemSlot = null
@@ -46,7 +53,7 @@ var _compact_mode: bool = false
 # --- Constants ---
 const SLOT_SIZE: Vector2 = Vector2(28, 28)
 const BAR_HEIGHT: int = 14
-const COMPACT_MINIMUM_SIZE: Vector2 = Vector2(146, 58)
+const COMPACT_MINIMUM_SIZE: Vector2 = Vector2(0, 76)
 const BUFF_ICON_SIZE: Vector2 = Vector2(16, 16)
 const STATUS_PANE_PATH: String = "res://assets/spd/interfaces/status_pane.png"
 const HERO_ICONS_PATH: String = "res://assets/spd/interfaces/hero_icons.png"
@@ -257,6 +264,111 @@ func _build_ui() -> void:
 	_buffs_container.add_theme_constant_override("v_separation", 2)
 	add_child(_buffs_container)
 
+	_build_compact_strip()
+
+
+func _build_compact_strip() -> void:
+	_compact_strip = HBoxContainer.new()
+	_compact_strip.visible = false
+	_compact_strip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_compact_strip.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_compact_strip.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_compact_strip.add_theme_constant_override("separation", 8)
+
+	_compact_level_label = Label.new()
+	_compact_level_label.text = "Lv. 1"
+	_compact_level_label.custom_minimum_size = Vector2(58, 0)
+	_compact_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_compact_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_compact_level_label.add_theme_font_size_override("font_size", 18)
+	_compact_level_label.add_theme_color_override("font_color", Color(0.9, 0.84, 0.62))
+	_compact_strip.add_child(_compact_level_label)
+
+	var bars: VBoxContainer = VBoxContainer.new()
+	bars.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bars.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bars.add_theme_constant_override("separation", 6)
+	_compact_strip.add_child(bars)
+
+	var hp_row: HBoxContainer = HBoxContainer.new()
+	hp_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_row.add_theme_constant_override("separation", 6)
+	bars.add_child(hp_row)
+
+	var hp_bar_container: Control = Control.new()
+	hp_bar_container.custom_minimum_size = Vector2(0, 22)
+	hp_bar_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_row.add_child(hp_bar_container)
+
+	_compact_shield_bar = ProgressBar.new()
+	_compact_shield_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_compact_shield_bar.show_percentage = false
+	var compact_shield_fill := StyleBoxFlat.new()
+	compact_shield_fill.bg_color = Color(0.85, 0.78, 0.35)
+	compact_shield_fill.set_corner_radius_all(2)
+	_compact_shield_bar.add_theme_stylebox_override("fill", compact_shield_fill)
+	var compact_shield_bg := StyleBoxFlat.new()
+	compact_shield_bg.bg_color = Color(0.15, 0.05, 0.05)
+	compact_shield_bg.border_color = Color(0.4, 0.2, 0.2)
+	compact_shield_bg.set_border_width_all(1)
+	compact_shield_bg.set_corner_radius_all(2)
+	_compact_shield_bar.add_theme_stylebox_override("background", compact_shield_bg)
+	hp_bar_container.add_child(_compact_shield_bar)
+
+	_compact_hp_bar = ProgressBar.new()
+	_compact_hp_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_compact_hp_bar.show_percentage = false
+	var compact_hp_fill := StyleBoxFlat.new()
+	compact_hp_fill.bg_color = Color(0.78, 0.16, 0.16)
+	compact_hp_fill.set_corner_radius_all(2)
+	_compact_hp_bar.add_theme_stylebox_override("fill", compact_hp_fill)
+	var compact_hp_bg := StyleBoxFlat.new()
+	compact_hp_bg.bg_color = Color(0.0, 0.0, 0.0, 0.0)
+	compact_hp_bg.set_corner_radius_all(2)
+	_compact_hp_bar.add_theme_stylebox_override("background", compact_hp_bg)
+	hp_bar_container.add_child(_compact_hp_bar)
+
+	_compact_hp_label = Label.new()
+	_compact_hp_label.text = "20/20"
+	_compact_hp_label.custom_minimum_size = Vector2(72, 0)
+	_compact_hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_compact_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_compact_hp_label.add_theme_font_size_override("font_size", 16)
+	_compact_hp_label.add_theme_color_override("font_color", Color(0.95, 0.84, 0.72))
+	hp_row.add_child(_compact_hp_label)
+
+	var xp_row: HBoxContainer = HBoxContainer.new()
+	xp_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	xp_row.add_theme_constant_override("separation", 6)
+	bars.add_child(xp_row)
+
+	_compact_xp_bar = ProgressBar.new()
+	_compact_xp_bar.custom_minimum_size = Vector2(0, 18)
+	_compact_xp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_compact_xp_bar.show_percentage = false
+	var compact_xp_fill := StyleBoxFlat.new()
+	compact_xp_fill.bg_color = Color(0.2, 0.55, 0.85)
+	compact_xp_fill.set_corner_radius_all(2)
+	_compact_xp_bar.add_theme_stylebox_override("fill", compact_xp_fill)
+	var compact_xp_bg := StyleBoxFlat.new()
+	compact_xp_bg.bg_color = Color(0.05, 0.1, 0.18)
+	compact_xp_bg.border_color = Color(0.2, 0.3, 0.45)
+	compact_xp_bg.set_border_width_all(1)
+	compact_xp_bg.set_corner_radius_all(2)
+	_compact_xp_bar.add_theme_stylebox_override("background", compact_xp_bg)
+	xp_row.add_child(_compact_xp_bar)
+
+	_compact_xp_label = Label.new()
+	_compact_xp_label.text = "0/10"
+	_compact_xp_label.custom_minimum_size = Vector2(72, 0)
+	_compact_xp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_compact_xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_compact_xp_label.add_theme_font_size_override("font_size", 14)
+	_compact_xp_label.add_theme_color_override("font_color", Color(0.74, 0.84, 0.96))
+	xp_row.add_child(_compact_xp_label)
+
+	add_child(_compact_strip)
+
 
 func _build_hp_section() -> void:
 	_hp_section = VBoxContainer.new()
@@ -397,7 +509,10 @@ func set_compact_mode(is_compact: bool) -> void:
 	custom_minimum_size = COMPACT_MINIMUM_SIZE if _compact_mode else Vector2.ZERO
 	add_theme_constant_override("separation", 3 if _compact_mode else 6)
 	if _level_label:
+		_level_label.visible = not _compact_mode
 		_level_label.add_theme_font_size_override("font_size", 12 if _compact_mode else 13)
+	if _compact_strip:
+		_compact_strip.visible = _compact_mode
 	if _portrait_container:
 		_portrait_container.visible = not _compact_mode
 	if _focus_label:
@@ -419,12 +534,14 @@ func set_compact_mode(is_compact: bool) -> void:
 	if _buffs_container:
 		_buffs_container.visible = not _compact_mode
 	if _hp_section:
+		_hp_section.visible = not _compact_mode
 		_hp_section.add_theme_constant_override("separation", 0 if _compact_mode else 1)
 	if _hp_header:
 		_hp_header.add_theme_font_size_override("font_size", 9 if _compact_mode else 10)
 	if _hp_label:
 		_hp_label.visible = not _compact_mode
 	if _xp_section:
+		_xp_section.visible = not _compact_mode
 		_xp_section.add_theme_constant_override("separation", 0 if _compact_mode else 1)
 	if _xp_header:
 		_xp_header.add_theme_font_size_override("font_size", 9 if _compact_mode else 10)
@@ -488,12 +605,20 @@ func update_all() -> void:
 		_hp_bar.value = hp
 	if _hp_label:
 		_hp_label.text = "%d / %d" % [hp, hp_max]
+	if _compact_hp_bar:
+		_compact_hp_bar.max_value = hp_max
+		_compact_hp_bar.value = hp
+	if _compact_hp_label:
+		_compact_hp_label.text = "%d/%d" % [hp, hp_max]
 
 	# Shielding (barrier buff)
 	var shield: int = hero.shielding
 	if _shield_bar:
 		_shield_bar.max_value = hp_max
 		_shield_bar.value = hp + shield
+	if _compact_shield_bar:
+		_compact_shield_bar.max_value = hp_max
+		_compact_shield_bar.value = hp + shield
 
 	# XP
 	var xp: int = hero.xp
@@ -506,6 +631,13 @@ func update_all() -> void:
 		_xp_label.text = "%d / %d" % [xp, xp_max]
 	if _level_label:
 		_level_label.text = "Lv. %d" % hero_level
+	if _compact_xp_bar:
+		_compact_xp_bar.max_value = xp_max
+		_compact_xp_bar.value = xp
+	if _compact_xp_label:
+		_compact_xp_label.text = "%d/%d" % [xp, xp_max]
+	if _compact_level_label:
+		_compact_level_label.text = "Lv.%d" % hero_level
 	if _focus_label:
 		_focus_label.visible = false
 		if not _compact_mode and GameManager and GameManager.has_method("is_party_run") and GameManager.is_party_run() and GameManager.has_method("get_hero_index"):
