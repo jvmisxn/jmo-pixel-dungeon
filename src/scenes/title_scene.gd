@@ -664,8 +664,8 @@ func _check_has_save() -> bool:
 
 func _apply_layout() -> void:
 	var viewport_size: Vector2 = get_viewport_rect().size
-	var margin: float = 24.0
 	var is_portrait: bool = viewport_size.y > viewport_size.x
+	var margin: float = 48.0 if is_portrait else 24.0
 	var menu_width: float = minf(400.0, viewport_size.x - (margin * 2.0))
 	var title_width: float = maxf(1.0, viewport_size.x - (margin * 2.0))
 	var title_top: float = 64.0 if is_portrait else 20.0
