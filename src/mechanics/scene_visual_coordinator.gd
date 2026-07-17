@@ -267,6 +267,8 @@ static func _blob_color_for_id(blob_id: String) -> Color:
 			return Color(0.95, 0.84, 0.26)
 		"confusion_gas":
 			return Color(0.72, 0.45, 0.95)
+		"freezing":
+			return Color(0.55, 0.82, 1.0)
 		"fire":
 			return Color(1.0, 0.42, 0.12)
 		"web":

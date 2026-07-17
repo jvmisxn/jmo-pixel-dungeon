@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: potions, blobs, gases, source-fidelity, audit-S15, audit-S20
+- Re-pointed offensive potion shatter effects at the live blob layer. Toxic Gas, Paralytic Gas, and Liquid Flame now seed `ToxicGas`, `ParalyticGas`, and `FireBlob` through `Level.add_blob()` instead of applying one-shot 3x3 buffs, and Potion of Frost now seeds a new `FreezingBlob` that freezes characters and water terrain. Updated blob and thrown-potion shatter tests to assert blob seeding, deferred tick effects, and freezing behavior. Follow-up: blob ticking still runs per hero round rather than true actor time, and freezing/fire cross-blob cancellation is not implemented yet.
+
 - Tags: items, stack-splitting, source-fidelity, audit-S12, audit-S15, audit-S17
 - Fixed stack splitting so split-off consumables keep their concrete behavior instead of becoming inert base items. Base `Item.duplicate_item()` now reconstructs clones through `Generator.create_item(item_id)` before copying shared state, so factory-backed stackables like seeds, bombs, stones, spells, food, missile weapons, torches, and dewdrops keep their scripts and subtype fields. Potion and scroll overrides now route through `Potion.create(item_id)` / `Scroll.create(item_id)` so split stacks preserve their actual `drink()`/`read_scroll()` implementations instead of downgrading to base `Potion`/`Scroll`. Added `test_item_stack_splitting.gd` to cover the affected families.
 

@@ -20,6 +20,7 @@ const MUST_COMPILE: Array[String] = [
 	"res://src/autoloads/network_manager.gd",
 	"res://src/autoloads/player_profile.gd",
 	"res://src/actors/respawner.gd",
+	"res://src/actors/blobs/freezing_blob.gd",
 ]
 
 func run(t: Object) -> void:

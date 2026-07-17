@@ -20,6 +20,8 @@ func run(t: Object) -> void:
 	_test_no_row_wrap(t)
 	_test_decay_and_prune(t)
 	_test_toxic_gas_poisons(t)
+	_test_freezing_blob_freezes(t)
+	_test_freezing_blob_freezes_water(t)
 	_test_serialize_round_trip(t)
 	_test_level_merge_and_tick(t)
 
@@ -81,6 +83,33 @@ func _test_toxic_gas_poisons(t: Object) -> void:
 	gas.tick()
 	t.check(victim.has_buff("Poison"), "toxic gas poisons a character standing in it")
 	victim.free()
+
+func _test_freezing_blob_freezes(t: Object) -> void:
+	var victim: Char = Char.new()
+	var cell: int = _center()
+	victim.pos = cell
+	var stub: StubLevel = StubLevel.new()
+	stub._char = victim
+	stub._char_cell = cell
+	var script: GDScript = load("res://src/actors/blobs/freezing_blob.gd") as GDScript
+	var frost: Blob = script.new() as Blob
+	frost.level = stub
+	frost.seed(cell, 5.0)
+	frost.tick()
+	t.check(victim.has_buff("Frozen"), "freezing blob freezes a character standing in it")
+	victim.free()
+
+func _test_freezing_blob_freezes_water(t: Object) -> void:
+	var level: Level = Level.new()
+	var cell: int = _center()
+	level.set_terrain(cell, ConstantsData.Terrain.WATER)
+	var script: GDScript = load("res://src/actors/blobs/freezing_blob.gd") as GDScript
+	var frost: Blob = script.new() as Blob
+	frost.level = level
+	frost.seed(cell, 5.0)
+	frost.tick()
+	t.check(level.get_terrain(cell) == ConstantsData.Terrain.EMPTY,
+			"freezing blob freezes water terrain")
 
 func _test_serialize_round_trip(t: Object) -> void:
 	var gas: ToxicGas = ToxicGas.new()

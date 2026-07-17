@@ -42,7 +42,10 @@ func run(t: Object) -> void:
 
 	hero._do_throw_item(potion, target_pos)
 
-	t.check(victim.has_buff("Poison"), "thrown potion calls shatter effect at the collision cell")
+	t.check(_has_blob(level, "toxic_gas"), "thrown toxic gas potion seeds toxic gas")
+	t.check(not victim.has_buff("Poison"), "thrown gas waits for the blob tick before applying poison")
+	level.tick_blobs()
+	t.check(victim.has_buff("Poison"), "toxic gas blob poisons at the collision cell")
 	t.check(potion.quantity == 1, "thrown potion consumes one item from the stack")
 	t.check(hero.belongings.has_item(potion), "partially consumed thrown potion remains in backpack")
 	t.check(potion.is_identified(), "thrown potion identifies itself after shattering")
@@ -51,7 +54,18 @@ func run(t: Object) -> void:
 	single_potion.quantity = 1
 	t.check(hero.belongings.add_item(single_potion), "single test potion added to backpack")
 	hero._do_throw_item(single_potion, target_pos)
+	t.check(_has_blob(level, "paralytic_gas"), "thrown paralytic gas potion seeds paralytic gas")
+	level.tick_blobs()
+	t.check(victim.has_buff("Paralysis"), "paralytic gas blob paralyzes at the collision cell")
 	t.check(not hero.belongings.has_item(single_potion), "last thrown potion is removed from backpack")
+
+	var flame: Potion = Potion.create("liquid_flame")
+	flame.shatter(target_pos, level)
+	t.check(_has_blob(level, "fire"), "liquid flame shatter seeds fire blob")
+
+	var frost: Potion = Potion.create("frost")
+	frost.shatter(target_pos, level)
+	t.check(_has_blob(level, "freezing"), "frost shatter seeds freezing blob")
 
 	GameManager.heroes = original_heroes
 	GameManager.hero = original_hero
@@ -59,3 +73,10 @@ func run(t: Object) -> void:
 
 	hero.free()
 	victim.free()
+
+func _has_blob(level: Level, blob_id: String) -> bool:
+	for entry: Dictionary in level.blobs:
+		var blob: Variant = entry.get("blob")
+		if blob != null and str(blob.get("blob_id")) == blob_id:
+			return true
+	return false

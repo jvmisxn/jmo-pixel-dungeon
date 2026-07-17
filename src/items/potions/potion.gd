@@ -26,6 +26,7 @@ func _init() -> void:
 
 ## Time cost for drinking a potion (matches original TIME_TO_DRINK = 1f).
 const TIME_TO_DRINK: float = 1.0
+const FREEZING_BLOB_SCRIPT: String = "res://src/actors/blobs/freezing_blob.gd"
 
 ## Primary action: drink the potion and consume one from the stack.
 func execute(hero: Char) -> void:
@@ -47,6 +48,20 @@ func drink(_hero: Char) -> void:
 func shatter(_pos: int, _lvl: Variant) -> void:
 	if MessageLog:
 		MessageLog.add("The potion shatters!")
+
+func _seed_shatter_blob(lvl: Variant, pos: int, blob: Blob, amount: float = 5.0) -> bool:
+	if lvl == null or blob == null:
+		return false
+	if not lvl.has_method("add_blob"):
+		return false
+	lvl.add_blob(blob, pos, amount)
+	return true
+
+func _new_freezing_blob() -> Blob:
+	var script: GDScript = load(FREEZING_BLOB_SCRIPT) as GDScript
+	if script == null:
+		return null
+	return script.new() as Blob
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -441,23 +456,7 @@ class PotionToxicGas extends Potion:
 
 	func shatter(spos: int, lvl: Variant) -> void:
 		super.shatter(spos, lvl)
-		_apply_gas_to_area(spos, lvl)
-
-	func _apply_gas_to_area(spos: int, lvl: Variant) -> void:
-		if lvl == null:
-			return
-		# Poison all characters in a 3x3 area around shatter position
-		var positions: Array[int] = [spos]
-		for offset: int in ConstantsData.DIRS_8:
-			var adj: int = spos + offset
-			if ConstantsData.is_valid_pos(adj):
-				positions.append(adj)
-		if lvl.has_method("find_char_at"):
-			for p: int in positions:
-				var target: Variant = lvl.find_char_at(p)
-				if target and target.has_method("add_buff"):
-					var poison_buff: Poison = Poison.create(5.0)
-					target.add_buff(poison_buff)
+		_seed_shatter_blob(lvl, spos, ToxicGas.new())
 		if MessageLog:
 			MessageLog.add_warning("A cloud of toxic gas fills the area!")
 
@@ -484,32 +483,7 @@ class PotionLiquidFlame extends Potion:
 
 	func shatter(spos: int, lvl: Variant) -> void:
 		super.shatter(spos, lvl)
-		_apply_fire_to_area(spos, lvl)
-
-	func _apply_fire_to_area(spos: int, lvl: Variant) -> void:
-		if lvl == null:
-			return
-		# Set fire to all characters in a 3x3 area
-		var positions: Array[int] = [spos]
-		for offset: int in ConstantsData.DIRS_8:
-			var adj: int = spos + offset
-			if ConstantsData.is_valid_pos(adj):
-				positions.append(adj)
-		if lvl.has_method("find_char_at"):
-			for p: int in positions:
-				var target: Variant = lvl.find_char_at(p)
-				if target and target.has_method("add_buff"):
-					var burn: Burning = Burning.new()
-					target.add_buff(burn)
-		# Set terrain on fire (high grass -> embers)
-		if lvl.has_method("get_terrain") and lvl.has_method("set_terrain"):
-			for p: int in positions:
-				if ConstantsData.is_valid_pos(p):
-					var terrain: int = lvl.get_terrain(p)
-					if terrain == ConstantsData.Terrain.HIGH_GRASS or terrain == ConstantsData.Terrain.GRASS:
-						lvl.set_terrain(p, ConstantsData.Terrain.EMBERS)
-					elif terrain == ConstantsData.Terrain.BARRICADE:
-						lvl.set_terrain(p, ConstantsData.Terrain.EMBERS)
+		_seed_shatter_blob(lvl, spos, FireBlob.new())
 		if MessageLog:
 			MessageLog.add_warning("Flames erupt across the area!")
 
@@ -518,8 +492,6 @@ class PotionLiquidFlame extends Potion:
 # Potion of Frost
 # ---------------------------------------------------------------------------
 class PotionFrost extends Potion:
-	const FROST_DAMAGE: int = 2
-
 	func _init() -> void:
 		super._init()
 		item_id = "frost"
@@ -538,34 +510,7 @@ class PotionFrost extends Potion:
 
 	func shatter(spos: int, lvl: Variant) -> void:
 		super.shatter(spos, lvl)
-		_apply_frost_to_area(spos, lvl)
-
-	func _apply_frost_to_area(spos: int, lvl: Variant) -> void:
-		if lvl == null:
-			return
-		var positions: Array[int] = [spos]
-		for offset: int in ConstantsData.DIRS_8:
-			var adj: int = spos + offset
-			if ConstantsData.is_valid_pos(adj):
-				positions.append(adj)
-		if lvl.has_method("find_char_at"):
-			for p: int in positions:
-				var target: Variant = lvl.find_char_at(p)
-				if target == null:
-					continue
-				# Extinguish burning
-				if target.has_method("remove_buff_by_id"):
-					target.remove_buff_by_id("Burning")
-				# Deal frost damage
-				if target.has_method("take_damage"):
-					target.take_damage(FROST_DAMAGE, null)
-		# Freeze water tiles
-		if lvl.has_method("get_terrain") and lvl.has_method("set_terrain"):
-			for p: int in positions:
-				if ConstantsData.is_valid_pos(p):
-					var terrain: int = lvl.get_terrain(p)
-					if terrain == ConstantsData.Terrain.WATER:
-						lvl.set_terrain(p, ConstantsData.Terrain.EMPTY)
+		_seed_shatter_blob(lvl, spos, _new_freezing_blob())
 		if MessageLog:
 			MessageLog.add_info("Everything in the area freezes!")
 
@@ -626,23 +571,7 @@ class PotionParalyticGas extends Potion:
 
 	func shatter(spos: int, lvl: Variant) -> void:
 		super.shatter(spos, lvl)
-		_apply_paralysis_to_area(spos, lvl)
-
-	func _apply_paralysis_to_area(spos: int, lvl: Variant) -> void:
-		if lvl == null:
-			return
-		var positions: Array[int] = [spos]
-		for offset: int in ConstantsData.DIRS_8:
-			var adj: int = spos + offset
-			if ConstantsData.is_valid_pos(adj):
-				positions.append(adj)
-		if lvl.has_method("find_char_at"):
-			for p: int in positions:
-				var target: Variant = lvl.find_char_at(p)
-				if target and target.has_method("add_buff"):
-					var buff: Paralysis = Paralysis.new()
-					buff.set_duration(5.0)
-					target.add_buff(buff)
+		_seed_shatter_blob(lvl, spos, ParalyticGas.new())
 		if MessageLog:
 			MessageLog.add_warning("A cloud of paralytic gas fills the area!")
 
