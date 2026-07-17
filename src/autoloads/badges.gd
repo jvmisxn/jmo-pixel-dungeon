@@ -437,5 +437,9 @@ const _ALL_BADGE_IDS: Array[String] = [
 	# Skill
 	"no_armor_win",
 	"no_food_win",
-	"champion_win"
+	"champion_win",
+	"strength_15",
+	# Death
+	"first_death",
+	"death_by_goo"
 ]

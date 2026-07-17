@@ -103,10 +103,6 @@ func attack(target: Char, dmg_multi: float = 1.0, dmg_bonus: float = 0.0, acc_mu
 		if berserk_buff and berserk_buff.has_method("damage_factor"):
 			dmg = berserk_buff.damage_factor(dmg)
 
-		# Fury: 1.5x damage when below 50% HP
-		if has_buff("Fury"):
-			dmg *= 1.5
-
 		# Weakness: 0.67x damage
 		if has_buff("Weakness"):
 			dmg *= 0.67
@@ -527,19 +523,11 @@ func on_move(old_pos: int, new_pos: int) -> void:
 # ---------------------------------------------------------------------------
 
 ## Get speed including buff modifiers. Matches original Char.speed().
-## Specific named buffs are checked directly to match original multiplier order.
 func get_speed() -> float:
 	var spd: float = base_speed
-
-	# Named buff speed modifiers matching original Char.speed()
-	if has_buff("Cripple"):
-		spd /= 2.0
-	if has_buff("Stamina"):
-		spd *= 1.5
-	if has_buff("Adrenaline"):
-		spd *= 2.0
-	if has_buff("Haste"):
-		spd *= 3.0
+	for b: Node in _buffs:
+		if b.has_method("modify_speed"):
+			spd = b.modify_speed(spd)
 	return spd
 
 # ---------------------------------------------------------------------------
