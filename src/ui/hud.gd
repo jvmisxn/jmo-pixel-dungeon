@@ -281,6 +281,8 @@ func handle_screen_tap(screen_pos: Vector2) -> bool:
 		if _toolbar_bar != null and _toolbar_bar.has_method("activate_button_at_screen_position"):
 			return bool(_toolbar_bar.activate_button_at_screen_position(screen_pos))
 		return true
+	if _party_row != null and _party_row.visible and _control_contains_screen_position(_party_row, screen_pos):
+		return _activate_party_button_at_screen_position(screen_pos)
 	return false
 
 
@@ -289,6 +291,20 @@ func _control_contains_screen_position(control: Control, screen_pos: Vector2) ->
 		return false
 	var rect: Rect2 = control.get_global_rect()
 	return rect.has_point(screen_pos)
+
+
+func _activate_party_button_at_screen_position(screen_pos: Vector2) -> bool:
+	if _party_row == null or not _party_row.visible:
+		return false
+	for child: Node in _party_row.get_children():
+		var button: Button = child as Button
+		if button == null or button.disabled:
+			continue
+		if not _control_contains_screen_position(button, screen_pos):
+			continue
+		_on_party_focus_pressed(int(button.get_meta("hero_index", -1)))
+		return true
+	return false
 
 
 func _connect_signals() -> void:
@@ -666,6 +682,7 @@ func _refresh_party_row() -> void:
 		else:
 			btn.modulate = Color(0.82, 0.82, 0.88, 0.92) if is_alive else Color(0.58, 0.58, 0.62, 0.82)
 		if is_alive:
+			btn.set_meta("hero_index", idx)
 			btn.pressed.connect(_on_party_focus_pressed.bind(idx))
 		_party_row.add_child(btn)
 

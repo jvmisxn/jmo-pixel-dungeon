@@ -300,7 +300,7 @@ func _input(event: InputEvent) -> void:
 				_cancel_auto_walk()
 	elif event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT and _is_synthesized_touch_mouse_suppressed() and not _is_screen_position_over_hud(mb.position):
+		if mb.button_index == MOUSE_BUTTON_LEFT and _should_suppress_synthesized_touch_mouse_event(mb.position):
 			get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -367,6 +367,9 @@ func _suppress_synthesized_touch_mouse() -> void:
 
 func _is_synthesized_touch_mouse_suppressed() -> bool:
 	return Time.get_ticks_msec() <= _suppress_touch_mouse_until_msec
+
+func _should_suppress_synthesized_touch_mouse_event(_screen_pos: Vector2) -> bool:
+	return _is_synthesized_touch_mouse_suppressed()
 
 func _is_screen_position_over_hud(screen_pos: Vector2) -> bool:
 	if _hud == null or not is_instance_valid(_hud):
