@@ -429,11 +429,15 @@ class WandOfFrost extends Wand:
 			target_char.take_damage(dmg, hero)
 			# Apply chill (use Cripple as cold-slow approximation)
 			if target_char.has_method("add_buff"):
+				# Capture the chilled state BEFORE applying this hit's Cripple —
+				# SPD only freezes a target that was already chilled (Frost.freeze).
+				var was_chilled: bool = target_char.has_method("has_buff") \
+						and target_char.has_buff("Cripple")
 				var chill: Cripple = Cripple.new()
 				chill.set_duration(5.0 + float(level) * 2.0)
 				target_char.add_buff(chill)
-				# If already crippled, freeze (paralyze)
-				if target_char.has_method("has_buff") and target_char.has_buff("Cripple"):
+				# If it was already crippled before this bolt, freeze (paralyze).
+				if was_chilled:
 					var freeze: Paralysis = Paralysis.new()
 					freeze.set_duration(3.0 + float(level))
 					target_char.add_buff(freeze)

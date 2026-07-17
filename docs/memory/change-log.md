@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-17
+
+- Tags: wands, combat, fidelity, spd-parity, audit-S14
+- Fixed Wand of Frost always paralysing (audit S14 P1). `WandOfFrost.on_zap` applied `Cripple` (chill) and then checked `has_buff("Cripple")` on the same target - always true because it had just been added - so `Paralysis` (freeze) fired on *every* frost hit instead of only when the target was already chilled. SPD's `Frost.freeze()` only freezes an already-chilled target. Fix: capture `was_chilled` *before* adding the new Cripple, and gate the freeze on that (`wand.gd:430-442`). Added `tests/cases/test_wand_of_frost.gd` (fresh target -> chilled but not frozen; pre-chilled target -> frozen) and registered it in the runner; verified it fails against the pre-fix code and passes after. Full headless suite green (177 checks). NOTE: the S14 wand P0 "wands never recharge" is already fixed/tested (PR #5 `belongings.recharge_wands` per hero turn) - NEXT-STEPS.md is stale on that. Remaining S14 P1s still open in `wand.gd`: Corruption makes an enemy not an ally (string alignment + Amok), Disintegration bypasses `take_damage`, Warding spawns no sentry, use-to-id stalls after 5 zaps.
+
 ## 2026-07-16
 
 - Tags: blobs, gas, simulation, fidelity, spd-parity

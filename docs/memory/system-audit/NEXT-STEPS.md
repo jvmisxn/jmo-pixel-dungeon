@@ -4,6 +4,11 @@ Synthesized 2026-07-11 from the 37-system audit (`reports/S01–S37`), `backlog.
 (~140 tagged findings), and the repo's own strategy docs (active-context,
 framework-extraction-roadmap, multiplayer-roadmap, persistence-notes).
 
+**Status (2026-07-15):** WS0 is complete (PR #1 merged), WS1 is complete
+(CI/headless test harness landed), PR #2 has the first quick-win crash/data-loss
+batch open and CI-green, and WS2 is in progress. Next priority after finishing
+WS2 is the WS2.5 wand-recharge P0 micro-PR, then the WS3/WS4 save-contract spine.
+
 **Standing constraints (apply to every workstream):**
 - No Godot engine on this machine → verification is `gdparse`/`gdlint` + reasoning.
   Items marked **[ENGINE]** are not trustworthy until played in-engine (or in CI, see WS1).
@@ -13,7 +18,12 @@ framework-extraction-roadmap, multiplayer-roadmap, persistence-notes).
 - `SAVE_VERSION` currently only rejects *newer* saves. Any fix that alters the save
   contract is marked **[SAVE]** and must land *after* the WS2 migration scaffold
   (`_migrate(save, from_version)` + version bump per change).
-- PR #1 (`audit/autofix`) holds mechanically-safe cleanups — merge before starting.
+- Each workstream ships its logic fix and its CI round-trip/contract test in the
+  same PR whenever practical; WS1 seeds only the harness and broad smoke tests.
+- One **[SAVE]** contract change = one PR with its own `SAVE_VERSION` bump and
+  migration. Do not batch unrelated contract changes into one version bump.
+- One **[TRUNC]** dead-code deletion = its own reviewed diff, separate from the
+  behavioral change in the same file.
 
 ---
 
@@ -95,10 +105,16 @@ M (1–3 days), L (multi-day).
 ### WS1 — CI + headless test harness (verification keystone) — **M, low risk**
 - GitHub Actions job: install Godot 4.5 headless → `gdparse` every file (truncation
   tripwire), gdlint, then a minimal test runner (GUT or bespoke `SceneTree` script).
-- Seed tests for pure logic: Ballistica/ShadowCaster/Pathfinder geometry (S22),
-  online codecs round-trip (S31), item serialize→create→deserialize (S12),
-  scheduler cooldown math (S04), **EventBus emitter+consumer contract test** (S27),
-  badge count invariant (S29).
+- Seed only the broad tests that guard the harness itself: Ballistica/
+  ShadowCaster/Pathfinder geometry (S22), online codecs round-trip (S31),
+  **EventBus emitter+consumer contract test** (S27), and one item
+  serialize→create→deserialize smoke test (S12).
+- Add a WS1b headless smoke-run: start a run, descend at least two floors, save,
+  reload, and assert hero HP/inventory/depth survived. This is the missing CI
+  bridge between pure import tests and the [ENGINE] save/lifecycle risks below.
+- Defer narrow contract tests to the PR that changes the contract: scheduler
+  cooldowns with TurnManager persistence (S04), badge count with badge fixes
+  (S29), item round-trips with each item save fix, etc.
 - Why first: with no local engine, this is the only scalable trust mechanism for
   everything below; it also permanently guards against the repo's truncation
   failure mode.
@@ -122,6 +138,15 @@ M (1–3 days), L (multi-day).
 - Touches: save_manager.gd, game_manager.gd, message_log.gd (all [TRUNC]),
   floor_transition_coordinator.gd (safe). Playtest: autosave-on-close is [ENGINE];
   the rest is statically verifiable + CI-testable.
+
+### WS2.5 — Wand recharge P0 micro-PR — **S-M, medium risk** [TRUNC][ENGINE]
+- Per-hero-turn Charger buff on equip → `recharge(1, hero)` × Recharging/
+  battlemage multipliers [audit:S14 **P0**].
+- Keep this separate from WS7's subclass/balance fixes: the P0 is the clearest
+  early player-visible win, and a tiny `wand.gd` diff is safer than reopening the
+  whole wand stack at once.
+- Touches: wand.gd [TRUNC]. Add a focused CI contract if the charge math can run
+  headlessly; final wand feel is [ENGINE].
 
 ### WS3 — Buff/modifier dispatch unification — **M, medium risk** [TRUNC]
 - `get_speed()` iterates `modify_speed()` hooks → un-deadens Sleep/Dread/
@@ -183,9 +208,7 @@ M (1–3 days), L (multi-day).
 - Touches: item.gd, hero.gd [TRUNC], door.gd [TRUNC], scroll.gd [TRUNC],
   bomb.gd [TRUNC], belongings.gd [TRUNC]. Mostly CI-testable; throw-UX is [ENGINE].
 
-### WS7 — Wands: recharge (the P0) + subclass fixes — **M, medium risk** [TRUNC][ENGINE]
-- Per-hero-turn Charger buff on equip → `recharge(1, hero)` × Recharging/
-  battlemage multipliers [audit:S14 **P0**].
+### WS7 — Wands: subclass fixes + balance helpers — **M, medium risk** [TRUNC][ENGINE]
 - Frost `was_chilled` gate; Corruption → `CorruptionBuff`; Disintegration through
   `take_damage`; Warding spawns a real sentry; id-uses refill on level/descend
   [audit:S14 P1×5].
@@ -265,9 +288,11 @@ M (1–3 days), L (multi-day).
 
 ---
 
-## 4. Immediate quick wins (before/alongside WS1)
+## 4. Immediate quick wins (status + remaining slicing)
 
-All small, self-contained, high-value. Non-[TRUNC] unless noted.
+All small, self-contained, high-value. Non-[TRUNC] unless noted. The first
+mechanical batch is already open as PR #2 and CI-green; keep future quick wins in
+small reviewable buckets rather than trickling one-off commits into main.
 
 1. **Merge PR #1** (audit/autofix).
 2. **File S36 findings into backlog** (currently report-only).
@@ -287,6 +312,12 @@ All small, self-contained, high-value. Non-[TRUNC] unless noted.
 
 Each verified with gdparse + gdlint; none alter the save contract (item 6 only
 *reads* data already being written).
+
+Recommended slicing for any remaining quick wins:
+- Pure-read/no-contract crash and data-loss fixes can share one PR.
+- Deserialize additions that only read already-written data can share one PR.
+- `wnd_item.gd:284` is [TRUNC] and should be its own small reviewed diff.
+- Network run-config desync is whole-run behavior risk and should be its own PR.
 
 ---
 
@@ -320,8 +351,11 @@ roadmap Phase A):
 
 ## Suggested execution order (TL;DR)
 
-Quick wins → WS0 → WS1 (CI) → WS2 (durability+APIs) → WS3 (buff hooks) →
-WS4 (save contract) → WS5 (blobs) → WS6 (items) → WS7 (wands) → WS8 (world) →
-WS9 (bosses) → WS10 (scene/render) → WS11 (weapons/identity) → WS12 (UI/quests) →
-WS13 (doors). WS5–WS9 parallelize reasonably after WS4; WS10 and WS13 want the
-most in-engine time, so schedule them around when Godot/CI playtesting exists.
+Quick wins/WS0/WS1 are done or in review. Current order:
+
+WS2 (durability+APIs) → WS2.5 (wand recharge P0) → WS3 (buff hooks) →
+WS4 (save contract) → WS5 (blobs) → WS6 (items) → WS7 (wand subclasses) →
+WS8 (world) → WS9 (bosses) → WS10 (scene/render) → WS11 (weapons/identity) →
+WS12 (UI/quests) → WS13 (doors). WS5–WS9 parallelize reasonably after WS4;
+WS10 and WS13 want the most in-engine time, so schedule them around when
+Godot/CI playtesting exists.
