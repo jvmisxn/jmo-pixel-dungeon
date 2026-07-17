@@ -42,6 +42,10 @@ const QUICKSLOT_SIZE: Vector2 = Vector2(44, 36)
 const QUICKSLOT_ICON_SIZE: Vector2 = Vector2(24, 24)
 const MOBILE_QUICKSLOT_SIZE: Vector2 = Vector2(50, 56)
 const MOBILE_QUICKSLOT_ICON_SIZE: Vector2 = Vector2(32, 32)
+const MOBILE_NARROW_BUTTON_MIN_SIZE: Vector2 = Vector2(50, 56)
+const MOBILE_NARROW_QUICKSLOT_SIZE: Vector2 = Vector2(44, 56)
+const MOBILE_NARROW_QUICKSLOT_ICON_SIZE: Vector2 = Vector2(28, 28)
+const MOBILE_NARROW_BREAKPOINT: float = 430.0
 
 # --- Constants ---
 const BUTTON_MIN_SIZE: Vector2 = Vector2(80, 36)
@@ -55,6 +59,7 @@ const ITEM_SHEET_COLUMNS: int = 16
 var _last_enabled: bool = true
 var _last_action_controls_enabled: bool = true
 var _compact_mode: bool = false
+var _available_width: float = 0.0
 
 static var _item_sheet_texture: Texture2D = null
 static var _item_sprite_cache: Dictionary = {}
@@ -258,12 +263,36 @@ func set_compact_mode(is_compact: bool) -> void:
 	_apply_button_labels()
 
 
+func set_available_width(available_width: float) -> void:
+	if is_equal_approx(_available_width, available_width):
+		return
+	_available_width = maxf(0.0, available_width)
+	_apply_button_labels()
+
+
+func _is_narrow_compact_mode() -> bool:
+	return _compact_mode and _available_width > 0.0 and _available_width <= MOBILE_NARROW_BREAKPOINT
+
+
 func _apply_button_labels() -> void:
-	var button_size: Vector2 = MOBILE_BUTTON_MIN_SIZE if _compact_mode else BUTTON_MIN_SIZE
-	var action_font_size: int = 16 if _compact_mode else 13
-	var quickslot_size: Vector2 = MOBILE_QUICKSLOT_SIZE if _compact_mode else QUICKSLOT_SIZE
-	var quickslot_icon_size: Vector2 = MOBILE_QUICKSLOT_ICON_SIZE if _compact_mode else QUICKSLOT_ICON_SIZE
-	add_theme_constant_override("separation", 4 if _compact_mode else 6)
+	var is_narrow_compact: bool = _is_narrow_compact_mode()
+	var button_size: Vector2 = (
+		MOBILE_NARROW_BUTTON_MIN_SIZE
+		if is_narrow_compact
+		else (MOBILE_BUTTON_MIN_SIZE if _compact_mode else BUTTON_MIN_SIZE)
+	)
+	var action_font_size: int = 13 if is_narrow_compact else (16 if _compact_mode else 13)
+	var quickslot_size: Vector2 = (
+		MOBILE_NARROW_QUICKSLOT_SIZE
+		if is_narrow_compact
+		else (MOBILE_QUICKSLOT_SIZE if _compact_mode else QUICKSLOT_SIZE)
+	)
+	var quickslot_icon_size: Vector2 = (
+		MOBILE_NARROW_QUICKSLOT_ICON_SIZE
+		if is_narrow_compact
+		else (MOBILE_QUICKSLOT_ICON_SIZE if _compact_mode else QUICKSLOT_ICON_SIZE)
+	)
+	add_theme_constant_override("separation", 3 if is_narrow_compact else (4 if _compact_mode else 6))
 
 	if _btn_inventory:
 		_btn_inventory.text = "Bag" if _compact_mode else "Inventory [I]"
@@ -292,9 +321,9 @@ func _apply_button_labels() -> void:
 		_btn_settings.custom_minimum_size = button_size
 		_btn_settings.add_theme_font_size_override("font_size", action_font_size)
 	if _quickslot_sep:
-		_quickslot_sep.visible = true
+		_quickslot_sep.visible = not is_narrow_compact
 	if _settings_sep:
-		_settings_sep.visible = true
+		_settings_sep.visible = not is_narrow_compact
 	for i: int in range(_quickslots.size()):
 		var is_mobile_hidden_slot: bool = _compact_mode and i >= 2
 		_quickslots[i].visible = not is_mobile_hidden_slot

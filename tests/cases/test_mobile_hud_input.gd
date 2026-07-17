@@ -14,6 +14,19 @@ class TestHud:
 	func _on_party_focus_pressed(hero_index: int) -> void:
 		focused_hero_index = hero_index
 
+func _visible_toolbar_min_width(toolbar: Toolbar) -> float:
+	var width: float = 0.0
+	var visible_controls: int = 0
+	for child: Node in toolbar.get_children():
+		var control := child as Control
+		if control == null or not control.visible:
+			continue
+		width += control.custom_minimum_size.x
+		visible_controls += 1
+	if visible_controls > 1:
+		width += float(visible_controls - 1) * float(toolbar.get_theme_constant("separation"))
+	return width
+
 func run(t: Object) -> void:
 	var scene := GameScene.new()
 	var hud := FakeHud.new()
@@ -53,3 +66,21 @@ func run(t: Object) -> void:
 		"party row touch focuses the tapped hero index"
 	)
 	test_hud.free()
+
+	var toolbar := Toolbar.new()
+	toolbar._ready()
+	toolbar.set_compact_mode(true)
+	toolbar.set_available_width(375.0)
+	t.check(
+		_visible_toolbar_min_width(toolbar) <= 343.0,
+		"narrow mobile toolbar fits a 375px portrait viewport after HUD panel margins"
+	)
+	t.check(
+		toolbar._quickslots[0].visible and toolbar._quickslots[1].visible,
+		"narrow mobile toolbar keeps the first two quickslots visible"
+	)
+	t.check(
+		not toolbar._quickslot_sep.visible and not toolbar._settings_sep.visible,
+		"narrow mobile toolbar hides nonessential separators"
+	)
+	toolbar.free()

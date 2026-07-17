@@ -891,6 +891,8 @@ func _apply_responsive_layout() -> void:
 
 	if _toolbar_bar:
 		_toolbar_bar.set_compact_mode(is_mobile_layout)
+		if _toolbar_bar.has_method("set_available_width"):
+			_toolbar_bar.set_available_width(toolbar.size.x if toolbar != null else _vp_size.x)
 
 	_layout_toolbar()
 	_refresh_status_overlay()
@@ -938,6 +940,8 @@ func _layout_toolbar() -> void:
 	toolbar.position = Vector2(safe_left, _vp_size.y - height - safe_bottom)
 	toolbar.custom_minimum_size = Vector2(width, height)
 	toolbar.size = Vector2(width, height)
+	if _toolbar_bar != null and _toolbar_bar.has_method("set_available_width"):
+		_toolbar_bar.set_available_width(width)
 
 
 func _refresh_status_overlay() -> void:

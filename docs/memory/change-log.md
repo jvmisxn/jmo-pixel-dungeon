@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: mobile, hud, toolbar, web, playtesting
+- Tightened the compact mobile toolbar for narrow portrait viewports. The previous compact sizing still needed about 380px before browser safe-area/panel padding, so a 375px-wide phone viewport could clip or hide controls even after touch routing was fixed. `Toolbar` now receives its available width from `HUD`, switches to a narrower compact layout at <=430px, keeps Bag/Wait/Find/Menu plus the first two quickslots visible, and hides only decorative separators. Added headless coverage to `test_mobile_hud_input.gd` asserting the toolbar fits a 375px portrait budget after HUD panel margins. Full local headless suite green (184 checks, Godot 4.7.1).
+
 - Tags: mobile, hud, controls, web, playtesting
 - Fixed mobile HUD taps being followed by Godot's synthesized mouse click. The scene already handled real touch release on HUD controls, but the mouse-suppression gate exempted HUD positions, so mobile web could activate a toolbar/window control and then leak a map click/hero action from the synthetic left-click. `GameScene` now suppresses synthesized touch-mouse events for the whole short post-touch window, including over-HUD positions, while preserving direct mouse/desktop input outside that window. Also routed touch release through the party-row focus buttons, which were previously included in HUD hit-testing but not activated by the custom touch path. Added `tests/cases/test_mobile_hud_input.gd` and registered it in the headless runner. Full local headless suite green (181 checks, Godot 4.7.1).
 
