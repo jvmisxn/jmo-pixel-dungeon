@@ -21,6 +21,11 @@ var num_special_rooms: int = 1
 ## Number of secret rooms. Original defaults to 1 per floor via secretsForFloor().
 var num_secret_rooms: int = 1
 
+## Original RegularLevel keeps depleted floors from staying empty forever by
+## scheduling a level-owned actor roughly every 50 game-time ticks.
+var respawn_target_mob_count: int = -1
+var _respawner: Respawner = null
+
 # ---------------------------------------------------------------------------
 # Level Creation
 # ---------------------------------------------------------------------------
@@ -78,6 +83,7 @@ func _build() -> bool:
 
 	# Step 7: Spawn mobs
 	var num_mobs: int = mob_count()
+	respawn_target_mob_count = num_mobs
 	var mob_positions: Array[int] = mob_spawn_positions(num_mobs)
 	for mob_pos: int in mob_positions:
 		var mob: Mob = MobFactory.create_random_mob(depth)
@@ -425,6 +431,96 @@ func _fallback_mob_spawn_positions(count: int, existing_positions: Array[int]) -
 		positions.append(pos)
 	return positions
 
+## Activate the regular-floor respawner in the turn scheduler for the current
+## active level. LoadingScene calls this alongside hero/mob activation.
+func activate_respawner(initial_cooldown: float = Respawner.TIME_TO_RESPAWN) -> void:
+	if TurnManager == null:
+		return
+	if respawn_target_mob_count <= 0:
+		respawn_target_mob_count = maxi(1, _living_respawn_mob_count())
+	if _respawner == null or not is_instance_valid(_respawner):
+		_respawner = Respawner.new()
+	_respawner.level = self
+	_respawner.active = true
+	TurnManager.add_actor(_respawner, initial_cooldown)
+
+func deactivate_respawner(free_node: bool = false) -> void:
+	if _respawner == null or not is_instance_valid(_respawner):
+		_respawner = null
+		return
+	if TurnManager != null and TurnManager.has_actor(_respawner):
+		TurnManager.remove_actor(_respawner)
+	_respawner.active = false
+	if free_node:
+		_respawner.free()
+		_respawner = null
+
+## Attempt one scheduled respawn. Returns true if a replacement mob was spawned.
+func respawn_mob_if_needed() -> bool:
+	if respawn_target_mob_count <= 0:
+		respawn_target_mob_count = maxi(1, _living_respawn_mob_count())
+
+	if _living_respawn_mob_count() >= respawn_target_mob_count:
+		return false
+
+	var spawn_pos: int = _find_respawn_cell()
+	if spawn_pos < 0:
+		return false
+
+	var mob: Mob = MobFactory.create_random_mob(depth)
+	if mob == null:
+		return false
+	mob.pos = spawn_pos
+	mob.level = self
+	if mob.has_method("scale_to_depth"):
+		mob.scale_to_depth(depth)
+	add_mob(mob)
+	if TurnManager:
+		mob.active = true
+		TurnManager.add_actor(mob, TurnManager.TICK)
+	return true
+
+func _living_respawn_mob_count() -> int:
+	var count: int = 0
+	for mob: Variant in mobs:
+		if mob == null or not is_instance_valid(mob):
+			continue
+		if not (mob is Mob):
+			continue
+		if mob.get("is_alive") != true:
+			continue
+		if mob.has_method("is_boss") and mob.is_boss():
+			continue
+		count += 1
+	return count
+
+func _find_respawn_cell() -> int:
+	var attempts: int = 120
+	while attempts > 0:
+		attempts -= 1
+		var pos: int = random_passable_cell()
+		if _is_valid_respawn_cell(pos):
+			return pos
+	return -1
+
+func _is_valid_respawn_cell(pos: int) -> bool:
+	if pos < 0 or pos >= ConstantsData.LENGTH:
+		return false
+	if pos == entrance or pos == exit_pos:
+		return false
+	if not is_passable(pos):
+		return false
+	if find_char_at(pos) != null:
+		return false
+	if pos < visible.size() and visible[pos]:
+		return false
+	for hero: Char in get_heroes():
+		if hero == null or not is_instance_valid(hero):
+			continue
+		if hero.distance_to(pos) <= ConstantsData.VIEW_DISTANCE:
+			return false
+	return true
+
 # ---------------------------------------------------------------------------
 # Entrance Distance Helpers
 # ---------------------------------------------------------------------------
@@ -543,8 +639,12 @@ func _record_special_rooms(used_types: Array[String]) -> void:
 
 ## Serialize the full level state for caching / save-load.
 func serialize() -> Dictionary:
-	return super.serialize()
+	var data: Dictionary = super.serialize()
+	data["respawn_target_mob_count"] = respawn_target_mob_count
+	return data
 
 ## Deserialize level state from cached data.
 func deserialize(data: Dictionary) -> void:
 	super.deserialize(data)
+	respawn_target_mob_count = int(data.get("respawn_target_mob_count", -1))
+	_respawner = null

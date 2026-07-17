@@ -37,6 +37,20 @@ func _unique_count(values: Array[int]) -> int:
 		seen[value] = true
 	return seen.size()
 
+func _make_rat(pos: int) -> Rat:
+	var rat := Rat.new()
+	rat.pos = pos
+	return rat
+
+func _free_level_mobs(level: RegularLevel) -> void:
+	for mob: Variant in level.mobs:
+		if mob != null and is_instance_valid(mob):
+			if TurnManager != null and TurnManager.has_actor(mob):
+				TurnManager.remove_actor(mob)
+			if mob is Node:
+				(mob as Node).free()
+	level.mobs.clear()
+
 func run(t: Object) -> void:
 	var fallback_only := SpawnLevel.new()
 	_fill_empty(fallback_only)
@@ -85,3 +99,83 @@ func run(t: Object) -> void:
 		blocked_positions.size() == 3,
 		"failed room placement does not consume the remaining mob count"
 	)
+
+	var respawn_level := SpawnLevel.new()
+	_fill_empty(respawn_level)
+	respawn_level.depth = 2
+	var visible_cell: int = ConstantsData.xy_to_pos(12, 12)
+	var occupied_cell: int = ConstantsData.xy_to_pos(13, 12)
+	var hidden_cell: int = ConstantsData.xy_to_pos(14, 12)
+	respawn_level.visible.resize(ConstantsData.LENGTH)
+	respawn_level.visible.fill(false)
+	respawn_level.visible[visible_cell] = true
+	respawn_level.fallback_positions = [visible_cell, occupied_cell, hidden_cell]
+	respawn_level.add_mob(_make_rat(occupied_cell))
+	respawn_level.respawn_target_mob_count = 2
+	t.check(
+		respawn_level.respawn_mob_if_needed(),
+		"respawner creates a replacement mob when below the floor target"
+	)
+	t.check(
+		respawn_level.mobs.size() == 2,
+		"respawner fills toward the stored floor target"
+	)
+	t.check(
+		int(respawn_level.mobs[1].get("pos")) == hidden_cell,
+		"respawner skips visible and occupied cells"
+	)
+	_free_level_mobs(respawn_level)
+
+	var capped_level := SpawnLevel.new()
+	_fill_empty(capped_level)
+	capped_level.depth = 2
+	capped_level.add_mob(_make_rat(ConstantsData.xy_to_pos(18, 18)))
+	capped_level.respawn_target_mob_count = 1
+	t.check(
+		not capped_level.respawn_mob_if_needed(),
+		"respawner does not exceed the stored floor mob target"
+	)
+	t.check(
+		capped_level.mobs.size() == 1,
+		"respawner leaves capped floors unchanged"
+	)
+	_free_level_mobs(capped_level)
+
+	var serialized_level := SpawnLevel.new()
+	_fill_empty(serialized_level)
+	serialized_level.respawn_target_mob_count = 7
+	var serialized: Dictionary = serialized_level.serialize()
+	var restored_level := SpawnLevel.new()
+	restored_level.deserialize(serialized)
+	t.check(
+		restored_level.respawn_target_mob_count == 7,
+		"respawner target mob count survives level serialization"
+	)
+
+	var scheduled_level := SpawnLevel.new()
+	_fill_empty(scheduled_level)
+	scheduled_level.depth = 2
+	scheduled_level.fallback_positions = [ConstantsData.xy_to_pos(20, 20)]
+	scheduled_level.respawn_target_mob_count = 1
+	if TurnManager != null:
+		TurnManager.clear_actors()
+		var respawner := Respawner.new()
+		respawner.level = scheduled_level
+		respawner.active = true
+		TurnManager.add_actor(respawner)
+		var actor: Node = TurnManager.process_turn()
+		t.check(
+			actor == respawner,
+			"respawner participates in the turn scheduler as an Actor"
+		)
+		t.check(
+			scheduled_level.mobs.size() == 1,
+			"respawner actor spawns one replacement mob on its scheduled turn"
+		)
+		t.check(
+			is_equal_approx(TurnManager.get_cooldown(respawner), Respawner.TIME_TO_RESPAWN),
+			"respawner actor spends the SPD respawn cooldown"
+		)
+		TurnManager.clear_actors()
+		respawner.free()
+	_free_level_mobs(scheduled_level)

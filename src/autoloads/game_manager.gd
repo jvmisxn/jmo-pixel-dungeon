@@ -254,6 +254,8 @@ func _cleanup_previous_run() -> void:
 
 	# Free mobs cached in the level cache
 	if current_level != null and current_level.get("mobs") != null:
+		if current_level.has_method("deactivate_respawner"):
+			current_level.deactivate_respawner(true)
 		for mob: Variant in current_level.mobs:
 			if is_instance_valid(mob) and mob is Node:
 				(mob as Node).free()
@@ -309,6 +311,8 @@ func _cache_current_level() -> void:
 		return
 	if current_level.has_method("serialize"):
 		_level_cache[depth] = current_level.serialize()
+	if current_level.has_method("deactivate_respawner"):
+		current_level.deactivate_respawner(true)
 	# Free mob Nodes from the departing level to prevent memory leak.
 	# The serialized data is in the cache; these Node instances are no longer needed.
 	if current_level.get("mobs") != null:

@@ -402,6 +402,8 @@ func _transition_to_game() -> void:
 				if mob is Node:
 					mob.active = false
 					mob.activate()
+			if level.has_method("activate_respawner"):
+				level.activate_respawner()
 
 	# --- Create and show the GameScene ---
 	var game_script: GDScript = load("res://src/scenes/game_scene.gd") as GDScript
