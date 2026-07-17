@@ -12,6 +12,7 @@ const DESKTOP_TOOLBAR_HEIGHT: int = 40
 const MOBILE_TOOLBAR_HEIGHT: int = 72
 const MOBILE_BREAKPOINT: float = 720.0
 const HUD_MARGIN: float = 6.0
+const MOBILE_STATUS_SIZE: Vector2 = Vector2(156, 86)
 
 # --- Child panels ---
 var toolbar: MarginContainer = null
@@ -646,11 +647,15 @@ func _apply_responsive_layout() -> void:
 
 	if status_container:
 		status_container.position = Vector2(HUD_MARGIN, HUD_MARGIN)
-		status_container.custom_minimum_size = Vector2(180 if is_mobile_layout else 220, 140)
+		var is_portrait_mobile: bool = _is_mobile_portrait_layout()
+		status_container.custom_minimum_size = MOBILE_STATUS_SIZE if is_portrait_mobile else Vector2(180 if is_mobile_layout else 220, 140)
+		status_container.size = status_container.custom_minimum_size
+		if _status_pane and _status_pane.has_method("set_compact_mode"):
+			_status_pane.set_compact_mode(is_portrait_mobile)
 
 	if log_container:
 		var log_width: float = minf(300.0, _vp_size.x - (HUD_MARGIN * 2.0))
-		var log_height: float = 96.0 if is_mobile_layout else 195.0
+		var log_height: float = 74.0 if _is_mobile_portrait_layout() else (96.0 if is_mobile_layout else 195.0)
 		log_container.custom_minimum_size = Vector2(log_width, log_height)
 		log_container.size = Vector2(log_width, log_height)
 		log_container.position = Vector2(HUD_MARGIN, _vp_size.y - _toolbar_height() - log_height - HUD_MARGIN)
@@ -658,6 +663,7 @@ func _apply_responsive_layout() -> void:
 	if info_row:
 		var info_width: float = 180.0
 		info_row.position = Vector2(maxf(HUD_MARGIN, _vp_size.x - info_width - HUD_MARGIN), HUD_MARGIN)
+		info_row.visible = not _is_mobile_portrait_layout()
 
 	if party_row:
 		var party_width: float = minf(520.0, _vp_size.x - 420.0)
@@ -683,6 +689,10 @@ func _apply_responsive_layout() -> void:
 
 func _is_mobile_layout() -> bool:
 	return _vp_size.x <= MOBILE_BREAKPOINT or _vp_size.y > _vp_size.x
+
+
+func _is_mobile_portrait_layout() -> bool:
+	return _is_mobile_layout() and _vp_size.y > _vp_size.x
 
 
 func _toolbar_height() -> int:

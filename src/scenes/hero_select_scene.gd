@@ -26,6 +26,7 @@ var _action_row: HBoxContainer = null
 var _main_panel: Panel = null
 var _left_panel: Panel = null
 var _right_panel: Panel = null
+var _content_box: VBoxContainer = null
 
 # --- Background ---
 var _bg_color_rect: ColorRect = null
@@ -247,11 +248,11 @@ void fragment() {
 	shader_material.shader = shader
 	_fade_overlay.material = shader_material
 
-	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 12)
-	vbox.position = Vector2(LEFT_INSET_X, LEFT_INSET_Y)
-	vbox.custom_minimum_size = Vector2(LEFT_CONTENT_WIDTH, 592)
-	_left_panel.add_child(vbox)
+	_content_box = VBoxContainer.new()
+	_content_box.add_theme_constant_override("separation", 12)
+	_content_box.position = Vector2(LEFT_INSET_X, LEFT_INSET_Y)
+	_content_box.custom_minimum_size = Vector2(LEFT_CONTENT_WIDTH, 592)
+	_left_panel.add_child(_content_box)
 
 	# --- Title ---
 	_title_label = Label.new()
@@ -259,19 +260,19 @@ void fragment() {
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_title_label.add_theme_font_size_override("font_size", 26)
 	_title_label.add_theme_color_override("font_color", Color(0.9, 0.92, 1.0))
-	vbox.add_child(_title_label)
+	_content_box.add_child(_title_label)
 
 	var class_label: Label = Label.new()
 	class_label.text = "Hero Class"
 	class_label.add_theme_font_size_override("font_size", 12)
 	class_label.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85))
-	vbox.add_child(class_label)
+	_content_box.add_child(class_label)
 
 	# --- Hero buttons (icon buttons in a row, like original SPD) ---
 	_class_button_row = HBoxContainer.new()
 	_class_button_row.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 48)
 	_class_button_row.add_theme_constant_override("separation", 4)
-	vbox.add_child(_class_button_row)
+	_content_box.add_child(_class_button_row)
 
 	for i: int in range(CLASS_COUNT):
 		var btn: Button = _create_hero_button(i)
@@ -284,7 +285,7 @@ void fragment() {
 	_hero_name_label.add_theme_font_size_override("font_size", 16)
 	_hero_name_label.add_theme_color_override("font_color", GOLD_COLOR)
 	_hero_name_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 24)
-	vbox.add_child(_hero_name_label)
+	_content_box.add_child(_hero_name_label)
 
 	# --- Hero description ---
 	_hero_desc_label = Label.new()
@@ -293,7 +294,7 @@ void fragment() {
 	_hero_desc_label.add_theme_font_size_override("font_size", 12)
 	_hero_desc_label.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85))
 	_hero_desc_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 120)
-	vbox.add_child(_hero_desc_label)
+	_content_box.add_child(_hero_desc_label)
 
 	# --- Stats ---
 	_stats_label = Label.new()
@@ -301,7 +302,7 @@ void fragment() {
 	_stats_label.add_theme_font_size_override("font_size", 12)
 	_stats_label.add_theme_color_override("font_color", Color(0.7, 0.9, 0.7))
 	_stats_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 40)
-	vbox.add_child(_stats_label)
+	_content_box.add_child(_stats_label)
 
 	# --- Party slots selector ---
 	_slots_title_label = Label.new()
@@ -310,13 +311,13 @@ void fragment() {
 	_slots_title_label.add_theme_font_size_override("font_size", 12)
 	_slots_title_label.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85))
 	_slots_title_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 20)
-	vbox.add_child(_slots_title_label)
+	_content_box.add_child(_slots_title_label)
 
 	_party_slots_row = HBoxContainer.new()
 	_party_slots_row.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 42)
 	_party_slots_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_party_slots_row.add_theme_constant_override("separation", 6)
-	vbox.add_child(_party_slots_row)
+	_content_box.add_child(_party_slots_row)
 
 	for slot_index: int in range(GameManager.MAX_PARTY_SIZE):
 		var slot_button: Button = _create_party_chip_button("", Vector2(78, 38))
@@ -331,7 +332,7 @@ void fragment() {
 	_party_summary_label.add_theme_font_size_override("font_size", 11)
 	_party_summary_label.add_theme_color_override("font_color", Color(0.72, 0.76, 0.82))
 	_party_summary_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 48)
-	vbox.add_child(_party_summary_label)
+	_content_box.add_child(_party_summary_label)
 
 	_network_notice_label = Label.new()
 	_network_notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -339,17 +340,17 @@ void fragment() {
 	_network_notice_label.add_theme_font_size_override("font_size", 11)
 	_network_notice_label.add_theme_color_override("font_color", Color(0.75, 0.82, 0.95))
 	_network_notice_label.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 36)
-	vbox.add_child(_network_notice_label)
+	_content_box.add_child(_network_notice_label)
 
 	var action_spacer: Control = Control.new()
 	action_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(action_spacer)
+	_content_box.add_child(action_spacer)
 
 	# --- Action buttons ---
 	_action_row = HBoxContainer.new()
 	_action_row.custom_minimum_size = Vector2(STANDARD_ROW_WIDTH, 44)
 	_action_row.add_theme_constant_override("separation", 12)
-	vbox.add_child(_action_row)
+	_content_box.add_child(_action_row)
 
 	_back_button = _create_chrome_button("Back")
 	_back_button.custom_minimum_size = Vector2(ACTION_BUTTON_WIDTH, 42)
@@ -662,6 +663,10 @@ func _get_party_slot_display_name(slot_index: int) -> String:
 
 func _apply_layout() -> void:
 	var viewport_size: Vector2 = get_viewport_rect().size
+	var is_portrait: bool = viewport_size.y > viewport_size.x
+	if is_portrait or viewport_size.x < OUTER_PANEL_SIZE.x:
+		_apply_portrait_layout(viewport_size)
+		return
 	var panel_x: float = floor((viewport_size.x - OUTER_PANEL_SIZE.x) * 0.5)
 	var panel_y: float = LAYOUT_MARGIN_TOP
 	var left_x: float = 20.0
@@ -674,8 +679,75 @@ func _apply_layout() -> void:
 	if _left_panel != null:
 		_left_panel.position = Vector2(left_x, left_y)
 	if _right_panel != null:
+		_right_panel.visible = true
 		_right_panel.position = Vector2(right_x, right_y)
+		_right_panel.size = RIGHT_PANEL_SIZE
+		_right_panel.custom_minimum_size = RIGHT_PANEL_SIZE
+	if _left_panel != null:
+		_left_panel.size = LEFT_PANEL_SIZE
+		_left_panel.custom_minimum_size = LEFT_PANEL_SIZE
+	if _content_box != null:
+		_content_box.position = Vector2(LEFT_INSET_X, LEFT_INSET_Y)
+		_content_box.custom_minimum_size = Vector2(LEFT_CONTENT_WIDTH, 592)
+		_content_box.size = _content_box.custom_minimum_size
+		_content_box.add_theme_constant_override("separation", 12)
+	_update_mobile_content_width(LEFT_CONTENT_WIDTH, false)
 	_update_splash_crop()
+
+
+func _apply_portrait_layout(viewport_size: Vector2) -> void:
+	var margin: float = 12.0
+	var panel_size: Vector2 = Vector2(
+		maxf(1.0, viewport_size.x - (margin * 2.0)),
+		maxf(1.0, viewport_size.y - (margin * 2.0))
+	)
+	var inset: float = 18.0
+	var content_width: float = maxf(1.0, panel_size.x - (inset * 2.0))
+	if _main_panel != null:
+		_main_panel.position = Vector2(margin, margin)
+		_main_panel.size = panel_size
+	if _left_panel != null:
+		_left_panel.position = Vector2.ZERO
+		_left_panel.custom_minimum_size = panel_size
+		_left_panel.size = panel_size
+	if _right_panel != null:
+		_right_panel.visible = false
+	if _content_box != null:
+		_content_box.position = Vector2(inset, inset)
+		_content_box.custom_minimum_size = Vector2(content_width, panel_size.y - (inset * 2.0))
+		_content_box.size = _content_box.custom_minimum_size
+		_content_box.add_theme_constant_override("separation", 10)
+	_update_mobile_content_width(content_width, true)
+
+
+func _update_mobile_content_width(content_width: float, is_portrait: bool) -> void:
+	if _title_label:
+		_title_label.add_theme_font_size_override("font_size", 23 if is_portrait else 26)
+		_title_label.custom_minimum_size = Vector2(content_width, 32)
+	if _class_button_row:
+		_class_button_row.custom_minimum_size = Vector2(content_width, 48)
+	if _hero_name_label:
+		_hero_name_label.custom_minimum_size = Vector2(content_width, 24)
+	if _hero_desc_label:
+		_hero_desc_label.custom_minimum_size = Vector2(content_width, 132 if is_portrait else 120)
+	if _stats_label:
+		_stats_label.custom_minimum_size = Vector2(content_width, 40)
+	if _slots_title_label:
+		_slots_title_label.custom_minimum_size = Vector2(content_width, 20)
+	if _party_slots_row:
+		_party_slots_row.custom_minimum_size = Vector2(content_width, 42)
+	if _party_summary_label:
+		_party_summary_label.custom_minimum_size = Vector2(content_width, 48)
+	if _network_notice_label:
+		_network_notice_label.custom_minimum_size = Vector2(content_width, 36)
+	if _action_row:
+		_action_row.custom_minimum_size = Vector2(content_width, 44)
+	var action_gap: float = 12.0
+	var action_width: float = floor((content_width - action_gap) * 0.5)
+	if _back_button:
+		_back_button.custom_minimum_size = Vector2(action_width, 42)
+	if _start_button:
+		_start_button.custom_minimum_size = Vector2(action_width, 42)
 
 func _update_splash_crop() -> void:
 	if _bg_sprite == null or _right_panel == null:

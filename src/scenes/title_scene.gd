@@ -36,6 +36,11 @@ var _settings_sfx_mute_btn: CheckButton = null
 var _settings_music_value_label: Label = null
 var _settings_sfx_value_label: Label = null
 var _settings_brightness_value_label: Label = null
+var _jmo_title_label: Label = null
+var _pd_title_label: Label = null
+var _menu_box: VBoxContainer = null
+var _top_menu_row: HBoxContainer = null
+var _version_label: Label = null
 var _buttons: Array[Button] = []
 var _selected_index: int = 0
 
@@ -84,6 +89,7 @@ func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color.BLACK)
 	_build_background()
 	_build_ui()
+	_apply_layout()
 	_update_button_focus()
 	_refresh_network_status()
 	_refresh_profile_ui()
@@ -105,6 +111,7 @@ func _ready() -> void:
 		AudioManager.play_theme_music()
 	if PlayerProfile and not PlayerProfile.is_profile_complete():
 		_open_profile_prompt()
+	get_viewport().size_changed.connect(_apply_layout)
 
 func _process(_delta: float) -> void:
 	var time_elapsed: float = float(Time.get_ticks_msec()) * 0.001
@@ -225,69 +232,69 @@ void fragment() {
 func _build_ui() -> void:
 	# --- Title Text ---
 	# "JMO" in large gold text
-	var jmo_label: Label = Label.new()
-	jmo_label.text = "JMO"
-	jmo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	jmo_label.add_theme_font_size_override("font_size", 72)
-	jmo_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-	jmo_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.7))
-	jmo_label.add_theme_constant_override("shadow_offset_x", 3)
-	jmo_label.add_theme_constant_override("shadow_offset_y", 3)
-	jmo_label.position = Vector2(340, 20)
-	jmo_label.custom_minimum_size = Vector2(600, 80)
-	add_child(jmo_label)
+	_jmo_title_label = Label.new()
+	_jmo_title_label.text = "JMO"
+	_jmo_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_jmo_title_label.add_theme_font_size_override("font_size", 72)
+	_jmo_title_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	_jmo_title_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.7))
+	_jmo_title_label.add_theme_constant_override("shadow_offset_x", 3)
+	_jmo_title_label.add_theme_constant_override("shadow_offset_y", 3)
+	_jmo_title_label.position = Vector2(340, 20)
+	_jmo_title_label.custom_minimum_size = Vector2(600, 80)
+	add_child(_jmo_title_label)
 
 	# "Pixel Dungeon" below
-	var pd_label: Label = Label.new()
-	pd_label.text = "Pixel Dungeon"
-	pd_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pd_label.add_theme_font_size_override("font_size", 40)
-	pd_label.add_theme_color_override("font_color", Color(0.78, 0.72, 0.6))
-	pd_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.6))
-	pd_label.add_theme_constant_override("shadow_offset_x", 2)
-	pd_label.add_theme_constant_override("shadow_offset_y", 2)
-	pd_label.position = Vector2(340, 105)
-	pd_label.custom_minimum_size = Vector2(600, 50)
-	add_child(pd_label)
+	_pd_title_label = Label.new()
+	_pd_title_label.text = "Pixel Dungeon"
+	_pd_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pd_title_label.add_theme_font_size_override("font_size", 40)
+	_pd_title_label.add_theme_color_override("font_color", Color(0.78, 0.72, 0.6))
+	_pd_title_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.6))
+	_pd_title_label.add_theme_constant_override("shadow_offset_x", 2)
+	_pd_title_label.add_theme_constant_override("shadow_offset_y", 2)
+	_pd_title_label.position = Vector2(340, 105)
+	_pd_title_label.custom_minimum_size = Vector2(600, 50)
+	add_child(_pd_title_label)
 
 	# --- Menu Buttons ---
-	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.position = Vector2(440, 190)
-	vbox.custom_minimum_size = Vector2(400, 300)
-	vbox.add_theme_constant_override("separation", 12)
-	add_child(vbox)
+	_menu_box = VBoxContainer.new()
+	_menu_box.position = Vector2(440, 190)
+	_menu_box.custom_minimum_size = Vector2(400, 300)
+	_menu_box.add_theme_constant_override("separation", 12)
+	add_child(_menu_box)
 
 	var has_save: bool = _check_has_save()
 
-	var top_row: HBoxContainer = HBoxContainer.new()
-	top_row.custom_minimum_size = Vector2(400, 44)
-	top_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top_row.add_theme_constant_override("separation", 12)
-	vbox.add_child(top_row)
+	_top_menu_row = HBoxContainer.new()
+	_top_menu_row.custom_minimum_size = Vector2(400, 44)
+	_top_menu_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_top_menu_row.add_theme_constant_override("separation", 12)
+	_menu_box.add_child(_top_menu_row)
 
 	_btn_new_game = _create_spd_button("New Game", Vector2(400 if not has_save else 258, 44))
 	_btn_new_game.pressed.connect(_on_new_game_pressed)
-	top_row.add_child(_btn_new_game)
+	_top_menu_row.add_child(_btn_new_game)
 
 	if has_save:
 		_btn_continue = _create_spd_button("Continue", Vector2(130, 44))
 		_btn_continue.pressed.connect(_on_continue_pressed)
 		_btn_continue.disabled = false
-		top_row.add_child(_btn_continue)
+		_top_menu_row.add_child(_btn_continue)
 	else:
 		_btn_continue = null
 
 	_btn_multiplayer = _create_spd_button("Multiplayer")
 	_btn_multiplayer.pressed.connect(_on_multiplayer_pressed)
-	vbox.add_child(_btn_multiplayer)
+	_menu_box.add_child(_btn_multiplayer)
 
 	_btn_profile = _create_spd_button("Player Profile")
 	_btn_profile.pressed.connect(_on_profile_pressed)
-	vbox.add_child(_btn_profile)
+	_menu_box.add_child(_btn_profile)
 
 	_btn_settings = _create_spd_button("Settings")
 	_btn_settings.pressed.connect(_on_settings_pressed)
-	vbox.add_child(_btn_settings)
+	_menu_box.add_child(_btn_settings)
 
 	_buttons = [_btn_new_game]
 	if _btn_continue != null:
@@ -295,12 +302,12 @@ func _build_ui() -> void:
 	_buttons.append_array([_btn_multiplayer, _btn_profile, _btn_settings])
 
 	# --- Version label ---
-	var version_label: Label = Label.new()
-	version_label.text = "v0.1.2"
-	version_label.add_theme_font_size_override("font_size", 12)
-	version_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.5))
-	version_label.position = Vector2(1210, 700)
-	add_child(version_label)
+	_version_label = Label.new()
+	_version_label.text = "v0.1.2"
+	_version_label.add_theme_font_size_override("font_size", 12)
+	_version_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.5))
+	_version_label.position = Vector2(1210, 700)
+	add_child(_version_label)
 
 	# --- Network panel (hidden) ---
 	_network_panel = PanelContainer.new()
@@ -653,11 +660,68 @@ func _check_has_save() -> bool:
 	return SaveManager != null and SaveManager.has_method("has_save") and SaveManager.has_save()
 
 
+func _apply_layout() -> void:
+	var viewport_size: Vector2 = get_viewport_rect().size
+	var margin: float = 24.0
+	var is_portrait: bool = viewport_size.y > viewport_size.x
+	var menu_width: float = minf(400.0, viewport_size.x - (margin * 2.0))
+	var title_width: float = maxf(1.0, viewport_size.x - (margin * 2.0))
+	var title_top: float = 64.0 if is_portrait else 20.0
+
+	if _jmo_title_label:
+		_jmo_title_label.add_theme_font_size_override("font_size", 58 if is_portrait else 72)
+		_jmo_title_label.position = Vector2(margin, title_top)
+		_jmo_title_label.custom_minimum_size = Vector2(title_width, 70 if is_portrait else 80)
+		_jmo_title_label.size = _jmo_title_label.custom_minimum_size
+	if _pd_title_label:
+		_pd_title_label.add_theme_font_size_override("font_size", 28 if is_portrait else 40)
+		_pd_title_label.position = Vector2(margin, title_top + (70.0 if is_portrait else 85.0))
+		_pd_title_label.custom_minimum_size = Vector2(title_width, 42 if is_portrait else 50)
+		_pd_title_label.size = _pd_title_label.custom_minimum_size
+	if _menu_box:
+		_menu_box.position = Vector2(floor((viewport_size.x - menu_width) * 0.5), title_top + (150.0 if is_portrait else 170.0))
+		_menu_box.custom_minimum_size = Vector2(menu_width, 300)
+		_menu_box.size = Vector2(menu_width, 300)
+	if _top_menu_row:
+		_top_menu_row.custom_minimum_size = Vector2(menu_width, 44)
+	if _btn_continue:
+		var split_gap: float = 12.0
+		_btn_new_game.custom_minimum_size = Vector2(floor((menu_width - split_gap) * 0.62), 44)
+		_btn_continue.custom_minimum_size = Vector2(ceil((menu_width - split_gap) * 0.38), 44)
+	elif _btn_new_game:
+		_btn_new_game.custom_minimum_size = Vector2(menu_width, 44)
+	for btn: Button in [_btn_multiplayer, _btn_profile, _btn_settings]:
+		if btn:
+			btn.custom_minimum_size = Vector2(menu_width, 44)
+	if _version_label:
+		_version_label.position = Vector2(maxf(margin, viewport_size.x - 70.0), maxf(margin, viewport_size.y - 24.0))
+
+	var submenu_size: Vector2 = _get_submenu_panel_size()
+	for panel: PanelContainer in [_network_panel, _profile_panel, _settings_panel]:
+		if panel:
+			panel.custom_minimum_size = submenu_size
+			panel.size = submenu_size
+			panel.position = _get_centered_submenu_position(submenu_size)
+	if _profile_prompt_panel:
+		var prompt_size: Vector2 = Vector2(minf(500.0, viewport_size.x - (margin * 2.0)), 220.0)
+		_profile_prompt_panel.custom_minimum_size = prompt_size
+		_profile_prompt_panel.size = prompt_size
+		_profile_prompt_panel.position = _get_centered_submenu_position(prompt_size)
+
+
+func _get_submenu_panel_size() -> Vector2:
+	var viewport_size: Vector2 = get_viewport_rect().size
+	return Vector2(
+		minf(SUBMENU_PANEL_SIZE.x, viewport_size.x - 24.0),
+		minf(SUBMENU_PANEL_SIZE.y, viewport_size.y - 40.0)
+	)
+
+
 func _get_centered_submenu_position(panel_size: Vector2) -> Vector2:
 	var viewport_size: Vector2 = get_viewport_rect().size
 	return Vector2(
-		floor((viewport_size.x - panel_size.x) * 0.5),
-		SUBMENU_PANEL_TOP
+		maxf(12.0, floor((viewport_size.x - panel_size.x) * 0.5)),
+		maxf(12.0, minf(SUBMENU_PANEL_TOP, floor((viewport_size.y - panel_size.y) * 0.5)))
 	)
 
 

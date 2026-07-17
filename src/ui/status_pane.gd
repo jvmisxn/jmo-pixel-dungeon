@@ -22,6 +22,14 @@ var _equip_grid: GridContainer = null
 var _buffs_container: HFlowContainer = null
 var _hunger_bar: ProgressBar = null
 var _hunger_label: Label = null
+var _portrait_container: CenterContainer = null
+var _hp_section: VBoxContainer = null
+var _xp_section: VBoxContainer = null
+var _hunger_section: VBoxContainer = null
+var _equip_label: Label = null
+var _buffs_label: Label = null
+var _separator_equipment: HSeparator = null
+var _separator_buffs: HSeparator = null
 
 # Equipment slot references (ItemSlot components for proper sprite rendering)
 var _slot_weapon: ItemSlot = null
@@ -31,6 +39,7 @@ var _slot_artifact: ItemSlot = null
 var _slot_ring_left: ItemSlot = null
 var _slot_ring_right: ItemSlot = null
 var _slot_misc: ItemSlot = null
+var _compact_mode: bool = false
 
 # --- Constants ---
 const SLOT_SIZE: Vector2 = Vector2(28, 28)
@@ -107,7 +116,7 @@ func _build_ui() -> void:
 	add_theme_stylebox_override("panel", panel_bg)
 
 	# --- Hero Portrait ---
-	var portrait_container := CenterContainer.new()
+	_portrait_container = CenterContainer.new()
 	# Stone border around portrait
 	var portrait_panel := PanelContainer.new()
 	var portrait_style := StyleBoxFlat.new()
@@ -145,8 +154,8 @@ func _build_ui() -> void:
 	_class_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_portrait_fallback.add_child(_class_label)
 
-	portrait_container.add_child(portrait_panel)
-	add_child(portrait_container)
+	_portrait_container.add_child(portrait_panel)
+	add_child(_portrait_container)
 
 	# --- Level Label ---
 	_level_label = Label.new()
@@ -189,17 +198,17 @@ func _build_ui() -> void:
 	add_child(_depth_label)
 
 	# --- Separator ---
-	var sep := HSeparator.new()
-	sep.modulate = Color(0.5, 0.45, 0.35)
-	add_child(sep)
+	_separator_equipment = HSeparator.new()
+	_separator_equipment.modulate = Color(0.5, 0.45, 0.35)
+	add_child(_separator_equipment)
 
 	# --- Equipment Slots ---
-	var equip_label := Label.new()
-	equip_label.text = "Equipment"
-	equip_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	equip_label.add_theme_font_size_override("font_size", 11)
-	equip_label.add_theme_color_override("font_color", Color(0.7, 0.65, 0.55))
-	add_child(equip_label)
+	_equip_label = Label.new()
+	_equip_label.text = "Equipment"
+	_equip_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_equip_label.add_theme_font_size_override("font_size", 11)
+	_equip_label.add_theme_color_override("font_color", Color(0.7, 0.65, 0.55))
+	add_child(_equip_label)
 
 	_equip_grid = GridContainer.new()
 	_equip_grid.columns = 4
@@ -224,17 +233,17 @@ func _build_ui() -> void:
 	add_child(_equip_grid)
 
 	# --- Separator ---
-	var sep2 := HSeparator.new()
-	sep2.modulate = Color(0.5, 0.45, 0.35)
-	add_child(sep2)
+	_separator_buffs = HSeparator.new()
+	_separator_buffs.modulate = Color(0.5, 0.45, 0.35)
+	add_child(_separator_buffs)
 
 	# --- Active Buffs ---
-	var buffs_label := Label.new()
-	buffs_label.text = "Buffs"
-	buffs_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	buffs_label.add_theme_font_size_override("font_size", 11)
-	buffs_label.add_theme_color_override("font_color", Color(0.7, 0.65, 0.55))
-	add_child(buffs_label)
+	_buffs_label = Label.new()
+	_buffs_label.text = "Buffs"
+	_buffs_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_buffs_label.add_theme_font_size_override("font_size", 11)
+	_buffs_label.add_theme_color_override("font_color", Color(0.7, 0.65, 0.55))
+	add_child(_buffs_label)
 
 	_buffs_container = HFlowContainer.new()
 	_buffs_container.add_theme_constant_override("h_separation", 2)
@@ -243,13 +252,13 @@ func _build_ui() -> void:
 
 
 func _build_hp_section() -> void:
-	var hp_section := VBoxContainer.new()
-	hp_section.add_theme_constant_override("separation", 1)
+	_hp_section = VBoxContainer.new()
+	_hp_section.add_theme_constant_override("separation", 1)
 	var hp_header := Label.new()
 	hp_header.text = "HP"
 	hp_header.add_theme_font_size_override("font_size", 10)
 	hp_header.add_theme_color_override("font_color", Color(0.7, 0.3, 0.3))
-	hp_section.add_child(hp_header)
+	_hp_section.add_child(hp_header)
 
 	# Layered container for HP + shield bars (shield draws behind HP)
 	var hp_bar_container := Control.new()
@@ -289,25 +298,25 @@ func _build_hp_section() -> void:
 	_hp_bar.add_theme_stylebox_override("background", hp_bg)
 	hp_bar_container.add_child(_hp_bar)
 
-	hp_section.add_child(hp_bar_container)
+	_hp_section.add_child(hp_bar_container)
 
 	_hp_label = Label.new()
 	_hp_label.text = "20 / 20"
 	_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hp_label.add_theme_font_size_override("font_size", 11)
 	_hp_label.add_theme_color_override("font_color", Color(0.9, 0.8, 0.7))
-	hp_section.add_child(_hp_label)
-	add_child(hp_section)
+	_hp_section.add_child(_hp_label)
+	add_child(_hp_section)
 
 
 func _build_xp_section() -> void:
-	var xp_section := VBoxContainer.new()
-	xp_section.add_theme_constant_override("separation", 1)
+	_xp_section = VBoxContainer.new()
+	_xp_section.add_theme_constant_override("separation", 1)
 	var xp_header := Label.new()
 	xp_header.text = "XP"
 	xp_header.add_theme_font_size_override("font_size", 10)
 	xp_header.add_theme_color_override("font_color", Color(0.3, 0.5, 0.8))
-	xp_section.add_child(xp_header)
+	_xp_section.add_child(xp_header)
 
 	_xp_bar = ProgressBar.new()
 	_xp_bar.custom_minimum_size = Vector2(0, BAR_HEIGHT - 4)
@@ -326,25 +335,25 @@ func _build_xp_section() -> void:
 	xp_bg.set_border_width_all(1)
 	xp_bg.set_corner_radius_all(1)
 	_xp_bar.add_theme_stylebox_override("background", xp_bg)
-	xp_section.add_child(_xp_bar)
+	_xp_section.add_child(_xp_bar)
 
 	_xp_label = Label.new()
 	_xp_label.text = "0 / 10"
 	_xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_xp_label.add_theme_font_size_override("font_size", 11)
 	_xp_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.9))
-	xp_section.add_child(_xp_label)
-	add_child(xp_section)
+	_xp_section.add_child(_xp_label)
+	add_child(_xp_section)
 
 
 func _build_hunger_section() -> void:
-	var hunger_section := VBoxContainer.new()
-	hunger_section.add_theme_constant_override("separation", 1)
+	_hunger_section = VBoxContainer.new()
+	_hunger_section.add_theme_constant_override("separation", 1)
 	var hunger_header := Label.new()
 	hunger_header.text = "Hunger"
 	hunger_header.add_theme_font_size_override("font_size", 10)
 	hunger_header.add_theme_color_override("font_color", Color(0.4, 0.7, 0.3))
-	hunger_section.add_child(hunger_header)
+	_hunger_section.add_child(hunger_header)
 
 	_hunger_bar = ProgressBar.new()
 	_hunger_bar.custom_minimum_size = Vector2(0, BAR_HEIGHT - 4)
@@ -363,15 +372,48 @@ func _build_hunger_section() -> void:
 	hunger_bg.set_border_width_all(1)
 	hunger_bg.set_corner_radius_all(1)
 	_hunger_bar.add_theme_stylebox_override("background", hunger_bg)
-	hunger_section.add_child(_hunger_bar)
+	_hunger_section.add_child(_hunger_bar)
 
 	_hunger_label = Label.new()
 	_hunger_label.text = "Satisfied"
 	_hunger_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hunger_label.add_theme_font_size_override("font_size", 10)
 	_hunger_label.add_theme_color_override("font_color", Color(0.5, 0.7, 0.4))
-	hunger_section.add_child(_hunger_label)
-	add_child(hunger_section)
+	_hunger_section.add_child(_hunger_label)
+	add_child(_hunger_section)
+
+
+func set_compact_mode(is_compact: bool) -> void:
+	if _compact_mode == is_compact:
+		return
+	_compact_mode = is_compact
+	add_theme_constant_override("separation", 3 if _compact_mode else 6)
+	if _portrait_container:
+		_portrait_container.visible = not _compact_mode
+	if _focus_label:
+		_focus_label.visible = false if _compact_mode else _focus_label.visible
+	if _str_label:
+		_str_label.visible = not _compact_mode
+	if _depth_label:
+		_depth_label.visible = not _compact_mode
+	if _separator_equipment:
+		_separator_equipment.visible = not _compact_mode
+	if _equip_label:
+		_equip_label.visible = not _compact_mode
+	if _equip_grid:
+		_equip_grid.visible = not _compact_mode
+	if _separator_buffs:
+		_separator_buffs.visible = not _compact_mode
+	if _buffs_label:
+		_buffs_label.visible = not _compact_mode
+	if _buffs_container:
+		_buffs_container.visible = not _compact_mode
+	if _hp_section:
+		_hp_section.add_theme_constant_override("separation", 0 if _compact_mode else 1)
+	if _xp_section:
+		_xp_section.add_theme_constant_override("separation", 0 if _compact_mode else 1)
+	if _hunger_section:
+		_hunger_section.visible = not _compact_mode
 
 
 # ---------------------------------------------------------------------------
@@ -446,7 +488,7 @@ func update_all() -> void:
 		_level_label.text = "Lv. %d" % hero_level
 	if _focus_label:
 		_focus_label.visible = false
-		if GameManager and GameManager.has_method("is_party_run") and GameManager.is_party_run() and GameManager.has_method("get_hero_index"):
+		if not _compact_mode and GameManager and GameManager.has_method("is_party_run") and GameManager.is_party_run() and GameManager.has_method("get_hero_index"):
 			var hero_index: int = GameManager.get_hero_index(hero)
 			if hero_index >= 0:
 				var focus_text: String = "Focus: P%d/%d" % [hero_index + 1, GameManager.heroes.size()]
