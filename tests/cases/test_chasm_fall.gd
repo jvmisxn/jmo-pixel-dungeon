@@ -43,15 +43,16 @@ func run(t: Object) -> void:
 		"test level marks the fall cell as a chasm"
 	)
 	t.check(
-		Chasm.fall_damage(hero) == 5,
-		"chasm fall damage uses the SPD maxHP/currentHP scaled formula at full HP"
+		Chasm.fall_damage(hero) >= 10 and Chasm.fall_damage(hero) <= 20,
+		"chasm fall damage stays in SPD's HT/6..HT/3 range"
 	)
 	t.check(not Chasm.can_cross(hero), "grounded hero cannot cross chasms safely")
 
+	seed(0xC4A5)
 	var damage: int = Chasm.apply_landing_damage(hero, level)
-	t.check(damage == 5, "landing damage reports the scaled fall amount")
-	t.check(hero.hp == 55, "landing damage reduces HP without instant-killing the hero")
-	t.check(hero.has_buff("Bleeding"), "landing damage applies bleeding")
+	t.check(damage >= 10 and damage <= 20, "landing damage reports the SPD fall amount")
+	t.check(hero.hp == 60 - damage, "landing damage reduces HP without instant-killing the hero")
+	t.check(hero.has_buff("Cripple"), "landing damage applies cripple")
 
 	var levitating_hero: Hero = _make_hero(chasm_pos, level)
 	var levitation := Levitation.new()
@@ -86,11 +87,12 @@ func run(t: Object) -> void:
 	var bottom_hero: Hero = _make_hero(chasm_pos, bottom_level)
 	var bottom_scene := FallSceneStub.new()
 	bottom_scene._current_level = bottom_level
+	seed(0xC4A5)
 	FloorTransitionCoordinator.handle_fall(bottom_scene, bottom_hero)
 	t.check(bottom_scene.refreshed, "bottom-depth chasm fall refreshes without transitioning")
 	t.check(bottom_hero.pos != chasm_pos, "bottom-depth chasm fall moves hero off the chasm")
 	t.check(bottom_level.is_passable(bottom_hero.pos), "bottom-depth chasm fall lands on a passable cell")
-	t.check(bottom_hero.hp == 55, "bottom-depth chasm fall applies landing damage once")
+	t.check(bottom_hero.hp >= 40 and bottom_hero.hp <= 50, "bottom-depth chasm fall applies landing damage once")
 	GameManager.depth = original_depth
 
 	hero.free()

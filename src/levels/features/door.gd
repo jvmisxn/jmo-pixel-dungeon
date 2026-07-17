@@ -22,8 +22,8 @@ static func open(level: Level, pos: int, opener: Variant = null) -> bool:
 		ConstantsData.Terrain.LOCKED_DOOR:
 			# Check if opener has a key
 			if opener != null and opener.has_method("has_key"):
-				if opener.has_key("golden"):
-					opener.use_key("golden")
+				if opener.has_key("iron"):
+					opener.use_key("iron")
 					level.set_terrain(pos, ConstantsData.Terrain.OPEN_DOOR)
 					if EventBus:
 						EventBus.door_opened.emit(pos)

@@ -4,8 +4,6 @@ extends RefCounted
 ## descending a floor) or crossed with levitation.
 
 ## Damage dealt when falling into a chasm.
-const MIN_FALL_DAMAGE: int = 1
-
 # ---------------------------------------------------------------------------
 # Chasm Actions
 # ---------------------------------------------------------------------------
@@ -20,18 +18,17 @@ static func can_cross(actor: Variant) -> bool:
 		return true
 	return false
 
-## SPD scales fall damage against max HP and current HP fraction. At full HP
-## the damage is about maxHP/12; at low HP it approaches maxHP/6.
+## SPD's Chasm.heroLand rolls NormalIntRange(HT/6, HT/3). This port uses the
+## same two-roll triangular approximation used by other NormalIntRange ports.
 static func fall_damage(actor: Variant) -> int:
 	if actor == null:
 		return 0
 	var max_hp: int = int(actor.get("ht")) if actor.get("ht") != null else int(actor.get("hp_max"))
-	var hp: int = int(actor.get("hp")) if actor.get("hp") != null else max_hp
 	if max_hp <= 0:
-		return MIN_FALL_DAMAGE
-	var hp_fraction: float = clampf(float(hp) / float(max_hp), 0.0, 1.0)
-	var divisor: float = 6.0 + 6.0 * hp_fraction
-	return maxi(MIN_FALL_DAMAGE, roundi(float(max_hp) / divisor))
+		return 1
+	var min_damage: int = maxi(1, max_hp / 6)
+	var max_damage: int = maxi(min_damage, max_hp / 3)
+	return (randi_range(min_damage, max_damage) + randi_range(min_damage, max_damage)) / 2
 
 ## Apply landing damage after the floor transition has completed.
 static func apply_landing_damage(actor: Variant, _level: Level = null) -> int:
@@ -39,8 +36,7 @@ static func apply_landing_damage(actor: Variant, _level: Level = null) -> int:
 	if actor != null and actor.has_method("take_damage"):
 		actor.take_damage(damage, "chasm")
 		if actor.get("is_alive") == true and actor.has_method("add_buff"):
-			var bleed: Bleeding = Bleeding.create(float(damage))
-			actor.add_buff(bleed)
+			actor.add_buff(Cripple.new())
 	if MessageLog:
 		MessageLog.add_negative("You crash into the floor below!")
 	return damage

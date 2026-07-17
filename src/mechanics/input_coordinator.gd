@@ -50,8 +50,9 @@ static func handle_cell_click(scene: Variant, cell: int) -> void:
 static func handle_key_input(scene: Variant, keycode: int) -> bool:
 	if scene == null:
 		return false
-	if scene._targeting_active and keycode == KEY_ESCAPE:
-		scene._cancel_targeting_mode()
+	if scene._targeting_active:
+		if keycode == KEY_ESCAPE:
+			scene._cancel_targeting_mode()
 		return true
 	scene._cancel_auto_walk()
 	match keycode:
