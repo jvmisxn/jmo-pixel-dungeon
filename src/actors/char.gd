@@ -151,8 +151,10 @@ static func hit(attacker: Char, defender: Char, acc_multi: float = 1.0) -> bool:
 	var acu_stat: float = float(attacker.accuracy())
 	var def_stat: float = float(defender.evasion())
 
-	# Invisible attackers always hit (surprise attack / guaranteed hit)
-	if attacker.invisible > 0 and attacker.can_surprise_attack():
+	# Guaranteed hit when the defender is surprised: an invisible attacker, or
+	# (for mobs) one the defender cannot see/detect — sleeping, unaware, stealth.
+	# Mirrors SPD, where a surprised defender has 0 effective evasion.
+	if attacker.can_surprise_attack() and defender.is_surprised_by(attacker):
 		return true
 
 	# Infinite evasion beats infinite accuracy
@@ -186,6 +188,12 @@ static func hit(attacker: Char, defender: Char, acc_multi: float = 1.0) -> bool:
 ## Override in Hero to check weapon requirements. Base returns true.
 func can_surprise_attack() -> bool:
 	return true
+
+## Whether this character is surprised by (unaware of) the attacker, granting the
+## attacker a guaranteed hit. Base characters are only surprised by an invisible
+## attacker; Mob overrides this to also cover sleeping/unaware/out-of-sight states.
+func is_surprised_by(attacker: Char) -> bool:
+	return attacker != null and attacker.invisible > 0
 
 ## Check if the target is invulnerable to this attacker.
 ## Override for boss-specific invulnerability phases.
