@@ -82,6 +82,11 @@ func _ready() -> void:
 func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: int = -1) -> void:
 	# Clean up previous run state
 	_cleanup_previous_run()
+	if TurnManager != null and TurnManager.has_method("clear_actors"):
+		TurnManager.clear_actors()
+	if MessageLog != null and MessageLog.has_method("clear"):
+		MessageLog.clear()
+		MessageLog.current_turn = 0
 
 	hero_class = chosen_class
 	if party_classes.is_empty():
@@ -415,7 +420,56 @@ func spend_gold(amount: int) -> bool:
 		return false
 	gold -= amount
 	gold_changed.emit(gold)
+	if EventBus:
+		EventBus.gold_collected.emit(-amount, gold)
 	return true
+
+# ---------------------------------------------------------------------------
+# Run State Serialization
+# ---------------------------------------------------------------------------
+
+func serialize_run_state() -> Dictionary:
+	return {
+		"depth": depth,
+		"gold": gold,
+		"run_seed": run_seed,
+		"score": score,
+		"hero_class": hero_class,
+		"hero_subclass": hero_subclass,
+		"party_classes": get_party_classes(),
+		"local_hero_index": local_hero_index,
+		"run_active": run_active,
+		"stats": stats.duplicate(true),
+		"quest_flags": quest_flags.duplicate(true),
+		"item_appearance": ItemAppearance.serialize() if ItemAppearance else {},
+	}
+
+func apply_run_state(data: Dictionary) -> void:
+	if data.is_empty():
+		return
+	depth = data.get("depth", 1)
+	gold = data.get("gold", 0)
+	run_seed = data.get("run_seed", 0)
+	score = data.get("score", 0)
+	hero_class = data.get("hero_class", ConstantsData.HeroClass.WARRIOR)
+	hero_subclass = data.get("hero_subclass", ConstantsData.HeroSubclass.NONE)
+	set_party_classes(data.get("party_classes", [hero_class]))
+	local_hero_index = int(data.get("local_hero_index", 0))
+	run_active = data.get("run_active", false)
+	stats = data.get("stats", {})
+
+	quest_flags.clear()
+	var saved_quest_flags: Variant = data.get("quest_flags", {})
+	if saved_quest_flags is Dictionary:
+		for key: Variant in saved_quest_flags:
+			quest_flags[str(key)] = saved_quest_flags[key]
+
+	if ItemAppearance:
+		var appearance_data: Dictionary = data.get("item_appearance", {})
+		if appearance_data.is_empty():
+			ItemAppearance.reset_for_new_run(run_seed)
+		else:
+			ItemAppearance.deserialize(appearance_data)
 
 # ---------------------------------------------------------------------------
 # Score

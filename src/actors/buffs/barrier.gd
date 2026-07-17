@@ -13,16 +13,14 @@ func _init() -> void:
 	duration = -1  # Managed by shield depletion
 	icon_color = Color(0.5, 0.8, 1.0)
 
-func shielding() -> int:
+func get_shielding() -> int:
 	return shield_amount
 
 func set_shield(amount: int) -> void:
-	shield_amount = amount
-	_apply_to_target()
+	shield_amount = maxi(0, amount)
 
 func inc_shield(amount: int) -> void:
-	shield_amount += amount
-	_apply_to_target()
+	shield_amount = maxi(0, shield_amount + amount)
 
 func absorb_damage(dmg: int) -> int:
 	## Absorb damage from shield. Returns remaining damage after absorption.
@@ -33,28 +31,17 @@ func absorb_damage(dmg: int) -> int:
 			target.remove_buff(self)
 	return dmg - absorbed
 
-func _apply_to_target() -> void:
-	if target:
-		target.shielding = maxi(target.shielding, shield_amount)
-
 func on_turn() -> void:
 	# Barrier decays by 1 each turn (original behavior)
 	shield_amount -= 1
 	if shield_amount <= 0:
 		if target:
 			target.remove_buff(self)
-	elif target:
-		target.shielding = shield_amount
-
-func on_detach() -> void:
-	if target:
-		target.shielding = maxi(0, target.shielding - shield_amount)
 
 func merge(other: Node) -> void:
 	if other is Barrier:
 		# Take the max shield, don't stack
 		shield_amount = maxi(shield_amount, (other as Barrier).shield_amount)
-		_apply_to_target()
 	else:
 		super.merge(other)
 
