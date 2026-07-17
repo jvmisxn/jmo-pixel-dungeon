@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-07-16
+
+- Tags: blobs, gas, simulation, fidelity, spd-parity
+- Brought the blob/gas layer to life (audit S20 vertical slice). Blobs were dead: `Blob.act()` was never driven, so every seeded gas/fire/web sat frozen at its origin, never spreading, poisoning, or decaying - the root cause of the S15/S19 one-shot-buff workarounds. Changes: (1) `Blob` now exposes `tick()` (spread -> apply effects -> decay -> prune) separate from `act()`, with `_spread()` no longer mutating `active_cells` mid-iteration and a row-wrap guard on cardinal neighbors; added `Blob.deserialize()`. (2) `Level.tick_blobs()` drives all blobs once per hero round (mirrors `tick_pending_bombs`), pruning burned-out blobs; wired into `SceneFeedbackCoordinator.on_round_completed`. (3) `Level.add_blob(blob, cell, amount)` now honors density and merges same-type blobs into one instance (SPD keeps one blob per type per level; prevents duplicate entries double-applying effects). (4) Fixed `fetid_rat.gd` toxic-gas drop, which crashed on `seed()`/`add_blob()` arg-count mismatches. Added `tests/cases/test_blobs.gd` (spread, row-wrap guard, decay/prune lifecycle, ToxicGas poison, serialize round-trip, Level merge + tick_blobs). All 65 headless checks pass.
+- NEXT SLICE: blobs still tick per *hero round* rather than per game turn (approximation - fine for hero-paced gas, note if mob-time gas matters). Persistence still round-trips live Node dicts via `store_var` rather than `Blob.serialize()`/factory (`blob.deserialize()` now exists but isn't wired into save_manager). Offensive potions (ToxicGas/ParalyticGas/LiquidFlame/Frost, S15) and gas traps/plants should now be re-pointed at real blobs via `add_blob` instead of one-shot 3x3 buffs. Missing SPD blob classes: Freezing/CausticGas/StenchGas/StormCloud/Regrowth/SmokeScreen (SmokeScreen also unblocks the dead LOS branch in `level.gd:257`).
+
 ## 2026-05-09
 
 - Tags: multiplayer, movement, sync

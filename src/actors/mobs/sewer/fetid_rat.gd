@@ -18,11 +18,5 @@ func _on_death(_source: Variant = null) -> void:
 	var death_level: Variant = level
 	super._on_death(_source)
 	if death_level != null and death_level.has_method("add_blob"):
-		var toxic_script: GDScript = load("res://src/actors/blobs/toxic_gas.gd")
-		if toxic_script != null:
-			var blob: Variant = toxic_script.new()
-			if blob != null:
-				blob.pos = death_pos
-				if blob.has_method("seed"):
-					blob.seed(death_level, death_pos, 6)
-				death_level.add_blob(blob)
+		var blob: ToxicGas = ToxicGas.new()
+		death_level.add_blob(blob, death_pos, 6.0)

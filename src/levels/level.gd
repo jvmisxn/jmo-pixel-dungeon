@@ -919,14 +919,56 @@ func destroy_terrain(cell: int) -> void:
 			set_terrain(cell, ConstantsData.Terrain.EMPTY)
 		# Walls, chasms, entrance, exit are indestructible
 
-## Add a blob effect at a cell position.
-func add_blob(blob: Variant, cell: int) -> void:
+## Add a blob effect at a cell position with the given density. Blobs of the
+## same type are merged into a single instance (SPD keeps one blob per type per
+## level), so repeated seeding just raises density at the target cell instead of
+## piling up duplicate entries that would double-apply effects.
+func add_blob(blob: Variant, cell: int, amount: float = 1.0) -> void:
 	if blob == null or cell < 0 or cell >= LEN:
 		return
+	var new_id: String = str(blob.get("blob_id")) if blob.get("blob_id") != null else ""
+	if new_id != "":
+		for entry: Dictionary in blobs:
+			var existing: Variant = entry.get("blob")
+			if existing == null or not is_instance_valid(existing):
+				continue
+			if str(existing.get("blob_id")) == new_id:
+				existing.level = self
+				if existing.has_method("seed"):
+					existing.seed(cell, amount)
+				return
+	blob.level = self
+	blob.pos = cell
 	if blob.has_method("seed"):
-		blob.seed(cell, 1)
-	var entry: Dictionary = {"blob": blob, "pos": cell}
-	blobs.append(entry)
+		blob.seed(cell, amount)
+	blobs.append({"blob": blob, "pos": cell})
+
+## Advance all active blobs by one hero round: each blob spreads, applies its
+## effect to characters standing in it, and decays. Burned-out blobs are
+## dropped. Returns true if any blob is still active so the caller can refresh
+## visuals. Mirrors `tick_pending_bombs()`; blobs are driven here rather than
+## registered as TurnManager actors.
+func tick_blobs() -> bool:
+	if blobs.is_empty():
+		return false
+	var remaining: Array[Dictionary] = []
+	var any_active: bool = false
+	for entry: Dictionary in blobs:
+		var blob: Variant = entry.get("blob")
+		if blob == null or not is_instance_valid(blob):
+			continue
+		blob.level = self
+		if blob.has_method("tick"):
+			blob.tick()
+		elif blob.has_method("act"):
+			blob.act()
+		var cells: Variant = blob.get("active_cells")
+		if cells is Array and (cells as Array).size() > 0:
+			entry["pos"] = int((cells as Array)[0])
+			remaining.append(entry)
+			any_active = true
+	blobs = remaining
+	return any_active
 
 ## Arm a bomb on the floor so it detonates after a fixed number of hero rounds.
 func arm_bomb(cell: int, bomb: Variant, turns_left: int) -> void:

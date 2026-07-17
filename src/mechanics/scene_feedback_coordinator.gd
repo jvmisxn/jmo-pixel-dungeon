@@ -137,6 +137,10 @@ static func on_round_completed(scene: Variant, round_number: int) -> void:
 		var detonated: bool = scene._current_level.tick_pending_bombs()
 		if detonated:
 			refresh_after_turn(scene)
+	if scene._current_level.has_method("tick_blobs"):
+		var blobs_active: bool = scene._current_level.tick_blobs()
+		if blobs_active:
+			refresh_after_turn(scene)
 	scene._queue_online_snapshot_sync()
 
 static func on_trap_triggered(scene: Variant, pos: int, trap_name: String) -> void:
