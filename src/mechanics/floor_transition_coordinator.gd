@@ -73,6 +73,30 @@ static func handle_ascend(scene: Variant) -> void:
 		OnlineEventCodec.broadcast_level_transition(NetworkManager, GameManager.depth, "ascend")
 	transition_to_loading(scene, "ascend")
 
+static func handle_fall(scene: Variant, hero_node: Variant) -> void:
+	if scene == null or hero_node == null:
+		return
+	if scene.get("_game_ended") == true:
+		return
+	if GameManager == null or GameManager.depth >= ConstantsData.MAX_DEPTH:
+		_relocate_faller_on_current_level(scene, hero_node)
+		Chasm.apply_landing_damage(hero_node, scene._current_level)
+		scene.refresh_after_turn()
+		return
+	if AudioManager:
+		AudioManager.play_sfx("falling")
+	notify_party_floor_change(scene)
+	var fall_actor_id: int = int(hero_node.get("actor_id")) if hero_node.get("actor_id") != null else -1
+	var new_depth: int = GameManager.descend()
+	if new_depth < 0:
+		_relocate_faller_on_current_level(scene, hero_node)
+		Chasm.apply_landing_damage(hero_node, scene._current_level)
+		scene.refresh_after_turn()
+		return
+	if scene._is_online_host():
+		OnlineEventCodec.broadcast_level_transition(NetworkManager, GameManager.depth, "fall")
+	transition_to_loading(scene, "fall", {"fall_actor_id": fall_actor_id})
+
 static func party_ready_for_stairs(scene: Variant, stair_pos: int, failure_message: String) -> bool:
 	if scene == null or GameManager == null or not GameManager.has_method("get_active_heroes"):
 		return true
@@ -103,7 +127,7 @@ static func notify_party_floor_change(scene: Variant) -> void:
 			if artifact != null and artifact.has_method("on_floor_change"):
 				artifact.on_floor_change()
 
-static func transition_to_loading(scene: Variant, transition_type: String = "descend") -> void:
+static func transition_to_loading(scene: Variant, transition_type: String = "descend", extra_meta: Dictionary = {}) -> void:
 	if scene == null:
 		return
 	scene._game_ended = true
@@ -111,7 +135,21 @@ static func transition_to_loading(scene: Variant, transition_type: String = "des
 	scene._detach_persistent_actors()
 	var loading_script: GDScript = load("res://src/scenes/loading_scene.gd") as GDScript
 	if loading_script:
-		SceneManager.go_to(loading_script, "LoadingScene", {
+		var meta: Dictionary = {
 			"is_continue": true,
 			"transition_type": transition_type,
-		})
+		}
+		meta.merge(extra_meta, true)
+		SceneManager.go_to(loading_script, "LoadingScene", meta)
+
+static func _relocate_faller_on_current_level(scene: Variant, hero_node: Variant) -> void:
+	if scene == null or hero_node == null:
+		return
+	var level: Variant = scene.get("_current_level")
+	if level == null or not level.has_method("random_passable_cell"):
+		return
+	var landing: int = level.random_passable_cell()
+	if landing < 0:
+		return
+	hero_node.set("pos", landing)
+	hero_node.set("level", level)

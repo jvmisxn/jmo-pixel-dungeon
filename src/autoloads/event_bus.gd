@@ -22,6 +22,9 @@ signal hero_died
 ## Emitted when any hero dies. payload: hero (Variant)
 @warning_ignore("unused_signal")
 signal hero_died_detailed(hero: Variant)
+## Emitted when a hero falls into a chasm and should transition downward.
+@warning_ignore("unused_signal")
+signal hero_fell(hero: Variant)
 ## Emitted when the hero's stats change (HP, STR, EXP, etc.).
 @warning_ignore("unused_signal")
 signal hero_stats_changed

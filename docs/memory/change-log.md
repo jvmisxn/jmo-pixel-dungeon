@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: chasms, level-transitions, source-fidelity, audit-S11
+- Replaced chasm instant-death with a first-pass SPD-style fall flow. Heroes with `Levitation` or flight now cross chasms safely; grounded heroes emit a fall transition, descend without requiring stairs, land on a passable cell of the next floor, and then take HP-scaled fall damage plus Bleeding instead of being killed in place. `Chasm` now owns the shared crossing and fall-damage logic, `LoadingScene` understands `"fall"` arrivals, and `test_chasm_fall.gd` covers the damage formula, levitation immunity, and event handoff. Remaining follow-ups: PitfallTrap still needs to reuse the fall path, boss-arena chasm rings need encounter-specific handling, and true PitRoom landing support is not implemented yet.
+
 - Tags: mobs, level-generation, source-fidelity, audit-S07
 - Added the missing regular-floor scheduled mob respawner. `RegularLevel` now stores the generated floor's target mob population and activates a level-owned `Respawner` actor on the active floor, matching SPD's scheduler shape with a 50-tick respawn cooldown. The respawner adds depth-appropriate replacement mobs only while the living count is below that target, avoids occupied/visible/hero-adjacent cells, registers spawned mobs with the turn manager, and persists the respawn target with cached/saved level state. Extended `test_mob_spawn_positions.gd` to cover cap behavior, hidden-cell selection, serialization, and the actor cooldown path. Full local headless suite green (272 checks, Godot 4.7.1).
 

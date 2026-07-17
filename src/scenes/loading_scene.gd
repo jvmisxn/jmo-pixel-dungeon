@@ -18,6 +18,7 @@ var _run_seed: int = -1
 var _is_continue: bool = false
 var _transition_type: String = "descend"  # "descend" or "ascend"
 var _autosave_after_generation: bool = false
+var _fall_actor_id: int = -1
 
 # --- UI References ---
 var _depth_label: Label = null
@@ -74,6 +75,8 @@ func _ready() -> void:
 	if has_meta("transition_type"):
 		_transition_type = get_meta("transition_type") as String
 		_autosave_after_generation = _is_continue
+	if has_meta("fall_actor_id"):
+		_fall_actor_id = int(get_meta("fall_actor_id"))
 
 	_build_ui()
 	# Defer generation to next frame so UI is visible
@@ -295,8 +298,10 @@ func _generate_current_level() -> void:
 		# Place party at the correct staircase:
 		# - Descending (or new game): appear at entrance (stairs up)
 		# - Ascending: appear at exit (stairs down, where they came from)
-		var anchor_pos: int = level.exit_pos if _transition_type == "ascend" and level.exit_pos >= 0 else level.entrance
+		var anchor_pos: int = _landing_anchor_for_transition(level)
 		_assign_party_positions(level, anchor_pos)
+		if _transition_type == "fall":
+			_apply_fall_arrival_effects(level)
 	else:
 		# Level already loaded from save — just ensure hero references are set
 		if GameManager.hero:
@@ -304,6 +309,34 @@ func _generate_current_level() -> void:
 		for h in GameManager.heroes:
 			if h is Node:
 				h.level = level
+		if _transition_type == "fall":
+			_apply_fall_arrival_effects(level)
+
+func _landing_anchor_for_transition(level: Level) -> int:
+	if level == null:
+		return -1
+	if _transition_type == "ascend" and level.exit_pos >= 0:
+		return level.exit_pos
+	if _transition_type == "fall":
+		var landing: int = level.random_passable_cell()
+		if landing >= 0:
+			return landing
+	return level.entrance
+
+func _apply_fall_arrival_effects(level: Level) -> void:
+	var fallen_hero: Variant = _find_hero_by_actor_id(_fall_actor_id)
+	if fallen_hero == null:
+		fallen_hero = GameManager.get_primary_hero() if GameManager and GameManager.has_method("get_primary_hero") else GameManager.hero
+	if fallen_hero != null:
+		Chasm.apply_landing_damage(fallen_hero, level)
+
+func _find_hero_by_actor_id(actor_id: int) -> Variant:
+	if actor_id < 0 or GameManager == null:
+		return null
+	for hero_node: Variant in GameManager.heroes:
+		if hero_node != null and is_instance_valid(hero_node) and int(hero_node.get("actor_id")) == actor_id:
+			return hero_node
+	return null
 
 func _apply_online_party_assignments() -> void:
 	if _player_infos.is_empty() or GameManager == null:

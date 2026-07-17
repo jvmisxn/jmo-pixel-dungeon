@@ -4,8 +4,7 @@ extends RefCounted
 ## descending a floor) or crossed with levitation.
 
 ## Damage dealt when falling into a chasm.
-const FALL_DAMAGE_MIN: int = 5
-const FALL_DAMAGE_PER_DEPTH: int = 2
+const MIN_FALL_DAMAGE: int = 1
 
 # ---------------------------------------------------------------------------
 # Chasm Actions
@@ -15,29 +14,35 @@ const FALL_DAMAGE_PER_DEPTH: int = 2
 static func can_cross(actor: Variant) -> bool:
 	if actor == null:
 		return false
-	# Check for levitation buff
-	if actor.has_method("has_buff") and actor.has_buff("levitation"):
+	if actor.get("flying") == true:
+		return true
+	if actor.has_method("has_buff") and actor.has_buff("Levitation"):
 		return true
 	return false
 
-## Handle falling into a chasm. Returns the damage dealt.
-static func fall(actor: Variant, level: Level) -> int:
+## SPD scales fall damage against max HP and current HP fraction. At full HP
+## the damage is about maxHP/12; at low HP it approaches maxHP/6.
+static func fall_damage(actor: Variant) -> int:
 	if actor == null:
 		return 0
+	var max_hp: int = int(actor.get("ht")) if actor.get("ht") != null else int(actor.get("hp_max"))
+	var hp: int = int(actor.get("hp")) if actor.get("hp") != null else max_hp
+	if max_hp <= 0:
+		return MIN_FALL_DAMAGE
+	var hp_fraction: float = clampf(float(hp) / float(max_hp), 0.0, 1.0)
+	var divisor: float = 6.0 + 6.0 * hp_fraction
+	return maxi(MIN_FALL_DAMAGE, roundi(float(max_hp) / divisor))
 
-	var damage: int = FALL_DAMAGE_MIN + level.depth * FALL_DAMAGE_PER_DEPTH
-
-	if MessageLog:
-		MessageLog.add("You fall into the chasm!")
-
-	# Apply damage
-	if actor.has_method("take_damage"):
+## Apply landing damage after the floor transition has completed.
+static func apply_landing_damage(actor: Variant, _level: Level = null) -> int:
+	var damage: int = fall_damage(actor)
+	if actor != null and actor.has_method("take_damage"):
 		actor.take_damage(damage, "chasm")
-
-	# Drop equipped items chance
-	if actor.has_method("drop_random_item") and randf() < 0.25:
-		actor.drop_random_item()
-
+		if actor.get("is_alive") == true and actor.has_method("add_buff"):
+			var bleed: Bleeding = Bleeding.create(float(damage))
+			actor.add_buff(bleed)
+	if MessageLog:
+		MessageLog.add_negative("You crash into the floor below!")
 	return damage
 
 ## Check if a position is a chasm.

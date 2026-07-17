@@ -11,7 +11,7 @@ extends RefCounted
 ## What we can guard mechanically is that the contract itself stays intact.)
 
 const REQUIRED_SIGNALS: Array[String] = [
-	"hero_moved", "hero_moved_detailed", "hero_died", "hero_stats_changed",
+	"hero_moved", "hero_moved_detailed", "hero_died", "hero_fell", "hero_stats_changed",
 	"mob_defeated", "mob_died", "mob_damaged",
 	"level_changed", "door_opened", "trap_triggered", "gold_collected",
 	"game_saved", "game_loaded",

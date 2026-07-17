@@ -665,10 +665,16 @@ func _check_terrain_effects() -> void:
 				level.set_terrain(pos, ConstantsData.Terrain.INACTIVE_TRAP)
 
 		ConstantsData.Terrain.CHASM:
-			# Falling into a chasm deals massive damage (usually lethal)
+			if Chasm.can_cross(self):
+				if MessageLog:
+					MessageLog.add("You float over the chasm.")
+				return
 			if MessageLog:
 				MessageLog.add_negative("You fall into the chasm!")
-			take_damage(hp_max, null)
+			if EventBus and EventBus.has_signal("hero_fell"):
+				EventBus.hero_fell.emit(self)
+			else:
+				Chasm.apply_landing_damage(self, level)
 
 		ConstantsData.Terrain.WATER:
 			# Water extinguishes fire

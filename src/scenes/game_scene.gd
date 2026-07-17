@@ -979,6 +979,8 @@ func _connect_signals() -> void:
 			EventBus.hero_died_detailed.connect(_on_hero_died_detailed)
 		else:
 			EventBus.hero_died.connect(_on_hero_died)
+		if EventBus.has_signal("hero_fell"):
+			EventBus.hero_fell.connect(_on_hero_fell)
 		if EventBus.has_signal("mob_revealed"):
 			EventBus.mob_revealed.connect(_on_mob_revealed)
 		if EventBus.has_signal("mob_moved_detailed"):
@@ -2015,6 +2017,9 @@ func _on_online_level_transition_requested(config: Dictionary) -> void:
 		if transition_type == "ascend":
 			MessageLog.add("The party is ascending...")
 			_pending_online_arrival_feedback = "Ascended"
+		elif transition_type == "fall":
+			MessageLog.add("The party falls deeper...")
+			_pending_online_arrival_feedback = "Fell"
 		else:
 			MessageLog.add("The party is descending...")
 			_pending_online_arrival_feedback = "Descended"
@@ -2235,6 +2240,9 @@ func _on_hero_died() -> void:
 
 func _on_hero_died_detailed(hero_node: Variant) -> void:
 	RunTransitionCoordinator.handle_hero_died_detailed(self, hero_node)
+
+func _on_hero_fell(hero_node: Variant) -> void:
+	FloorTransitionCoordinator.handle_fall(self, hero_node)
 
 func _transition_to_death() -> void:
 	RunTransitionCoordinator.transition_to_death(self)
