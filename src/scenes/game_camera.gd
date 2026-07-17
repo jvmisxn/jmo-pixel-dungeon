@@ -21,6 +21,9 @@ var _target_position: Vector2 = Vector2.ZERO
 var _shake_intensity: float = 0.0
 var _shake_tween: Tween = null
 var _target_zoom: float = 3.0
+var _touch_points: Dictionary = {}
+var _pinch_start_distance: float = 0.0
+var _pinch_start_zoom: float = 3.0
 
 # --- Bounds ---
 var _map_bounds: Rect2 = Rect2()
@@ -67,6 +70,22 @@ func _unhandled_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 			elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				zoom_out()
+				get_viewport().set_input_as_handled()
+	elif event is InputEventScreenTouch:
+		var touch: InputEventScreenTouch = event as InputEventScreenTouch
+		if touch.pressed:
+			_touch_points[touch.index] = touch.position
+		else:
+			_touch_points.erase(touch.index)
+			_pinch_start_distance = 0.0
+		if _touch_points.size() == 2:
+			_begin_pinch()
+	elif event is InputEventScreenDrag:
+		var drag: InputEventScreenDrag = event as InputEventScreenDrag
+		if _touch_points.has(drag.index):
+			_touch_points[drag.index] = drag.position
+			if _touch_points.size() == 2:
+				_update_pinch_zoom()
 				get_viewport().set_input_as_handled()
 
 # ---------------------------------------------------------------------------
@@ -151,3 +170,32 @@ func _clamp_to_bounds(pos: Vector2) -> Vector2:
 	# exposed area beyond the map with black, so there's no visual issue.
 	return pos
 
+
+func _begin_pinch() -> void:
+	var positions: Array[Vector2] = _touch_positions()
+	if positions.size() != 2:
+		return
+	_pinch_start_distance = positions[0].distance_to(positions[1])
+	_pinch_start_zoom = _target_zoom
+
+
+func _update_pinch_zoom() -> void:
+	if _pinch_start_distance <= 0.0:
+		_begin_pinch()
+		return
+	var positions: Array[Vector2] = _touch_positions()
+	if positions.size() != 2:
+		return
+	var current_distance: float = positions[0].distance_to(positions[1])
+	if current_distance <= 0.0:
+		return
+	var ratio: float = current_distance / _pinch_start_distance
+	set_zoom_level(_pinch_start_zoom * ratio)
+
+
+func _touch_positions() -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	for value: Variant in _touch_points.values():
+		if value is Vector2:
+			positions.append(value)
+	return positions
