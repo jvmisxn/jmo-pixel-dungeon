@@ -18,6 +18,7 @@ class LayoutHud:
 	extends HUD
 
 	var fake_safe_bottom: float = 0.0
+	var fake_canvas_size: Vector2 = Vector2.ZERO
 
 	class StubComponent:
 		extends Control
@@ -44,6 +45,11 @@ class LayoutHud:
 		if edge == "bottom":
 			return fake_safe_bottom
 		return 0.0
+
+	func _get_canvas_viewport_size() -> Vector2:
+		if fake_canvas_size != Vector2.ZERO:
+			return fake_canvas_size
+		return _vp_size
 
 func _visible_toolbar_min_width(toolbar: Toolbar) -> float:
 	var width: float = 0.0
@@ -140,3 +146,18 @@ func run(t: Object) -> void:
 		"mobile status overlay remains visible in portrait layout"
 	)
 	layout_hud.free()
+
+	var scaled_hud := LayoutHud.new()
+	scaled_hud.fake_canvas_size = Vector2(1179, 1704)
+	scaled_hud._vp_size = Vector2(393, 852)
+	scaled_hud._build_layout()
+	scaled_hud._apply_viewport_size(Vector2(393, 852))
+	t.check(
+		is_equal_approx(scaled_hud.scale.x, 3.0) and is_equal_approx(scaled_hud.scale.y, 2.0),
+		"mobile HUD scales CSS-viewport layout up to the backing canvas"
+	)
+	t.check(
+		scaled_hud.toolbar != null and is_equal_approx(scaled_hud.toolbar.size.x * scaled_hud.scale.x, 1179.0),
+		"scaled mobile toolbar remains full-width on a larger backing canvas"
+	)
+	scaled_hud.free()

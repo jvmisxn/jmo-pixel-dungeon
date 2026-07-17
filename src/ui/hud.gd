@@ -98,6 +98,7 @@ func _instantiate_script(path: String) -> Variant:
 func _ready() -> void:
 	layer = 10
 	_vp_size = _get_viewport_size()
+	_sync_canvas_layer_scale()
 	_build_layout()
 	_connect_signals()
 	update_all()
@@ -432,10 +433,22 @@ func _get_viewport_size() -> Vector2:
 	var browser_size: Vector2i = _get_browser_viewport_size()
 	if browser_size != Vector2i.ZERO and _should_layout_against_browser_size(browser_size):
 		return Vector2(browser_size)
+	return _get_canvas_viewport_size()
+
+
+func _get_canvas_viewport_size() -> Vector2:
 	var vp: Viewport = get_viewport()
 	if vp:
 		return vp.get_visible_rect().size
 	return Vector2(1280, 720)
+
+
+func _sync_canvas_layer_scale() -> void:
+	var canvas_size: Vector2 = _get_canvas_viewport_size()
+	if canvas_size.x <= 0.0 or canvas_size.y <= 0.0 or _vp_size.x <= 0.0 or _vp_size.y <= 0.0:
+		scale = Vector2.ONE
+		return
+	scale = Vector2(canvas_size.x / _vp_size.x, canvas_size.y / _vp_size.y)
 
 
 func _get_browser_viewport_size() -> Vector2i:
@@ -592,6 +605,7 @@ func _on_viewport_resized() -> void:
 
 func _apply_viewport_size(size: Vector2) -> void:
 	_vp_size = size
+	_sync_canvas_layer_scale()
 	var root_node: Node = get_node_or_null("HUDRoot")
 	if not root_node:
 		return
