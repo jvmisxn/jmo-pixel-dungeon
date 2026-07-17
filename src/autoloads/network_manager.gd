@@ -314,7 +314,7 @@ func set_local_ready(ready: bool) -> void:
 	if not is_online_session():
 		return
 	if is_host():
-		_upsert_lobby_player(multiplayer.get_unique_id(), _get_effective_local_player_name(), ready, local_lobby_class)
+		_upsert_lobby_player(multiplayer.get_unique_id(), _get_effective_local_player_name(), ready, local_lobby_class, local_profile_icon_id)
 		_broadcast_lobby_snapshot()
 	elif is_client():
 		rpc_id(1, "_server_set_ready", ready)

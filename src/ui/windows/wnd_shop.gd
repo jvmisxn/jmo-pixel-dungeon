@@ -195,8 +195,9 @@ func _on_shop_item_pressed(index: int) -> void:
 		if purchase_success and _shopkeeper.has_method("get_shop_items"):
 			_shop_items = _shopkeeper.get_shop_items()
 	else:
-		if GameManager:
-			GameManager.gold -= price
+		if GameManager and not GameManager.spend_gold(price):
+			_set_info("Purchase failed.")
+			return
 		_hero.belongings.add_item(item)
 		_shop_items.remove_at(index)
 		purchase_success = true
