@@ -152,7 +152,9 @@ func split(amount: int) -> Item:
 
 ## Create a copy of this item (used internally by split).
 func duplicate_item() -> Item:
-	var copy: Item = Item.new()
+	var copy: Item = Generator.create_item(item_id)
+	if copy == null:
+		copy = Item.new()
 	_copy_base_properties(copy)
 	return copy
 
@@ -175,6 +177,7 @@ func _copy_base_properties(target: Item) -> void:
 	target.unique = unique
 	target.str_requirement = str_requirement
 	target.icon_color = icon_color
+	target.sprite_index = sprite_index
 
 # ---------------------------------------------------------------------------
 # Identification & Curse

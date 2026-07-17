@@ -87,7 +87,9 @@ func _notify_hero(hero: Char, text: String, kind: String = "info") -> void:
 
 ## Override duplicate_item to preserve scroll-specific properties.
 func duplicate_item() -> Item:
-	var copy: Scroll = Scroll.new()
+	var copy: Scroll = Scroll.create(item_id)
+	if copy == null:
+		copy = Scroll.new()
 	_copy_base_properties(copy)
 	copy.known = known
 	copy.rune_symbol = rune_symbol

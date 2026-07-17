@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: items, stack-splitting, source-fidelity, audit-S12, audit-S15, audit-S17
+- Fixed stack splitting so split-off consumables keep their concrete behavior instead of becoming inert base items. Base `Item.duplicate_item()` now reconstructs clones through `Generator.create_item(item_id)` before copying shared state, so factory-backed stackables like seeds, bombs, stones, spells, food, missile weapons, torches, and dewdrops keep their scripts and subtype fields. Potion and scroll overrides now route through `Potion.create(item_id)` / `Scroll.create(item_id)` so split stacks preserve their actual `drink()`/`read_scroll()` implementations instead of downgrading to base `Potion`/`Scroll`. Added `test_item_stack_splitting.gd` to cover the affected families.
+
 - Tags: mobile, hud, web, playtesting
 - Fixed mobile web HUD layouts that used the visible browser viewport but still rendered into a larger Godot backing canvas. `HUD` now scales its `CanvasLayer` by backing-canvas size over CSS-visible layout size, so the status strip and toolbar keep their intended on-screen size when mobile browsers expose a large canvas behind a phone-sized viewport. Extended `test_mobile_hud_input.gd` with a 393x852 visible viewport / 1179x1704 backing-canvas regression that asserts the scaled toolbar remains full-width. Local headless suite green (311 checks, Godot 4.7.1); GitHub CI and Pages deploy green for commit `4fa7201`. Browser smoke: live page and `index.js`/`index.pck`/`index.wasm` returned 200, and Chromium mobile-width screenshot loaded the name prompt; no real-device/iPhone in-run touch confirmation yet.
 

@@ -67,7 +67,9 @@ func _consume(hero: Char) -> void:
 
 ## Override duplicate_item to preserve potion-specific properties.
 func duplicate_item() -> Item:
-	var copy: Potion = Potion.new()
+	var copy: Potion = Potion.create(item_id)
+	if copy == null:
+		copy = Potion.new()
 	_copy_base_properties(copy)
 	copy.known = known
 	copy.appearance_name = appearance_name

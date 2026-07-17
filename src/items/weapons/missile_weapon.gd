@@ -49,6 +49,17 @@ func is_broken() -> bool:
 func reset_uses() -> void:
 	uses_left = base_uses
 
+## Preserve mutable missile durability/combat state when splitting a stack.
+func duplicate_item() -> Item:
+	var copy_item: Item = super.duplicate_item()
+	if not copy_item is MissileWeapon:
+		copy_item = MissileWeapon.create(item_id)
+		if copy_item == null:
+			copy_item = MissileWeapon.new()
+	var copy: MissileWeapon = copy_item as MissileWeapon
+	copy.deserialize(serialize())
+	return copy
+
 # ---------------------------------------------------------------------------
 # Throw Behavior
 # ---------------------------------------------------------------------------
