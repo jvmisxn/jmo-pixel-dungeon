@@ -2,3 +2,20 @@
 .godot/
 /android/
 /exports/
+exports/
+
+# Local/editor artifacts
+.DS_Store
+*.tmp
+*.bak
+.fuse_hidden*
+**/.fuse_hidden*
+
+# Secrets and local environment files
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore

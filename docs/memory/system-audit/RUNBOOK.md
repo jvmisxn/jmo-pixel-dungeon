@@ -2,7 +2,7 @@
 
 You are an isolated agent. Do exactly ONE system this run, then stop. Fresh context —
 everything you need is here and in the repo. Repo root:
-`/Users/jamison/.openclaw/workspace/jmo-pixel-dungeon`.
+`<repo-root>`.
 
 ## Golden rules (non-negotiable)
 
@@ -18,7 +18,7 @@ everything you need is here and in the repo. Repo root:
 
 ```bash
 export PATH="$HOME/Library/Python/3.9/bin:$PATH"   # gdparse/gdlint live here
-cd /Users/jamison/.openclaw/workspace/jmo-pixel-dungeon
+cd <repo-root>
 git checkout main && git pull --ff-only 2>/dev/null || true
 ```
 

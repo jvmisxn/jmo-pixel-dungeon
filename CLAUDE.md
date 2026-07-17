@@ -1,7 +1,7 @@
-# Shattered Pixel Dungeon — Godot Clone
+# JMO Pixel Dungeon
 
 ## Project Overview
-A recreation of Shattered Pixel Dungeon in Godot 4.5 using GDScript. The project uses procedural sprite generation with SPD sprite sheet fallbacks, autoloaded singletons for game state, and a turn-based architecture.
+A Godot 4.5/GDScript roguelike port/adaptation derived from Shattered Pixel Dungeon. The project uses procedural sprite generation with SPD sprite sheet fallbacks, autoloaded singletons for game state, and a turn-based architecture.
 
 ## CRITICAL: File Integrity Rules
 
