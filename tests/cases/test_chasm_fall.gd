@@ -42,10 +42,8 @@ func run(t: Object) -> void:
 		level.get_terrain(chasm_pos) == ConstantsData.Terrain.CHASM,
 		"test level marks the fall cell as a chasm"
 	)
-	t.check(
-		Chasm.fall_damage(hero) >= 10 and Chasm.fall_damage(hero) <= 20,
-		"chasm fall damage stays in SPD's HT/6..HT/3 range"
-	)
+	var fall_roll: int = Chasm.fall_damage(hero)
+	t.check(fall_roll >= 10 and fall_roll <= 20, "chasm fall damage stays in SPD's HT/6..HT/3 range")
 	t.check(not Chasm.can_cross(hero), "grounded hero cannot cross chasms safely")
 
 	seed(0xC4A5)
