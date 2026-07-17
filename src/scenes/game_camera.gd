@@ -24,6 +24,9 @@ var _target_zoom: float = 3.0
 var _touch_points: Dictionary = {}
 var _pinch_start_distance: float = 0.0
 var _pinch_start_zoom: float = 3.0
+const MOBILE_DEFAULT_ZOOM: float = 4.5
+const MOBILE_MAX_ZOOM: float = 10.0
+const MOBILE_ZOOM_STEP: float = 0.75
 
 # --- Bounds ---
 var _map_bounds: Rect2 = Rect2()
@@ -34,6 +37,7 @@ var _has_bounds: bool = false
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
+	_apply_platform_zoom_limits()
 	_target_zoom = default_zoom_level
 	zoom = Vector2(_target_zoom, _target_zoom)
 	position_smoothing_enabled = false  # We handle smoothing manually
@@ -204,3 +208,11 @@ func _touch_positions() -> Array[Vector2]:
 		if value is Vector2:
 			positions.append(value)
 	return positions
+
+
+func _apply_platform_zoom_limits() -> void:
+	if OS.get_name() != "Web" or not DisplayServer.is_touchscreen_available():
+		return
+	default_zoom_level = maxf(default_zoom_level, MOBILE_DEFAULT_ZOOM)
+	max_zoom = maxf(max_zoom, MOBILE_MAX_ZOOM)
+	zoom_step = maxf(zoom_step, MOBILE_ZOOM_STEP)

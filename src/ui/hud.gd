@@ -8,7 +8,8 @@ extends CanvasLayer
 ##   - No sidebars — game world fills the screen
 
 # --- Constants ---
-const TOOLBAR_HEIGHT: int = 40
+const DESKTOP_TOOLBAR_HEIGHT: int = 40
+const MOBILE_TOOLBAR_HEIGHT: int = 72
 const MOBILE_BREAKPOINT: float = 720.0
 const HUD_MARGIN: float = 6.0
 
@@ -120,7 +121,7 @@ func _build_layout() -> void:
 	# --- Game Log (bottom-left, floating over game world) ---
 	var log_container: MarginContainer = MarginContainer.new()
 	log_container.name = "GameLog"
-	log_container.position = Vector2(HUD_MARGIN, _vp_size.y - TOOLBAR_HEIGHT - 200)
+	log_container.position = Vector2(HUD_MARGIN, _vp_size.y - _toolbar_height() - 200)
 	log_container.custom_minimum_size = Vector2(300, 195)
 	log_container.size = Vector2(300, 195)
 	log_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -144,9 +145,9 @@ func _build_layout() -> void:
 	# --- Toolbar (bottom, full width) ---
 	toolbar = MarginContainer.new()
 	toolbar.name = "Toolbar"
-	toolbar.position = Vector2(0, _vp_size.y - TOOLBAR_HEIGHT)
-	toolbar.custom_minimum_size = Vector2(_vp_size.x, TOOLBAR_HEIGHT)
-	toolbar.size = Vector2(_vp_size.x, TOOLBAR_HEIGHT)
+	toolbar.position = Vector2(0, _vp_size.y - _toolbar_height())
+	toolbar.custom_minimum_size = Vector2(_vp_size.x, _toolbar_height())
+	toolbar.size = Vector2(_vp_size.x, _toolbar_height())
 	var toolbar_panel: PanelContainer = PanelContainer.new()
 	toolbar_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var toolbar_style: StyleBoxFlat = StyleBoxFlat.new()
@@ -357,9 +358,9 @@ func _on_viewport_resized() -> void:
 		return
 	# Reposition toolbar at bottom
 	if toolbar:
-		toolbar.position = Vector2(0, _vp_size.y - TOOLBAR_HEIGHT)
-		toolbar.custom_minimum_size = Vector2(_vp_size.x, TOOLBAR_HEIGHT)
-		toolbar.size = Vector2(_vp_size.x, TOOLBAR_HEIGHT)
+		toolbar.position = Vector2(0, _vp_size.y - _toolbar_height())
+		toolbar.custom_minimum_size = Vector2(_vp_size.x, _toolbar_height())
+		toolbar.size = Vector2(_vp_size.x, _toolbar_height())
 	_apply_responsive_layout()
 
 
@@ -637,7 +638,7 @@ func _apply_responsive_layout() -> void:
 	if root_node == null:
 		return
 
-	var is_mobile_layout: bool = _vp_size.x <= MOBILE_BREAKPOINT or _vp_size.y > _vp_size.x
+	var is_mobile_layout: bool = _is_mobile_layout()
 	var status_container: Control = root_node.get_node_or_null("StatusContainer") as Control
 	var log_container: Control = root_node.get_node_or_null("GameLog") as Control
 	var info_row: Control = root_node.get_node_or_null("InfoRow") as Control
@@ -649,10 +650,10 @@ func _apply_responsive_layout() -> void:
 
 	if log_container:
 		var log_width: float = minf(300.0, _vp_size.x - (HUD_MARGIN * 2.0))
-		var log_height: float = 132.0 if is_mobile_layout else 195.0
+		var log_height: float = 96.0 if is_mobile_layout else 195.0
 		log_container.custom_minimum_size = Vector2(log_width, log_height)
 		log_container.size = Vector2(log_width, log_height)
-		log_container.position = Vector2(HUD_MARGIN, _vp_size.y - TOOLBAR_HEIGHT - log_height - HUD_MARGIN)
+		log_container.position = Vector2(HUD_MARGIN, _vp_size.y - _toolbar_height() - log_height - HUD_MARGIN)
 
 	if info_row:
 		var info_width: float = 180.0
@@ -678,3 +679,11 @@ func _apply_responsive_layout() -> void:
 
 	if _toolbar_bar:
 		_toolbar_bar.set_compact_mode(is_mobile_layout)
+
+
+func _is_mobile_layout() -> bool:
+	return _vp_size.x <= MOBILE_BREAKPOINT or _vp_size.y > _vp_size.x
+
+
+func _toolbar_height() -> int:
+	return MOBILE_TOOLBAR_HEIGHT if _is_mobile_layout() else DESKTOP_TOOLBAR_HEIGHT

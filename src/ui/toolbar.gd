@@ -28,6 +28,8 @@ var _btn_wait: Button = null
 var _btn_rest: Button = null
 var _btn_search: Button = null
 var _btn_settings: Button = null
+var _quickslot_sep: VSeparator = null
+var _settings_sep: VSeparator = null
 
 # --- Quickslot references ---
 var _quickslots: Array[Button] = []
@@ -38,9 +40,12 @@ var _quickslot_labels: Array[Label] = []
 const QUICKSLOT_COUNT: int = 6
 const QUICKSLOT_SIZE: Vector2 = Vector2(44, 36)
 const QUICKSLOT_ICON_SIZE: Vector2 = Vector2(24, 24)
+const MOBILE_QUICKSLOT_SIZE: Vector2 = Vector2(50, 56)
+const MOBILE_QUICKSLOT_ICON_SIZE: Vector2 = Vector2(32, 32)
 
 # --- Constants ---
 const BUTTON_MIN_SIZE: Vector2 = Vector2(80, 36)
+const MOBILE_BUTTON_MIN_SIZE: Vector2 = Vector2(58, 56)
 const TOOLBAR_PATH: String = "res://assets/spd/interfaces/toolbar.png"
 const ITEM_SHEET_PATH: String = "res://assets/spd/sprites/items.png"
 const ITEM_SPRITE_SIZE: int = 16
@@ -74,10 +79,10 @@ func _ready() -> void:
 	add_child(_btn_search)
 
 	# --- Quickslot separator ---
-	var sep := VSeparator.new()
-	sep.custom_minimum_size = Vector2(2, 0)
-	sep.modulate = Color(0.5, 0.45, 0.35)
-	add_child(sep)
+	_quickslot_sep = VSeparator.new()
+	_quickslot_sep.custom_minimum_size = Vector2(2, 0)
+	_quickslot_sep.modulate = Color(0.5, 0.45, 0.35)
+	add_child(_quickslot_sep)
 
 	# --- Quickslot buttons ---
 	for i in QUICKSLOT_COUNT:
@@ -86,10 +91,10 @@ func _ready() -> void:
 		add_child(qs_btn)
 
 	# --- Another separator before settings ---
-	var sep2 := VSeparator.new()
-	sep2.custom_minimum_size = Vector2(2, 0)
-	sep2.modulate = Color(0.5, 0.45, 0.35)
-	add_child(sep2)
+	_settings_sep = VSeparator.new()
+	_settings_sep.custom_minimum_size = Vector2(2, 0)
+	_settings_sep.modulate = Color(0.5, 0.45, 0.35)
+	add_child(_settings_sep)
 
 	_btn_settings = _create_spd_button("Settings", "Esc")
 	add_child(_btn_settings)
@@ -254,24 +259,59 @@ func set_compact_mode(is_compact: bool) -> void:
 
 
 func _apply_button_labels() -> void:
+	var button_size: Vector2 = MOBILE_BUTTON_MIN_SIZE if _compact_mode else BUTTON_MIN_SIZE
+	var action_font_size: int = 16 if _compact_mode else 13
+	var quickslot_size: Vector2 = MOBILE_QUICKSLOT_SIZE if _compact_mode else QUICKSLOT_SIZE
+	var quickslot_icon_size: Vector2 = MOBILE_QUICKSLOT_ICON_SIZE if _compact_mode else QUICKSLOT_ICON_SIZE
+	add_theme_constant_override("separation", 4 if _compact_mode else 6)
+
 	if _btn_inventory:
-		_btn_inventory.text = "Inv [I]" if _compact_mode else "Inventory [I]"
-		_btn_inventory.custom_minimum_size.x = 64 if _compact_mode else BUTTON_MIN_SIZE.x
+		_btn_inventory.text = "Bag" if _compact_mode else "Inventory [I]"
+		_btn_inventory.custom_minimum_size = button_size
+		_btn_inventory.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_map:
 		_btn_map.text = "Map [M]"
-		_btn_map.custom_minimum_size.x = 56 if _compact_mode else BUTTON_MIN_SIZE.x
+		_btn_map.visible = not _compact_mode
+		_btn_map.custom_minimum_size = button_size
+		_btn_map.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_wait:
 		_btn_wait.text = "Wait" if _compact_mode else "Wait [Space]"
-		_btn_wait.custom_minimum_size.x = 56 if _compact_mode else BUTTON_MIN_SIZE.x
+		_btn_wait.custom_minimum_size = button_size
+		_btn_wait.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_rest:
 		_btn_rest.text = "Rest [R]"
-		_btn_rest.custom_minimum_size.x = 56 if _compact_mode else BUTTON_MIN_SIZE.x
+		_btn_rest.visible = not _compact_mode
+		_btn_rest.custom_minimum_size = button_size
+		_btn_rest.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_search:
-		_btn_search.text = "Find [S]" if _compact_mode else "Search [S]"
-		_btn_search.custom_minimum_size.x = 56 if _compact_mode else BUTTON_MIN_SIZE.x
+		_btn_search.text = "Find" if _compact_mode else "Search [S]"
+		_btn_search.custom_minimum_size = button_size
+		_btn_search.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_settings:
 		_btn_settings.text = "Menu" if _compact_mode else "Settings [Esc]"
-		_btn_settings.custom_minimum_size.x = 60 if _compact_mode else BUTTON_MIN_SIZE.x
+		_btn_settings.custom_minimum_size = button_size
+		_btn_settings.add_theme_font_size_override("font_size", action_font_size)
+	if _quickslot_sep:
+		_quickslot_sep.visible = true
+	if _settings_sep:
+		_settings_sep.visible = true
+	for i: int in range(_quickslots.size()):
+		var is_mobile_hidden_slot: bool = _compact_mode and i >= 2
+		_quickslots[i].visible = not is_mobile_hidden_slot
+		_quickslots[i].custom_minimum_size = quickslot_size
+		_quickslots[i].size = quickslot_size
+		if i < _quickslot_icons.size():
+			var icon: TextureRect = _quickslot_icons[i]
+			icon.custom_minimum_size = quickslot_icon_size
+			icon.size = quickslot_icon_size
+			icon.position = Vector2(
+				(quickslot_size.x - quickslot_icon_size.x) * 0.5,
+				5.0 if _compact_mode else 4.0
+			)
+		if i < _quickslot_labels.size():
+			var slot_label: Label = _quickslot_labels[i]
+			slot_label.position = Vector2(5.0, quickslot_size.y - 20.0)
+			slot_label.add_theme_font_size_override("font_size", 13 if _compact_mode else 11)
 
 
 ## Enable or disable all toolbar buttons.

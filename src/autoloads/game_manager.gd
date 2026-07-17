@@ -47,8 +47,8 @@ var hero_subclass: int = ConstantsData.HeroSubclass.NONE
 ## Whether a run is currently in progress.
 var run_active: bool = false
 const DESKTOP_CONTENT_SCALE_SIZE: Vector2i = Vector2i(1280, 720)
-const MOBILE_LANDSCAPE_CONTENT_SCALE_SIZE: Vector2i = Vector2i(960, 540)
-const MOBILE_PORTRAIT_CONTENT_SCALE_SIZE: Vector2i = Vector2i(540, 960)
+const MOBILE_LANDSCAPE_CONTENT_SCALE_SIZE: Vector2i = Vector2i(932, 430)
+const MOBILE_PORTRAIT_CONTENT_SCALE_SIZE: Vector2i = Vector2i(430, 932)
 const MOBILE_ORIENTATION_AUTO: String = "auto"
 const MOBILE_ORIENTATION_PORTRAIT: String = "portrait"
 const MOBILE_ORIENTATION_LANDSCAPE: String = "landscape"
