@@ -12,7 +12,7 @@ const DESKTOP_TOOLBAR_HEIGHT: int = 40
 const MOBILE_TOOLBAR_HEIGHT: int = 72
 const MOBILE_BREAKPOINT: float = 720.0
 const HUD_MARGIN: float = 6.0
-const MOBILE_STATUS_HEIGHT: float = 132.0
+const MOBILE_STATUS_HEIGHT: float = 88.0
 
 # --- Child panels ---
 var toolbar: MarginContainer = null
@@ -253,6 +253,16 @@ func contains_screen_position(screen_pos: Vector2) -> bool:
 		return true
 	var party_row: Control = root_node.get_node_or_null("PartyRow") as Control
 	if party_row != null and party_row.visible and _control_contains_screen_position(party_row, screen_pos):
+		return true
+	return false
+
+
+func handle_screen_tap(screen_pos: Vector2) -> bool:
+	if window_layer != null and window_layer.visible:
+		return true
+	if toolbar != null and _control_contains_screen_position(toolbar, screen_pos):
+		if _toolbar_bar != null and _toolbar_bar.has_method("activate_button_at_screen_position"):
+			return bool(_toolbar_bar.activate_button_at_screen_position(screen_pos))
 		return true
 	return false
 

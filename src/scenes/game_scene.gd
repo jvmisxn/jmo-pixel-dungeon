@@ -119,7 +119,9 @@ var _active_touch_points: Dictionary = {}
 var _ui_touch_points: Dictionary = {}
 var _touch_gesture_started: bool = false
 var _suppress_touch_mouse_until_msec: int = 0
+var _last_action_from_touch: bool = false
 const HELD_MOVE_REPEAT_DELAY: float = 0.25
+const TOUCH_MOVE_DURATION: float = 0.28
 
 # --- Auto-Walk State ---
 ## When > 0, the hero is auto-walking toward this destination cell.
@@ -273,6 +275,8 @@ func _input(event: InputEvent) -> void:
 		else:
 			if _ui_touch_points.has(touch.index):
 				_ui_touch_points.erase(touch.index)
+				_handle_hud_touch_release(touch.position)
+				get_viewport().set_input_as_handled()
 				return
 			var should_tap: bool = not _touch_gesture_started \
 					and _active_touch_points.size() == 1 \
@@ -379,8 +383,16 @@ func _handle_touch_tap(screen_pos: Vector2) -> void:
 	if game_camera and game_camera.has_method("get_cell_at_screen_position"):
 		cell = game_camera.get_cell_at_screen_position(screen_pos)
 	if cell >= 0:
+		_last_action_from_touch = true
 		_handle_cell_click(cell)
 		get_viewport().set_input_as_handled()
+
+
+func _handle_hud_touch_release(screen_pos: Vector2) -> void:
+	if _hud == null or not is_instance_valid(_hud):
+		return
+	if _hud.has_method("handle_screen_tap"):
+		_hud.handle_screen_tap(screen_pos)
 
 func _movement_dir_for_key(keycode: int) -> int:
 	match keycode:
@@ -1877,11 +1889,15 @@ func _animate_action_for_hero(hero: Variant, action: Dictionary) -> void:
 	if hero_sprite == null:
 		return
 
+	var action_from_touch: bool = _last_action_from_touch
+	_last_action_from_touch = false
+
 	match action.get("type", ""):
 		"move":
 			# Animate to hero's actual position (may differ from clicked cell
 			# due to one-step pathfinding)
-			hero_sprite.move_to(hero.pos)
+			var move_duration: float = TOUCH_MOVE_DURATION if action_from_touch else 0.15
+			hero_sprite.move_to(hero.pos, move_duration)
 		"attack":
 			var target: int = action.get("target_pos", -1)
 			if target >= 0:

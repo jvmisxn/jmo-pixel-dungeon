@@ -355,6 +355,37 @@ func set_action_controls_enabled(is_enabled: bool) -> void:
 		qs.modulate = Color.WHITE if is_enabled else Color(0.72, 0.72, 0.72, 0.9)
 
 
+func activate_button_at_screen_position(screen_pos: Vector2) -> bool:
+	var button_actions: Array[Dictionary] = [
+		{"button": _btn_inventory, "callback": Callable(self, "_on_inventory")},
+		{"button": _btn_map, "callback": Callable(self, "_on_map")},
+		{"button": _btn_wait, "callback": Callable(self, "_on_wait")},
+		{"button": _btn_rest, "callback": Callable(self, "_on_rest")},
+		{"button": _btn_search, "callback": Callable(self, "_on_search")},
+		{"button": _btn_settings, "callback": Callable(self, "_on_settings")},
+	]
+	for entry: Dictionary in button_actions:
+		var button: Button = entry.get("button") as Button
+		if _button_accepts_screen_position(button, screen_pos):
+			var callback: Callable = entry.get("callback") as Callable
+			callback.call()
+			return true
+
+	for index: int in range(_quickslots.size()):
+		var button: Button = _quickslots[index]
+		if _button_accepts_screen_position(button, screen_pos):
+			_on_quickslot_pressed(index)
+			return true
+	return false
+
+
+func _button_accepts_screen_position(button: Button, screen_pos: Vector2) -> bool:
+	return button != null \
+			and button.visible \
+			and not button.disabled \
+			and button.get_global_rect().has_point(screen_pos)
+
+
 # --- Signal Callbacks ---
 
 func _on_inventory() -> void:
