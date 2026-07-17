@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: mobile, camera, zoom, web, playtesting
+- Fixed mobile web runs starting heavily zoomed in after the browser-viewport scaling fixes. `GameCamera` had forced mobile web to start at `4.5x`; once the game used the actual phone-sized logical viewport, that showed only a tiny slice of the dungeon. Mobile now starts at `1.5x`, can pinch/setting zoom out to `1x`, and still allows zooming in up to `10x`. Added `tests/cases/test_game_camera_mobile_zoom.gd` to lock the mobile defaults.
+
 - Tags: mobile, hud, toolbar, web, playtesting
 - Fixed the in-run mobile HUD using the Godot canvas size when mobile browsers report a larger backing canvas than the visible viewport. `HUD` now mirrors the hero-select fix by laying out against `window.innerWidth/innerHeight` for portrait/small/mobile web contexts and polling browser viewport changes so collapsing address bars or orientation changes relayout the toolbar and status strip. Added portrait safe-area coverage to `test_mobile_hud_input.gd` to keep the toolbar above the bottom inset and the status overlay visible.
 

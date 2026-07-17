@@ -24,7 +24,8 @@ var _target_zoom: float = 3.0
 var _touch_points: Dictionary = {}
 var _pinch_start_distance: float = 0.0
 var _pinch_start_zoom: float = 3.0
-const MOBILE_DEFAULT_ZOOM: float = 4.5
+const MOBILE_DEFAULT_ZOOM: float = 1.5
+const MOBILE_MIN_ZOOM: float = 1.0
 const MOBILE_MAX_ZOOM: float = 10.0
 const MOBILE_ZOOM_STEP: float = 0.75
 
@@ -213,8 +214,13 @@ func _touch_positions() -> Array[Vector2]:
 func _apply_platform_zoom_limits() -> void:
 	if not _is_mobile_web_context():
 		return
-	default_zoom_level = maxf(default_zoom_level, MOBILE_DEFAULT_ZOOM)
+	_apply_mobile_zoom_limits()
+
+
+func _apply_mobile_zoom_limits() -> void:
+	min_zoom = minf(min_zoom, MOBILE_MIN_ZOOM)
 	max_zoom = maxf(max_zoom, MOBILE_MAX_ZOOM)
+	default_zoom_level = clampf(MOBILE_DEFAULT_ZOOM, min_zoom, max_zoom)
 	zoom_step = maxf(zoom_step, MOBILE_ZOOM_STEP)
 
 
