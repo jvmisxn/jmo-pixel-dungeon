@@ -374,19 +374,15 @@ func mob_spawn_positions(count: int) -> Array[int]:
 			for _w: int in range(weight):
 				std_rooms.append(room)
 	if std_rooms.is_empty():
-		# Fallback
-		for _i: int in range(count):
-			var pos: int = random_passable_cell()
-			if pos >= 0 and not _near_entrance(pos):
-				return [pos]
-		return []
+		return _fallback_mob_spawn_positions(count, [])
 
 	std_rooms.shuffle()
 	var room_idx: int = 0
 
 	var positions: Array[int] = []
-	var remaining: int = count
-	while remaining > 0:
+	var failed_rooms_in_a_row: int = 0
+	var max_failed_rooms: int = maxi(1, std_rooms.size() * 4)
+	while positions.size() < count and failed_rooms_in_a_row < max_failed_rooms:
 		if room_idx >= std_rooms.size():
 			room_idx = 0
 		var room: Room = std_rooms[room_idx]
@@ -405,10 +401,28 @@ func mob_spawn_positions(count: int) -> Array[int]:
 						positions.append(pos)
 						placed = true
 						break
-		if not placed and positions.size() >= count / 2:
-			# Give up on this mob to avoid infinite loop
-			pass
-		remaining -= 1
+		if placed:
+			failed_rooms_in_a_row = 0
+		else:
+			failed_rooms_in_a_row += 1
+	if positions.size() < count:
+		positions = _fallback_mob_spawn_positions(count, positions)
+	return positions
+
+
+func _fallback_mob_spawn_positions(count: int, existing_positions: Array[int]) -> Array[int]:
+	var positions: Array[int] = existing_positions.duplicate()
+	var attempts: int = 0
+	while positions.size() < count and attempts < count * 40:
+		attempts += 1
+		var pos: int = random_passable_cell()
+		if pos < 0:
+			continue
+		if _near_entrance(pos):
+			continue
+		if positions.has(pos):
+			continue
+		positions.append(pos)
 	return positions
 
 # ---------------------------------------------------------------------------

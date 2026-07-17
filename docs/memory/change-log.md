@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: mobs, level-generation, source-fidelity, audit-S07
+- Fixed regular-level mob spawn placement under-filling floors. `RegularLevel.mob_spawn_positions()` used to consume one requested mob even when a room placement failed, and the no-standard-room fallback returned a single position instead of filling the requested count. Placement now counts successful cells, falls back without duplicates when room attempts stall, and has headless coverage for normal rooms, failed room placement, and fallback-only levels. Full local headless suite green (263 checks, Godot 4.7.1). Remaining source-fidelity follow-up: SPD's scheduled floor respawner is still not implemented.
+
 - Tags: wands, combat, source-fidelity, audit-S14
 - Routed Wand of Disintegration damage through `Char.take_damage()` instead of mutating HP directly. Disintegration still bypasses physical armor because `take_damage()` receives already-raw magical damage, but it now respects shielding, Arcane Armor, wake-on-damage hooks, and the shared death path like the other wand subclasses. Added `tests/cases/test_wand_of_disintegration.gd` to cover Barrier absorption, Arcane Armor reduction, and exactly-once death handling.
 
