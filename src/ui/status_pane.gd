@@ -53,7 +53,7 @@ var _compact_mode: bool = false
 # --- Constants ---
 const SLOT_SIZE: Vector2 = Vector2(28, 28)
 const BAR_HEIGHT: int = 14
-const COMPACT_MINIMUM_SIZE: Vector2 = Vector2(0, 76)
+const COMPACT_MINIMUM_SIZE: Vector2 = Vector2(1, 76)
 const BUFF_ICON_SIZE: Vector2 = Vector2(16, 16)
 const STATUS_PANE_PATH: String = "res://assets/spd/interfaces/status_pane.png"
 const HERO_ICONS_PATH: String = "res://assets/spd/interfaces/hero_icons.png"
@@ -270,6 +270,7 @@ func _build_ui() -> void:
 func _build_compact_strip() -> void:
 	_compact_strip = HBoxContainer.new()
 	_compact_strip.visible = false
+	_compact_strip.custom_minimum_size = COMPACT_MINIMUM_SIZE
 	_compact_strip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_compact_strip.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_compact_strip.alignment = BoxContainer.ALIGNMENT_BEGIN
@@ -285,6 +286,7 @@ func _build_compact_strip() -> void:
 	_compact_strip.add_child(_compact_level_label)
 
 	var bars: VBoxContainer = VBoxContainer.new()
+	bars.custom_minimum_size = Vector2(1, 64)
 	bars.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bars.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	bars.add_theme_constant_override("separation", 6)
@@ -513,6 +515,9 @@ func set_compact_mode(is_compact: bool) -> void:
 		_level_label.add_theme_font_size_override("font_size", 16 if _compact_mode else 13)
 	if _compact_strip:
 		_compact_strip.visible = _compact_mode
+		_compact_strip.custom_minimum_size = COMPACT_MINIMUM_SIZE
+		_compact_strip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_compact_strip.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	if _portrait_container:
 		_portrait_container.visible = not _compact_mode
 	if _focus_label:

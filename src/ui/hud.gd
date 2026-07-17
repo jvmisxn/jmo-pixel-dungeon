@@ -13,6 +13,7 @@ const MOBILE_TOOLBAR_HEIGHT: int = 72
 const MOBILE_BREAKPOINT: float = 720.0
 const HUD_MARGIN: float = 6.0
 const MOBILE_STATUS_HEIGHT: float = 88.0
+const MOBILE_SAFE_TOP_INSET: float = 18.0
 
 # --- Child panels ---
 var toolbar: MarginContainer = null
@@ -117,6 +118,8 @@ func _build_layout() -> void:
 	status_style.content_margin_bottom = 4.0
 	status_container.add_theme_stylebox_override("panel", status_style)
 	_status_pane = _instantiate_script("res://src/ui/status_pane.gd")
+	_status_pane.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_status_pane.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	status_container.add_child(_status_pane)
 	root.add_child(status_container)
 
@@ -681,8 +684,8 @@ func _apply_responsive_layout() -> void:
 	var party_row: Control = root_node.get_node_or_null("PartyRow") as Control
 
 	if status_container:
-		status_container.position = Vector2(HUD_MARGIN, HUD_MARGIN)
 		var is_portrait_mobile: bool = _is_mobile_portrait_layout()
+		status_container.position = Vector2(HUD_MARGIN, _hud_top_margin())
 		status_container.custom_minimum_size = (
 			Vector2(maxf(0.0, _vp_size.x - (HUD_MARGIN * 2.0)), MOBILE_STATUS_HEIGHT)
 			if is_portrait_mobile
@@ -691,6 +694,11 @@ func _apply_responsive_layout() -> void:
 		status_container.size = status_container.custom_minimum_size
 		if _status_pane and _status_pane.has_method("set_compact_mode"):
 			_status_pane.set_compact_mode(is_portrait_mobile)
+			_status_pane.custom_minimum_size = Vector2(
+				maxf(1.0, status_container.size.x - 12.0),
+				maxf(1.0, status_container.size.y - 8.0)
+			)
+			_status_pane.size = _status_pane.custom_minimum_size
 
 	if log_container:
 		var log_width: float = minf(300.0, _vp_size.x - (HUD_MARGIN * 2.0))
@@ -701,20 +709,20 @@ func _apply_responsive_layout() -> void:
 
 	if info_row:
 		var info_width: float = 180.0
-		info_row.position = Vector2(maxf(HUD_MARGIN, _vp_size.x - info_width - HUD_MARGIN), HUD_MARGIN)
+		info_row.position = Vector2(maxf(HUD_MARGIN, _vp_size.x - info_width - HUD_MARGIN), _hud_top_margin())
 		info_row.visible = not _is_mobile_portrait_layout()
 
 	if party_row:
 		var party_width: float = minf(520.0, _vp_size.x - 420.0)
 		party_row.position = Vector2(
 			maxf(HUD_MARGIN + 190.0, (_vp_size.x - party_width) * 0.5),
-			HUD_MARGIN if not is_mobile_layout else HUD_MARGIN + 146.0
+			_hud_top_margin() if not is_mobile_layout else _hud_top_margin() + 146.0
 		)
 
 	if _online_state_label:
 		_online_state_label.position = Vector2(
 			maxf(HUD_MARGIN + 200.0, (_vp_size.x - _online_state_label.custom_minimum_size.x) * 0.5),
-			(HUD_MARGIN + 38.0) if not is_mobile_layout else (HUD_MARGIN + 182.0)
+			(_hud_top_margin() + 38.0) if not is_mobile_layout else (_hud_top_margin() + 182.0)
 		)
 
 	if _minimap:
@@ -736,3 +744,7 @@ func _is_mobile_portrait_layout() -> bool:
 
 func _toolbar_height() -> int:
 	return MOBILE_TOOLBAR_HEIGHT if _is_mobile_layout() else DESKTOP_TOOLBAR_HEIGHT
+
+
+func _hud_top_margin() -> float:
+	return HUD_MARGIN + (MOBILE_SAFE_TOP_INSET if _is_mobile_portrait_layout() else 0.0)
