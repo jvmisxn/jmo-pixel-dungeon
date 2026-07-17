@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: mobile, hero-select, portrait, web, playtesting
+- Fixed the character-select action row falling below the visible panel on tight portrait mobile viewports. `HeroSelectScene` now uses a tighter portrait layout when vertical space is short: smaller splash crop, reduced panel inset/gaps, compressed description/stat blocks, narrower hero buttons, and slimmer Back/Start buttons. Added `tests/cases/test_hero_select_portrait_layout.gd` to lock a 375px portrait mobile budget so the Start row remains inside the panel.
+
 - Tags: bosses, hud, combat, fidelity, spd-parity, audit-S27, audit-S35
 - Wired the dead boss HP bar signals. `HUD` already subscribed to `boss_fight_started`, `boss_damaged`, and `boss_defeated`, but no gameplay path emitted them, so bosses fought without the original-style top HP bar. `Mob` now recognizes current boss mob IDs (plus the existing `BOSS` property), starts the bar when a boss becomes active or is first damaged, updates it on non-fatal damage, and hides it on defeat. Added `tests/cases/test_boss_hp_signals.gd` to cover non-boss silence, boss start payload, HP update payload, and fatal hide ordering. Full local headless suite green (244 checks, Godot 4.7.1).
 

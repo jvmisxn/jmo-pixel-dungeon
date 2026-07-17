@@ -53,6 +53,7 @@ const LEFT_INSET_Y: float = 24.0
 const LEFT_CONTENT_WIDTH: float = 292.0
 const STANDARD_ROW_WIDTH: float = 300.0
 const ACTION_BUTTON_WIDTH: float = 145.0
+const PORTRAIT_TIGHT_HEIGHT: float = 390.0
 
 # Hero class splash art paths (800x450 JPGs)
 const SPLASH_PATHS: Array[String] = [
@@ -701,10 +702,13 @@ func _apply_portrait_layout(viewport_size: Vector2) -> void:
 		maxf(1.0, viewport_size.x - (margin * 2.0)),
 		maxf(1.0, viewport_size.y - (margin * 2.0))
 	)
-	var inset: float = 18.0
+	var tight_portrait: bool = panel_size.y < 590.0
+	var inset: float = 14.0 if tight_portrait else 18.0
 	var content_width: float = maxf(1.0, panel_size.x - (inset * 2.0))
-	var splash_height: float = minf(190.0, maxf(130.0, panel_size.y * 0.22))
-	var gap: float = 12.0
+	var splash_min: float = 94.0 if tight_portrait else 130.0
+	var splash_max: float = 150.0 if tight_portrait else 190.0
+	var splash_height: float = minf(splash_max, maxf(splash_min, panel_size.y * 0.20))
+	var gap: float = 8.0 if tight_portrait else 12.0
 	var left_top: float = inset + splash_height + gap
 	var left_height: float = maxf(1.0, panel_size.y - left_top - inset)
 	if _main_panel != null:
@@ -723,39 +727,82 @@ func _apply_portrait_layout(viewport_size: Vector2) -> void:
 		_content_box.position = Vector2(inset, 0.0)
 		_content_box.custom_minimum_size = Vector2(content_width, left_height)
 		_content_box.size = _content_box.custom_minimum_size
-		_content_box.add_theme_constant_override("separation", 10)
-	_update_mobile_content_width(content_width, true)
+		_content_box.add_theme_constant_override("separation", 6 if left_height < PORTRAIT_TIGHT_HEIGHT else 10)
+	_update_mobile_content_width(content_width, true, left_height)
 	_update_splash_crop()
 
 
-func _update_mobile_content_width(content_width: float, is_portrait: bool) -> void:
+func _update_mobile_content_width(content_width: float, is_portrait: bool, content_height: float = 0.0) -> void:
+	var tight_portrait: bool = is_portrait and content_height < PORTRAIT_TIGHT_HEIGHT
 	if _title_label:
-		_title_label.add_theme_font_size_override("font_size", 23 if is_portrait else 26)
-		_title_label.custom_minimum_size = Vector2(content_width, 32)
+		_title_label.add_theme_font_size_override("font_size", 20 if tight_portrait else (23 if is_portrait else 26))
+		_title_label.custom_minimum_size = Vector2(content_width, 26 if tight_portrait else 32)
 	if _class_button_row:
-		_class_button_row.custom_minimum_size = Vector2(content_width, 48)
+		_class_button_row.custom_minimum_size = Vector2(content_width, 42 if tight_portrait else 48)
+		for child: Node in _class_button_row.get_children():
+			var hero_button := child as Button
+			if hero_button != null:
+				hero_button.custom_minimum_size = Vector2(46 if tight_portrait else 50, 38 if tight_portrait else 44)
 	if _hero_name_label:
-		_hero_name_label.custom_minimum_size = Vector2(content_width, 24)
+		_hero_name_label.custom_minimum_size = Vector2(content_width, 20 if tight_portrait else 24)
 	if _hero_desc_label:
-		_hero_desc_label.custom_minimum_size = Vector2(content_width, 132 if is_portrait else 120)
+		_hero_desc_label.custom_minimum_size = Vector2(content_width, 88 if tight_portrait else (132 if is_portrait else 120))
 	if _stats_label:
-		_stats_label.custom_minimum_size = Vector2(content_width, 40)
+		_stats_label.custom_minimum_size = Vector2(content_width, 28 if tight_portrait else 40)
 	if _slots_title_label:
-		_slots_title_label.custom_minimum_size = Vector2(content_width, 20)
+		_slots_title_label.custom_minimum_size = Vector2(content_width, 18 if tight_portrait else 20)
 	if _party_slots_row:
-		_party_slots_row.custom_minimum_size = Vector2(content_width, 42)
+		_party_slots_row.custom_minimum_size = Vector2(content_width, 36 if tight_portrait else 42)
 	if _party_summary_label:
-		_party_summary_label.custom_minimum_size = Vector2(content_width, 48)
+		_party_summary_label.custom_minimum_size = Vector2(content_width, 34 if tight_portrait else 48)
 	if _network_notice_label:
-		_network_notice_label.custom_minimum_size = Vector2(content_width, 36)
+		_network_notice_label.custom_minimum_size = Vector2(content_width, 28 if tight_portrait else 36)
 	if _action_row:
-		_action_row.custom_minimum_size = Vector2(content_width, 44)
-	var action_gap: float = 12.0
+		_action_row.custom_minimum_size = Vector2(content_width, 40 if tight_portrait else 44)
+	var action_gap: float = 8.0 if tight_portrait else 12.0
+	if _action_row:
+		_action_row.add_theme_constant_override("separation", action_gap)
 	var action_width: float = floor((content_width - action_gap) * 0.5)
 	if _back_button:
-		_back_button.custom_minimum_size = Vector2(action_width, 42)
+		_back_button.custom_minimum_size = Vector2(action_width, 38 if tight_portrait else 42)
 	if _start_button:
-		_start_button.custom_minimum_size = Vector2(action_width, 42)
+		_start_button.custom_minimum_size = Vector2(action_width, 38 if tight_portrait else 42)
+
+func _portrait_single_player_min_content_height(viewport_size: Vector2) -> float:
+	var margin: float = 12.0
+	var panel_height: float = maxf(1.0, viewport_size.y - (margin * 2.0))
+	var tight_portrait: bool = panel_height < 590.0
+	var separation: float = 6.0 if _portrait_left_height(viewport_size) < PORTRAIT_TIGHT_HEIGHT else 10.0
+	var row_heights: Array[float] = [
+		26.0 if tight_portrait else 32.0,
+		14.0,
+		42.0 if tight_portrait else 48.0,
+		20.0 if tight_portrait else 24.0,
+		88.0 if tight_portrait else 132.0,
+		28.0 if tight_portrait else 40.0,
+		0.0,
+		40.0 if tight_portrait else 44.0,
+	]
+	var total: float = 0.0
+	for height: float in row_heights:
+		total += height
+	total += separation * float(row_heights.size() - 1)
+	return total
+
+func _portrait_left_height(viewport_size: Vector2) -> float:
+	var margin: float = 12.0
+	var panel_size: Vector2 = Vector2(
+		maxf(1.0, viewport_size.x - (margin * 2.0)),
+		maxf(1.0, viewport_size.y - (margin * 2.0))
+	)
+	var tight_portrait: bool = panel_size.y < 590.0
+	var inset: float = 14.0 if tight_portrait else 18.0
+	var splash_min: float = 94.0 if tight_portrait else 130.0
+	var splash_max: float = 150.0 if tight_portrait else 190.0
+	var splash_height: float = minf(splash_max, maxf(splash_min, panel_size.y * 0.20))
+	var gap: float = 8.0 if tight_portrait else 12.0
+	var left_top: float = inset + splash_height + gap
+	return maxf(1.0, panel_size.y - left_top - inset)
 
 func _update_splash_crop() -> void:
 	if _bg_sprite == null or _right_panel == null:
