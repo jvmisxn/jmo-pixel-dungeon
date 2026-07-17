@@ -14,6 +14,37 @@ class TestHud:
 	func _on_party_focus_pressed(hero_index: int) -> void:
 		focused_hero_index = hero_index
 
+class LayoutHud:
+	extends HUD
+
+	var fake_safe_bottom: float = 0.0
+
+	class StubComponent:
+		extends Control
+
+		func update_all() -> void:
+			pass
+
+		func refresh() -> void:
+			pass
+
+		func set_compact_mode(_is_compact: bool) -> void:
+			pass
+
+		func set_available_width(_available_width: float) -> void:
+			pass
+
+		func set_action_controls_enabled(_is_enabled: bool) -> void:
+			pass
+
+	func _instantiate_script(_path: String) -> Variant:
+		return StubComponent.new()
+
+	func _safe_area_inset(edge: String) -> float:
+		if edge == "bottom":
+			return fake_safe_bottom
+		return 0.0
+
 func _visible_toolbar_min_width(toolbar: Toolbar) -> float:
 	var width: float = 0.0
 	var visible_controls: int = 0
@@ -84,3 +115,28 @@ func run(t: Object) -> void:
 		"narrow mobile toolbar hides nonessential separators"
 	)
 	toolbar.free()
+
+	var layout_hud := LayoutHud.new()
+	layout_hud._vp_size = Vector2(393, 852)
+	layout_hud.fake_safe_bottom = 24.0
+	layout_hud._build_layout()
+	layout_hud._apply_responsive_layout()
+	var layout_root: Control = layout_hud.get_node_or_null("HUDRoot") as Control
+	var status_container: Control = layout_root.get_node_or_null("StatusContainer") as Control
+	t.check(
+		layout_hud.toolbar != null and is_equal_approx(layout_hud.toolbar.position.y, 756.0),
+		"mobile toolbar stays above the bottom safe area"
+	)
+	t.check(
+		layout_hud.toolbar != null and is_equal_approx(layout_hud.toolbar.size.x, 393.0),
+		"mobile toolbar keeps the full viewport width when no horizontal safe area is present"
+	)
+	t.check(
+		status_container != null and is_equal_approx(status_container.size.x, 381.0),
+		"mobile status panel leaves HUD margins while staying visible"
+	)
+	t.check(
+		layout_hud._status_overlay != null and layout_hud._status_overlay.visible,
+		"mobile status overlay remains visible in portrait layout"
+	)
+	layout_hud.free()

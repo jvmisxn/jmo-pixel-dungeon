@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: mobile, hud, toolbar, web, playtesting
+- Fixed the in-run mobile HUD using the Godot canvas size when mobile browsers report a larger backing canvas than the visible viewport. `HUD` now mirrors the hero-select fix by laying out against `window.innerWidth/innerHeight` for portrait/small/mobile web contexts and polling browser viewport changes so collapsing address bars or orientation changes relayout the toolbar and status strip. Added portrait safe-area coverage to `test_mobile_hud_input.gd` to keep the toolbar above the bottom inset and the status overlay visible.
+
 - Tags: mobile, hero-select, portrait, web, playtesting
 - Fixed the character-select action row falling below the visible panel on tight portrait mobile viewports. `HeroSelectScene` now uses a tighter portrait layout when vertical space is short: smaller splash crop, reduced panel inset/gaps, compressed description/stat blocks, narrower hero buttons, and slimmer Back/Start buttons. Follow-up: mobile Web can report a desktop-sized Godot canvas while the browser viewport is portrait, so `HeroSelectScene` now lays out against `window.innerWidth/innerHeight` when the browser viewport is portrait or small and polls that size during browser chrome changes. Added `tests/cases/test_hero_select_portrait_layout.gd` to lock both the 375px portrait mobile budget and the browser-vs-canvas viewport selection.
 

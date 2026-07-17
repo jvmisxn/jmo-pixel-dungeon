@@ -17,6 +17,7 @@ const MOBILE_STATUS_HEIGHT: float = 88.0
 const MOBILE_STATUS_LANDSCAPE_HEIGHT: float = 76.0
 const MOBILE_SAFE_TOP_INSET: float = 18.0
 const MOBILE_SAFE_LANDSCAPE_TOP_INSET: float = 8.0
+const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
 
 # --- Child panels ---
 var toolbar: MarginContainer = null
@@ -47,6 +48,7 @@ var _sub_windows: Array[Variant] = []
 
 # --- Viewport size cache ---
 var _vp_size: Vector2 = Vector2(1280, 720)
+var _web_layout_poll_elapsed: float = 0.0
 
 func _get_local_hero() -> Variant:
 	if GameManager == null:
@@ -102,6 +104,18 @@ func _ready() -> void:
 	_apply_responsive_layout()
 	# Re-layout when viewport resizes
 	get_viewport().size_changed.connect(_on_viewport_resized)
+
+
+func _process(delta: float) -> void:
+	if OS.get_name() != "Web":
+		return
+	_web_layout_poll_elapsed += delta
+	if _web_layout_poll_elapsed < WEB_LAYOUT_POLL_INTERVAL:
+		return
+	_web_layout_poll_elapsed = 0.0
+	var current_size: Vector2 = _get_viewport_size()
+	if not current_size.is_equal_approx(_vp_size):
+		_apply_viewport_size(current_size)
 
 
 func _build_layout() -> void:
@@ -415,10 +429,41 @@ func _update_info_row() -> void:
 
 
 func _get_viewport_size() -> Vector2:
+	var browser_size: Vector2i = _get_browser_viewport_size()
+	if browser_size != Vector2i.ZERO and _should_layout_against_browser_size(browser_size):
+		return Vector2(browser_size)
 	var vp: Viewport = get_viewport()
 	if vp:
 		return vp.get_visible_rect().size
 	return Vector2(1280, 720)
+
+
+func _get_browser_viewport_size() -> Vector2i:
+	if OS.get_name() != "Web":
+		return Vector2i.ZERO
+	var js_result: Variant = JavaScriptBridge.eval(
+		"(function(){return Math.round(window.innerWidth) + 'x' + Math.round(window.innerHeight);})()",
+		true
+	)
+	if js_result is String:
+		var parts: PackedStringArray = str(js_result).split("x")
+		if parts.size() == 2:
+			var width: int = int(parts[0])
+			var height: int = int(parts[1])
+			if width > 0 and height > 0:
+				return Vector2i(width, height)
+	return Vector2i.ZERO
+
+
+func _should_layout_against_browser_size(browser_size: Vector2i) -> bool:
+	if browser_size.y > browser_size.x:
+		return true
+	if mini(browser_size.x, browser_size.y) <= MOBILE_BREAKPOINT:
+		return true
+	if maxi(browser_size.x, browser_size.y) <= MOBILE_WEB_MAX_VIEWPORT:
+		return true
+	var js_result: Variant = _eval_browser_mobile_expression()
+	return bool(js_result) if js_result is bool else false
 
 
 func _build_status_overlay(root: Control) -> void:
@@ -542,7 +587,11 @@ func _build_status_overlay(root: Control) -> void:
 
 
 func _on_viewport_resized() -> void:
-	_vp_size = _get_viewport_size()
+	_apply_viewport_size(_get_viewport_size())
+
+
+func _apply_viewport_size(size: Vector2) -> void:
+	_vp_size = size
 	var root_node: Node = get_node_or_null("HUDRoot")
 	if not root_node:
 		return
