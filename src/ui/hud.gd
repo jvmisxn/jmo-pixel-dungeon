@@ -11,9 +11,12 @@ extends CanvasLayer
 const DESKTOP_TOOLBAR_HEIGHT: int = 40
 const MOBILE_TOOLBAR_HEIGHT: int = 72
 const MOBILE_BREAKPOINT: float = 720.0
+const MOBILE_WEB_MAX_VIEWPORT: float = 960.0
 const HUD_MARGIN: float = 6.0
 const MOBILE_STATUS_HEIGHT: float = 88.0
+const MOBILE_STATUS_LANDSCAPE_HEIGHT: float = 76.0
 const MOBILE_SAFE_TOP_INSET: float = 18.0
+const MOBILE_SAFE_LANDSCAPE_TOP_INSET: float = 8.0
 
 # --- Child panels ---
 var toolbar: MarginContainer = null
@@ -34,6 +37,7 @@ var _status_shield_bar: ProgressBar = null
 var _status_hp_label: Label = null
 var _status_xp_bar: ProgressBar = null
 var _status_xp_label: Label = null
+var _status_depth_label: Label = null
 var _status_str_label: Label = null
 
 # --- Active popup window ---
@@ -502,6 +506,15 @@ func _build_status_overlay(root: Control) -> void:
 	_status_xp_label.add_theme_color_override("font_color", Color(0.74, 0.84, 0.96))
 	xp_row.add_child(_status_xp_label)
 
+	_status_depth_label = Label.new()
+	_status_depth_label.text = "D1"
+	_status_depth_label.custom_minimum_size = Vector2(54, 0)
+	_status_depth_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_status_depth_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_depth_label.add_theme_font_size_override("font_size", 15)
+	_status_depth_label.add_theme_color_override("font_color", Color(0.72, 0.72, 0.86))
+	_status_overlay.add_child(_status_depth_label)
+
 	_status_str_label = Label.new()
 	_status_str_label.text = "STR 10"
 	_status_str_label.custom_minimum_size = Vector2(70, 0)
@@ -519,9 +532,7 @@ func _on_viewport_resized() -> void:
 		return
 	# Reposition toolbar at bottom
 	if toolbar:
-		toolbar.position = Vector2(0, _vp_size.y - _toolbar_height())
-		toolbar.custom_minimum_size = Vector2(_vp_size.x, _toolbar_height())
-		toolbar.size = Vector2(_vp_size.x, _toolbar_height())
+		_layout_toolbar()
 	_apply_responsive_layout()
 
 
@@ -808,16 +819,22 @@ func _apply_responsive_layout() -> void:
 	var party_row: Control = root_node.get_node_or_null("PartyRow") as Control
 
 	if status_container:
-		var is_portrait_mobile: bool = _is_mobile_portrait_layout()
-		status_container.position = Vector2(HUD_MARGIN, _hud_top_margin())
+		var safe_left: float = _safe_area_inset("left")
+		var safe_right: float = _safe_area_inset("right")
+		var available_width: float = maxf(
+			1.0,
+			_vp_size.x - safe_left - safe_right - (HUD_MARGIN * 2.0)
+		)
+		var mobile_status_height: float = MOBILE_STATUS_HEIGHT if _is_mobile_portrait_layout() else MOBILE_STATUS_LANDSCAPE_HEIGHT
+		status_container.position = Vector2(safe_left + HUD_MARGIN, _hud_top_margin())
 		status_container.custom_minimum_size = (
-			Vector2(maxf(0.0, _vp_size.x - (HUD_MARGIN * 2.0)), MOBILE_STATUS_HEIGHT)
-			if is_portrait_mobile
+			Vector2(available_width, mobile_status_height)
+			if is_mobile_layout
 			else Vector2(180 if is_mobile_layout else 220, 140)
 		)
 		status_container.size = status_container.custom_minimum_size
 		if _status_pane and _status_pane.has_method("set_compact_mode"):
-			_status_pane.set_compact_mode(is_portrait_mobile)
+			_status_pane.set_compact_mode(is_mobile_layout)
 			_status_pane.custom_minimum_size = Vector2(
 				maxf(1.0, status_container.size.x - 12.0),
 				maxf(1.0, status_container.size.y - 8.0)
@@ -835,7 +852,7 @@ func _apply_responsive_layout() -> void:
 	if info_row:
 		var info_width: float = 180.0
 		info_row.position = Vector2(maxf(HUD_MARGIN, _vp_size.x - info_width - HUD_MARGIN), _hud_top_margin())
-		info_row.visible = not _is_mobile_portrait_layout()
+		info_row.visible = not is_mobile_layout
 
 	if party_row:
 		var party_width: float = minf(520.0, _vp_size.x - 420.0)
@@ -858,6 +875,7 @@ func _apply_responsive_layout() -> void:
 	if _toolbar_bar:
 		_toolbar_bar.set_compact_mode(is_mobile_layout)
 
+	_layout_toolbar()
 	_refresh_status_overlay()
 
 
@@ -875,18 +893,34 @@ func _layout_status_overlay(status_container: Control) -> void:
 	var is_mobile_layout: bool = _is_mobile_layout()
 	var is_portrait_mobile: bool = _is_mobile_portrait_layout()
 	if _status_level_label:
-		_status_level_label.custom_minimum_size = Vector2(58.0 if is_mobile_layout else 62.0, 0.0)
-		_status_level_label.add_theme_font_size_override("font_size", 18 if is_mobile_layout else 17)
+		_status_level_label.custom_minimum_size = Vector2(50.0 if is_mobile_layout else 62.0, 0.0)
+		_status_level_label.add_theme_font_size_override("font_size", 17 if is_mobile_layout else 17)
 	if _status_hp_label:
-		_status_hp_label.custom_minimum_size = Vector2(72.0 if is_mobile_layout else 68.0, 0.0)
-		_status_hp_label.add_theme_font_size_override("font_size", 16 if is_mobile_layout else 13)
+		_status_hp_label.custom_minimum_size = Vector2(60.0 if is_mobile_layout else 68.0, 0.0)
+		_status_hp_label.add_theme_font_size_override("font_size", 14 if is_mobile_layout else 13)
 	if _status_xp_label:
-		_status_xp_label.custom_minimum_size = Vector2(72.0 if is_mobile_layout else 68.0, 0.0)
-		_status_xp_label.add_theme_font_size_override("font_size", 14 if is_mobile_layout else 12)
+		_status_xp_label.custom_minimum_size = Vector2(60.0 if is_mobile_layout else 68.0, 0.0)
+		_status_xp_label.add_theme_font_size_override("font_size", 13 if is_mobile_layout else 12)
+	if _status_depth_label:
+		_status_depth_label.custom_minimum_size = Vector2(46.0 if is_mobile_layout else 54.0, 0.0)
+		_status_depth_label.add_theme_font_size_override("font_size", 14 if is_mobile_layout else 13)
 	if _status_str_label:
 		_status_str_label.visible = not is_portrait_mobile
-		_status_str_label.custom_minimum_size = Vector2(70.0, 0.0)
-		_status_str_label.add_theme_font_size_override("font_size", 15 if is_mobile_layout else 13)
+		_status_str_label.custom_minimum_size = Vector2(58.0 if is_mobile_layout else 70.0, 0.0)
+		_status_str_label.add_theme_font_size_override("font_size", 13 if is_mobile_layout else 13)
+
+
+func _layout_toolbar() -> void:
+	if toolbar == null:
+		return
+	var safe_left: float = _safe_area_inset("left")
+	var safe_right: float = _safe_area_inset("right")
+	var safe_bottom: float = _safe_area_inset("bottom")
+	var height: float = float(_toolbar_height())
+	var width: float = maxf(1.0, _vp_size.x - safe_left - safe_right)
+	toolbar.position = Vector2(safe_left, _vp_size.y - height - safe_bottom)
+	toolbar.custom_minimum_size = Vector2(width, height)
+	toolbar.size = Vector2(width, height)
 
 
 func _refresh_status_overlay() -> void:
@@ -917,12 +951,17 @@ func _refresh_status_overlay() -> void:
 		_status_xp_bar.value = clampi(xp, 0, xp_max)
 	if _status_xp_label:
 		_status_xp_label.text = "%d/%d" % [xp, xp_max]
+	if _status_depth_label:
+		var depth_val: int = int(GameManager.depth) if GameManager != null else 1
+		_status_depth_label.text = "D%d" % depth_val
 	if _status_str_label:
 		_status_str_label.text = "STR %d" % str_val
 
 
 func _is_mobile_layout() -> bool:
-	return _is_touch_web() or _vp_size.x <= MOBILE_BREAKPOINT or _vp_size.y > _vp_size.x
+	return _is_mobile_web_context() \
+			or _vp_size.x <= MOBILE_BREAKPOINT \
+			or _vp_size.y > _vp_size.x
 
 
 func _is_mobile_portrait_layout() -> bool:
@@ -934,8 +973,56 @@ func _toolbar_height() -> int:
 
 
 func _hud_top_margin() -> float:
-	return HUD_MARGIN + (MOBILE_SAFE_TOP_INSET if _is_mobile_portrait_layout() else 0.0)
+	if not _is_mobile_layout():
+		return HUD_MARGIN
+	var fallback_top: float = (
+		MOBILE_SAFE_TOP_INSET
+		if _is_mobile_portrait_layout()
+		else MOBILE_SAFE_LANDSCAPE_TOP_INSET
+	)
+	return HUD_MARGIN + maxf(fallback_top, _safe_area_inset("top"))
 
 
-func _is_touch_web() -> bool:
-	return OS.get_name() == "Web" and DisplayServer.is_touchscreen_available()
+func _is_mobile_web_context() -> bool:
+	if OS.get_name() != "Web":
+		return false
+	if DisplayServer.is_touchscreen_available():
+		return true
+	if _vp_size.y > _vp_size.x or minf(_vp_size.x, _vp_size.y) <= MOBILE_BREAKPOINT:
+		return true
+	if maxf(_vp_size.x, _vp_size.y) <= MOBILE_WEB_MAX_VIEWPORT:
+		return true
+	var js_result: Variant = _eval_browser_mobile_expression()
+	return bool(js_result) if js_result is bool else false
+
+
+func _eval_browser_mobile_expression() -> Variant:
+	if OS.get_name() != "Web":
+		return false
+	return JavaScriptBridge.eval(
+		"(function(){return !!(navigator.maxTouchPoints > 0 || " +
+		"matchMedia('(pointer: coarse)').matches || " +
+		"/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));})()",
+		true
+	)
+
+
+func _safe_area_inset(edge: String) -> float:
+	if OS.get_name() != "Web":
+		return 0.0
+	var script: String = "(function(edge){" \
+			+ "var id='godot-safe-area-probe';" \
+			+ "var el=document.getElementById(id);" \
+			+ "if(!el){el=document.createElement('div');el.id=id;" \
+			+ "el.style.position='fixed';el.style.visibility='hidden';" \
+			+ "el.style.pointerEvents='none';document.body.appendChild(el);}" \
+			+ "el.style.paddingTop=edge==='top'?'env(safe-area-inset-top)':'0px';" \
+			+ "el.style.paddingRight=edge==='right'?'env(safe-area-inset-right)':'0px';" \
+			+ "el.style.paddingBottom=edge==='bottom'?'env(safe-area-inset-bottom)':'0px';" \
+			+ "el.style.paddingLeft=edge==='left'?'env(safe-area-inset-left)':'0px';" \
+			+ "var s=getComputedStyle(el);" \
+			+ "var key='padding-'+edge;" \
+			+ "return parseFloat(s.getPropertyValue(key))||0;" \
+			+ "})('%s')" % edge
+	var result: Variant = JavaScriptBridge.eval(script, true)
+	return maxf(0.0, float(result)) if result != null else 0.0

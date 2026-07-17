@@ -211,8 +211,31 @@ func _touch_positions() -> Array[Vector2]:
 
 
 func _apply_platform_zoom_limits() -> void:
-	if OS.get_name() != "Web" or not DisplayServer.is_touchscreen_available():
+	if not _is_mobile_web_context():
 		return
 	default_zoom_level = maxf(default_zoom_level, MOBILE_DEFAULT_ZOOM)
 	max_zoom = maxf(max_zoom, MOBILE_MAX_ZOOM)
 	zoom_step = maxf(zoom_step, MOBILE_ZOOM_STEP)
+
+
+func _is_mobile_web_context() -> bool:
+	if OS.get_name() != "Web":
+		return false
+	if DisplayServer.is_touchscreen_available():
+		return true
+	var viewport_size: Vector2 = (
+		get_viewport().get_visible_rect().size
+		if get_viewport() != null
+		else Vector2.ZERO
+	)
+	var is_small_viewport: bool = viewport_size != Vector2.ZERO \
+			and (viewport_size.y > viewport_size.x or minf(viewport_size.x, viewport_size.y) <= 720.0)
+	if is_small_viewport:
+		return true
+	var js_result: Variant = JavaScriptBridge.eval(
+		"(function(){return !!(navigator.maxTouchPoints > 0 || " +
+		"matchMedia('(pointer: coarse)').matches || " +
+		"/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));})()",
+		true
+	)
+	return bool(js_result) if js_result is bool else false

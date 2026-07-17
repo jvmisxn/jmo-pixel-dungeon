@@ -49,6 +49,7 @@ var run_active: bool = false
 const DESKTOP_CONTENT_SCALE_SIZE: Vector2i = Vector2i(1280, 720)
 const MOBILE_LANDSCAPE_CONTENT_SCALE_SIZE: Vector2i = Vector2i(932, 430)
 const MOBILE_PORTRAIT_CONTENT_SCALE_SIZE: Vector2i = Vector2i(430, 932)
+const MOBILE_WEB_MAX_VIEWPORT: int = 960
 const MOBILE_ORIENTATION_AUTO: String = "auto"
 const MOBILE_ORIENTATION_PORTRAIT: String = "portrait"
 const MOBILE_ORIENTATION_LANDSCAPE: String = "landscape"
@@ -163,7 +164,24 @@ func _load_display_settings() -> void:
 
 
 func _is_mobile_web() -> bool:
-	return OS.get_name() == "Web" and DisplayServer.is_touchscreen_available()
+	if OS.get_name() != "Web":
+		return false
+	if DisplayServer.is_touchscreen_available():
+		return true
+	var window: Window = get_window()
+	if window != null:
+		var window_size: Vector2i = window.size
+		if window_size.y > window_size.x or mini(window_size.x, window_size.y) <= 720:
+			return true
+		if maxi(window_size.x, window_size.y) <= MOBILE_WEB_MAX_VIEWPORT:
+			return true
+	var js_result: Variant = JavaScriptBridge.eval(
+		"(function(){return !!(navigator.maxTouchPoints > 0 || " +
+		"matchMedia('(pointer: coarse)').matches || " +
+		"/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));})()",
+		true
+	)
+	return bool(js_result) if js_result is bool else false
 
 
 func _get_mobile_content_scale_size() -> Vector2i:
@@ -187,7 +205,7 @@ func _normalize_mobile_orientation_mode(mode: String) -> String:
 
 
 func _on_viewport_size_changed() -> void:
-	if mobile_orientation_mode == MOBILE_ORIENTATION_AUTO:
+	if OS.get_name() == "Web" or mobile_orientation_mode == MOBILE_ORIENTATION_AUTO:
 		_apply_platform_content_scale()
 
 

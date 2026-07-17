@@ -267,6 +267,7 @@ func _input(event: InputEvent) -> void:
 		if touch.pressed:
 			if _is_screen_position_over_hud(touch.position):
 				_ui_touch_points[touch.index] = true
+				get_viewport().set_input_as_handled()
 				return
 			_active_touch_points[touch.index] = touch.position
 			if _active_touch_points.size() >= 2:
