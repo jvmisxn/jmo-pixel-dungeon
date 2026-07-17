@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: levels, traps, halls, fidelity, spd-parity, audit-S09
+- Fixed Demon Halls regular-floor trap generation falling back to the base early-game pool (WornDart/Poison/Fire/Alarm/Teleport). `HallsLevel` now has its own weighted late-game trap table based on the original SPD Halls trap weights, using the trap classes currently implemented in the port: Frost, Storm, Corrosion, Blazing, Rockfall, Flashing, Guardian, Disarming, Summoning, Warping, Cursing, Grim, and Pitfall. Added `tests/cases/test_halls_traps.gd` to lock the weighted boundaries and assert Halls never selects the early fallback traps. Full local headless suite green (225 checks, Godot 4.7.1). Remaining parity note: upstream SPD also includes Disintegration, Weakening, Distortion, Gateway, and Geyser in the Halls pool; those trap classes are not present in this port yet.
+
 - Tags: mobile, hud, toolbar, web, playtesting
 - Tightened the compact mobile toolbar for narrow portrait viewports. The previous compact sizing still needed about 380px before browser safe-area/panel padding, so a 375px-wide phone viewport could clip or hide controls even after touch routing was fixed. `Toolbar` now receives its available width from `HUD`, switches to a narrower compact layout at <=430px, keeps Bag/Wait/Find/Menu plus the first two quickslots visible, and hides only decorative separators. Added headless coverage to `test_mobile_hud_input.gd` asserting the toolbar fits a 375px portrait budget after HUD panel margins. Full local headless suite green (184 checks, Godot 4.7.1).
 

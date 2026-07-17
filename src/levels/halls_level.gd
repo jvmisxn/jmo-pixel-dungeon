@@ -45,3 +45,36 @@ func _create_secret_room() -> Room:
 	else:
 		return SecretWellRoom.new()
 
+func _create_random_trap() -> Trap:
+	return _trap_for_weighted_roll(randf())
+
+func _trap_for_weighted_roll(roll: float) -> Trap:
+	# Original Halls trap weights are mostly late-game lethal traps. This port
+	# uses the implemented subset and preserves their relative source weights.
+	var slot: int = clampi(int(floor(roll * 28.0)), 0, 27)
+	if slot < 4:
+		return FrostTrap.new()
+	elif slot < 8:
+		return StormTrap.new()
+	elif slot < 12:
+		return CorrosionTrap.new()
+	elif slot < 16:
+		return BlazingTrap.new()
+	elif slot < 18:
+		return RockfallTrap.new()
+	elif slot < 20:
+		return FlashingTrap.new()
+	elif slot < 22:
+		return GuardianTrap.new()
+	elif slot < 23:
+		return DisarmingTrap.new()
+	elif slot < 24:
+		return SummoningTrap.new()
+	elif slot < 25:
+		return WarpingTrap.new()
+	elif slot < 26:
+		return CursingTrap.new()
+	elif slot < 27:
+		return GrimTrap.new()
+	else:
+		return PitfallTrap.new()
