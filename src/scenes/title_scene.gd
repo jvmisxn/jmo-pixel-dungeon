@@ -535,10 +535,12 @@ func _build_ui() -> void:
 
 	_profile_prompt_name_edit = LineEdit.new()
 	_profile_prompt_name_edit.placeholder_text = "Player name"
+	_profile_prompt_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	prompt_vbox.add_child(_profile_prompt_name_edit)
 
 	var prompt_confirm_btn: Button = _create_spd_button("Continue")
 	prompt_confirm_btn.custom_minimum_size = Vector2(220, 40)
+	prompt_confirm_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	prompt_confirm_btn.pressed.connect(_on_profile_prompt_confirmed)
 	prompt_vbox.add_child(prompt_confirm_btn)
 
@@ -707,6 +709,21 @@ func _apply_layout() -> void:
 		_profile_prompt_panel.custom_minimum_size = prompt_size
 		_profile_prompt_panel.size = prompt_size
 		_profile_prompt_panel.position = _get_centered_submenu_position(prompt_size)
+		_fit_panel_first_child(_profile_prompt_panel, prompt_size, 18.0)
+
+
+func _fit_panel_first_child(panel: PanelContainer, panel_size: Vector2, content_margin: float) -> void:
+	if panel == null or panel.get_child_count() == 0:
+		return
+	var child: Control = panel.get_child(0) as Control
+	if child == null:
+		return
+	var content_size: Vector2 = Vector2(
+		maxf(1.0, panel_size.x - (content_margin * 2.0)),
+		maxf(1.0, panel_size.y - (content_margin * 2.0))
+	)
+	child.custom_minimum_size = content_size
+	child.size = content_size
 
 
 func _get_submenu_panel_size() -> Vector2:
