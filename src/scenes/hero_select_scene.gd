@@ -792,7 +792,7 @@ func _get_browser_viewport_size() -> Vector2i:
 	if OS.get_name() != "Web":
 		return Vector2i.ZERO
 	var js_result: Variant = JavaScriptBridge.eval(
-		"(function(){return Math.round(window.innerWidth) + 'x' + Math.round(window.innerHeight);})()",
+		"(function(){var v=window.visualViewport;var w=v?v.width:window.innerWidth;var h=v?v.height:window.innerHeight;return Math.round(w)+'x'+Math.round(h);})()",
 		true
 	)
 	if js_result is String:

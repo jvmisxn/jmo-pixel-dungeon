@@ -14,4 +14,12 @@ func run(t: Object) -> void:
 		min_content_height <= left_height,
 		"portrait hero select keeps Start row inside a 375px mobile viewport"
 	)
+
+	var safari_viewport := Vector2(393, 687)
+	var safari_left_height: float = scene._portrait_left_height(safari_viewport)
+	var safari_min_content_height: float = scene._portrait_single_player_min_content_height(safari_viewport)
+	t.check(
+		safari_min_content_height <= safari_left_height,
+		"portrait hero select keeps Start row above mobile browser controls"
+	)
 	scene.free()

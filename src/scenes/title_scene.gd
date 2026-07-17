@@ -43,6 +43,8 @@ var _top_menu_row: HBoxContainer = null
 var _version_label: Label = null
 var _buttons: Array[Button] = []
 var _selected_index: int = 0
+var _layout_viewport_size: Vector2 = Vector2.ZERO
+var _web_layout_poll_elapsed: float = 0.0
 
 # --- Background layers (parallax) ---
 var _bg_color_rect: ColorRect = null
@@ -67,6 +69,7 @@ const SUBMENU_PANEL_TOP: float = 20.0
 const SUBMENU_CONTENT_MARGIN: int = 24
 const SUBMENU_CONTENT_WIDTH: float = 712.0
 const SUBMENU_ACTION_WIDTH: float = 350.0
+const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
 const PROFILE_ICON_SPRITES: Dictionary = {
 	"warrior": "res://assets/spd/sprites/warrior.png",
 	"mage": "res://assets/spd/sprites/mage.png",
@@ -114,6 +117,13 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_apply_layout)
 
 func _process(_delta: float) -> void:
+	if OS.get_name() == "Web":
+		_web_layout_poll_elapsed += _delta
+		if _web_layout_poll_elapsed >= WEB_LAYOUT_POLL_INTERVAL:
+			_web_layout_poll_elapsed = 0.0
+			var current_size: Vector2 = _get_layout_viewport_size()
+			if not current_size.is_equal_approx(_layout_viewport_size):
+				_apply_layout()
 	var time_elapsed: float = float(Time.get_ticks_msec()) * 0.001
 	# Parallax scroll — each layer at different speed for depth effect
 	if _back_clusters_sprite:
@@ -663,7 +673,8 @@ func _check_has_save() -> bool:
 
 
 func _apply_layout() -> void:
-	var viewport_size: Vector2 = get_viewport_rect().size
+	var viewport_size: Vector2 = _get_layout_viewport_size()
+	_layout_viewport_size = viewport_size
 	var is_portrait: bool = viewport_size.y > viewport_size.x
 	var margin: float = 48.0 if is_portrait else 24.0
 	var menu_width: float = minf(400.0, viewport_size.x - (margin * 2.0))
@@ -686,15 +697,16 @@ func _apply_layout() -> void:
 		_menu_box.size = Vector2(menu_width, 300)
 	if _top_menu_row:
 		_top_menu_row.custom_minimum_size = Vector2(menu_width, 44)
+		_top_menu_row.size = Vector2(menu_width, 44)
 	if _btn_continue:
 		var split_gap: float = 12.0
-		_btn_new_game.custom_minimum_size = Vector2(floor((menu_width - split_gap) * 0.62), 44)
-		_btn_continue.custom_minimum_size = Vector2(ceil((menu_width - split_gap) * 0.38), 44)
+		_set_button_width(_btn_new_game, floor((menu_width - split_gap) * 0.62), 44)
+		_set_button_width(_btn_continue, ceil((menu_width - split_gap) * 0.38), 44)
 	elif _btn_new_game:
-		_btn_new_game.custom_minimum_size = Vector2(menu_width, 44)
+		_set_button_width(_btn_new_game, menu_width, 44)
 	for btn: Button in [_btn_multiplayer, _btn_profile, _btn_settings]:
 		if btn:
-			btn.custom_minimum_size = Vector2(menu_width, 44)
+			_set_button_width(btn, menu_width, 44)
 	if _version_label:
 		_version_label.position = Vector2(maxf(margin, viewport_size.x - 70.0), maxf(margin, viewport_size.y - 24.0))
 
@@ -726,8 +738,53 @@ func _fit_panel_first_child(panel: PanelContainer, panel_size: Vector2, content_
 	child.size = content_size
 
 
+func _set_button_width(btn: Button, width: float, height: float) -> void:
+	if btn == null:
+		return
+	var button_size: Vector2 = Vector2(width, height)
+	btn.custom_minimum_size = button_size
+	btn.size = button_size
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+
+func _get_layout_viewport_size() -> Vector2:
+	var engine_size: Vector2 = get_viewport_rect().size
+	return _choose_layout_viewport_size(engine_size, _get_browser_viewport_size())
+
+
+func _choose_layout_viewport_size(engine_size: Vector2, browser_size: Vector2i) -> Vector2:
+	if browser_size != Vector2i.ZERO and _should_layout_against_browser_size(browser_size):
+		return Vector2(browser_size)
+	return engine_size
+
+
+func _get_browser_viewport_size() -> Vector2i:
+	if OS.get_name() != "Web":
+		return Vector2i.ZERO
+	var js_result: Variant = JavaScriptBridge.eval(
+		"(function(){var v=window.visualViewport;var w=v?v.width:window.innerWidth;var h=v?v.height:window.innerHeight;return Math.round(w)+'x'+Math.round(h);})()",
+		true
+	)
+	if js_result is String:
+		var parts: PackedStringArray = str(js_result).split("x")
+		if parts.size() == 2:
+			var width: int = int(parts[0])
+			var height: int = int(parts[1])
+			if width > 0 and height > 0:
+				return Vector2i(width, height)
+	return Vector2i.ZERO
+
+
+func _should_layout_against_browser_size(browser_size: Vector2i) -> bool:
+	if browser_size.y > browser_size.x:
+		return true
+	if mini(browser_size.x, browser_size.y) < 760:
+		return true
+	return false
+
+
 func _get_submenu_panel_size() -> Vector2:
-	var viewport_size: Vector2 = get_viewport_rect().size
+	var viewport_size: Vector2 = _layout_viewport_size if _layout_viewport_size != Vector2.ZERO else _get_layout_viewport_size()
 	return Vector2(
 		minf(SUBMENU_PANEL_SIZE.x, viewport_size.x - 24.0),
 		minf(SUBMENU_PANEL_SIZE.y, viewport_size.y - 40.0)
@@ -735,7 +792,7 @@ func _get_submenu_panel_size() -> Vector2:
 
 
 func _get_centered_submenu_position(panel_size: Vector2) -> Vector2:
-	var viewport_size: Vector2 = get_viewport_rect().size
+	var viewport_size: Vector2 = _layout_viewport_size if _layout_viewport_size != Vector2.ZERO else _get_layout_viewport_size()
 	return Vector2(
 		maxf(12.0, floor((viewport_size.x - panel_size.x) * 0.5)),
 		maxf(12.0, minf(SUBMENU_PANEL_TOP, floor((viewport_size.y - panel_size.y) * 0.5)))
