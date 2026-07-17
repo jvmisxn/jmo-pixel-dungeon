@@ -34,11 +34,14 @@ Exit code `0` = all checks passed, `1` = at least one failed. CI (`.github/workf
   truncation / parse breakage in the runtime spine).
 - **test_event_bus** — the EventBus signal contract other systems connect to
   stays intact.
+- **test_headless_save_descend_reload** — starts a run, descends to depth 2 with
+  a deterministic smoke level, saves, reloads, and checks broad hero/level/
+  inventory state survived.
 
 ## Good next targets (from the audit)
 
 - Pure-geometry tests for `Ballistica` / `ShadowCaster` / `Pathfinder` (S22 —
   much of combat/AI/wands rides on them and they have zero coverage).
-- Save round-trip: serialize → deserialize a `Hero` / `Level` and assert parity
-  (S01/S03 — persistence is the top-risk area).
+- Narrow save contracts for `Hero` / `Level` / scheduler details as those
+  contracts are fixed (S01/S03/S04 — persistence is the top-risk area).
 - Generator drop-table invariants (S12).
