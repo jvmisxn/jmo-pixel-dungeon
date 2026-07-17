@@ -42,7 +42,7 @@ func run(t: Object) -> void:
 	)
 
 	var migrated: Dictionary = manager._migrate_save({"marker": "legacy"}, 0)
-	t.check(migrated.get("save_version", 0) == 1, "legacy saves receive current save version")
+	t.check(migrated.get("save_version", 0) == manager.SAVE_VERSION, "legacy saves receive current save version")
 	t.check(migrated.get("marker", "") == "legacy", "migration preserves existing fields")
 
 	manager.free()
