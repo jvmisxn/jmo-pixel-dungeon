@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: potions, throwing, source-fidelity, audit-S15
+- Wired thrown potions into the existing shatter path. `Hero._do_throw_item()` now detects `Potion`, resolves the projectile collision cell, calls `Potion.shatter(collision_pos, level)`, identifies the potion, records potion usage, and consumes one stack item instead of falling through to generic ranged-miss logic. Added `test_thrown_potion_shatter.gd` covering Toxic Gas shatter effects, stack consumption, identification, and last-item removal. Follow-up: offensive potion shatter effects still use current one-shot 3x3 buff/terrain behavior; the next fidelity pass should re-point Toxic Gas/Paralytic Gas/Liquid Flame/Frost at real blobs.
+
 - Tags: doors, keys, source-fidelity, audit-S11
 - Fixed ordinary locked doors consuming the wrong key type. `Door.open()` now asks for `"iron"` keys instead of `"golden"` keys, activating the existing depth-scoped iron-key logic in `Hero.has_key()`/`use_key()` and preserving golden keys for golden chests. Added `test_door_key_gating.gd` to cover golden-key rejection and iron-key consumption. Follow-up: key placement for locked special rooms is still thin and should be audited against SPD's guaranteed same-floor iron-key placement.
 

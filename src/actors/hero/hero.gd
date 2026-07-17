@@ -443,6 +443,22 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 		_followup_strike_ready = false
 		return
 
+	if item is Potion:
+		var potion: Potion = item as Potion
+		var shatter_pos: int = _projectile_collision_pos(target_pos)
+		if shatter_pos < 0:
+			shatter_pos = target_pos
+		potion.shatter(shatter_pos, level)
+		potion.identify()
+		if EventBus:
+			EventBus.item_used.emit(potion.item_name)
+		if GameManager:
+			GameManager.record_stat("potions_used")
+		_consume_thrown_stack_item(potion)
+		_patient_strike_ready = false
+		_followup_strike_ready = false
+		return
+
 	var collision_pos: int = _projectile_collision_pos(target_pos)
 	var collision_target: Variant = level.find_char_at(collision_pos) if collision_pos >= 0 else null
 	var hit_target: Char = collision_target as Char if collision_target is Char and collision_target != self else null
