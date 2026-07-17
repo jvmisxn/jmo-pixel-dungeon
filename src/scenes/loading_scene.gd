@@ -17,6 +17,7 @@ var _player_infos: Array[Dictionary] = []
 var _run_seed: int = -1
 var _is_continue: bool = false
 var _transition_type: String = "descend"  # "descend" or "ascend"
+var _autosave_after_generation: bool = false
 
 # --- UI References ---
 var _depth_label: Label = null
@@ -72,6 +73,7 @@ func _ready() -> void:
 		_is_continue = get_meta("is_continue") as bool
 	if has_meta("transition_type"):
 		_transition_type = get_meta("transition_type") as String
+		_autosave_after_generation = _is_continue
 
 	_build_ui()
 	# Defer generation to next frame so UI is visible
@@ -232,6 +234,9 @@ func _perform_generation() -> void:
 	# Play descend sound for level transitions
 	if AudioManager:
 		AudioManager.play_sfx("descend")
+
+	if _autosave_after_generation and SaveManager and SaveManager.has_method("autosave_if_active"):
+		SaveManager.autosave_if_active()
 
 	_generation_complete = true
 
