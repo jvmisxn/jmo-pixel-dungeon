@@ -527,19 +527,11 @@ func on_move(old_pos: int, new_pos: int) -> void:
 # ---------------------------------------------------------------------------
 
 ## Get speed including buff modifiers. Matches original Char.speed().
-## Specific named buffs are checked directly to match original multiplier order.
 func get_speed() -> float:
 	var spd: float = base_speed
-
-	# Named buff speed modifiers matching original Char.speed()
-	if has_buff("Cripple"):
-		spd /= 2.0
-	if has_buff("Stamina"):
-		spd *= 1.5
-	if has_buff("Adrenaline"):
-		spd *= 2.0
-	if has_buff("Haste"):
-		spd *= 3.0
+	for b: Node in _buffs:
+		if b.has_method("modify_speed"):
+			spd = b.modify_speed(spd)
 	return spd
 
 # ---------------------------------------------------------------------------
