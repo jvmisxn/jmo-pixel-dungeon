@@ -149,9 +149,14 @@ func reset_zoom() -> void:
 ## Uses floori() instead of int()/ to correctly handle negative coordinates
 ## (mouse positions left of or above the map origin).
 func get_cell_under_mouse() -> int:
-	var mouse_global: Vector2 = get_global_mouse_position()
-	var cell_x: int = floori(mouse_global.x / 16.0)
-	var cell_y: int = floori(mouse_global.y / 16.0)
+	return get_cell_at_screen_position(get_viewport().get_mouse_position())
+
+## Get the dungeon cell under a viewport/screen position. Touch input uses this
+## instead of relying on Godot's synthesized mouse position.
+func get_cell_at_screen_position(screen_pos: Vector2) -> int:
+	var world_pos: Vector2 = get_canvas_transform().affine_inverse() * screen_pos
+	var cell_x: int = floori(world_pos.x / 16.0)
+	var cell_y: int = floori(world_pos.y / 16.0)
 	if cell_x < 0 or cell_x >= ConstantsData.WIDTH or cell_y < 0 or cell_y >= ConstantsData.HEIGHT:
 		return -1
 	return ConstantsData.xy_to_pos(cell_x, cell_y)

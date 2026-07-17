@@ -115,6 +115,9 @@ var _held_move_keycode: int = KEY_NONE
 var _held_move_dir: int = 0
 var _held_move_keys: Array[int] = []
 var _held_move_repeat_cooldown: float = 0.0
+var _active_touch_points: Dictionary = {}
+var _touch_gesture_started: bool = false
+var _suppress_touch_mouse_until_msec: int = 0
 const HELD_MOVE_REPEAT_DELAY: float = 0.25
 
 # --- Auto-Walk State ---
@@ -254,6 +257,37 @@ func _process(_delta: float) -> void:
 		else:
 			_process_auto_walk()
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		var touch: InputEventScreenTouch = event as InputEventScreenTouch
+		_suppress_synthesized_touch_mouse()
+		if touch.pressed:
+			_active_touch_points[touch.index] = touch.position
+			if _active_touch_points.size() >= 2:
+				_touch_gesture_started = true
+				_cancel_auto_walk()
+		else:
+			var should_tap: bool = not _touch_gesture_started \
+					and _active_touch_points.size() == 1 \
+					and _active_touch_points.has(touch.index)
+			_active_touch_points.erase(touch.index)
+			if should_tap:
+				_handle_touch_tap(touch.position)
+			if _active_touch_points.is_empty():
+				_touch_gesture_started = false
+	elif event is InputEventScreenDrag:
+		var drag: InputEventScreenDrag = event as InputEventScreenDrag
+		_suppress_synthesized_touch_mouse()
+		if _active_touch_points.has(drag.index):
+			_active_touch_points[drag.index] = drag.position
+			if _active_touch_points.size() >= 2:
+				_touch_gesture_started = true
+				_cancel_auto_walk()
+	elif event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and _is_synthesized_touch_mouse_suppressed():
+			get_viewport().set_input_as_handled()
+
 func _unhandled_input(event: InputEvent) -> void:
 	# --- Mouse Click ---
 	if event is InputEventMouseButton:
@@ -309,6 +343,24 @@ func _is_local_action_key(keycode: int) -> bool:
 		KEY_KP_7, KEY_Y, KEY_KP_9, KEY_U, KEY_KP_1, KEY_B, KEY_KP_3, KEY_N,
 		KEY_LESS, KEY_GREATER
 	]
+
+func _suppress_synthesized_touch_mouse() -> void:
+	_suppress_touch_mouse_until_msec = Time.get_ticks_msec() + 500
+
+func _is_synthesized_touch_mouse_suppressed() -> bool:
+	return Time.get_ticks_msec() <= _suppress_touch_mouse_until_msec
+
+func _handle_touch_tap(screen_pos: Vector2) -> void:
+	if not _awaiting_hero_input:
+		if _is_online_client():
+			_show_local_action_blocked_feedback()
+		return
+	var cell: int = -1
+	if game_camera and game_camera.has_method("get_cell_at_screen_position"):
+		cell = game_camera.get_cell_at_screen_position(screen_pos)
+	if cell >= 0:
+		_handle_cell_click(cell)
+		get_viewport().set_input_as_handled()
 
 func _movement_dir_for_key(keycode: int) -> int:
 	match keycode:
