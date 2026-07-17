@@ -47,15 +47,14 @@ jobs:
           fi
           test -f build/web/index.html
 
-      - name: Upload PR Web artifact
-        if: github.event_name == 'pull_request'
+      - name: Upload Web artifact
         uses: actions/upload-artifact@v4
         with:
           name: pixel-dungeon-web
           path: build/web
 
       - name: Upload Pages artifact
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && vars.ENABLE_GITHUB_PAGES_DEPLOY == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
@@ -63,7 +62,7 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     needs: build
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && vars.ENABLE_GITHUB_PAGES_DEPLOY == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
