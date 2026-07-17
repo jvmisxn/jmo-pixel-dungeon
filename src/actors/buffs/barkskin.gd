@@ -8,6 +8,7 @@ extends Buff
 
 var level: int = 0
 var interval: int = 1
+var _turns_until_decay: int = 1
 
 func _init() -> void:
 	buff_id = "Barkskin"
@@ -21,7 +22,8 @@ func _init() -> void:
 func set_level(value: int, time: int) -> void:
 	if level <= value:
 		level = value
-		interval = time
+		interval = maxi(1, time)
+		_turns_until_decay = interval
 
 ## Delay the next tick by a given amount.
 func delay(_value: float) -> void:
@@ -33,8 +35,12 @@ func on_turn() -> void:
 		if target:
 			target.remove_buff(self)
 		return
-	# Decrement level each interval
+	_turns_until_decay -= 1
+	if _turns_until_decay > 0:
+		return
+
 	level -= 1
+	_turns_until_decay = interval
 	if level <= 0:
 		if target:
 			target.remove_buff(self)
@@ -57,7 +63,8 @@ func serialize() -> Dictionary:
 func deserialize(data: Dictionary) -> void:
 	super.deserialize(data)
 	level = data.get("level", 0)
-	interval = data.get("interval", 1)
+	interval = maxi(1, data.get("interval", 1))
+	_turns_until_decay = interval
 
 func description() -> String:
 	return "Protected by bark-like skin (+%d DR)." % level
