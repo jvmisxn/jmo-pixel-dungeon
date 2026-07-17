@@ -516,11 +516,9 @@ class ScrollLullaby extends Scroll:
 				if mob == null or not mob.is_alive:
 					continue
 				if hero.has_method("can_see") and hero.can_see(mob.pos):
-					# Put to sleep by applying paralysis as a sleep substitute
+					# Put to sleep with wake-on-damage semantics.
 					if mob.has_method("add_buff"):
-						var sleep_buff: Paralysis = Paralysis.new()
-						sleep_buff.buff_id = "Sleep"
-						sleep_buff.buff_name = "Sleeping"
+						var sleep_buff: SleepBuff = SleepBuff.new()
 						sleep_buff.set_duration(10.0)
 						mob.add_buff(sleep_buff)
 						affected += 1

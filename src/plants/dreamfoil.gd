@@ -32,7 +32,7 @@ func _do_effect(char: Variant, _level: Variant) -> void:
 	else:
 		# Put mobs to sleep
 		if char.has_method("add_buff"):
-			var sleep: Paralysis = Paralysis.new()
+			var sleep: SleepBuff = SleepBuff.new()
 			sleep.set_duration(SLEEP_DURATION)
 			char.add_buff(sleep)
 		if char is Mob:

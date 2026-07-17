@@ -339,7 +339,7 @@ func _use_deepened_sleep(hero: Char) -> void:
 		if dungeon_level.has_method("find_char_at"):
 			var ch: Variant = dungeon_level.find_char_at(cell)
 			if ch != null and ch != hero and ch.has_method("add_buff"):
-				var sleep_buff: Paralysis = Paralysis.new()
+				var sleep_buff: SleepBuff = SleepBuff.new()
 				sleep_buff.set_duration(20.0)
 				ch.add_buff(sleep_buff)
 				_notify_hero(hero, "The target falls into a deep sleep!", "positive")

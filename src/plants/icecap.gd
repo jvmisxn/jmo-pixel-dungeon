@@ -1,7 +1,6 @@
 class_name Icecap
 extends Plant
-## Freezes nearby characters by applying Paralysis (frozen solid) to all
-## characters within a 1-cell radius. Also extinguishes fire on the hero.
+## Freezes nearby characters. Also extinguishes fire on the hero.
 
 const FREEZE_DURATION: float = 5.0
 const RADIUS: int = 1
@@ -32,8 +31,7 @@ func _do_effect(char: Variant, level: Variant) -> void:
 			# Remove Burning if present
 			if target.has_method("remove_buff_by_id"):
 				target.remove_buff_by_id("Burning")
-			# Apply paralysis (frozen)
-			var freeze: Paralysis = Paralysis.new()
+			var freeze: Frozen = Frozen.new()
 			freeze.set_duration(FREEZE_DURATION)
 			target.add_buff(freeze)
 			if MessageLog:

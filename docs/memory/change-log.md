@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: buffs, plants, scrolls, stones, source-fidelity, audit-S15, audit-S17, audit-S19
+- Replaced the remaining renamed-Paralysis sleep/freeze substitutes in Scroll of Lullaby, Stone of Deepened Sleep, Dreamfoil, and Icecap with the dedicated `SleepBuff` / `Frozen` effects. Sleep now uses the wake-on-damage contract instead of generic paralysis, and Icecap now gets Frozen's shared freeze semantics rather than an unrelated paralysis timer. Added `test_sleep_freeze_effects.gd` to cover sleep wakeup and Icecap Frozen attachment. Local headless suite green (397 checks, Godot 4.7.1).
+
 - Tags: mobile, hud, toolbar, web, playtesting
 - Fixed scaled mobile HUD touch activation after the backing-canvas layout fix. `HUD` now accepts high-DPI backing-canvas touch coordinates for hit-testing, converts them back into HUD layout coordinates before activating toolbar controls, and applies the same conversion to party-row buttons. Extended `test_mobile_hud_input.gd` with scaled toolbar hit-testing and party-button activation coverage. Local headless suite green (384 checks, Godot 4.7.1); no real-device/iPhone touch confirmation yet.
 
