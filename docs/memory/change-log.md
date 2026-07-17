@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: wands, combat, source-fidelity, audit-S14
+- Routed Wand of Disintegration damage through `Char.take_damage()` instead of mutating HP directly. Disintegration still bypasses physical armor because `take_damage()` receives already-raw magical damage, but it now respects shielding, Arcane Armor, wake-on-damage hooks, and the shared death path like the other wand subclasses. Added `tests/cases/test_wand_of_disintegration.gd` to cover Barrier absorption, Arcane Armor reduction, and exactly-once death handling.
+
 - Tags: mobile, camera, zoom, web, playtesting
 - Fixed mobile web runs starting heavily zoomed in after the browser-viewport scaling fixes. `GameCamera` had forced mobile web to start at `4.5x`; once the game used the actual phone-sized logical viewport, that showed only a tiny slice of the dungeon. Mobile now starts at `1.5x`, can pinch/setting zoom out to `1x`, and still allows zooming in up to `10x`. Added `tests/cases/test_game_camera_mobile_zoom.gd` to lock the mobile defaults.
 

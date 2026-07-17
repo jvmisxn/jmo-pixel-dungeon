@@ -577,11 +577,9 @@ class WandOfDisintegration extends Wand:
 		for cell_pos: int in beam_path:
 			var target_char: Variant = lvl.find_char_at(cell_pos)
 			if target_char != null and target_char.has_method("take_damage"):
-				# Disintegration ignores armor — deal damage directly to HP
-				target_char.hp -= total_dmg
-				target_char.hp = maxi(0, target_char.hp)
-				if target_char.hp <= 0 and target_char.has_method("die"):
-					target_char.die(hero)
+				# Disintegration ignores physical armor, but still routes through
+				# the shared magical damage pipeline for shielding and resistances.
+				target_char.take_damage(total_dmg, hero)
 				hit_any = true
 				if MessageLog:
 					MessageLog.add("The disintegration beam hits for %d damage!" % total_dmg)
