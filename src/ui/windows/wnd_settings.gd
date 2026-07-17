@@ -7,6 +7,7 @@ extends WndBase
 var _music_slider: HSlider = null
 var _sfx_slider: HSlider = null
 var _zoom_option: OptionButton = null
+var _orientation_option: OptionButton = null
 var _brightness_slider: HSlider = null
 var _music_mute_btn: CheckButton = null
 var _sfx_mute_btn: CheckButton = null
@@ -87,6 +88,25 @@ func _build_content() -> Control:
 	_zoom_option.item_selected.connect(_on_zoom_changed)
 	zoom_container.add_child(_zoom_option)
 	main.add_child(zoom_container)
+
+	# --- Mobile Layout ---
+	var orientation_container: VBoxContainer = VBoxContainer.new()
+	orientation_container.add_theme_constant_override("separation", 4)
+	var orientation_label: Label = Label.new()
+	orientation_label.text = "Mobile Layout"
+	orientation_label.add_theme_font_size_override("font_size", 12)
+	orientation_label.add_theme_color_override("font_color", Color(0.85, 0.8, 0.65))
+	orientation_container.add_child(orientation_label)
+
+	_orientation_option = OptionButton.new()
+	_orientation_option.add_item("Auto", 0)
+	_orientation_option.add_item("Portrait", 1)
+	_orientation_option.add_item("Landscape", 2)
+	_orientation_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_orientation_option.selected = _get_current_orientation_index()
+	_orientation_option.item_selected.connect(_on_orientation_changed)
+	orientation_container.add_child(_orientation_option)
+	main.add_child(orientation_container)
 
 	# --- Brightness ---
 	var bright_section: Dictionary = _create_slider_section("Brightness")
@@ -207,6 +227,18 @@ func _on_zoom_changed(index: int) -> void:
 				camera.zoom = Vector2(zoom_val, zoom_val)
 
 
+func _on_orientation_changed(index: int) -> void:
+	var orientation_values: Array[String] = ["auto", "portrait", "landscape"]
+	if index < 0 or index >= orientation_values.size():
+		return
+	var game_manager: Node = GameManager
+	if game_manager == null or not game_manager.has_method("set_mobile_orientation_mode"):
+		return
+	game_manager.set_mobile_orientation_mode(orientation_values[index])
+	if game_manager.has_method("save_display_settings"):
+		game_manager.save_display_settings()
+
+
 func _on_brightness_changed(value: float) -> void:
 	_brightness_val_label.text = "%d%%" % int(value)
 	# Map 0-100 to a brightness modulation (0.5 = dim, 1.0 = normal, 1.5 = bright)
@@ -230,6 +262,13 @@ func _on_save_close() -> void:
 		game_manager.set("setting_brightness", _brightness_slider.value / 100.0)
 		game_manager.set("setting_music_muted", _music_mute_btn.button_pressed if _music_mute_btn else false)
 		game_manager.set("setting_sfx_muted", _sfx_mute_btn.button_pressed if _sfx_mute_btn else false)
+		if _orientation_option != null and game_manager.has_method("set_mobile_orientation_mode"):
+			var orientation_values: Array[String] = ["auto", "portrait", "landscape"]
+			var selected: int = _orientation_option.selected
+			if selected >= 0 and selected < orientation_values.size():
+				game_manager.set_mobile_orientation_mode(orientation_values[selected])
+		if game_manager.has_method("save_display_settings"):
+			game_manager.save_display_settings()
 		if game_manager.has_method("save_settings"):
 			game_manager.save_settings()
 	# Also persist via SaveManager if available
@@ -294,6 +333,19 @@ func _get_current_zoom_index() -> int:
 				if absf(zoom_values[i] - zoom) < 0.01:
 					return i
 	return 0
+
+
+func _get_current_orientation_index() -> int:
+	var game_manager: Node = GameManager
+	if game_manager == null or not game_manager.has_method("get_mobile_orientation_mode"):
+		return 0
+	match str(game_manager.get_mobile_orientation_mode()):
+		"portrait":
+			return 1
+		"landscape":
+			return 2
+		_:
+			return 0
 
 
 func _get_brightness_percent() -> float:

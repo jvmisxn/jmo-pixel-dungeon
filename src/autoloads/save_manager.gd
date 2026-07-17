@@ -536,7 +536,7 @@ func clear_rankings() -> void:
 # ---------------------------------------------------------------------------
 
 ## Save a settings dictionary to disk.
-## Expected keys: sfx_volume, music_volume, sfx_muted, music_muted
+## Expected keys: sfx_volume, music_volume, sfx_muted, music_muted, mobile_orientation_mode
 func save_settings(settings: Dictionary) -> void:
 	var file: FileAccess = FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
 	if file == null:
@@ -553,6 +553,7 @@ func load_settings() -> Dictionary:
 		"music_volume": 0.5,
 		"sfx_muted": false,
 		"music_muted": false,
+		"mobile_orientation_mode": "auto",
 	}
 
 	if not FileAccess.file_exists(SETTINGS_PATH):

@@ -47,7 +47,12 @@ var hero_subclass: int = ConstantsData.HeroSubclass.NONE
 ## Whether a run is currently in progress.
 var run_active: bool = false
 const DESKTOP_CONTENT_SCALE_SIZE: Vector2i = Vector2i(1280, 720)
-const MOBILE_CONTENT_SCALE_SIZE: Vector2i = Vector2i(960, 540)
+const MOBILE_LANDSCAPE_CONTENT_SCALE_SIZE: Vector2i = Vector2i(960, 540)
+const MOBILE_PORTRAIT_CONTENT_SCALE_SIZE: Vector2i = Vector2i(540, 960)
+const MOBILE_ORIENTATION_AUTO: String = "auto"
+const MOBILE_ORIENTATION_PORTRAIT: String = "portrait"
+const MOBILE_ORIENTATION_LANDSCAPE: String = "landscape"
+var mobile_orientation_mode: String = MOBILE_ORIENTATION_AUTO
 
 # --- Statistics ---
 var stats: Dictionary[String, int] = {}
@@ -74,6 +79,10 @@ func get_quest_flag(flag_name: String, default_val: Variant = false) -> Variant:
 
 
 func _ready() -> void:
+	var viewport: Viewport = get_viewport()
+	if viewport != null and not viewport.size_changed.is_connected(_on_viewport_size_changed):
+		viewport.size_changed.connect(_on_viewport_size_changed)
+	call_deferred("_load_display_settings")
 	_apply_platform_content_scale()
 	_reset_stats()
 
@@ -120,10 +129,66 @@ func _apply_platform_content_scale() -> void:
 	var window: Window = get_window()
 	if window == null:
 		return
-	if OS.get_name() == "Web" and DisplayServer.is_touchscreen_available():
-		window.content_scale_size = MOBILE_CONTENT_SCALE_SIZE
+	if _is_mobile_web():
+		window.content_scale_size = _get_mobile_content_scale_size()
 	else:
 		window.content_scale_size = DESKTOP_CONTENT_SCALE_SIZE
+
+
+func set_mobile_orientation_mode(mode: String) -> void:
+	mobile_orientation_mode = _normalize_mobile_orientation_mode(mode)
+	_apply_platform_content_scale()
+
+
+func get_mobile_orientation_mode() -> String:
+	return mobile_orientation_mode
+
+
+func save_display_settings() -> void:
+	if SaveManager == null or not SaveManager.has_method("load_settings"):
+		return
+	var settings: Dictionary = SaveManager.load_settings()
+	settings["mobile_orientation_mode"] = mobile_orientation_mode
+	if SaveManager.has_method("save_settings"):
+		SaveManager.save_settings(settings)
+
+
+func _load_display_settings() -> void:
+	if SaveManager != null and SaveManager.has_method("load_settings"):
+		var settings: Dictionary = SaveManager.load_settings()
+		mobile_orientation_mode = _normalize_mobile_orientation_mode(
+			str(settings.get("mobile_orientation_mode", MOBILE_ORIENTATION_AUTO))
+		)
+	_apply_platform_content_scale()
+
+
+func _is_mobile_web() -> bool:
+	return OS.get_name() == "Web" and DisplayServer.is_touchscreen_available()
+
+
+func _get_mobile_content_scale_size() -> Vector2i:
+	var mode: String = _normalize_mobile_orientation_mode(mobile_orientation_mode)
+	if mode == MOBILE_ORIENTATION_PORTRAIT:
+		return MOBILE_PORTRAIT_CONTENT_SCALE_SIZE
+	if mode == MOBILE_ORIENTATION_LANDSCAPE:
+		return MOBILE_LANDSCAPE_CONTENT_SCALE_SIZE
+	var window: Window = get_window()
+	if window != null and window.size.y > window.size.x:
+		return MOBILE_PORTRAIT_CONTENT_SCALE_SIZE
+	return MOBILE_LANDSCAPE_CONTENT_SCALE_SIZE
+
+
+func _normalize_mobile_orientation_mode(mode: String) -> String:
+	match mode:
+		MOBILE_ORIENTATION_PORTRAIT, MOBILE_ORIENTATION_LANDSCAPE:
+			return mode
+		_:
+			return MOBILE_ORIENTATION_AUTO
+
+
+func _on_viewport_size_changed() -> void:
+	if mobile_orientation_mode == MOBILE_ORIENTATION_AUTO:
+		_apply_platform_content_scale()
 
 
 ## Free stale Nodes from the previous run so nothing holds a freed-instance ref.
