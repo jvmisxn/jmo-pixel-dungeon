@@ -241,8 +241,8 @@ func _on_hero_moved(new_pos: int) -> void:
 		_level_map.assign(level.map)
 	if level.get("visited") != null:
 		_visited.assign(level.visited)
-	if level.get("visible_cells") != null:
-		_visible_cells.assign(level.visible_cells)
+	if level.get("visible") != null:
+		_visible_cells.assign(level.visible)
 	# Get mob positions
 	_mob_positions.clear()
 	if level.has_method("get_mobs"):

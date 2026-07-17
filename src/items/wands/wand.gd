@@ -61,6 +61,12 @@ func recharge(turns: int = 1, hero: Char = null) -> void:
 			if ring.has_method("bonus"):
 				var b: int = ring.bonus()
 				charge_per_turn *= pow(1.2, maxf(0.0, float(b)))
+		var recharging_buff: Variant = hero.get_buff("Recharging")
+		if recharging_buff != null and recharging_buff.has_method("recharge_rate"):
+			charge_per_turn *= float(recharging_buff.recharge_rate())
+		var battlemage_buff: Variant = hero.get_buff("BattemagePower")
+		if battlemage_buff != null and battlemage_buff.has_method("wand_recharge_multiplier"):
+			charge_per_turn *= float(battlemage_buff.wand_recharge_multiplier())
 	_recharge_progress += charge_per_turn * float(turns)
 	while _recharge_progress >= 1.0 and charges < charges_max:
 		_recharge_progress -= 1.0

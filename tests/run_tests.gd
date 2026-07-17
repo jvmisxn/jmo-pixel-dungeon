@@ -11,6 +11,11 @@ extends SceneTree
 const CASES: Array[String] = [
 	"res://tests/cases/test_compile.gd",
 	"res://tests/cases/test_event_bus.gd",
+	"res://tests/cases/test_headless_save_descend_reload.gd",
+	"res://tests/cases/test_game_manager_run_state.gd",
+	"res://tests/cases/test_save_manager.gd",
+	"res://tests/cases/test_wand_recharge.gd",
+	"res://tests/cases/test_speed_modifiers.gd",
 	"res://tests/cases/test_fury_damage.gd",
 ]
 
@@ -21,7 +26,7 @@ func _initialize() -> void:
 	print("== jmo-pixel-dungeon test runner ==")
 	for case_path: String in CASES:
 		var script: Variant = load(case_path)
-		if script == null:
+		if script == null or not script is Script or not (script as Script).can_instantiate():
 			_record_failure("could not load test case: " + case_path)
 			continue
 		var case: Object = script.new()

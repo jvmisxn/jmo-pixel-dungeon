@@ -32,13 +32,8 @@ func on_damage_taken(amount: int, _source: Variant) -> void:
 		consecutive_hits = 0
 
 func modify_speed(speed: float) -> float:
-	# Unarmed attacks get faster with consecutive hits
-	if target and target.get("is_hero") == true:
-		var hero: Node = target
-		# Check if unarmed (no weapon or using fists)
-		if hero.belongings == null or hero.belongings.weapon == null:
-			var speed_bonus: float = 1.0 + consecutive_hits * 0.4  # up to 3x at 5 hits
-			return speed * speed_bonus
+	# Flurry is an attack-speed passive, not movement speed. Attack delay needs
+	# its own hook so get_speed() can safely activate movement buffs.
 	return speed
 
 func modify_accuracy(acc: int) -> int:

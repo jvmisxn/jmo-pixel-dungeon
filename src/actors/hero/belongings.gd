@@ -297,6 +297,13 @@ func get_items() -> Array[Item]:
 func get_all_items() -> Array[Item]:
 	return get_items()
 
+## Recharge every wand the hero is carrying or has equipped.
+func recharge_wands(turns: int = 1) -> void:
+	for item: Item in get_items():
+		if item != null and item.has_method("recharge"):
+			var wand: Variant = item
+			wand.recharge(turns, owner)
+
 ## Count items with the given item_id in backpack.
 func count_item(search_id: String) -> int:
 	var count: int = 0

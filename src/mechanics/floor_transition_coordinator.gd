@@ -12,7 +12,16 @@ static func handle_descend(scene: Variant) -> void:
 			MessageLog.add_warning("You need to be on the stairs down to descend.")
 		scene._awaiting_hero_input = true
 		return
-	if not party_ready_for_stairs(scene, scene._current_level.exit_pos, "All party members must be on the stairs down to descend."):
+	if not party_ready_for_stairs(
+		scene,
+		scene._current_level.exit_pos,
+		"All party members must be on the stairs down to descend."
+	):
+		scene._awaiting_hero_input = true
+		return
+	if GameManager == null or GameManager.depth >= ConstantsData.MAX_DEPTH:
+		if MessageLog:
+			MessageLog.add_warning("The way deeper is sealed.")
 		scene._awaiting_hero_input = true
 		return
 	if MessageLog:
@@ -20,9 +29,10 @@ static func handle_descend(scene: Variant) -> void:
 	if AudioManager:
 		AudioManager.play_sfx("descend")
 	notify_party_floor_change(scene)
-	GameManager._cache_current_level()
-	GameManager.depth += 1
-	GameManager._on_depth_changed()
+	var new_depth: int = GameManager.descend()
+	if new_depth < 0:
+		scene._awaiting_hero_input = true
+		return
 	if scene._is_online_host():
 		OnlineEventCodec.broadcast_level_transition(NetworkManager, GameManager.depth, "descend")
 	transition_to_loading(scene, "descend")
@@ -38,7 +48,11 @@ static func handle_ascend(scene: Variant) -> void:
 			MessageLog.add_warning("You need to be on the stairs up to ascend.")
 		scene._awaiting_hero_input = true
 		return
-	if not party_ready_for_stairs(scene, scene._current_level.entrance, "All party members must be on the stairs up to ascend."):
+	if not party_ready_for_stairs(
+		scene,
+		scene._current_level.entrance,
+		"All party members must be on the stairs up to ascend."
+	):
 		scene._awaiting_hero_input = true
 		return
 	if GameManager.depth <= 1:
@@ -51,9 +65,10 @@ static func handle_ascend(scene: Variant) -> void:
 	if AudioManager:
 		AudioManager.play_sfx("descend")
 	notify_party_floor_change(scene)
-	GameManager._cache_current_level()
-	GameManager.depth -= 1
-	GameManager._on_depth_changed()
+	var new_depth: int = GameManager.ascend()
+	if new_depth < 0:
+		scene._awaiting_hero_input = true
+		return
 	if scene._is_online_host():
 		OnlineEventCodec.broadcast_level_transition(NetworkManager, GameManager.depth, "ascend")
 	transition_to_loading(scene, "ascend")
