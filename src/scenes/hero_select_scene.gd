@@ -703,21 +703,29 @@ func _apply_portrait_layout(viewport_size: Vector2) -> void:
 	)
 	var inset: float = 18.0
 	var content_width: float = maxf(1.0, panel_size.x - (inset * 2.0))
+	var splash_height: float = minf(190.0, maxf(130.0, panel_size.y * 0.22))
+	var gap: float = 12.0
+	var left_top: float = inset + splash_height + gap
+	var left_height: float = maxf(1.0, panel_size.y - left_top - inset)
 	if _main_panel != null:
 		_main_panel.position = Vector2(margin, margin)
 		_main_panel.size = panel_size
 	if _left_panel != null:
-		_left_panel.position = Vector2.ZERO
-		_left_panel.custom_minimum_size = panel_size
-		_left_panel.size = panel_size
+		_left_panel.position = Vector2(0.0, left_top)
+		_left_panel.custom_minimum_size = Vector2(panel_size.x, left_height)
+		_left_panel.size = _left_panel.custom_minimum_size
 	if _right_panel != null:
-		_right_panel.visible = false
+		_right_panel.visible = true
+		_right_panel.position = Vector2(inset, inset)
+		_right_panel.custom_minimum_size = Vector2(content_width, splash_height)
+		_right_panel.size = _right_panel.custom_minimum_size
 	if _content_box != null:
-		_content_box.position = Vector2(inset, inset)
-		_content_box.custom_minimum_size = Vector2(content_width, panel_size.y - (inset * 2.0))
+		_content_box.position = Vector2(inset, 0.0)
+		_content_box.custom_minimum_size = Vector2(content_width, left_height)
 		_content_box.size = _content_box.custom_minimum_size
 		_content_box.add_theme_constant_override("separation", 10)
 	_update_mobile_content_width(content_width, true)
+	_update_splash_crop()
 
 
 func _update_mobile_content_width(content_width: float, is_portrait: bool) -> void:

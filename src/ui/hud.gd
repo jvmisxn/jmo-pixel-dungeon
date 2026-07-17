@@ -12,7 +12,7 @@ const DESKTOP_TOOLBAR_HEIGHT: int = 40
 const MOBILE_TOOLBAR_HEIGHT: int = 72
 const MOBILE_BREAKPOINT: float = 720.0
 const HUD_MARGIN: float = 6.0
-const MOBILE_STATUS_SIZE: Vector2 = Vector2(156, 86)
+const MOBILE_STATUS_SIZE: Vector2 = Vector2(150, 70)
 
 # --- Child panels ---
 var toolbar: MarginContainer = null
@@ -104,6 +104,7 @@ func _build_layout() -> void:
 	status_container.name = "StatusContainer"
 	status_container.position = Vector2(HUD_MARGIN, HUD_MARGIN)
 	status_container.custom_minimum_size = Vector2(220, 140)
+	status_container.clip_contents = true
 	var status_style: StyleBoxFlat = StyleBoxFlat.new()
 	status_style.bg_color = Color(0.08, 0.07, 0.06, 0.92)
 	status_style.border_color = Color(0.35, 0.30, 0.25)

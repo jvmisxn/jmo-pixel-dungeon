@@ -11,8 +11,10 @@ var _portrait_fallback: ColorRect = null
 var _class_label: Label = null
 var _hp_bar: ProgressBar = null
 var _shield_bar: ProgressBar = null  # Overlay for shielding (yellow tint)
+var _hp_header: Label = null
 var _hp_label: Label = null
 var _xp_bar: ProgressBar = null
+var _xp_header: Label = null
 var _xp_label: Label = null
 var _str_label: Label = null
 var _depth_label: Label = null
@@ -44,6 +46,7 @@ var _compact_mode: bool = false
 # --- Constants ---
 const SLOT_SIZE: Vector2 = Vector2(28, 28)
 const BAR_HEIGHT: int = 14
+const COMPACT_MINIMUM_SIZE: Vector2 = Vector2(146, 58)
 const BUFF_ICON_SIZE: Vector2 = Vector2(16, 16)
 const STATUS_PANE_PATH: String = "res://assets/spd/interfaces/status_pane.png"
 const HERO_ICONS_PATH: String = "res://assets/spd/interfaces/hero_icons.png"
@@ -69,6 +72,10 @@ func _ready() -> void:
 	_build_ui()
 	_connect_signals()
 	update_all()
+
+
+func _get_minimum_size() -> Vector2:
+	return COMPACT_MINIMUM_SIZE if _compact_mode else Vector2.ZERO
 
 
 ## Per-frame update for the low-HP warning flash on the hero portrait.
@@ -254,11 +261,11 @@ func _build_ui() -> void:
 func _build_hp_section() -> void:
 	_hp_section = VBoxContainer.new()
 	_hp_section.add_theme_constant_override("separation", 1)
-	var hp_header := Label.new()
-	hp_header.text = "HP"
-	hp_header.add_theme_font_size_override("font_size", 10)
-	hp_header.add_theme_color_override("font_color", Color(0.7, 0.3, 0.3))
-	_hp_section.add_child(hp_header)
+	_hp_header = Label.new()
+	_hp_header.text = "HP"
+	_hp_header.add_theme_font_size_override("font_size", 10)
+	_hp_header.add_theme_color_override("font_color", Color(0.7, 0.3, 0.3))
+	_hp_section.add_child(_hp_header)
 
 	# Layered container for HP + shield bars (shield draws behind HP)
 	var hp_bar_container := Control.new()
@@ -312,11 +319,11 @@ func _build_hp_section() -> void:
 func _build_xp_section() -> void:
 	_xp_section = VBoxContainer.new()
 	_xp_section.add_theme_constant_override("separation", 1)
-	var xp_header := Label.new()
-	xp_header.text = "XP"
-	xp_header.add_theme_font_size_override("font_size", 10)
-	xp_header.add_theme_color_override("font_color", Color(0.3, 0.5, 0.8))
-	_xp_section.add_child(xp_header)
+	_xp_header = Label.new()
+	_xp_header.text = "XP"
+	_xp_header.add_theme_font_size_override("font_size", 10)
+	_xp_header.add_theme_color_override("font_color", Color(0.3, 0.5, 0.8))
+	_xp_section.add_child(_xp_header)
 
 	_xp_bar = ProgressBar.new()
 	_xp_bar.custom_minimum_size = Vector2(0, BAR_HEIGHT - 4)
@@ -387,7 +394,10 @@ func set_compact_mode(is_compact: bool) -> void:
 	if _compact_mode == is_compact:
 		return
 	_compact_mode = is_compact
+	custom_minimum_size = COMPACT_MINIMUM_SIZE if _compact_mode else Vector2.ZERO
 	add_theme_constant_override("separation", 3 if _compact_mode else 6)
+	if _level_label:
+		_level_label.add_theme_font_size_override("font_size", 12 if _compact_mode else 13)
 	if _portrait_container:
 		_portrait_container.visible = not _compact_mode
 	if _focus_label:
@@ -410,10 +420,20 @@ func set_compact_mode(is_compact: bool) -> void:
 		_buffs_container.visible = not _compact_mode
 	if _hp_section:
 		_hp_section.add_theme_constant_override("separation", 0 if _compact_mode else 1)
+	if _hp_header:
+		_hp_header.add_theme_font_size_override("font_size", 9 if _compact_mode else 10)
+	if _hp_label:
+		_hp_label.visible = not _compact_mode
 	if _xp_section:
 		_xp_section.add_theme_constant_override("separation", 0 if _compact_mode else 1)
+	if _xp_header:
+		_xp_header.add_theme_font_size_override("font_size", 9 if _compact_mode else 10)
+	if _xp_label:
+		_xp_label.visible = not _compact_mode
 	if _hunger_section:
 		_hunger_section.visible = not _compact_mode
+	minimum_size_changed()
+	queue_sort()
 
 
 # ---------------------------------------------------------------------------
