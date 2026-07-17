@@ -47,6 +47,28 @@ jobs:
           fi
           test -f build/web/index.html
 
+      - name: Patch mobile web shell
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          page = Path("build/web/index.html")
+          html = page.read_text()
+          html = html.replace(
+              "width=device-width, user-scalable=no, initial-scale=1.0",
+              "width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover",
+          )
+          html = html.replace(
+              "overflow: hidden;\n\ttouch-action: none;",
+              "overflow: hidden;\n\ttouch-action: pan-x pan-y pinch-zoom;",
+          )
+          html = html.replace(
+              "#canvas {\n\tdisplay: block;\n}",
+              "#canvas {\n\tdisplay: block;\n\twidth: 100vw !important;\n\theight: 100dvh !important;\n\ttouch-action: pan-x pan-y pinch-zoom;\n}",
+          )
+          page.write_text(html)
+          PY
+
       - name: Upload Web artifact
         uses: actions/upload-artifact@v4
         with:
