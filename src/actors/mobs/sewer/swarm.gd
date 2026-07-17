@@ -19,7 +19,7 @@ func _init() -> void:
 ## When damaged below half HP, split into a new smaller swarm.
 func take_damage(dmg: int, source: Variant = null) -> int:
 	var actual: int = super.take_damage(dmg, source)
-	if actual > 0 and is_alive and not has_split and hp <= hp_max / 2:
+	if actual > 0 and is_alive and not has_split and hp >= 2 and hp <= hp_max / 2:
 		_split()
 	return actual
 
@@ -37,12 +37,14 @@ func _split() -> void:
 			break
 	if spawn_pos < 0:
 		return  # No room to split
+	# Split current HP between the two swarms (SPD divides HP; it is not duplicated).
+	var child_hp: int = hp / 2
 	# Create the child swarm
 	var child: Swarm = Swarm.new()
 	child.has_split = true  # Children don't split again
-	child.hp = hp  # Share remaining HP
+	child.hp = child_hp
 	child.hp_max = hp_max
-	child.ht = hp
+	child.ht = hp_max
 	child.state = AIState.HUNTING
 	child.target = target
 	child.pos = spawn_pos
@@ -51,6 +53,8 @@ func _split() -> void:
 		level.add_mob(child)
 	if TurnManager:
 		TurnManager.add_actor(child)
+	# Parent keeps the remaining half so total swarm HP is conserved.
+	hp -= child_hp
 	if MessageLog:
 		MessageLog.add_warning("The swarm splits in two!")
 

@@ -33,6 +33,9 @@ var _properties: Array[String] = []
 var _resistances: Array[String] = []
 @warning_ignore("unused_private_class_variable")
 var _immunities: Array[String] = []
+var _boss_bar_announced: bool = false
+
+const BOSS_MOB_IDS: Array[String] = ["goo", "tengu", "dm300", "king", "yog"]
 
 ## Set to true during act() when the mob does something the player should see
 ## (moves, attacks, opens a door). TurnManager checks this to decide whether
@@ -87,6 +90,8 @@ func act() -> void:
 	if not is_alive:
 		deactivate()
 		return
+	if is_boss():
+		_ensure_boss_bar_started()
 
 	did_visible_action = false
 	last_visible_action = ""
@@ -234,6 +239,7 @@ func _wake_up(threat: Char) -> void:
 	_set_state(AIState.HUNTING)
 	target = threat
 	target_pos = threat.pos
+	_ensure_boss_bar_started()
 	if MessageLog:
 		MessageLog.add_info("The %s notices you!" % mob_name)
 
@@ -242,6 +248,17 @@ func _set_state(new_state: AIState) -> void:
 		return
 	state = new_state
 	state_changed.emit(new_state)
+	if new_state == AIState.HUNTING:
+		_ensure_boss_bar_started()
+
+func is_boss() -> bool:
+	return _properties.has("BOSS") or BOSS_MOB_IDS.has(mob_id)
+
+func _ensure_boss_bar_started() -> void:
+	if _boss_bar_announced or not is_boss() or EventBus == null:
+		return
+	_boss_bar_announced = true
+	EventBus.boss_fight_started.emit(mob_name, maxi(hp, 0))
 
 ## A mob is surprised by an attacker it is not actively aware of: while sleeping,
 ## wandering, or passive; while paralysed; or while hunting/fleeing but unable to
@@ -386,7 +403,11 @@ func _drop_loot() -> void:
 
 ## Override take_damage to wake sleeping mobs and trigger flee checks.
 func take_damage(dmg: int, source: Variant = null) -> int:
+	if is_boss():
+		_ensure_boss_bar_started()
 	var actual: int = super.take_damage(dmg, source)
+	if actual > 0 and is_alive and is_boss() and EventBus:
+		EventBus.boss_damaged.emit(maxi(hp, 0), hp_max)
 	if actual > 0 and is_alive:
 		# Wake up if sleeping
 		if state == AIState.SLEEPING:
@@ -451,6 +472,8 @@ func _on_death(_source: Variant) -> void:
 	if EventBus:
 		EventBus.mob_died.emit(self)
 		EventBus.mob_defeated.emit(pos, mob_name, mob_id)
+		if is_boss():
+			EventBus.boss_defeated.emit()
 	# Log death
 	if MessageLog:
 		MessageLog.add("The %s dies." % mob_name)

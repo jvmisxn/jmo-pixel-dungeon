@@ -11,6 +11,7 @@ extends SceneTree
 const CASES: Array[String] = [
 	"res://tests/cases/test_compile.gd",
 	"res://tests/cases/test_event_bus.gd",
+	"res://tests/cases/test_boss_hp_signals.gd",
 	"res://tests/cases/test_headless_save_descend_reload.gd",
 	"res://tests/cases/test_game_manager_run_state.gd",
 	"res://tests/cases/test_save_manager.gd",
@@ -28,6 +29,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_interval_armor_buffs.gd",
 	"res://tests/cases/test_ring_of_might_state.gd",
 	"res://tests/cases/test_surprise_attacks.gd",
+	"res://tests/cases/test_swarm_split.gd",
 ]
 
 var _checks: int = 0
