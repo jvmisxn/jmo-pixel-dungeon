@@ -70,6 +70,7 @@ const SUBMENU_CONTENT_MARGIN: int = 24
 const SUBMENU_CONTENT_WIDTH: float = 712.0
 const SUBMENU_ACTION_WIDTH: float = 350.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
+const PORTRAIT_MENU_MAX_WIDTH: float = 320.0
 const PROFILE_ICON_SPRITES: Dictionary = {
 	"warrior": "res://assets/spd/sprites/warrior.png",
 	"mage": "res://assets/spd/sprites/mage.png",
@@ -676,8 +677,8 @@ func _apply_layout() -> void:
 	var viewport_size: Vector2 = _get_layout_viewport_size()
 	_layout_viewport_size = viewport_size
 	var is_portrait: bool = viewport_size.y > viewport_size.x
-	var margin: float = 48.0 if is_portrait else 24.0
-	var menu_width: float = minf(400.0, viewport_size.x - (margin * 2.0))
+	var margin: float = 56.0 if is_portrait else 24.0
+	var menu_width: float = _title_menu_width(viewport_size)
 	var title_width: float = maxf(1.0, viewport_size.x - (margin * 2.0))
 	var title_top: float = 64.0 if is_portrait else 20.0
 
@@ -747,9 +748,16 @@ func _set_button_width(btn: Button, width: float, height: float) -> void:
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 
+func _title_menu_width(viewport_size: Vector2) -> float:
+	var is_portrait: bool = viewport_size.y > viewport_size.x
+	var margin: float = 56.0 if is_portrait else 24.0
+	var max_width: float = PORTRAIT_MENU_MAX_WIDTH if is_portrait else 400.0
+	return maxf(1.0, minf(max_width, viewport_size.x - (margin * 2.0)))
+
+
 func _get_layout_viewport_size() -> Vector2:
 	var engine_size: Vector2 = get_viewport_rect().size
-	return _choose_layout_viewport_size(engine_size, _get_browser_viewport_size())
+	return _apply_mobile_safe_layout_reserve(_choose_layout_viewport_size(engine_size, _get_browser_viewport_size()))
 
 
 func _choose_layout_viewport_size(engine_size: Vector2, browser_size: Vector2i) -> Vector2:
@@ -781,6 +789,12 @@ func _should_layout_against_browser_size(browser_size: Vector2i) -> bool:
 	if mini(browser_size.x, browser_size.y) < 760:
 		return true
 	return false
+
+
+func _apply_mobile_safe_layout_reserve(viewport_size: Vector2) -> Vector2:
+	if viewport_size.y <= viewport_size.x:
+		return viewport_size
+	return Vector2(maxf(1.0, viewport_size.x - 16.0), viewport_size.y)
 
 
 func _get_submenu_panel_size() -> Vector2:

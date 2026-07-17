@@ -57,6 +57,8 @@ const STANDARD_ROW_WIDTH: float = 300.0
 const ACTION_BUTTON_WIDTH: float = 145.0
 const PORTRAIT_TIGHT_HEIGHT: float = 390.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
+const PORTRAIT_WEB_SAFE_BOTTOM_RESERVE: float = 92.0
+const PORTRAIT_WEB_SAFE_SIDE_RESERVE: float = 16.0
 
 # Hero class splash art paths (800x450 JPGs)
 const SPLASH_PATHS: Array[String] = [
@@ -781,7 +783,7 @@ func _update_mobile_content_width(content_width: float, is_portrait: bool, conte
 
 func _get_layout_viewport_size() -> Vector2:
 	var engine_size: Vector2 = get_viewport_rect().size
-	return _choose_layout_viewport_size(engine_size, _get_browser_viewport_size())
+	return _apply_mobile_safe_layout_reserve(_choose_layout_viewport_size(engine_size, _get_browser_viewport_size()))
 
 func _choose_layout_viewport_size(engine_size: Vector2, browser_size: Vector2i) -> Vector2:
 	if browser_size != Vector2i.ZERO and _should_layout_against_browser_size(browser_size):
@@ -811,6 +813,14 @@ func _should_layout_against_browser_size(browser_size: Vector2i) -> bool:
 		return true
 	return false
 
+func _apply_mobile_safe_layout_reserve(viewport_size: Vector2) -> Vector2:
+	if viewport_size.y <= viewport_size.x:
+		return viewport_size
+	return Vector2(
+		maxf(1.0, viewport_size.x - PORTRAIT_WEB_SAFE_SIDE_RESERVE),
+		maxf(1.0, viewport_size.y - PORTRAIT_WEB_SAFE_BOTTOM_RESERVE)
+	)
+
 func _portrait_single_player_min_content_height(viewport_size: Vector2) -> float:
 	var margin: float = 12.0
 	var panel_height: float = maxf(1.0, viewport_size.y - (margin * 2.0))
@@ -832,7 +842,25 @@ func _portrait_single_player_min_content_height(viewport_size: Vector2) -> float
 	total += separation * float(row_heights.size() - 1)
 	return total
 
+func _portrait_action_row_bottom(viewport_size: Vector2) -> float:
+	var margin: float = 12.0
+	var left_top: float = _portrait_left_top(viewport_size)
+	var left_height: float = _portrait_left_height(viewport_size)
+	var row_height: float = 40.0 if left_height < PORTRAIT_TIGHT_HEIGHT else 44.0
+	return margin + left_top + left_height - row_height
+
 func _portrait_left_height(viewport_size: Vector2) -> float:
+	var margin: float = 12.0
+	var panel_size: Vector2 = Vector2(
+		maxf(1.0, viewport_size.x - (margin * 2.0)),
+		maxf(1.0, viewport_size.y - (margin * 2.0))
+	)
+	var left_top: float = _portrait_left_top(viewport_size)
+	var tight_portrait: bool = panel_size.y < 590.0
+	var inset: float = 14.0 if tight_portrait else 18.0
+	return maxf(1.0, panel_size.y - left_top - inset)
+
+func _portrait_left_top(viewport_size: Vector2) -> float:
 	var margin: float = 12.0
 	var panel_size: Vector2 = Vector2(
 		maxf(1.0, viewport_size.x - (margin * 2.0)),
@@ -844,8 +872,7 @@ func _portrait_left_height(viewport_size: Vector2) -> float:
 	var splash_max: float = 150.0 if tight_portrait else 190.0
 	var splash_height: float = minf(splash_max, maxf(splash_min, panel_size.y * 0.20))
 	var gap: float = 8.0 if tight_portrait else 12.0
-	var left_top: float = inset + splash_height + gap
-	return maxf(1.0, panel_size.y - left_top - inset)
+	return inset + splash_height + gap
 
 func _update_splash_crop() -> void:
 	if _bg_sprite == null or _right_panel == null:
