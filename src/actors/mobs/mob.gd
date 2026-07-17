@@ -243,6 +243,23 @@ func _set_state(new_state: AIState) -> void:
 	state = new_state
 	state_changed.emit(new_state)
 
+## A mob is surprised by an attacker it is not actively aware of: while sleeping,
+## wandering, or passive; while paralysed; or while hunting/fleeing but unable to
+## see the attacker's cell. Invisible attackers always surprise (see Char).
+## Mirrors SPD's Mob.defenseSkill returning 0 when the enemy has not been seen.
+func is_surprised_by(attacker: Char) -> bool:
+	if super.is_surprised_by(attacker):
+		return true
+	if attacker == null:
+		return false
+	if paralysed > 0:
+		return true
+	match state:
+		AIState.SLEEPING, AIState.WANDERING, AIState.PASSIVE:
+			return true
+	# HUNTING or FLEEING: aware of the attacker only if its cell is visible.
+	return not can_see(attacker.pos)
+
 func _find_visible_heroes() -> Array[Char]:
 	var heroes: Array[Char] = []
 	if level == null:

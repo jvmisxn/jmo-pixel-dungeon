@@ -386,7 +386,9 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1) -> void:
 		return
 	last_visible_action = "attack"
 	last_visible_target_pos = atk_target.pos
-	_pending_surprise_attack = invisible > 0 and can_surprise_attack()
+	# Surprise applies whenever the target is unaware of us (invisible, or a mob
+	# that is sleeping/wandering/out-of-sight), not only while we are invisible.
+	_pending_surprise_attack = can_surprise_attack() and atk_target.is_surprised_by(self)
 	# Check if target is a disguised mimic — reveal it
 	if atk_target is Mimic and (atk_target as Mimic).disguised:
 		(atk_target as Mimic).reveal()
