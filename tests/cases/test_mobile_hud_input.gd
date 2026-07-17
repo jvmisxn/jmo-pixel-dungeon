@@ -160,4 +160,36 @@ func run(t: Object) -> void:
 		scaled_hud.toolbar != null and is_equal_approx(scaled_hud.toolbar.size.x * scaled_hud.scale.x, 1179.0),
 		"scaled mobile toolbar remains full-width on a larger backing canvas"
 	)
+	t.check(
+		scaled_hud._control_contains_screen_position(scaled_hud.toolbar, Vector2(590, 1632)),
+		"scaled mobile HUD hit-testing accepts backing-canvas touch coordinates"
+	)
+	t.check(
+		scaled_hud._screen_position_for_control(scaled_hud.toolbar, Vector2(590, 1632)).is_equal_approx(Vector2(196.66667, 816.0)),
+		"scaled mobile HUD converts backing-canvas touches before activating toolbar controls"
+	)
 	scaled_hud.free()
+
+	var scaled_party_hud := TestHud.new()
+	scaled_party_hud.scale = Vector2(3.0, 2.0)
+	var scaled_party_row := HBoxContainer.new()
+	scaled_party_row.visible = true
+	scaled_party_row.position = Vector2(100, 200)
+	scaled_party_row.size = Vector2(120, 40)
+	var scaled_party_button := Button.new()
+	scaled_party_button.visible = true
+	scaled_party_button.position = Vector2.ZERO
+	scaled_party_button.size = Vector2(80, 30)
+	scaled_party_button.set_meta("hero_index", 2)
+	scaled_party_row.add_child(scaled_party_button)
+	scaled_party_hud._party_row = scaled_party_row
+	scaled_party_hud.add_child(scaled_party_row)
+	t.check(
+		scaled_party_hud.handle_screen_tap(Vector2(330, 430)),
+		"scaled mobile HUD touch release activates party buttons from backing-canvas coordinates"
+	)
+	t.check(
+		scaled_party_hud.focused_hero_index == 2,
+		"scaled party touch focuses the tapped hero index"
+	)
+	scaled_party_hud.free()

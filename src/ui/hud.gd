@@ -294,7 +294,8 @@ func handle_screen_tap(screen_pos: Vector2) -> bool:
 		return true
 	if toolbar != null and _control_contains_screen_position(toolbar, screen_pos):
 		if _toolbar_bar != null and _toolbar_bar.has_method("activate_button_at_screen_position"):
-			return bool(_toolbar_bar.activate_button_at_screen_position(screen_pos))
+			var toolbar_pos: Vector2 = _screen_position_for_control(toolbar, screen_pos)
+			return bool(_toolbar_bar.activate_button_at_screen_position(toolbar_pos))
 		return true
 	if _party_row != null and _party_row.visible and _control_contains_screen_position(_party_row, screen_pos):
 		return _activate_party_button_at_screen_position(screen_pos)
@@ -305,7 +306,25 @@ func _control_contains_screen_position(control: Control, screen_pos: Vector2) ->
 	if control == null or not control.visible:
 		return false
 	var rect: Rect2 = control.get_global_rect()
-	return rect.has_point(screen_pos)
+	return rect.has_point(screen_pos) or rect.has_point(_scaled_screen_position_to_hud_space(screen_pos))
+
+
+func _screen_position_for_control(control: Control, screen_pos: Vector2) -> Vector2:
+	if control == null:
+		return screen_pos
+	var rect: Rect2 = control.get_global_rect()
+	if rect.has_point(screen_pos):
+		return screen_pos
+	var hud_space_pos: Vector2 = _scaled_screen_position_to_hud_space(screen_pos)
+	return hud_space_pos if rect.has_point(hud_space_pos) else screen_pos
+
+
+func _scaled_screen_position_to_hud_space(screen_pos: Vector2) -> Vector2:
+	if is_zero_approx(scale.x) or is_zero_approx(scale.y):
+		return screen_pos
+	if scale.is_equal_approx(Vector2.ONE):
+		return screen_pos
+	return Vector2(screen_pos.x / scale.x, screen_pos.y / scale.y)
 
 
 func _activate_party_button_at_screen_position(screen_pos: Vector2) -> bool:
@@ -316,6 +335,9 @@ func _activate_party_button_at_screen_position(screen_pos: Vector2) -> bool:
 		if button == null or button.disabled:
 			continue
 		if not _control_contains_screen_position(button, screen_pos):
+			continue
+		var button_pos: Vector2 = _screen_position_for_control(button, screen_pos)
+		if not button.get_global_rect().has_point(button_pos):
 			continue
 		_on_party_focus_pressed(int(button.get_meta("hero_index", -1)))
 		return true

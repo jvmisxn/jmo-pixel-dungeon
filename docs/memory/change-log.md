@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: mobile, hud, toolbar, web, playtesting
+- Fixed scaled mobile HUD touch activation after the backing-canvas layout fix. `HUD` now accepts high-DPI backing-canvas touch coordinates for hit-testing, converts them back into HUD layout coordinates before activating toolbar controls, and applies the same conversion to party-row buttons. Extended `test_mobile_hud_input.gd` with scaled toolbar hit-testing and party-button activation coverage. Local headless suite green (384 checks, Godot 4.7.1); no real-device/iPhone touch confirmation yet.
+
 - Tags: potions, blobs, gases, source-fidelity, audit-S15, audit-S20
 - Re-pointed offensive potion shatter effects at the live blob layer. Toxic Gas, Paralytic Gas, and Liquid Flame now seed `ToxicGas`, `ParalyticGas`, and `FireBlob` through `Level.add_blob()` instead of applying one-shot 3x3 buffs, and Potion of Frost now seeds a new `FreezingBlob` that freezes characters and water terrain. Updated blob and thrown-potion shatter tests to assert blob seeding, deferred tick effects, and freezing behavior. Follow-up: blob ticking still runs per hero round rather than true actor time, and freezing/fire cross-blob cancellation is not implemented yet.
 
