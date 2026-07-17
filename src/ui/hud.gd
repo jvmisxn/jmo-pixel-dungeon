@@ -27,6 +27,14 @@ var _boss_hp_bar: Variant = null
 var _minimap: Variant = null
 var _party_row: HBoxContainer = null
 var _online_state_label: Label = null
+var _status_overlay: Control = null
+var _status_level_label: Label = null
+var _status_hp_bar: ProgressBar = null
+var _status_shield_bar: ProgressBar = null
+var _status_hp_label: Label = null
+var _status_xp_bar: ProgressBar = null
+var _status_xp_label: Label = null
+var _status_str_label: Label = null
 
 # --- Active popup window ---
 var _active_window: Control = null
@@ -120,8 +128,10 @@ func _build_layout() -> void:
 	_status_pane = _instantiate_script("res://src/ui/status_pane.gd")
 	_status_pane.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status_pane.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_status_pane.visible = false
 	status_container.add_child(_status_pane)
 	root.add_child(status_container)
+	_build_status_overlay(root)
 
 	# --- Game Log (bottom-left, floating over game world) ---
 	var log_container: MarginContainer = MarginContainer.new()
@@ -363,6 +373,7 @@ func update_all() -> void:
 	_refresh_party_row()
 	_refresh_online_state()
 	_refresh_action_controls()
+	_refresh_status_overlay()
 	if _status_pane:
 		_status_pane.update_all()
 	if _game_log_display:
@@ -390,6 +401,117 @@ func _get_viewport_size() -> Vector2:
 	return Vector2(1280, 720)
 
 
+func _build_status_overlay(root: Control) -> void:
+	_status_overlay = HBoxContainer.new()
+	_status_overlay.name = "StatusOverlay"
+	_status_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_status_overlay.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_status_overlay.add_theme_constant_override("separation", 8)
+	root.add_child(_status_overlay)
+
+	_status_level_label = Label.new()
+	_status_level_label.text = "Lv. 1"
+	_status_level_label.custom_minimum_size = Vector2(58, 0)
+	_status_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_status_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_level_label.add_theme_font_size_override("font_size", 18)
+	_status_level_label.add_theme_color_override("font_color", Color(0.9, 0.84, 0.62))
+	_status_overlay.add_child(_status_level_label)
+
+	var bars: VBoxContainer = VBoxContainer.new()
+	bars.custom_minimum_size = Vector2(1, 64)
+	bars.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bars.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bars.add_theme_constant_override("separation", 6)
+	_status_overlay.add_child(bars)
+
+	var hp_row: HBoxContainer = HBoxContainer.new()
+	hp_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_row.add_theme_constant_override("separation", 6)
+	bars.add_child(hp_row)
+
+	var hp_bar_container: Control = Control.new()
+	hp_bar_container.custom_minimum_size = Vector2(1, 22)
+	hp_bar_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_row.add_child(hp_bar_container)
+
+	_status_shield_bar = ProgressBar.new()
+	_status_shield_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_status_shield_bar.show_percentage = false
+	var shield_fill: StyleBoxFlat = StyleBoxFlat.new()
+	shield_fill.bg_color = Color(0.85, 0.78, 0.35)
+	shield_fill.set_corner_radius_all(2)
+	_status_shield_bar.add_theme_stylebox_override("fill", shield_fill)
+	var shield_bg: StyleBoxFlat = StyleBoxFlat.new()
+	shield_bg.bg_color = Color(0.15, 0.05, 0.05)
+	shield_bg.border_color = Color(0.4, 0.2, 0.2)
+	shield_bg.set_border_width_all(1)
+	shield_bg.set_corner_radius_all(2)
+	_status_shield_bar.add_theme_stylebox_override("background", shield_bg)
+	hp_bar_container.add_child(_status_shield_bar)
+
+	_status_hp_bar = ProgressBar.new()
+	_status_hp_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_status_hp_bar.show_percentage = false
+	var hp_fill: StyleBoxFlat = StyleBoxFlat.new()
+	hp_fill.bg_color = Color(0.78, 0.16, 0.16)
+	hp_fill.set_corner_radius_all(2)
+	_status_hp_bar.add_theme_stylebox_override("fill", hp_fill)
+	var hp_bg: StyleBoxFlat = StyleBoxFlat.new()
+	hp_bg.bg_color = Color(0.0, 0.0, 0.0, 0.0)
+	hp_bg.set_corner_radius_all(2)
+	_status_hp_bar.add_theme_stylebox_override("background", hp_bg)
+	hp_bar_container.add_child(_status_hp_bar)
+
+	_status_hp_label = Label.new()
+	_status_hp_label.text = "20/20"
+	_status_hp_label.custom_minimum_size = Vector2(72, 0)
+	_status_hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_status_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_status_hp_label.add_theme_font_size_override("font_size", 16)
+	_status_hp_label.add_theme_color_override("font_color", Color(0.95, 0.84, 0.72))
+	hp_row.add_child(_status_hp_label)
+
+	var xp_row: HBoxContainer = HBoxContainer.new()
+	xp_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	xp_row.add_theme_constant_override("separation", 6)
+	bars.add_child(xp_row)
+
+	_status_xp_bar = ProgressBar.new()
+	_status_xp_bar.custom_minimum_size = Vector2(1, 18)
+	_status_xp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_status_xp_bar.show_percentage = false
+	var xp_fill: StyleBoxFlat = StyleBoxFlat.new()
+	xp_fill.bg_color = Color(0.2, 0.55, 0.85)
+	xp_fill.set_corner_radius_all(2)
+	_status_xp_bar.add_theme_stylebox_override("fill", xp_fill)
+	var xp_bg: StyleBoxFlat = StyleBoxFlat.new()
+	xp_bg.bg_color = Color(0.05, 0.1, 0.18)
+	xp_bg.border_color = Color(0.2, 0.3, 0.45)
+	xp_bg.set_border_width_all(1)
+	xp_bg.set_corner_radius_all(2)
+	_status_xp_bar.add_theme_stylebox_override("background", xp_bg)
+	xp_row.add_child(_status_xp_bar)
+
+	_status_xp_label = Label.new()
+	_status_xp_label.text = "0/10"
+	_status_xp_label.custom_minimum_size = Vector2(72, 0)
+	_status_xp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_status_xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_status_xp_label.add_theme_font_size_override("font_size", 14)
+	_status_xp_label.add_theme_color_override("font_color", Color(0.74, 0.84, 0.96))
+	xp_row.add_child(_status_xp_label)
+
+	_status_str_label = Label.new()
+	_status_str_label.text = "STR 10"
+	_status_str_label.custom_minimum_size = Vector2(70, 0)
+	_status_str_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_status_str_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_str_label.add_theme_font_size_override("font_size", 15)
+	_status_str_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.3))
+	_status_overlay.add_child(_status_str_label)
+
+
 func _on_viewport_resized() -> void:
 	_vp_size = _get_viewport_size()
 	var root_node: Node = get_node_or_null("HUDRoot")
@@ -407,12 +529,14 @@ func _on_viewport_resized() -> void:
 
 func _on_stats_changed() -> void:
 	_refresh_quickslots()
+	_refresh_status_overlay()
 	if _status_pane:
 		_status_pane.update_all()
 
 
 func _on_level_changed(_new_depth: int) -> void:
 	_update_info_row()
+	_refresh_status_overlay()
 	if _status_pane:
 		_status_pane.update_all()
 	if _minimap and GameManager and GameManager.current_level:
@@ -699,6 +823,7 @@ func _apply_responsive_layout() -> void:
 				maxf(1.0, status_container.size.y - 8.0)
 			)
 			_status_pane.size = _status_pane.custom_minimum_size
+		_layout_status_overlay(status_container)
 
 	if log_container:
 		var log_width: float = minf(300.0, _vp_size.x - (HUD_MARGIN * 2.0))
@@ -733,9 +858,71 @@ func _apply_responsive_layout() -> void:
 	if _toolbar_bar:
 		_toolbar_bar.set_compact_mode(is_mobile_layout)
 
+	_refresh_status_overlay()
+
+
+func _layout_status_overlay(status_container: Control) -> void:
+	if _status_overlay == null or status_container == null:
+		return
+	var inset: Vector2 = Vector2(10.0, 8.0)
+	_status_overlay.visible = true
+	_status_overlay.position = status_container.position + inset
+	_status_overlay.custom_minimum_size = Vector2(
+		maxf(1.0, status_container.size.x - (inset.x * 2.0)),
+		maxf(1.0, status_container.size.y - (inset.y * 2.0))
+	)
+	_status_overlay.size = _status_overlay.custom_minimum_size
+	var is_mobile_layout: bool = _is_mobile_layout()
+	var is_portrait_mobile: bool = _is_mobile_portrait_layout()
+	if _status_level_label:
+		_status_level_label.custom_minimum_size = Vector2(58.0 if is_mobile_layout else 62.0, 0.0)
+		_status_level_label.add_theme_font_size_override("font_size", 18 if is_mobile_layout else 17)
+	if _status_hp_label:
+		_status_hp_label.custom_minimum_size = Vector2(72.0 if is_mobile_layout else 68.0, 0.0)
+		_status_hp_label.add_theme_font_size_override("font_size", 16 if is_mobile_layout else 13)
+	if _status_xp_label:
+		_status_xp_label.custom_minimum_size = Vector2(72.0 if is_mobile_layout else 68.0, 0.0)
+		_status_xp_label.add_theme_font_size_override("font_size", 14 if is_mobile_layout else 12)
+	if _status_str_label:
+		_status_str_label.visible = not is_portrait_mobile
+		_status_str_label.custom_minimum_size = Vector2(70.0, 0.0)
+		_status_str_label.add_theme_font_size_override("font_size", 15 if is_mobile_layout else 13)
+
+
+func _refresh_status_overlay() -> void:
+	var hero_ref: Variant = _get_local_hero()
+	if hero_ref == null:
+		return
+	var hp: int = int(ConstantsData.get_prop(hero_ref, "hp", 0))
+	var hp_max: int = max(1, int(ConstantsData.get_prop(hero_ref, "hp_max", 1)))
+	var shield: int = int(ConstantsData.get_prop(hero_ref, "shielding", 0))
+	if hero_ref.has_method("total_shielding"):
+		shield = int(hero_ref.total_shielding())
+	var xp: int = int(ConstantsData.get_prop(hero_ref, "xp", 0))
+	var xp_max: int = max(1, int(ConstantsData.get_prop(hero_ref, "xp_to_next", 1)))
+	var hero_level: int = int(ConstantsData.get_prop(hero_ref, "hero_level", 1))
+	var str_val: int = int(ConstantsData.get_prop(hero_ref, "str_val", 10))
+	if _status_level_label:
+		_status_level_label.text = "Lv.%d" % hero_level
+	if _status_hp_bar:
+		_status_hp_bar.max_value = hp_max
+		_status_hp_bar.value = clampi(hp, 0, hp_max)
+	if _status_shield_bar:
+		_status_shield_bar.max_value = hp_max
+		_status_shield_bar.value = clampi(hp + shield, 0, hp_max)
+	if _status_hp_label:
+		_status_hp_label.text = "%d/%d" % [hp, hp_max]
+	if _status_xp_bar:
+		_status_xp_bar.max_value = xp_max
+		_status_xp_bar.value = clampi(xp, 0, xp_max)
+	if _status_xp_label:
+		_status_xp_label.text = "%d/%d" % [xp, xp_max]
+	if _status_str_label:
+		_status_str_label.text = "STR %d" % str_val
+
 
 func _is_mobile_layout() -> bool:
-	return _vp_size.x <= MOBILE_BREAKPOINT or _vp_size.y > _vp_size.x
+	return _is_touch_web() or _vp_size.x <= MOBILE_BREAKPOINT or _vp_size.y > _vp_size.x
 
 
 func _is_mobile_portrait_layout() -> bool:
@@ -748,3 +935,7 @@ func _toolbar_height() -> int:
 
 func _hud_top_margin() -> float:
 	return HUD_MARGIN + (MOBILE_SAFE_TOP_INSET if _is_mobile_portrait_layout() else 0.0)
+
+
+func _is_touch_web() -> bool:
+	return OS.get_name() == "Web" and DisplayServer.is_touchscreen_available()
