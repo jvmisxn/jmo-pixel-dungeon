@@ -237,6 +237,9 @@ func execute_action() -> void:
 			TurnManager.hero_action_complete(self)
 		return
 
+	if belongings != null:
+		belongings.recharge_wands(1)
+
 	# Refresh cached speed in TurnManager after buffs may have changed it.
 	if TurnManager:
 		TurnManager.refresh_speed(self)
