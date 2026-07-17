@@ -27,6 +27,8 @@ var _main_panel: Panel = null
 var _left_panel: Panel = null
 var _right_panel: Panel = null
 var _content_box: VBoxContainer = null
+var _layout_viewport_size: Vector2 = Vector2.ZERO
+var _web_layout_poll_elapsed: float = 0.0
 
 # --- Background ---
 var _bg_color_rect: ColorRect = null
@@ -54,6 +56,7 @@ const LEFT_CONTENT_WIDTH: float = 292.0
 const STANDARD_ROW_WIDTH: float = 300.0
 const ACTION_BUTTON_WIDTH: float = 145.0
 const PORTRAIT_TIGHT_HEIGHT: float = 390.0
+const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
 
 # Hero class splash art paths (800x450 JPGs)
 const SPLASH_PATHS: Array[String] = [
@@ -99,7 +102,7 @@ func _ready() -> void:
 			_apply_network_client_mode()
 	get_viewport().size_changed.connect(_apply_layout)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var time_elapsed: float = float(Time.get_ticks_msec()) * 0.001
 	if _back_clusters_sprite:
 		_back_clusters_sprite.position.x = -fmod(time_elapsed * 2.0, 512.0)
@@ -107,6 +110,13 @@ func _process(_delta: float) -> void:
 		_mid_mixed_sprite.position.x = -fmod(time_elapsed * 5.0, 2048.0)
 	if _archs_sprite:
 		_archs_sprite.position.x = -fmod(time_elapsed * 10.0, 1024.0)
+	if OS.get_name() == "Web":
+		_web_layout_poll_elapsed += delta
+		if _web_layout_poll_elapsed >= WEB_LAYOUT_POLL_INTERVAL:
+			_web_layout_poll_elapsed = 0.0
+			var current_size: Vector2 = _get_layout_viewport_size()
+			if not current_size.is_equal_approx(_layout_viewport_size):
+				_apply_layout()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _is_left_input(event):
@@ -663,7 +673,8 @@ func _get_party_slot_display_name(slot_index: int) -> String:
 	return "Player %d" % (slot_index + 1)
 
 func _apply_layout() -> void:
-	var viewport_size: Vector2 = get_viewport_rect().size
+	var viewport_size: Vector2 = _get_layout_viewport_size()
+	_layout_viewport_size = viewport_size
 	var is_portrait: bool = viewport_size.y > viewport_size.x
 	if is_portrait or viewport_size.x < OUTER_PANEL_SIZE.x:
 		_apply_portrait_layout(viewport_size)
@@ -767,6 +778,38 @@ func _update_mobile_content_width(content_width: float, is_portrait: bool, conte
 		_back_button.custom_minimum_size = Vector2(action_width, 38 if tight_portrait else 42)
 	if _start_button:
 		_start_button.custom_minimum_size = Vector2(action_width, 38 if tight_portrait else 42)
+
+func _get_layout_viewport_size() -> Vector2:
+	var engine_size: Vector2 = get_viewport_rect().size
+	return _choose_layout_viewport_size(engine_size, _get_browser_viewport_size())
+
+func _choose_layout_viewport_size(engine_size: Vector2, browser_size: Vector2i) -> Vector2:
+	if browser_size != Vector2i.ZERO and _should_layout_against_browser_size(browser_size):
+		return Vector2(browser_size)
+	return engine_size
+
+func _get_browser_viewport_size() -> Vector2i:
+	if OS.get_name() != "Web":
+		return Vector2i.ZERO
+	var js_result: Variant = JavaScriptBridge.eval(
+		"(function(){return Math.round(window.innerWidth) + 'x' + Math.round(window.innerHeight);})()",
+		true
+	)
+	if js_result is String:
+		var parts: PackedStringArray = str(js_result).split("x")
+		if parts.size() == 2:
+			var width: int = int(parts[0])
+			var height: int = int(parts[1])
+			if width > 0 and height > 0:
+				return Vector2i(width, height)
+	return Vector2i.ZERO
+
+func _should_layout_against_browser_size(browser_size: Vector2i) -> bool:
+	if browser_size.y > browser_size.x:
+		return true
+	if mini(browser_size.x, browser_size.y) < int(OUTER_PANEL_SIZE.x):
+		return true
+	return false
 
 func _portrait_single_player_min_content_height(viewport_size: Vector2) -> float:
 	var margin: float = 12.0
