@@ -264,6 +264,8 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch: InputEventScreenTouch = event as InputEventScreenTouch
 		_suppress_synthesized_touch_mouse()
+		if _should_defer_touch_to_modal_window():
+			return
 		if touch.pressed:
 			if _should_route_touch_to_hud(touch.position):
 				_ui_touch_points[touch.index] = true
@@ -290,6 +292,8 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventScreenDrag:
 		var drag: InputEventScreenDrag = event as InputEventScreenDrag
 		_suppress_synthesized_touch_mouse()
+		if _should_defer_touch_to_modal_window():
+			return
 		if _ui_touch_points.has(drag.index):
 			get_viewport().set_input_as_handled()
 			return
@@ -380,6 +384,14 @@ func _is_screen_position_over_hud(screen_pos: Vector2) -> bool:
 
 func _should_route_touch_to_hud(screen_pos: Vector2) -> bool:
 	return _active_touch_points.is_empty() and _is_screen_position_over_hud(screen_pos)
+
+func _should_defer_touch_to_modal_window() -> bool:
+	if _hud == null or not is_instance_valid(_hud):
+		return false
+	if _hud.has_method("has_active_window") and bool(_hud.has_active_window()):
+		return true
+	var layer: Variant = _hud.get("window_layer") if _hud is Object else null
+	return layer != null and is_instance_valid(layer) and layer.get("visible") == true
 
 func _handle_touch_tap(screen_pos: Vector2) -> void:
 	if not _awaiting_hero_input:

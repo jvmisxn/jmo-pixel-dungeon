@@ -17,6 +17,10 @@ func run(t: Object) -> void:
 
 	var safari_viewport := Vector2(393, 687)
 	var safari_safe_viewport: Vector2 = scene._apply_mobile_safe_layout_reserve(safari_viewport)
+	t.check(
+		safari_safe_viewport == Vector2(377, 560),
+		"mobile web hero select caps tall portrait layout below browser controls"
+	)
 	var safari_left_height: float = scene._portrait_left_height(safari_safe_viewport)
 	var safari_min_content_height: float = scene._portrait_single_player_min_content_height(safari_safe_viewport)
 	t.check(
@@ -31,8 +35,8 @@ func run(t: Object) -> void:
 	var discord_viewport := Vector2(393, 852)
 	var discord_safe_viewport: Vector2 = scene._apply_mobile_safe_layout_reserve(discord_viewport)
 	t.check(
-		discord_safe_viewport == Vector2(377, 660),
-		"Discord mobile webview hero select reserves its bottom browser chrome"
+		discord_safe_viewport == Vector2(377, 560),
+		"Discord mobile webview hero select uses the conservative portrait height cap"
 	)
 	t.check(
 		scene._portrait_action_row_bottom(discord_safe_viewport) <= discord_safe_viewport.y - 52.0,

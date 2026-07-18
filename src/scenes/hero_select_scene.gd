@@ -58,7 +58,7 @@ const ACTION_BUTTON_WIDTH: float = 145.0
 const PORTRAIT_TIGHT_HEIGHT: float = 390.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
 const PORTRAIT_WEB_SAFE_BOTTOM_RESERVE: float = 92.0
-const PORTRAIT_WEB_SAFE_MAX_HEIGHT: float = 660.0
+const PORTRAIT_WEB_SAFE_MAX_HEIGHT: float = 560.0
 const PORTRAIT_WEB_SAFE_SIDE_RESERVE: float = 16.0
 
 # Hero class splash art paths (800x450 JPGs)
