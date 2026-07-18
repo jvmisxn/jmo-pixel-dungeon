@@ -289,6 +289,7 @@ func _is_narrow_compact_mode() -> bool:
 
 func _apply_button_labels() -> void:
 	var is_narrow_compact: bool = _is_narrow_compact_mode()
+	alignment = BoxContainer.ALIGNMENT_CENTER
 	var button_size: Vector2 = (
 		MOBILE_NARROW_BUTTON_MIN_SIZE
 		if is_narrow_compact
@@ -377,6 +378,49 @@ func _apply_button_labels() -> void:
 			var slot_label: Label = _quickslot_labels[i]
 			slot_label.position = Vector2(5.0, quickslot_size.y - 20.0)
 			slot_label.add_theme_font_size_override("font_size", 13 if _compact_mode else 11)
+	_fit_compact_width_to_viewport()
+
+
+func _fit_compact_width_to_viewport() -> void:
+	if not _compact_mode or _available_width <= 0.0:
+		return
+	var min_width: float = _visible_min_width()
+	if min_width <= _available_width:
+		return
+	var scale_factor: float = maxf(0.6, _available_width / min_width)
+	alignment = BoxContainer.ALIGNMENT_BEGIN
+	for button: Button in [_btn_inventory, _btn_wait, _btn_search, _btn_settings]:
+		if button == null or not button.visible:
+			continue
+		button.custom_minimum_size.x = floorf(button.custom_minimum_size.x * scale_factor)
+		button.add_theme_font_size_override("font_size", 12 if scale_factor < 0.85 else 13)
+	if _btn_quickslot_page != null and _btn_quickslot_page.visible:
+		_btn_quickslot_page.custom_minimum_size.x = floorf(_btn_quickslot_page.custom_minimum_size.x * scale_factor)
+		_btn_quickslot_page.add_theme_font_size_override("font_size", 12 if scale_factor < 0.85 else 13)
+	for i: int in range(_quickslots.size()):
+		if not _quickslots[i].visible:
+			continue
+		_quickslots[i].custom_minimum_size.x = floorf(_quickslots[i].custom_minimum_size.x * scale_factor)
+		_quickslots[i].size.x = _quickslots[i].custom_minimum_size.x
+		if i < _quickslot_icons.size():
+			var icon: TextureRect = _quickslot_icons[i]
+			icon.size.x = minf(icon.size.x, maxf(24.0, _quickslots[i].custom_minimum_size.x - 10.0))
+			icon.custom_minimum_size.x = icon.size.x
+			icon.position.x = (_quickslots[i].custom_minimum_size.x - icon.size.x) * 0.5
+
+
+func _visible_min_width() -> float:
+	var width: float = 0.0
+	var visible_controls: int = 0
+	for child: Node in get_children():
+		var control := child as Control
+		if control == null or not control.visible:
+			continue
+		width += control.custom_minimum_size.x
+		visible_controls += 1
+	if visible_controls > 1:
+		width += float(visible_controls - 1) * float(get_theme_constant("separation"))
+	return width
 
 
 ## Enable or disable all toolbar buttons.

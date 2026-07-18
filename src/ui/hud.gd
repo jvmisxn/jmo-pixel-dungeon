@@ -989,14 +989,7 @@ func _apply_responsive_layout() -> void:
 		_layout_status_overlay(status_container)
 
 	if log_container:
-		var log_width: float = minf(300.0, _vp_size.x - (HUD_MARGIN * 2.0))
-		var log_height: float = 74.0 if _is_mobile_portrait_layout() else (96.0 if is_mobile_layout else 195.0)
-		log_container.custom_minimum_size = Vector2(log_width, log_height)
-		log_container.size = Vector2(log_width, log_height)
-		log_container.position = Vector2(
-			HUD_MARGIN,
-			_toolbar_top_y() - log_height - HUD_MARGIN
-		)
+		_layout_game_log(log_container, status_container, party_row)
 
 	if info_row:
 		var info_width: float = 180.0
@@ -1045,6 +1038,9 @@ func _apply_responsive_layout() -> void:
 			(party_row.position.y + 38.0) if is_mobile_layout and party_row != null else (_hud_top_margin() + 38.0)
 		)
 
+	if log_container:
+		_layout_game_log(log_container, status_container, party_row)
+
 	if _minimap:
 		_minimap.visible = not is_mobile_layout
 		if _minimap.visible:
@@ -1057,6 +1053,29 @@ func _apply_responsive_layout() -> void:
 
 	_layout_toolbar()
 	_refresh_status_overlay()
+
+
+func _layout_game_log(log_container: Control, status_container: Control, party_row: Control) -> void:
+	var is_mobile_layout: bool = _is_mobile_layout()
+	var log_width: float = minf(300.0, _vp_size.x - (HUD_MARGIN * 2.0))
+	var desired_log_height: float = 74.0 if _is_mobile_portrait_layout() else (96.0 if is_mobile_layout else 195.0)
+	var log_height: float = desired_log_height
+	var log_y: float = _toolbar_top_y() - log_height - HUD_MARGIN
+	if is_mobile_layout:
+		var top_controls_bottom: float = 0.0
+		if status_container != null:
+			top_controls_bottom = maxf(top_controls_bottom, status_container.position.y + status_container.size.y)
+		if party_row != null:
+			top_controls_bottom = maxf(top_controls_bottom, party_row.position.y + maxf(34.0, party_row.size.y))
+		if _online_state_label != null:
+			top_controls_bottom = maxf(top_controls_bottom, _online_state_label.position.y + _online_state_label.size.y)
+		var available_height: float = _toolbar_top_y() - top_controls_bottom - (HUD_MARGIN * 2.0)
+		if available_height > 0.0:
+			log_height = minf(desired_log_height, available_height)
+		log_y = maxf(top_controls_bottom + HUD_MARGIN, _toolbar_top_y() - log_height - HUD_MARGIN)
+	log_container.custom_minimum_size = Vector2(log_width, log_height)
+	log_container.size = Vector2(log_width, log_height)
+	log_container.position = Vector2(HUD_MARGIN, log_y)
 
 
 func _layout_status_overlay(status_container: Control) -> void:

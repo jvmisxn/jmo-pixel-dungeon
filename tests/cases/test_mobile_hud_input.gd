@@ -189,6 +189,26 @@ func run(t: Object) -> void:
 		toolbar._quickslots[0].visible and toolbar._quickslots[1].visible,
 		"narrow mobile toolbar pager wraps back to quickslots 1-2"
 	)
+	toolbar.set_available_width(320.0)
+	t.check(
+		_visible_toolbar_min_width(toolbar) <= 320.0,
+		"very narrow mobile toolbar fits a 320px visible width"
+	)
+	t.check(
+		toolbar._btn_inventory.visible and toolbar._btn_settings.visible,
+		"very narrow mobile toolbar keeps Bag and Menu visible"
+	)
+	toolbar.set_available_width(280.0)
+	t.check(
+		_visible_toolbar_min_width(toolbar) <= 280.0,
+		"foldable-width mobile toolbar fits a 280px visible width"
+	)
+	t.check(
+		toolbar._btn_inventory.custom_minimum_size.x > 0.0
+				and toolbar._btn_settings.custom_minimum_size.x > 0.0
+				and toolbar._btn_quickslot_page.custom_minimum_size.x > 0.0,
+		"foldable-width mobile toolbar preserves tappable core controls"
+	)
 	toolbar.free()
 
 	t.check(
@@ -372,6 +392,34 @@ func run(t: Object) -> void:
 		"mobile landscape game log stays clear of the toolbar"
 	)
 	landscape_hud.free()
+
+	var short_landscape_hud := LayoutHud.new()
+	short_landscape_hud._vp_size = Vector2(852, 320)
+	short_landscape_hud.fake_safe_bottom = 21.0
+	short_landscape_hud.fake_safe_left = 44.0
+	short_landscape_hud.fake_safe_right = 44.0
+	short_landscape_hud._build_layout()
+	short_landscape_hud._apply_responsive_layout()
+	var short_root: Control = short_landscape_hud.get_node_or_null("HUDRoot") as Control
+	var short_online_label: Control = short_root.get_node_or_null("OnlineStateLabel") as Control
+	var short_log: Control = short_root.get_node_or_null("GameLog") as Control
+	t.check(
+		short_online_label != null
+				and short_log != null
+				and short_online_label.position.y + short_online_label.size.y <= short_log.position.y - HUD.HUD_MARGIN,
+		"short mobile landscape keeps the game log below party turn labels"
+	)
+	t.check(
+		short_log != null
+				and short_landscape_hud.toolbar != null
+				and short_log.position.y + short_log.size.y <= short_landscape_hud.toolbar.position.y - HUD.HUD_MARGIN,
+		"short mobile landscape shrinks the game log before it hits the toolbar"
+	)
+	t.check(
+		short_log != null and short_log.size.y < 96.0 and short_log.size.y >= 48.0,
+		"short mobile landscape preserves a usable but reduced game log"
+	)
+	short_landscape_hud.free()
 
 	var scaled_party_hud := TestHud.new()
 	scaled_party_hud.scale = Vector2(3.0, 2.0)
