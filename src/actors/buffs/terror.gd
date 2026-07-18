@@ -25,5 +25,9 @@ func serialize() -> Dictionary:
 	data["source_id"] = source_id
 	return data
 
+func deserialize(data: Dictionary) -> void:
+	super.deserialize(data)
+	source_id = data.get("source_id", -1)
+
 func description() -> String:
 	return "Terrified! Fleeing from the source of terror."

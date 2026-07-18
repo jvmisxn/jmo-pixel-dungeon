@@ -2,6 +2,9 @@
 
 ## 2026-07-18
 
+- Tags: buffs, persistence, source-fidelity, tests, audit-S06
+- Fixed Charm/Terror source persistence. Both buffs already serialized `source_id`, but unlike `Dread` neither restored it during `deserialize()`, so a reload reset the charmer/terror source to `-1` and broke the SPD-style "cannot harm / flee from the source" relationship after loading. `Charm` and `Terror` now mirror `Dread` by calling `super.deserialize(data)` and restoring `source_id`. Added `test_status_source_serialization.gd` to cover direct buff deserialization and full `Char` buff round-trips. Local `git diff --check`, Godot import, and full headless suite passed (1180 checks, 0 failures, Godot 4.7.1).
+
 - Tags: mobile, hud, toolbar, controls, tests
 - Fixed two narrow mobile HUD/control layout failures. Fable's toolbar probe showed the compact mobile toolbar still needed 342px even after the quickslot pager work, so devices or landscape safe-area insets with only 280-320px usable width could clip the centered Bag/Menu edge controls. `Toolbar._apply_button_labels()` now computes the visible minimum width and scales compact button/quickslot/pager widths only when the toolbar would overflow, preserving the mainstream centered layout while keeping core controls tappable on foldable-width viewports. Also extracted `HUD._layout_game_log()` so short landscape mobile viewports shrink the floating game log to the space between the status/party/online labels and the safe-area-adjusted toolbar instead of overlapping either. Extended `test_mobile_hud_input.gd` with 280px/320px toolbar fit checks and an `852x320` landscape log-clearance case. Local `git diff --check`, Godot import, and full headless suite passed (1174 checks, 0 failures, Godot 4.7.1). Fable final diff review approved; web export/Playwright was not run locally because 4.7.1 web export templates are unavailable.
 
