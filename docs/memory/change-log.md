@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-18
+
+- Tags: mobile, hud, multiplayer, controls, tests
+- Kept mobile co-op HUD controls inside the visible viewport. The shared HUD layout still used desktop-centered offsets for `PartyRow` and `OnlineStateLabel`: on a 393px portrait viewport, `party_width = _vp_size.x - 420` went negative and both controls were positioned around x=196/206, leaving multiplayer focus/status controls partly or fully offscreen. `HUD._apply_responsive_layout()` now clamps both elements to the same mobile width budget as the status strip, respects horizontal safe-area insets in landscape, and `_refresh_party_row()` uses narrower mobile buttons/separation so up to four hero focus buttons fit in a phone portrait row. Added `test_mobile_hud_input.gd` coverage for portrait party-row/online-label bounds, four-button fit, and landscape safe-area bounds. Local full headless suite green (1135 checks, 0 failures, Godot 4.7.1); `git diff --check` clean.
+
 ## 2026-07-17
 
 - Tags: mobile, hud, web, controls, viewport, tests

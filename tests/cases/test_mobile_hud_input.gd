@@ -6,6 +6,16 @@ class FakeHud:
 	func contains_screen_position(_screen_pos: Vector2) -> bool:
 		return true
 
+class FakeHero:
+	extends Node
+
+	var is_alive: bool = true
+	var hp: int = 20
+	var hp_max: int = 20
+	var hero_class: int = ConstantsData.HeroClass.WARRIOR
+	var hero_name: String = ""
+	var hero_slot_index: int = 0
+
 class TestHud:
 	extends HUD
 
@@ -18,6 +28,8 @@ class LayoutHud:
 	extends HUD
 
 	var fake_safe_bottom: float = 0.0
+	var fake_safe_left: float = 0.0
+	var fake_safe_right: float = 0.0
 	var fake_canvas_size: Vector2 = Vector2.ZERO
 	var inventory_taps: int = 0
 	var toolbar_action_taps: int = 0
@@ -50,6 +62,10 @@ class LayoutHud:
 	func _safe_area_inset(edge: String) -> float:
 		if edge == "bottom":
 			return fake_safe_bottom
+		if edge == "left":
+			return fake_safe_left
+		if edge == "right":
+			return fake_safe_right
 		return 0.0
 
 	func _get_canvas_viewport_size() -> Vector2:
@@ -75,6 +91,19 @@ func _visible_toolbar_min_width(toolbar: Toolbar) -> float:
 		visible_controls += 1
 	if visible_controls > 1:
 		width += float(visible_controls - 1) * float(toolbar.get_theme_constant("separation"))
+	return width
+
+func _row_min_width(row: HBoxContainer) -> float:
+	var width: float = 0.0
+	var visible_controls: int = 0
+	for child: Node in row.get_children():
+		var control := child as Control
+		if control == null or not control.visible:
+			continue
+		width += control.custom_minimum_size.x
+		visible_controls += 1
+	if visible_controls > 1:
+		width += float(visible_controls - 1) * float(row.get_theme_constant("separation"))
 	return width
 
 func run(t: Object) -> void:
@@ -206,6 +235,46 @@ func run(t: Object) -> void:
 		status_container != null and is_equal_approx(status_container.size.x, 381.0),
 		"mobile status panel leaves HUD margins while staying visible"
 	)
+	var portrait_party_row: Control = layout_root.get_node_or_null("PartyRow") as Control
+	t.check(
+		portrait_party_row != null
+				and is_equal_approx(portrait_party_row.position.x, HUD.HUD_MARGIN)
+				and is_equal_approx(portrait_party_row.size.x, 381.0),
+		"mobile portrait party row stays inside the visible viewport width"
+	)
+	var original_heroes: Array[Node] = GameManager.heroes.duplicate()
+	var original_hero: Node = GameManager.hero
+	var original_local_hero_index: int = GameManager.local_hero_index
+	var party_heroes: Array[Node] = []
+	for hero_index: int in range(4):
+		var hero := FakeHero.new()
+		hero.hero_name = "Hero%d" % (hero_index + 1)
+		hero.hero_slot_index = hero_index
+		party_heroes.append(hero)
+	GameManager.heroes = party_heroes
+	GameManager.hero = party_heroes[0]
+	GameManager.local_hero_index = 0
+	layout_hud._refresh_party_row()
+	t.check(
+		portrait_party_row != null
+				and portrait_party_row.get_child_count() == 4
+				and is_equal_approx(float(portrait_party_row.get_theme_constant("separation")), 4.0)
+				and is_equal_approx((portrait_party_row.get_child(0) as Control).custom_minimum_size.x, 86.0)
+				and _row_min_width(portrait_party_row as HBoxContainer) <= portrait_party_row.size.x,
+		"mobile portrait party row fits four focus buttons within the visible row width"
+	)
+	GameManager.heroes = original_heroes
+	GameManager.hero = original_hero
+	GameManager.local_hero_index = original_local_hero_index
+	for hero_node: Node in party_heroes:
+		hero_node.free()
+	var portrait_online_label: Control = layout_root.get_node_or_null("OnlineStateLabel") as Control
+	t.check(
+		portrait_online_label != null
+				and is_equal_approx(portrait_online_label.position.x, HUD.HUD_MARGIN)
+				and is_equal_approx(portrait_online_label.size.x, 381.0),
+		"mobile portrait online state label stays inside the visible viewport width"
+	)
 	var log_container: Control = layout_root.get_node_or_null("GameLog") as Control
 	t.check(
 		log_container != null
@@ -262,13 +331,29 @@ func run(t: Object) -> void:
 	var landscape_hud := LayoutHud.new()
 	landscape_hud._vp_size = Vector2(852, 393)
 	landscape_hud.fake_safe_bottom = 21.0
+	landscape_hud.fake_safe_left = 44.0
+	landscape_hud.fake_safe_right = 44.0
 	landscape_hud._build_layout()
 	landscape_hud._apply_responsive_layout()
 	var landscape_root: Control = landscape_hud.get_node_or_null("HUDRoot") as Control
+	var landscape_party_row: Control = landscape_root.get_node_or_null("PartyRow") as Control
+	var landscape_online_label: Control = landscape_root.get_node_or_null("OnlineStateLabel") as Control
 	var landscape_log: Control = landscape_root.get_node_or_null("GameLog") as Control
 	t.check(
 		landscape_hud.toolbar != null and is_equal_approx(landscape_hud.toolbar.position.y, 300.0),
 		"mobile landscape toolbar stays above the bottom safe area"
+	)
+	t.check(
+		landscape_party_row != null
+				and is_equal_approx(landscape_party_row.position.x, 50.0)
+				and is_equal_approx(landscape_party_row.size.x, 520.0),
+		"mobile landscape party row avoids the horizontal safe area"
+	)
+	t.check(
+		landscape_online_label != null
+				and is_equal_approx(landscape_online_label.position.x, 50.0)
+				and is_equal_approx(landscape_online_label.size.x, 752.0),
+		"mobile landscape online state label avoids the horizontal safe area"
 	)
 	t.check(
 		landscape_log != null

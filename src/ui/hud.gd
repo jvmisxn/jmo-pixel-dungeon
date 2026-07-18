@@ -783,6 +783,8 @@ func _refresh_party_row() -> void:
 		_party_row.visible = false
 		return
 	_party_row.visible = true
+	_party_row.add_theme_constant_override("separation", 4 if _is_mobile_layout() else 6)
+	var button_width: float = 86.0 if _is_mobile_layout() else 104.0
 	var focused_hero: Variant = _get_local_hero()
 	var local_owned_hero: Variant = _get_local_owned_hero()
 	var input_hero: Variant = _get_input_hero()
@@ -791,7 +793,7 @@ func _refresh_party_row() -> void:
 		if hero_ref == null:
 			continue
 		var btn: Button = Button.new()
-		btn.custom_minimum_size = Vector2(104, 34)
+		btn.custom_minimum_size = Vector2(button_width, 34)
 		btn.clip_text = true
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		var is_alive: bool = hero_ref.get("is_alive") == true
@@ -1002,15 +1004,41 @@ func _apply_responsive_layout() -> void:
 		info_row.visible = not is_mobile_layout
 
 	if party_row:
-		var party_width: float = minf(520.0, _vp_size.x - 420.0)
+		var party_safe_left: float = _safe_area_inset("left") if is_mobile_layout else 0.0
+		var party_safe_right: float = _safe_area_inset("right") if is_mobile_layout else 0.0
+		var party_available_width: float = maxf(
+			1.0,
+			_vp_size.x - party_safe_left - party_safe_right - (HUD_MARGIN * 2.0)
+		)
+		var party_width: float = minf(
+			520.0,
+			party_available_width
+			if is_mobile_layout
+			else maxf(1.0, _vp_size.x - 420.0)
+		)
 		party_row.position = Vector2(
-			maxf(HUD_MARGIN + 190.0, (_vp_size.x - party_width) * 0.5),
+			party_safe_left + HUD_MARGIN
+			if is_mobile_layout
+			else maxf(HUD_MARGIN + 190.0, (_vp_size.x - party_width) * 0.5),
 			_hud_top_margin() if not is_mobile_layout else _hud_top_margin() + 146.0
 		)
+		party_row.custom_minimum_size = Vector2(party_width, 0.0)
+		party_row.size = Vector2(party_width, party_row.size.y)
 
 	if _online_state_label:
+		var online_safe_left: float = _safe_area_inset("left") if is_mobile_layout else 0.0
+		var online_safe_right: float = _safe_area_inset("right") if is_mobile_layout else 0.0
+		var online_width: float = (
+			maxf(1.0, _vp_size.x - online_safe_left - online_safe_right - (HUD_MARGIN * 2.0))
+			if is_mobile_layout
+			else _online_state_label.custom_minimum_size.x
+		)
+		_online_state_label.custom_minimum_size = Vector2(online_width, 20.0)
+		_online_state_label.size = _online_state_label.custom_minimum_size
 		_online_state_label.position = Vector2(
-			maxf(HUD_MARGIN + 200.0, (_vp_size.x - _online_state_label.custom_minimum_size.x) * 0.5),
+			online_safe_left + HUD_MARGIN
+			if is_mobile_layout
+			else maxf(HUD_MARGIN + 200.0, (_vp_size.x - online_width) * 0.5),
 			(_hud_top_margin() + 38.0) if not is_mobile_layout else (_hud_top_margin() + 182.0)
 		)
 
