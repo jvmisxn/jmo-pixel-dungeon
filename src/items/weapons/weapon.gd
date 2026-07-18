@@ -279,6 +279,8 @@ func random() -> Weapon:
 	var effect_roll: float = randf()
 	if effect_roll < 0.3:
 		cursed = true
+		# SPD: cursed weapons roll a curse enchantment so its proc can fire on hit.
+		enchant(WeaponEnchantment.random_curse())
 	elif effect_roll >= 0.85:
 		enchant(WeaponEnchantment.random())
 

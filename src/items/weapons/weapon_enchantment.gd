@@ -57,7 +57,14 @@ func proc(weapon: Variant, attacker: Variant, defender: Variant, damage: int) ->
 			return _blooming_proc(weapon, attacker, defender, damage)
 		"corrupting":
 			return _corrupting_proc(weapon, attacker, defender, damage)
-	# Curse enchantments and unknown IDs: no effect
+		# --- Curse enchantments with implemented procs ---
+		"annoying":
+			return _annoying_proc(weapon, attacker, defender, damage)
+		"sacrificial":
+			return _sacrificial_proc(weapon, attacker, defender, damage)
+		"displacing":
+			return _displacing_proc(weapon, attacker, defender, damage)
+	# Remaining curse enchantments (no proc impl yet) and unknown IDs: no effect
 	return damage
 
 # ---------------------------------------------------------------------------
