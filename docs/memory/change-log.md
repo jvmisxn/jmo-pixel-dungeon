@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: targeting, controls, source-fidelity, audit-S23
+- Guarded targeting resolution against out-of-bounds cells before range/visibility checks or item callbacks run. This keeps SPD-style targeting/cell-selection from resolving an invalid cell after mobile/browser coordinate drift or stale input, and leaves targeting active so the player can pick again. Extended `test_targeting_input.gd` to cover invalid-cell rejection and a valid-cell callback path. Local headless suite green (732 checks, Godot 4.7.1).
+
 - Tags: mobile, hud, toolbar, controls, web, playtesting
 - Hardened mobile toolbar tap activation against nested/scaled Control coordinate drift. `Toolbar.activate_button_at_screen_position()` now resolves touches in toolbar-local space as well as global space, so HUD-forwarded mobile taps still hit the intended action buttons when browser/backing-canvas scaling or nested panel containers shift rect spaces. Extended `test_mobile_hud_input.gd` to assert a real HUD touch on the bottom toolbar emits a toolbar action. Local headless suite green (399 checks, Godot 4.7.1); no real-device/iPhone confirmation yet.
 

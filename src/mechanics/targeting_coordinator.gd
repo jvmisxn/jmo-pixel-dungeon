@@ -27,6 +27,10 @@ static func cancel(scene: Variant) -> void:
 static func resolve(scene: Variant, cell: int) -> void:
 	if scene == null or not scene._targeting_active:
 		return
+	if not ConstantsData.is_valid_pos(cell):
+		if MessageLog:
+			MessageLog.add_warning("Invalid target!")
+		return
 	var hero: Variant = scene._get_input_hero()
 	if hero == null:
 		cancel(scene)
