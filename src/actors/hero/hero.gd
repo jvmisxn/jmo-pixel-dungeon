@@ -122,8 +122,8 @@ func give_starting_items() -> void:
 				belongings.add_item(food)
 
 		ConstantsData.HeroClass.MAGE:
-			# Mage's staff (worn shortsword) + cloth armor + food ration + scroll of identify
-			var staff: Item = Generator.create_item("worn_shortsword")
+			# Mage's staff (imbued with Wand of Magic Missile) + cloth armor + food ration + scroll of identify
+			var staff: Item = Generator.create_item("mages_staff")
 			if staff:
 				belongings.equip_weapon(staff)
 			var cloth: Item = Generator.create_item("cloth_armor")
@@ -492,12 +492,16 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 func _do_zap_wand(item: Variant, target_pos: int) -> void:
 	if item == null or target_pos < 0 or belongings == null:
 		return
-	if item != belongings.misc and not belongings.has_item(item):
+	if item != belongings.misc and item != belongings.weapon and not belongings.has_item(item):
 		return
 	last_visible_action = "zap_wand"
 	last_visible_target_pos = target_pos
 	if item is Wand:
 		(item as Wand).zap(self, target_pos)
+	elif item.has_method("zap"):
+		# Non-wand held items that expose a zap() (e.g. Mage's Staff) cast their
+		# imbued wand through the same targeting path.
+		item.zap(self, target_pos)
 	_patient_strike_ready = false
 	_followup_strike_ready = false
 

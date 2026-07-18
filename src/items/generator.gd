@@ -254,6 +254,12 @@ static func _create_item_internal(item_id: String) -> Item:
 		"elemental_embers":
 			return _make_misc_item("elemental_embers", "Elemental Embers", "Warm embers harvested for the wandmaker.", ConstantsData.ItemCategory.MISC)
 
+	# --- Mage's Staff (imbued-wand melee weapon) ---
+	if item_id == "mages_staff":
+		var staff: MagesStaff = MagesStaff.new()
+		staff.configure_default()
+		return staff
+
 	# --- Melee Weapons (known IDs) ---
 	if item_id in _MELEE_IDS:
 		return MeleeWeapon.create(item_id)
