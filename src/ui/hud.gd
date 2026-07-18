@@ -1016,11 +1016,14 @@ func _apply_responsive_layout() -> void:
 			if is_mobile_layout
 			else maxf(1.0, _vp_size.x - 420.0)
 		)
+		var party_y: float = _hud_top_margin()
+		if is_mobile_layout and status_container != null:
+			party_y = status_container.position.y + status_container.size.y + HUD_MARGIN
 		party_row.position = Vector2(
 			party_safe_left + HUD_MARGIN
 			if is_mobile_layout
 			else maxf(HUD_MARGIN + 190.0, (_vp_size.x - party_width) * 0.5),
-			_hud_top_margin() if not is_mobile_layout else _hud_top_margin() + 146.0
+			party_y
 		)
 		party_row.custom_minimum_size = Vector2(party_width, 0.0)
 		party_row.size = Vector2(party_width, party_row.size.y)
@@ -1039,7 +1042,7 @@ func _apply_responsive_layout() -> void:
 			online_safe_left + HUD_MARGIN
 			if is_mobile_layout
 			else maxf(HUD_MARGIN + 200.0, (_vp_size.x - online_width) * 0.5),
-			(_hud_top_margin() + 38.0) if not is_mobile_layout else (_hud_top_margin() + 182.0)
+			(party_row.position.y + 38.0) if is_mobile_layout and party_row != null else (_hud_top_margin() + 38.0)
 		)
 
 	if _minimap:

@@ -239,8 +239,9 @@ func run(t: Object) -> void:
 	t.check(
 		portrait_party_row != null
 				and is_equal_approx(portrait_party_row.position.x, HUD.HUD_MARGIN)
+				and is_equal_approx(portrait_party_row.position.y, status_container.position.y + status_container.size.y + HUD.HUD_MARGIN)
 				and is_equal_approx(portrait_party_row.size.x, 381.0),
-		"mobile portrait party row stays inside the visible viewport width"
+		"mobile portrait party row stays below the status panel and inside the visible viewport width"
 	)
 	var original_heroes: Array[Node] = GameManager.heroes.duplicate()
 	var original_hero: Node = GameManager.hero
@@ -272,8 +273,9 @@ func run(t: Object) -> void:
 	t.check(
 		portrait_online_label != null
 				and is_equal_approx(portrait_online_label.position.x, HUD.HUD_MARGIN)
+				and is_equal_approx(portrait_online_label.position.y, portrait_party_row.position.y + 38.0)
 				and is_equal_approx(portrait_online_label.size.x, 381.0),
-		"mobile portrait online state label stays inside the visible viewport width"
+		"mobile portrait online state label stays below party controls and inside the visible viewport width"
 	)
 	var log_container: Control = layout_root.get_node_or_null("GameLog") as Control
 	t.check(
@@ -336,6 +338,7 @@ func run(t: Object) -> void:
 	landscape_hud._build_layout()
 	landscape_hud._apply_responsive_layout()
 	var landscape_root: Control = landscape_hud.get_node_or_null("HUDRoot") as Control
+	var landscape_status: Control = landscape_root.get_node_or_null("StatusContainer") as Control
 	var landscape_party_row: Control = landscape_root.get_node_or_null("PartyRow") as Control
 	var landscape_online_label: Control = landscape_root.get_node_or_null("OnlineStateLabel") as Control
 	var landscape_log: Control = landscape_root.get_node_or_null("GameLog") as Control
@@ -346,14 +349,22 @@ func run(t: Object) -> void:
 	t.check(
 		landscape_party_row != null
 				and is_equal_approx(landscape_party_row.position.x, 50.0)
+				and is_equal_approx(landscape_party_row.position.y, landscape_status.position.y + landscape_status.size.y + HUD.HUD_MARGIN)
 				and is_equal_approx(landscape_party_row.size.x, 520.0),
-		"mobile landscape party row avoids the horizontal safe area"
+		"mobile landscape party row sits below status and avoids the horizontal safe area"
 	)
 	t.check(
 		landscape_online_label != null
 				and is_equal_approx(landscape_online_label.position.x, 50.0)
+				and is_equal_approx(landscape_online_label.position.y, landscape_party_row.position.y + 38.0)
 				and is_equal_approx(landscape_online_label.size.x, 752.0),
-		"mobile landscape online state label avoids the horizontal safe area"
+		"mobile landscape online state label sits below party controls and avoids the horizontal safe area"
+	)
+	t.check(
+		landscape_online_label != null
+				and landscape_log != null
+				and landscape_online_label.position.y + landscape_online_label.size.y <= landscape_log.position.y - HUD.HUD_MARGIN,
+		"mobile landscape online state label stays clear of the game log"
 	)
 	t.check(
 		landscape_log != null
