@@ -375,7 +375,8 @@ class CapeOfThorns extends Artifact:
 		charge = mini(charge + charge_gain, charge_max)
 		gain_exp(1)
 
-		# If shield is active, absorb 50% of damage
+		# If shield is active, absorb 50% of damage and retaliate against a
+		# living attacker with the absorbed amount (the "thorns").
 		if activated and shield_turns > 0:
 			@warning_ignore("integer_division")
 			var absorbed: int = damage / 2
@@ -384,6 +385,9 @@ class CapeOfThorns extends Artifact:
 					"The Cape of Thorns absorbs %d damage!" % absorbed,
 					icon_color
 				)
+			if absorbed > 0 and _source is Char and _source.is_alive \
+					and _source.has_method("take_damage"):
+				_source.take_damage(absorbed, self)
 			return damage - absorbed
 		return damage
 

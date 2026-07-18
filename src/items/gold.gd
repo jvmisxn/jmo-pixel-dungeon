@@ -30,13 +30,32 @@ func degrade() -> Item:
 	return self
 
 ## On pickup, add gold to the GameManager and log a message.
-func on_pickup(_hero: Char) -> void:
+## A wielded Ring of Wealth multiplies the collected pile (original: 1.2^bonus).
+func on_pickup(hero: Char) -> void:
+	var collected: int = wealth_adjusted_quantity(hero)
 	if GameManager:
-		GameManager.add_gold(quantity)
+		GameManager.add_gold(collected, hero)
 	if MessageLog:
-		MessageLog.add_positive("You collected %d gold." % quantity)
+		MessageLog.add_positive("You collected %d gold." % collected)
 	# Do NOT call super — gold doesn't go into inventory, it goes straight
 	# to the gold counter. EventBus signal is fired by GameManager.add_gold().
+
+## Returns this pile's quantity scaled by the hero's Ring of Wealth bonus.
+## No ring (or a null hero) returns the raw quantity unchanged.
+func wealth_adjusted_quantity(hero: Char) -> int:
+	if hero == null or not hero.has_method("get_buff"):
+		return quantity
+	var wealth_buff: Variant = hero.get_buff("RingOfWealth")
+	if wealth_buff == null or wealth_buff.get("ring") == null:
+		return quantity
+	var ring: Variant = wealth_buff.ring
+	if not ring.has_method("bonus"):
+		return quantity
+	var b: int = ring.bonus()
+	if b == 0:
+		return quantity
+	var multiplier: float = pow(1.2, float(b))
+	return maxi(1, int(round(float(quantity) * multiplier)))
 
 ## Gold's sell value is just its quantity (it IS currency).
 func value() -> int:

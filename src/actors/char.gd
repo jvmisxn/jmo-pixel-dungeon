@@ -311,6 +311,16 @@ func take_damage(dmg: int, source: Variant = null) -> int:
 
 	var actual: int = maxi(0, roundi(damage))
 
+	# Equipped Cape of Thorns absorbs/reflects a portion of incoming damage.
+	# The artifact charges from hits and, when activated, reduces the blow.
+	# Only heroes carry belongings; base Chars simply skip this.
+	if actual > 0:
+		var _belongings: Variant = get("belongings")
+		if _belongings != null and _belongings.has_method("get_equipped_artifact"):
+			var _art: Variant = _belongings.get_equipped_artifact()
+			if _art != null and _art.has_method("on_hero_damaged"):
+				actual = maxi(0, _art.on_hero_damaged(actual, source))
+
 	# Apply to ShieldBuff instances first (original: ShieldBuff.processDamage)
 	if actual > 0:
 		for b: Node in _buffs.duplicate():
