@@ -504,6 +504,51 @@ func _deserialize_buffs(data: Variant) -> void:
 			buff.attach(self)
 		buff_added.emit(buff)
 
+func serialize_char(overrides: Dictionary = {}) -> Dictionary:
+	var data: Dictionary = serialize_actor()
+	data["hp"] = int(overrides.get("hp", hp))
+	data["hp_max"] = int(overrides.get("hp_max", hp_max))
+	data["ht"] = int(overrides.get("ht", ht))
+	data["shielding"] = int(overrides.get("shielding", shielding))
+	data["str_val"] = int(overrides.get("str_val", str_val))
+	data["base_speed"] = float(overrides.get("base_speed", base_speed))
+	data["attack_skill"] = int(overrides.get("attack_skill", attack_skill))
+	data["defense_skill"] = int(overrides.get("defense_skill", defense_skill))
+	data["damage_roll_min"] = int(overrides.get("damage_roll_min", damage_roll_min))
+	data["damage_roll_max"] = int(overrides.get("damage_roll_max", damage_roll_max))
+	data["armor_value"] = int(overrides.get("armor_value", armor_value))
+	data["is_alive"] = bool(overrides.get("is_alive", is_alive))
+	data["flying"] = bool(overrides.get("flying", flying))
+	data["invisible"] = int(overrides.get("invisible", invisible))
+	data["paralysed"] = int(overrides.get("paralysed", paralysed))
+	data["buffs"] = overrides.get("buffs", _serialize_buffs())
+	return data
+
+func deserialize_char(data: Dictionary) -> void:
+	deserialize_actor(data)
+	hp = int(data.get("hp", hp))
+	hp_max = int(data.get("hp_max", hp_max))
+	ht = int(data.get("ht", hp_max))
+	shielding = int(data.get("shielding", shielding))
+	str_val = int(data.get("str_val", str_val))
+	base_speed = float(data.get("base_speed", base_speed))
+	attack_skill = int(data.get("attack_skill", attack_skill))
+	defense_skill = int(data.get("defense_skill", defense_skill))
+	damage_roll_min = int(data.get("damage_roll_min", damage_roll_min))
+	damage_roll_max = int(data.get("damage_roll_max", damage_roll_max))
+	armor_value = int(data.get("armor_value", armor_value))
+	is_alive = bool(data.get("is_alive", is_alive))
+	flying = bool(data.get("flying", flying))
+	invisible = int(data.get("invisible", invisible))
+	paralysed = int(data.get("paralysed", paralysed))
+	_deserialize_buffs(data.get("buffs", []))
+
+func serialize() -> Dictionary:
+	return serialize_char()
+
+func deserialize(data: Dictionary) -> void:
+	deserialize_char(data)
+
 # ---------------------------------------------------------------------------
 # Movement
 # ---------------------------------------------------------------------------

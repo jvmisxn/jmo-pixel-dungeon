@@ -281,8 +281,10 @@ func _action_drop() -> void:
 			slot = "artifact"
 		elif _hero.belongings.misc == _item:
 			slot = "misc"
-		elif _hero.belongings.ring == _item:
-			slot = "ring"
+		elif _hero.belongings.ring_left == _item:
+			slot = "ring_left"
+		elif _hero.belongings.ring_right == _item:
+			slot = "ring_right"
 		equip_slot = slot
 	if EventBus and EventBus.has_signal("request_hero_action"):
 		EventBus.request_hero_action.emit({"type": "drop_item", "item": _item, "equip_slot": equip_slot})

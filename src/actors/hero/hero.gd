@@ -1001,14 +1001,6 @@ func defense_proc(attacker: Char, damage: int) -> int:
 	return result
 
 func serialize() -> Dictionary:
-	var data: Dictionary = serialize_actor()
-	data["hero_class"] = hero_class
-	data["hero_subclass"] = hero_subclass
-	data["hero_level"] = hero_level
-	data["xp"] = xp
-	data["xp_to_next"] = xp_to_next
-	data["talent_points_available"] = talent_points_available
-	data["talent_levels"] = talent_levels.duplicate(true)
 	# Persist BASE str/hp without live equipped-ring passive bonuses baked in, so
 	# reloading (which re-applies those passives) does not double-count them and
 	# permanently inflate the hero. See RingOfMight.MightBuff.
@@ -1024,17 +1016,18 @@ func serialize() -> Dictionary:
 			var ht_contrib: int = int(b.get_ht_contribution())
 			base_hp_max -= ht_contrib
 			base_ht -= ht_contrib
-	data["hp"] = hp
-	data["hp_max"] = base_hp_max
-	data["ht"] = base_ht
-	data["str_val"] = base_str
-	data["attack_skill"] = attack_skill
-	data["defense_skill"] = defense_skill
-	data["damage_roll_min"] = damage_roll_min
-	data["damage_roll_max"] = damage_roll_max
-	data["armor_value"] = armor_value
-	data["is_alive"] = is_alive
-	data["base_speed"] = base_speed
+	var data: Dictionary = serialize_char({
+		"hp_max": base_hp_max,
+		"ht": base_ht,
+		"str_val": base_str,
+	})
+	data["hero_class"] = hero_class
+	data["hero_subclass"] = hero_subclass
+	data["hero_level"] = hero_level
+	data["xp"] = xp
+	data["xp_to_next"] = xp_to_next
+	data["talent_points_available"] = talent_points_available
+	data["talent_levels"] = talent_levels.duplicate(true)
 	data["hero_name"] = hero_name
 	data["owner_peer_id"] = owner_peer_id
 	data["hero_slot_index"] = hero_slot_index
@@ -1043,12 +1036,11 @@ func serialize() -> Dictionary:
 	data["patient_strike_ready"] = _patient_strike_ready
 	data["backup_barrier_ready"] = _backup_barrier_ready
 	data["followup_strike_ready"] = _followup_strike_ready
-	data["buffs"] = _serialize_buffs()
 	data["belongings"] = belongings.serialize() if belongings != null else {}
 	return data
 
 func deserialize(data: Dictionary) -> void:
-	deserialize_actor(data)
+	deserialize_char(data)
 	hero_class = data.get("hero_class", ConstantsData.HeroClass.WARRIOR)
 	hero_subclass = data.get("hero_subclass", ConstantsData.HeroSubclass.NONE)
 	hero_level = data.get("hero_level", 1)
@@ -1056,17 +1048,6 @@ func deserialize(data: Dictionary) -> void:
 	xp_to_next = data.get("xp_to_next", ConstantsData.xp_for_level(hero_level))
 	talent_points_available = data.get("talent_points_available", 0)
 	talent_levels = data.get("talent_levels", {}).duplicate(true)
-	hp = data.get("hp", 1)
-	hp_max = data.get("hp_max", hp)
-	ht = data.get("ht", hp_max)
-	str_val = data.get("str_val", 10)
-	attack_skill = data.get("attack_skill", 10)
-	defense_skill = data.get("defense_skill", 5)
-	damage_roll_min = data.get("damage_roll_min", 1)
-	damage_roll_max = data.get("damage_roll_max", 4)
-	armor_value = data.get("armor_value", 0)
-	is_alive = data.get("is_alive", true)
-	base_speed = data.get("base_speed", 1.0)
 	hero_name = data.get("hero_name", HeroClassData.get_class_name_str(hero_class))
 	owner_peer_id = int(data.get("owner_peer_id", 1))
 	hero_slot_index = int(data.get("hero_slot_index", 0))
@@ -1077,7 +1058,6 @@ func deserialize(data: Dictionary) -> void:
 	_backup_barrier_ready = data.get("backup_barrier_ready", true)
 	_followup_strike_ready = data.get("followup_strike_ready", false)
 	name = hero_name
-	_deserialize_buffs(data.get("buffs", []))
 	if belongings == null:
 		belongings = Belongings.new(self)
 	var belongings_data: Dictionary = data.get("belongings", {})

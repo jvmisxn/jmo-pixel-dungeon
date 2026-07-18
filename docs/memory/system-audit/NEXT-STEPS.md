@@ -35,11 +35,12 @@ and `change-log.md`.
   under-spawn, S23 targeting input-swallow, S35 minimap live FOV.
 
 **Still genuinely OPEN** (source-verified 2026-07-18 — these are the real next work):
-- **WS4** — `Char.serialize_char()/deserialize_char()` combat-block serializer is
-  NOT implemented; subclasses still hand-roll hp/stats. Also open: TurnManager
-  cooldown persistence, charm/terror `source_id` deserialize, `_generated_artifacts`
-  persistence, NPC lazy reward generation. (Ring/artifact passive rebuild on load
-  IS done.) **This is the largest remaining save-contract hole — top priority.**
+- **WS4** — PARTIAL: `Char.serialize_char()/deserialize_char()` combat-block
+  serializer landed, and `Hero`/`Mob` now route shared combat fields through it.
+  Still open: TurnManager cooldown persistence, `_generated_artifacts`
+  persistence, NPC lazy reward generation. (Ring/artifact passive rebuild and
+  charm/terror `source_id` deserialize are done.) This remains the save-contract
+  workstream, but the largest combat-state hole is closed.
 - **WS7** — Corruption still applies Amok (attacks the hero) not `CorruptionBuff`;
   Warding spawns no sentry; shared `Balance.normal_int_range()` helper not extracted.
 - **WS8** — chasm fall + iron keys landed; still open: paralytic/fire trap inert
@@ -49,8 +50,8 @@ and `change-log.md`.
 - Cross-cutting tails: WS2's dead ~200-line serialization block + `spend_gold()`
   routing + per-floor-transition autosave; WS3's Furor/Haste attack-vs-move split.
 
-Next priority order: **WS4 `Char` combat serializer → WS7 wand subclasses → WS8
-trap/respawn wiring → WS12/WS13.**
+Next priority order: **WS4 remaining save tails → WS8 trap/respawn wiring →
+WS12/WS13.**
 
 **Standing constraints (apply to every workstream):**
 - No Godot engine on this machine → verification is `gdparse`/`gdlint` + reasoning.
@@ -359,15 +360,14 @@ small reviewable buckets rather than trickling one-off commits into main.
   deserialize (`test_spirit_bow_serialization.gd`), #7 frozen dedent
   (`test_frozen.gd`), #9 minimap `level.visible` (`test_minimap_refresh.gd`),
   #10 badges 3 missing IDs (`badges.gd:441-444`), #11 `set_local_ready` icon arg
-  (`network_manager.gd:313`).
-- **STILL OPEN (verified):** #2 file the 7 S36 findings into `backlog.md` — still
-  NOT filed (no `[audit:S36]` tag in backlog); #8 charm/terror `deserialize` for
-  `source_id` (no override in either file); #12 client re-sanitizes host run config
-  (`network_manager.gd:672` still calls `_sanitize_run_config` on receive — whole-run
-  desync risk); #13 `item_catalog.gd` typed-dict coercion (still `.assign()` of an
-  untyped dict); #14 `wnd_item.gd` ring-drop crash — `_action_drop` still reads the
-  non-existent `belongings.ring` (`:284`) though `_action_unequip` was fixed to
-  ring_left/ring_right; #15 ghost double `mob_defeated` subscribe.
+  (`network_manager.gd:313`), #8 charm/terror `source_id` deserialize
+  (`test_status_source_serialization.gd`), #12 host run-config authority
+  (`test_network_run_config_authority.gd`), #14 `wnd_item.gd` ring-drop slot crash
+  (`test_wnd_item_drop_slots.gd`).
+- **STILL OPEN (verified):** #2 file the remaining S36 findings into `backlog.md`
+  (the ring-drop crash is now filed/fixed, but the full S36 window-audit set is
+  not reconciled); #13 `item_catalog.gd` typed-dict coercion (still `.assign()` of
+  an untyped dict); #15 ghost double `mob_defeated` subscribe.
 - **#1 (merge PR #1):** external PR state — not verifiable from the working tree.
 
 Originals below verified with gdparse + gdlint; none alter the save contract
@@ -376,7 +376,6 @@ Originals below verified with gdparse + gdlint; none alter the save contract
 Recommended slicing for any remaining quick wins:
 - Pure-read/no-contract crash and data-loss fixes can share one PR.
 - Deserialize additions that only read already-written data can share one PR.
-- `wnd_item.gd:284` is [TRUNC] and should be its own small reviewed diff.
 - Network run-config desync is whole-run behavior risk and should be its own PR.
 
 ---
@@ -414,8 +413,8 @@ roadmap Phase A):
 As of 2026-07-18, WS1/WS2/WS2.5/WS3/WS5/WS6/WS9/WS10/WS11 are landed (see the
 reconciled Status block at the top). Remaining order:
 
-**WS4** (Char combat-state serializer — the last big save-contract hole) →
-**WS7** (wand subclasses: Corruption/Warding + `Balance.normal_int_range`) →
+**WS4** (remaining save tails: TurnManager cooldowns, artifact generation,
+NPC lazy rewards) →
 **WS8** (trap buffs, trap-pool wiring, mob respawn, mimic item) →
 **WS12** (UI offline-action-path + `Ring/Wand.all_ids()` transmute) →
 **WS13** (level-gen door system — highest regen risk, wants in-engine time).

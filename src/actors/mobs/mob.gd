@@ -591,21 +591,6 @@ func serialize() -> Dictionary:
 	data["description"] = description
 	data["state"] = AIState.keys()[state]
 	data["target_pos"] = target_pos
-	data["hp"] = hp
-	data["hp_max"] = hp_max
-	data["ht"] = ht
-	data["shielding"] = shielding
-	data["str_val"] = str_val
-	data["base_speed"] = base_speed
-	data["attack_skill"] = attack_skill
-	data["defense_skill"] = defense_skill
-	data["damage_roll_min"] = damage_roll_min
-	data["damage_roll_max"] = damage_roll_max
-	data["armor_value"] = armor_value
-	data["is_alive"] = is_alive
-	data["flying"] = flying
-	data["invisible"] = invisible
-	data["paralysed"] = paralysed
 	data["xp_value"] = xp_value
 	data["max_level"] = max_level
 	data["awareness"] = awareness
@@ -613,11 +598,10 @@ func serialize() -> Dictionary:
 	data["is_ally"] = is_ally
 	data["last_visible_action"] = last_visible_action
 	data["last_visible_target_pos"] = last_visible_target_pos
-	data["buffs"] = _serialize_buffs()
 	return data
 
 func deserialize(data: Dictionary) -> void:
-	super.deserialize_actor(data)
+	super.deserialize(data)
 	mob_id = data.get("mob_id", mob_id)
 	mob_name = data.get("mob_name", mob_name)
 	description = data.get("description", description)
@@ -625,21 +609,6 @@ func deserialize(data: Dictionary) -> void:
 	set_mob_state(state_name)
 	target = null
 	target_pos = int(data.get("target_pos", -1))
-	hp = int(data.get("hp", hp))
-	hp_max = int(data.get("hp_max", hp_max))
-	ht = int(data.get("ht", ht))
-	shielding = int(data.get("shielding", 0))
-	str_val = int(data.get("str_val", str_val))
-	base_speed = float(data.get("base_speed", base_speed))
-	attack_skill = int(data.get("attack_skill", attack_skill))
-	defense_skill = int(data.get("defense_skill", defense_skill))
-	damage_roll_min = int(data.get("damage_roll_min", damage_roll_min))
-	damage_roll_max = int(data.get("damage_roll_max", damage_roll_max))
-	armor_value = int(data.get("armor_value", armor_value))
-	is_alive = bool(data.get("is_alive", is_alive))
-	flying = bool(data.get("flying", flying))
-	invisible = int(data.get("invisible", invisible))
-	paralysed = int(data.get("paralysed", paralysed))
 	xp_value = int(data.get("xp_value", xp_value))
 	max_level = int(data.get("max_level", max_level))
 	awareness = float(data.get("awareness", awareness))
