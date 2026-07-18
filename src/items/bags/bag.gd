@@ -118,7 +118,24 @@ func deserialize(data: Dictionary) -> void:
 	size = data.get("size", 20)
 	accepted_category = data.get("accepted_category", ConstantsData.ItemCategory.MISC)
 	accepted_category_secondary = data.get("accepted_category_secondary", -1)
-	# Items are deserialized by the item loading system
+	# Restore stored items. Append directly (rather than routing through
+	# can_hold/add_to_bag) so a round-trip preserves exact contents even if
+	# capacity or category rules later change.
+	items.clear()
+	var items_data: Variant = data.get("items", [])
+	if items_data is Array:
+		for item_data: Variant in items_data:
+			if not (item_data is Dictionary):
+				continue
+			var stored_id: String = item_data.get("item_id", "")
+			if stored_id == "":
+				continue
+			var stored: Item = Generator.create_item(stored_id) as Item
+			if stored == null:
+				continue
+			if stored.has_method("deserialize"):
+				stored.deserialize(item_data)
+			items.append(stored)
 
 # ---------------------------------------------------------------------------
 # Factory
