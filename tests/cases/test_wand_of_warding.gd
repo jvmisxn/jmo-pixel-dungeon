@@ -3,6 +3,8 @@ extends RefCounted
 ## WardSentry actor on the level (not just record a position), and that sentry
 ## must zap a nearby hostile mob for damage on its turn.
 
+const WARD_SENTRY_SCRIPT: Script = preload("res://src/actors/mobs/special/ward_sentry.gd")
+
 class _FakeLevel extends RefCounted:
 	var chars: Dictionary = {}          # pos -> Char
 	var mobs: Array[Node] = []
@@ -56,7 +58,7 @@ func _make_enemy(enemy_pos: int, enemy_hp: int) -> Mob:
 func _sentries_on(floor: _FakeLevel) -> Array:
 	var out: Array = []
 	for node: Variant in floor.mobs:
-		if node is WardSentry:
+		if node != null and node.get_script() == WARD_SENTRY_SCRIPT:
 			out.append(node)
 	return out
 
@@ -74,7 +76,7 @@ func _test_zap_spawns_sentry(t: Object) -> void:
 	t.check(ward_pos in wand._sentry_positions,
 		"Warding tracks the sentry's position")
 	if sentries.size() == 1:
-		var s: WardSentry = sentries[0]
+		var s: Variant = sentries[0]
 		t.check(s.is_ally, "The sentry is allied to the hero")
 		t.check(s.pos == ward_pos, "The sentry stands on the target cell")
 		# Clean up the globally-registered turn actor.
@@ -91,7 +93,7 @@ func _test_sentry_zaps_nearby_enemy(t: Object) -> void:
 	wand.on_zap(hero, [ward_pos] as Array[int])
 	var sentries: Array = _sentries_on(floor)
 	t.check(sentries.size() == 1, "sentry spawned")
-	var sentry: WardSentry = sentries[0]
+	var sentry: Variant = sentries[0]
 
 	# Drop a hostile mob one cell from the sentry, within zap range.
 	var foe: Mob = _make_enemy(ward_pos + 1, 40)

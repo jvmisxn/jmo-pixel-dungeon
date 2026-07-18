@@ -3,6 +3,8 @@ extends Item
 ## Base class for all wands. Wands have charges, can be zapped at target
 ## positions using Ballistica for trajectory, and recharge over time.
 
+const WARD_SENTRY_SCRIPT: Script = preload("res://src/actors/mobs/special/ward_sentry.gd")
+
 # --- Wand Properties ---
 ## Maximum charges this wand can hold.
 var charges_max: int = 2
@@ -904,7 +906,14 @@ class WandOfWarding extends Wand:
 			_despawn_sentry_at(lvl, oldest)
 		# Spawn a real sentry actor that zaps enemies each turn.
 		var dmg_range: Array[int] = get_damage(level)
-		WardSentry.spawn_at(target_pos, lvl, hero, level, dmg_range[0], dmg_range[1])
+		var sentry: Variant = WARD_SENTRY_SCRIPT.new()
+		sentry.pos = target_pos
+		sentry.level = lvl
+		sentry.configure(hero, level, dmg_range[0], dmg_range[1])
+		if lvl.has_method("add_mob"):
+			lvl.add_mob(sentry)
+		if TurnManager:
+			TurnManager.add_actor(sentry)
 		_sentry_positions.append(target_pos)
 		if MessageLog:
 			MessageLog.add_positive("A magical ward sentry appears! " \
@@ -916,8 +925,9 @@ class WandOfWarding extends Wand:
 		if lvl == null or not lvl.has_method("find_char_at"):
 			return
 		var occupant: Variant = lvl.find_char_at(cell)
-		if occupant is WardSentry:
-			(occupant as WardSentry)._on_death(null)
+		if occupant != null and occupant.get_script() == WARD_SENTRY_SCRIPT \
+				and occupant.has_method("_on_death"):
+			occupant._on_death(null)
 
 	func serialize() -> Dictionary:
 		var data: Dictionary = super.serialize()

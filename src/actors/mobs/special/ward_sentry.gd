@@ -75,8 +75,8 @@ func _on_death(_source: Variant) -> void:
 
 ## Conjure a sentry on the level and register it with the turn system.
 static func spawn_at(spawn_pos: int, p_level: Variant, hero: Char,
-		wand_level: int, dmg_min: int, dmg_max: int) -> WardSentry:
-	var sentry: WardSentry = WardSentry.new()
+		wand_level: int, dmg_min: int, dmg_max: int) -> Variant:
+	var sentry: Variant = load("res://src/actors/mobs/special/ward_sentry.gd").new()
 	sentry.pos = spawn_pos
 	sentry.level = p_level
 	sentry.configure(hero, wand_level, dmg_min, dmg_max)
