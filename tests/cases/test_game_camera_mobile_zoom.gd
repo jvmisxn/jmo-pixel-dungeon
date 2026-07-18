@@ -19,4 +19,17 @@ func run(t: Object) -> void:
 		camera.max_zoom >= 10.0,
 		"mobile camera still allows pinch zooming in"
 	)
+
+	camera._target_zoom = 2.0
+	camera._touch_points = {
+		0: Vector2(100, 100),
+		1: Vector2(200, 100),
+	}
+	camera._begin_pinch()
+	camera._touch_points[1] = Vector2(300, 100)
+	camera._update_pinch_zoom()
+	t.check(
+		camera._target_zoom > 3.9,
+		"pinch distance expansion zooms the camera in"
+	)
 	camera.free()

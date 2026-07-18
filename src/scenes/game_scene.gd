@@ -265,7 +265,7 @@ func _input(event: InputEvent) -> void:
 		var touch: InputEventScreenTouch = event as InputEventScreenTouch
 		_suppress_synthesized_touch_mouse()
 		if touch.pressed:
-			if _is_screen_position_over_hud(touch.position):
+			if _should_route_touch_to_hud(touch.position):
 				_ui_touch_points[touch.index] = true
 				get_viewport().set_input_as_handled()
 				return
@@ -377,6 +377,9 @@ func _is_screen_position_over_hud(screen_pos: Vector2) -> bool:
 	if _hud.has_method("contains_screen_position"):
 		return bool(_hud.contains_screen_position(screen_pos))
 	return false
+
+func _should_route_touch_to_hud(screen_pos: Vector2) -> bool:
+	return _active_touch_points.is_empty() and _is_screen_position_over_hud(screen_pos)
 
 func _handle_touch_tap(screen_pos: Vector2) -> void:
 	if not _awaiting_hero_input:

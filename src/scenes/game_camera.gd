@@ -38,6 +38,7 @@ var _has_bounds: bool = false
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
+	_claim_web_canvas_touch_gestures()
 	_apply_platform_zoom_limits()
 	_target_zoom = default_zoom_level
 	zoom = Vector2(_target_zoom, _target_zoom)
@@ -215,6 +216,28 @@ func _apply_platform_zoom_limits() -> void:
 	if not _is_mobile_web_context():
 		return
 	_apply_mobile_zoom_limits()
+
+
+func _claim_web_canvas_touch_gestures() -> void:
+	if OS.get_name() != "Web":
+		return
+	JavaScriptBridge.eval(
+		"(function(){" +
+		"var canvas=document.querySelector('canvas');" +
+		"if(canvas){canvas.style.touchAction='none';canvas.style.webkitTouchCallout='none';}" +
+		"document.documentElement.style.touchAction='none';" +
+		"document.body.style.touchAction='none';" +
+		"document.body.style.overscrollBehavior='none';" +
+		"var viewport=document.querySelector('meta[name=viewport]');" +
+		"if(viewport){" +
+		"var content=viewport.getAttribute('content')||'';" +
+		"if(content.indexOf('user-scalable=no')===-1){" +
+		"viewport.setAttribute('content', content + ', user-scalable=no, maximum-scale=1');" +
+		"}" +
+		"}" +
+		"})()",
+		true
+	)
 
 
 func _apply_mobile_zoom_limits() -> void:
