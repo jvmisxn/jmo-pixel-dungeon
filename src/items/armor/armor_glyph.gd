@@ -460,9 +460,8 @@ class FlowGlyph extends ArmorGlyph:
 					var terrain: int = level_ref.get_terrain(defender.pos)
 					if terrain == ConstantsData.Terrain.WATER:
 						if defender.has_method("add_buff"):
-							var haste: Buff = Buff.new()
-							haste.buff_id = "Haste"
-							haste.duration = 2.0 + armor_level
+							var haste: Haste = Haste.new()
+							haste.set_duration(2.0 + float(armor_level))
 							defender.add_buff(haste)
 						if MessageLog:
 							MessageLog.add("The water surges around you!")
@@ -479,9 +478,8 @@ class EntanglementGlyph extends ArmorGlyph:
 		if ArmorGlyph.check_proc(armor_level):
 			if defender != null and defender.has_method("add_buff"):
 				# Root the wearer
-				var root: Buff = Buff.new()
-				root.buff_id = "Rooted"
-				root.duration = 2.0 + float(armor_level)
+				var root: Rooted = Rooted.new()
+				root.set_duration(2.0 + float(armor_level))
 				defender.add_buff(root)
 				# Count adjacent grass for bonus armor
 				var grass_count: int = 0
