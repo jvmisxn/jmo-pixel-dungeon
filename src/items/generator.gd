@@ -253,6 +253,8 @@ static func _create_item_internal(item_id: String) -> Item:
 			return _make_misc_item("corpse_dust", "Corpse Dust", "Fine powdery remains gathered for the wandmaker.", ConstantsData.ItemCategory.MISC)
 		"elemental_embers":
 			return _make_misc_item("elemental_embers", "Elemental Embers", "Warm embers harvested for the wandmaker.", ConstantsData.ItemCategory.MISC)
+		"dark_gold_ore":
+			return _make_stackable_misc_item("dark_gold_ore", "Dark Gold Ore", "A lump of heavy, dark ore veined with gold. The troll blacksmith covets it.", ConstantsData.ItemCategory.MISC)
 
 	# --- Mage's Staff (imbued-wand melee weapon) ---
 	if item_id == "mages_staff":
@@ -394,6 +396,21 @@ static func _make_misc_item(id: String, display_name: String, desc: String, cate
 	item.identified = true
 	item.cursed_known = true
 	item.unique = true
+	return item
+
+## Build a stackable quest/material MISC item (e.g. dark gold ore) that the
+## Belongings stacking, count_item, and remove_item_quantity APIs can pool and
+## consume. Unlike _make_misc_item these are NOT unique — multiple pieces merge.
+static func _make_stackable_misc_item(id: String, display_name: String, desc: String, category: int) -> Item:
+	var item: Item = Item.new()
+	item.item_id = id
+	item.item_name = display_name
+	item.description = desc
+	item.category = category
+	item.identified = true
+	item.cursed_known = true
+	item.stackable = true
+	item.quantity = 1
 	return item
 
 # ---------------------------------------------------------------------------

@@ -13,6 +13,11 @@ func _init() -> void:
 	awareness = 0.5
 	aggro_range = 8
 	base_speed = 1.5  # Very fast
+	# Dark gold ore for the Troll Blacksmith quest. This port sources the ore
+	# from Caves bats (see blacksmith.gd / quest_handler.gd) rather than SPD's
+	# Pickaxe-and-mining terrain. Bats span depths 11-17, so 15 pieces are
+	# reachable across the Caves/City with a moderate per-kill drop chance.
+	loot_table = [{"item_id": "dark_gold_ore", "chance": 0.5}]
 
 func on_attack_hit(_target_char: Char, damage: int) -> void:
 	super.on_attack_hit(_target_char, damage)
