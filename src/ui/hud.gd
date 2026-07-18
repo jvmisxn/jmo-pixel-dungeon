@@ -49,6 +49,7 @@ var _sub_windows: Array[Variant] = []
 # --- Viewport size cache ---
 var _vp_size: Vector2 = Vector2(1280, 720)
 var _web_layout_poll_elapsed: float = 0.0
+var _web_viewport_resize_callback: JavaScriptObject = null
 
 func _get_local_hero() -> Variant:
 	if GameManager == null:
@@ -105,6 +106,7 @@ func _ready() -> void:
 	_apply_responsive_layout()
 	# Re-layout when viewport resizes
 	get_viewport().size_changed.connect(_on_viewport_resized)
+	_connect_web_viewport_resize_events()
 
 
 func _process(delta: float) -> void:
@@ -508,9 +510,16 @@ func _get_browser_viewport_size() -> Vector2i:
 	if OS.get_name() != "Web":
 		return Vector2i.ZERO
 	var js_result: Variant = JavaScriptBridge.eval(
-		"(function(){return Math.round(window.innerWidth) + 'x' + Math.round(window.innerHeight);})()",
+		"(function(){var v=window.visualViewport;" +
+		"var w=(v&&v.width)?v.width:window.innerWidth;" +
+		"var h=(v&&v.height)?v.height:window.innerHeight;" +
+		"return Math.round(w)+'x'+Math.round(h);})()",
 		true
 	)
+	return _parse_browser_viewport_size(js_result)
+
+
+static func _parse_browser_viewport_size(js_result: Variant) -> Vector2i:
 	if js_result is String:
 		var parts: PackedStringArray = str(js_result).split("x")
 		if parts.size() == 2:
@@ -654,6 +663,22 @@ func _build_status_overlay(root: Control) -> void:
 
 func _on_viewport_resized() -> void:
 	_apply_viewport_size(_get_viewport_size())
+
+
+func _connect_web_viewport_resize_events() -> void:
+	if OS.get_name() != "Web":
+		return
+	_web_viewport_resize_callback = JavaScriptBridge.create_callback(_on_web_viewport_resized)
+	var window: JavaScriptObject = JavaScriptBridge.get_interface("window")
+	if window == null:
+		return
+	if window.visualViewport:
+		window.visualViewport.addEventListener("resize", _web_viewport_resize_callback)
+	window.addEventListener("orientationchange", _web_viewport_resize_callback)
+
+
+func _on_web_viewport_resized(_args: Array) -> void:
+	_on_viewport_resized.call_deferred()
 
 
 func _apply_viewport_size(size: Vector2) -> void:

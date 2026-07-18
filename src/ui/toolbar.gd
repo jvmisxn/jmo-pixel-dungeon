@@ -28,6 +28,7 @@ var _btn_wait: Button = null
 var _btn_rest: Button = null
 var _btn_search: Button = null
 var _btn_settings: Button = null
+var _btn_quickslot_page: Button = null
 var _quickslot_sep: VSeparator = null
 var _settings_sep: VSeparator = null
 
@@ -36,13 +37,16 @@ var _quickslots: Array[Button] = []
 var _quickslot_items: Array[RefCounted] = [null, null, null, null, null, null]
 var _quickslot_icons: Array[TextureRect] = []
 var _quickslot_labels: Array[Label] = []
+var _quickslot_page: int = 0
 
 const QUICKSLOT_COUNT: int = 6
+const MOBILE_VISIBLE_QUICKSLOTS: int = 2
 const QUICKSLOT_SIZE: Vector2 = Vector2(44, 36)
 const QUICKSLOT_ICON_SIZE: Vector2 = Vector2(24, 24)
 const MOBILE_QUICKSLOT_SIZE: Vector2 = Vector2(50, 56)
 const MOBILE_QUICKSLOT_ICON_SIZE: Vector2 = Vector2(32, 32)
 const MOBILE_NARROW_BUTTON_MIN_SIZE: Vector2 = Vector2(50, 56)
+const MOBILE_NARROW_PAGE_BUTTON_MIN_SIZE: Vector2 = Vector2(36, 56)
 const MOBILE_NARROW_QUICKSLOT_SIZE: Vector2 = Vector2(44, 56)
 const MOBILE_NARROW_QUICKSLOT_ICON_SIZE: Vector2 = Vector2(28, 28)
 const MOBILE_NARROW_BREAKPOINT: float = 430.0
@@ -95,6 +99,9 @@ func _ready() -> void:
 		_quickslots.append(qs_btn)
 		add_child(qs_btn)
 
+	_btn_quickslot_page = _create_spd_button("More", "Tab")
+	add_child(_btn_quickslot_page)
+
 	# --- Another separator before settings ---
 	_settings_sep = VSeparator.new()
 	_settings_sep.custom_minimum_size = Vector2(2, 0)
@@ -109,6 +116,7 @@ func _ready() -> void:
 	_btn_wait.pressed.connect(_on_wait)
 	_btn_rest.pressed.connect(_on_rest)
 	_btn_search.pressed.connect(_on_search)
+	_btn_quickslot_page.pressed.connect(_on_quickslot_page)
 	_btn_settings.pressed.connect(_on_settings)
 	_apply_button_labels()
 
@@ -325,12 +333,35 @@ func _apply_button_labels() -> void:
 		_btn_settings.text = "Menu" if _compact_mode else "Settings [Esc]"
 		_btn_settings.custom_minimum_size = button_size
 		_btn_settings.add_theme_font_size_override("font_size", action_font_size)
+	if _btn_quickslot_page:
+		_btn_quickslot_page.visible = _compact_mode
+		_btn_quickslot_page.custom_minimum_size = (
+			MOBILE_NARROW_PAGE_BUTTON_MIN_SIZE
+			if is_narrow_compact
+			else button_size
+		)
+		_btn_quickslot_page.add_theme_font_size_override(
+			"font_size",
+			13 if is_narrow_compact else action_font_size
+		)
+		var next_page: int = (_quickslot_page + 1) % _quickslot_page_count()
+		var next_start: int = next_page * MOBILE_VISIBLE_QUICKSLOTS
+		var next_end: int = mini(QUICKSLOT_COUNT, next_start + MOBILE_VISIBLE_QUICKSLOTS)
+		_btn_quickslot_page.text = "%d-%d" % [next_start + 1, next_end]
+		_btn_quickslot_page.tooltip_text = (
+			"Show quickslots %d-%d" % [next_start + 1, next_end]
+		)
 	if _quickslot_sep:
 		_quickslot_sep.visible = not is_narrow_compact
 	if _settings_sep:
 		_settings_sep.visible = not is_narrow_compact
+	var first_visible_quickslot: int = _quickslot_page * MOBILE_VISIBLE_QUICKSLOTS
+	var last_visible_quickslot: int = first_visible_quickslot + MOBILE_VISIBLE_QUICKSLOTS
 	for i: int in range(_quickslots.size()):
-		var is_mobile_hidden_slot: bool = _compact_mode and i >= 2
+		var is_mobile_hidden_slot: bool = (
+			_compact_mode
+			and (i < first_visible_quickslot or i >= last_visible_quickslot)
+		)
 		_quickslots[i].visible = not is_mobile_hidden_slot
 		_quickslots[i].custom_minimum_size = quickslot_size
 		_quickslots[i].size = quickslot_size
@@ -365,6 +396,8 @@ func set_enabled(is_enabled: bool) -> void:
 		_btn_search.disabled = not is_enabled
 	if _btn_settings:
 		_btn_settings.disabled = not is_enabled
+	if _btn_quickslot_page:
+		_btn_quickslot_page.disabled = not is_enabled
 	for qs: Button in _quickslots:
 		qs.disabled = not is_enabled
 
@@ -397,6 +430,7 @@ func activate_button_at_screen_position(screen_pos: Vector2) -> bool:
 		{"button": _btn_wait, "callback": Callable(self, "_on_wait")},
 		{"button": _btn_rest, "callback": Callable(self, "_on_rest")},
 		{"button": _btn_search, "callback": Callable(self, "_on_search")},
+		{"button": _btn_quickslot_page, "callback": Callable(self, "_on_quickslot_page")},
 		{"button": _btn_settings, "callback": Callable(self, "_on_settings")},
 	]
 	for entry: Dictionary in button_actions:
@@ -445,6 +479,13 @@ func _on_rest() -> void:
 
 func _on_search() -> void:
 	search_pressed.emit()
+
+func _on_quickslot_page() -> void:
+	_quickslot_page = (_quickslot_page + 1) % _quickslot_page_count()
+	_apply_button_labels()
+
+func _quickslot_page_count() -> int:
+	return ceili(float(QUICKSLOT_COUNT) / float(MOBILE_VISIBLE_QUICKSLOTS))
 
 func _on_settings() -> void:
 	settings_pressed.emit()

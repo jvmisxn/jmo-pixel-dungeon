@@ -133,7 +133,47 @@ func run(t: Object) -> void:
 		not toolbar._quickslot_sep.visible and not toolbar._settings_sep.visible,
 		"narrow mobile toolbar hides nonessential separators"
 	)
+	t.check(
+		toolbar._btn_quickslot_page != null and toolbar._btn_quickslot_page.visible,
+		"narrow mobile toolbar exposes quickslot paging"
+	)
+	t.check(
+		toolbar._quickslots[2].visible == false and toolbar._quickslots[3].visible == false,
+		"narrow mobile toolbar starts on quickslots 1-2"
+	)
+	toolbar._on_quickslot_page()
+	t.check(
+		toolbar._quickslots[2].visible and toolbar._quickslots[3].visible,
+		"narrow mobile toolbar pager exposes quickslots 3-4"
+	)
+	t.check(
+		not toolbar._quickslots[0].visible and not toolbar._quickslots[1].visible,
+		"narrow mobile toolbar pager hides the previous pair"
+	)
+	toolbar._on_quickslot_page()
+	t.check(
+		toolbar._quickslots[4].visible and toolbar._quickslots[5].visible,
+		"narrow mobile toolbar pager exposes quickslots 5-6"
+	)
+	toolbar._on_quickslot_page()
+	t.check(
+		toolbar._quickslots[0].visible and toolbar._quickslots[1].visible,
+		"narrow mobile toolbar pager wraps back to quickslots 1-2"
+	)
 	toolbar.free()
+
+	t.check(
+		HUD._parse_browser_viewport_size("393x752") == Vector2i(393, 752),
+		"mobile HUD accepts the browser visual viewport probe size"
+	)
+	t.check(
+		HUD._parse_browser_viewport_size("0x752") == Vector2i.ZERO,
+		"mobile HUD rejects zero-width browser viewport probe results"
+	)
+	t.check(
+		HUD._parse_browser_viewport_size("393") == Vector2i.ZERO,
+		"mobile HUD rejects malformed browser viewport probe results"
+	)
 
 	var layout_hud := LayoutHud.new()
 	layout_hud._vp_size = Vector2(393, 852)
