@@ -669,7 +669,12 @@ func _client_lobby_started() -> void:
 
 @rpc("authority", "reliable")
 func _client_receive_online_run_start(config: Dictionary) -> void:
-	_emit_online_run_start(_sanitize_run_config(config))
+	# The host is authoritative for the run config and has already sanitized it
+	# (see start_online_run). Adopt the host payload verbatim rather than calling
+	# _sanitize_run_config here — that rebuilds party_classes/player_infos from
+	# this client's own lobby_players snapshot, which can diverge from the host's
+	# at run start and desync the class-to-slot mapping.
+	_emit_online_run_start(config.duplicate(true))
 
 @rpc("authority", "reliable")
 func _client_receive_run_snapshot(snapshot: Dictionary) -> void:
