@@ -13,9 +13,13 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 	if triggerer == null:
 		return
 
-	# Try to disarm the weapon
+	# Try to disarm the equipped melee weapon. Weapons live on Belongings, not
+	# directly on the Hero, so check there first (SPD disarms belongings.weapon).
+	var belongings: Variant = triggerer.get("belongings")
 	var weapon: Variant = null
-	if triggerer.has_method("get_weapon"):
+	if belongings != null and belongings.has_method("get_equipped_weapon"):
+		weapon = belongings.get_equipped_weapon()
+	elif triggerer.has_method("get_weapon"):
 		weapon = triggerer.get_weapon()
 	elif triggerer.get("weapon") != null:
 		weapon = triggerer.weapon
@@ -38,7 +42,9 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 	var drop_pos: int = candidates[randi() % candidates.size()]
 
 	# Unequip and drop
-	if triggerer.has_method("unequip_weapon"):
+	if belongings != null and belongings.has_method("unequip"):
+		belongings.unequip("weapon")
+	elif triggerer.has_method("unequip_weapon"):
 		triggerer.unequip_weapon()
 
 	if level.has_method("drop_item"):

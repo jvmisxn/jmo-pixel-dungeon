@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: traps, disarming, source-fidelity, audit-S10
+- Made Disarming Trap actually disarm the hero. `DisarmingTrap._do_effect` read the equipped weapon from `triggerer.get_weapon()` / `triggerer.weapon`, but `Hero` exposes neither — equipped weapons live on `Belongings` (`belongings.get_equipped_weapon()`). The trap therefore always hit the `weapon == null` branch and printed "You have nothing to disarm," doing nothing, despite now being live in the Halls trap pool (depth 21-24, added this session). Fix: read the weapon from `triggerer.belongings.get_equipped_weapon()` first (falling back to the old `get_weapon`/`weapon` paths for non-hero triggerers), and unequip via `belongings.unequip("weapon")` instead of the non-existent `triggerer.unequip_weapon()`, so the weapon is knocked to a nearby passable cell as a heap (SPD behavior). The earlier arg-swap P1 (`drop_item(drop_pos, weapon)`) was already fixed. Added `tests/cases/test_disarming_trap.gd` (weapon unequipped + dropped as a nearby heap; unarmed hero drops nothing) and registered it in the runner; verified it fails against the pre-fix detection (2 failures) and passes after. Full local headless suite green (754 checks, Godot 4.7.1). Remaining S10 open: cursing-trap equipment path still dead, pitfall trap doesn't descend a depth, several trap classes still unpooled outside Halls.
+
 - Tags: plants, aoe, source-fidelity, audit-S19
 - Fixed grid edge-wrap in `icecap.gd` and `firebloom.gd`: `DIRS_8` neighbours are now column-safe, so a wall-edge freeze/ignite can no longer affect a cell wrapped across the map edge. Added `test_plant_edge_wrap.gd`.
 

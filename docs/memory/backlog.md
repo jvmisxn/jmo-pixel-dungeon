@@ -119,7 +119,7 @@ Filed by the system-audit loop (`docs/memory/system-audit/`). Tag `[audit:<id>]`
 - [P1][audit:S10] `paralytic_trap.gd:14-15` paralysis effect is `pass`; `Paralysis` buff class exists but is never applied — trap only logs a message. (TRUNCATED file — manual fix.)
 - [P1][audit:S10] `fire_trap.gd:14-16` burning buff is `pass`; only raw damage + ember spread run. Apply `Burning` like `blazing_trap.gd:15-18` does. (TRUNCATED file — manual fix.)
 - [P2][audit:S10] Trap generation pools incomplete — 7 implemented classes referenced by no `_create_random_trap`: ParalyticTrap, FrostTrap, BlazingTrap, FlockTrap, CursingTrap, DisarmingTrap, PitfallTrap. Wire into region trap tiers (per SPD) or delete dead classes.
-- [P2][audit:S10] `disarming_trap.gd:18-21` weapon detection dead on hero (no `Hero.get_weapon()`/`weapon`; weapons live on `belongings.get_equipped_weapon()`) → always "nothing to disarm."
+- [DONE][audit:S10] `disarming_trap.gd` weapon detection now reads `triggerer.belongings.get_equipped_weapon()` and unequips via `belongings.unequip("weapon")`, so the (now Halls-pooled) trap actually knocks the hero's weapon to a nearby heap instead of always printing "nothing to disarm." Covered by `test_disarming_trap.gd`.
 - [P2][audit:S10] `cursing_trap.gd:17` equipment path dead (no `Hero.get_equipped_items()`) → always falls back to `Hex`.
 - [P2][audit:S10] `pitfall_trap.gd:31-39` doesn't descend a depth; proxies with same-level teleport (TODO). SPD PitfallTrap forces chasm depth-drop with fall damage.
 - [P3][audit:S10] Trap neighbor loops (`adj = pos + dir`, bounded only by `0<=adj<LEN`) wrap rows at grid edges; add a `cell_valid`/adjacency guard instead of relying on the wall border.
