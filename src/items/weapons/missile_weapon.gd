@@ -159,12 +159,18 @@ static func create(weapon_id: String) -> MissileWeapon:
 			w.description = "A weighted wooden club that can be hurled short distances."
 			w.tier = 1
 			w.base_uses = 10
+			# Heavy thrown: slower and harder-hitting than a light dart.
+			w.delay_factor = 1.15
+			w.damage_multiplier = 1.2
+			w.str_req_bonus = 1
 			w.icon_color = Color(0.5, 0.35, 0.15)
 		"throwing_stone":
 			w.item_name = "Throwing Stone"
 			w.description = "A smooth, heavy stone. Primitive but always available."
 			w.tier = 1
 			w.base_uses = 10
+			# Dense but crude: a modest damage boost over a dart.
+			w.damage_multiplier = 1.1
 			w.icon_color = Color(0.5, 0.5, 0.5)
 
 		# ===== TIER 2 =====
@@ -173,6 +179,10 @@ static func create(weapon_id: String) -> MissileWeapon:
 			w.description = "A razor-sharp throwing star. Cuts deep but wears down quickly."
 			w.tier = 2
 			w.base_uses = 5
+			# Light and fast: quick to throw, less damage per hit.
+			w.delay_factor = 0.8
+			w.damage_multiplier = 0.9
+			w.str_req_bonus = -1
 			w.icon_color = Color(0.7, 0.7, 0.75)
 		"kunai":
 			w.item_name = "Kunai"

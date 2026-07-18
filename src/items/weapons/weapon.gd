@@ -10,7 +10,16 @@ enum Augment { NONE, SPEED, DAMAGE }
 var tier: int = 1
 var augment: Augment = Augment.NONE
 var enchantment: WeaponEnchantment = null
+## Attack delay multiplier. <1 = faster, >1 = slower. Differentiates same-tier
+## weapons (fast light blades vs. slow heavy hammers), matching SPD's per-weapon DLY.
 var delay_factor: float = 1.0
+## Per-weapon damage scaling applied on top of the tier/level base range. Fast weapons
+## trade damage (<1) for speed; heavy weapons hit harder (>1). Mirrors SPD's practice
+## of pairing a lower DLY with reduced damage (and vice versa). 1.0 = tier baseline.
+var damage_multiplier: float = 1.0
+## Per-weapon adjustment to the tier-derived strength requirement (SPD's STRReq tweaks:
+## light weapons are easier to wield, heavy weapons demand more). Added to the base req.
+var str_req_bonus: int = 0
 ## Whether the enchantment is hardened (protected from upgrade loss).
 var enchant_hardened: bool = false
 ## Whether this weapon has a curse infusion bonus (+1 + level/6 to effective level).
@@ -46,8 +55,8 @@ func get_damage_range() -> Array[int]:
 	var base_min: int = tier + lvl
 	var base_max: int = 5 * (tier + 1) + lvl * (tier + 1)
 
-	# Apply augment damage scaling
-	var dmg_multi: float = _augment_damage_multiplier()
+	# Apply per-weapon damage scaling then augment damage scaling
+	var dmg_multi: float = _augment_damage_multiplier() * damage_multiplier
 	var final_min: int = maxi(1, roundi(base_min * dmg_multi))
 	var final_max: int = maxi(final_min, roundi(base_max * dmg_multi))
 
@@ -94,7 +103,7 @@ func _augment_damage_multiplier() -> float:
 func get_str_requirement() -> int:
 	var effective_lvl: int = maxi(0, level)
 	var reduction: int = int((sqrt(8.0 * effective_lvl + 1.0) - 1.0) / 2.0)
-	return maxi(1, 8 + tier * 2 - reduction)
+	return maxi(1, 8 + tier * 2 + str_req_bonus - reduction)
 
 # ---------------------------------------------------------------------------
 # Accuracy
@@ -284,6 +293,8 @@ func serialize() -> Dictionary:
 	data["tier"] = tier
 	data["augment"] = augment
 	data["delay_factor"] = delay_factor
+	data["damage_multiplier"] = damage_multiplier
+	data["str_req_bonus"] = str_req_bonus
 	data["enchant_hardened"] = enchant_hardened
 	data["curse_infusion_bonus"] = curse_infusion_bonus
 	data["mastery_potion_bonus"] = mastery_potion_bonus
@@ -297,7 +308,10 @@ func deserialize(data: Dictionary) -> void:
 	super.deserialize(data)
 	tier = data.get("tier", 1)
 	augment = data.get("augment", Augment.NONE) as Augment
-	delay_factor = data.get("delay_factor", 1.0)
+	if data.has("damage_multiplier") or data.has("str_req_bonus"):
+		delay_factor = data.get("delay_factor", delay_factor)
+		damage_multiplier = data.get("damage_multiplier", damage_multiplier)
+		str_req_bonus = data.get("str_req_bonus", str_req_bonus)
 	enchant_hardened = data.get("enchant_hardened", false)
 	curse_infusion_bonus = data.get("curse_infusion_bonus", false)
 	mastery_potion_bonus = data.get("mastery_potion_bonus", false)

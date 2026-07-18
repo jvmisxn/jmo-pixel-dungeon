@@ -47,26 +47,42 @@ static func create(weapon_id: String) -> MeleeWeapon:
 			w.item_name = "Worn Shortsword"
 			w.description = "A rusted, chipped blade. Better than nothing, but not by much."
 			w.tier = 1
+			# Standard: the tier baseline.
 			w.icon_color = Color(0.6, 0.6, 0.6)  # grey
 		"cudgel":
 			w.item_name = "Cudgel"
 			w.description = "A crude but heavy wooden club. Simple and brutally effective."
 			w.tier = 1
+			# Heavy: slower, harder-hitting, needs more strength.
+			w.delay_factor = 1.15
+			w.damage_multiplier = 1.15
+			w.str_req_bonus = 1
 			w.icon_color = Color(0.55, 0.35, 0.15)  # brown
 		"gloves":
 			w.item_name = "Gloves"
 			w.description = "Reinforced leather gloves for hand-to-hand combat. Quick strikes."
 			w.tier = 1
+			# Very fast, low damage: rapid light strikes.
+			w.delay_factor = 0.6
+			w.damage_multiplier = 0.6
+			w.str_req_bonus = -1
 			w.icon_color = Color(0.8, 0.7, 0.5)  # tan
 		"rapier":
 			w.item_name = "Rapier"
 			w.description = "A slender thrusting sword favored by duelists. Elegant and precise."
 			w.tier = 1
+			# Fast and precise: quicker with a small damage trade.
+			w.delay_factor = 0.85
+			w.damage_multiplier = 0.9
 			w.icon_color = Color(0.75, 0.75, 0.85)  # silver-blue
 		"dagger":
 			w.item_name = "Dagger"
 			w.description = "A small blade ideal for quick, precise strikes from the shadows."
 			w.tier = 1
+			# Light and fast: low strength, low damage, quick.
+			w.delay_factor = 0.75
+			w.damage_multiplier = 0.75
+			w.str_req_bonus = -1
 			w.icon_color = Color(0.5, 0.5, 0.55)  # dark grey
 
 		# ===== TIER 2 (str req 12, 2-15 base) =====
@@ -74,11 +90,16 @@ static func create(weapon_id: String) -> MeleeWeapon:
 			w.item_name = "Shortsword"
 			w.description = "A reliable one-handed blade. Well-balanced for offense and defense."
 			w.tier = 2
+			# Standard: the tier baseline.
 			w.icon_color = Color(0.7, 0.7, 0.75)  # light steel
 		"hand_axe":
 			w.item_name = "Hand Axe"
 			w.description = "A small but vicious axe. Its weighted head delivers crushing blows."
 			w.tier = 2
+			# Heavy: slower, harder-hitting, needs more strength.
+			w.delay_factor = 1.15
+			w.damage_multiplier = 1.15
+			w.str_req_bonus = 1
 			w.icon_color = Color(0.5, 0.4, 0.3)  # bronze
 		"spear":
 			w.item_name = "Spear"
@@ -90,11 +111,17 @@ static func create(weapon_id: String) -> MeleeWeapon:
 			w.item_name = "Quarterstaff"
 			w.description = "A sturdy wooden staff. Defensive and versatile in skilled hands."
 			w.tier = 2
+			# Defensive/versatile: slightly lower damage.
+			w.damage_multiplier = 0.9
 			w.icon_color = Color(0.45, 0.35, 0.2)  # dark wood
 		"dirk":
 			w.item_name = "Dirk"
 			w.description = "A long dagger with a reinforced blade. Deadly from stealth."
 			w.tier = 2
+			# Light and fast: low strength, low damage, quick.
+			w.delay_factor = 0.75
+			w.damage_multiplier = 0.75
+			w.str_req_bonus = -1
 			w.icon_color = Color(0.4, 0.4, 0.45)  # gunmetal
 
 		# ===== TIER 3 (str req 14, 3-25 base) =====
@@ -102,26 +129,41 @@ static func create(weapon_id: String) -> MeleeWeapon:
 			w.item_name = "Sword"
 			w.description = "A standard longsword. The workhorse of any adventurer's arsenal."
 			w.tier = 3
+			# Standard: the tier baseline.
 			w.icon_color = Color(0.8, 0.8, 0.85)  # bright steel
 		"mace":
 			w.item_name = "Mace"
 			w.description = "A flanged metal head on a sturdy handle. Armor means nothing to it."
 			w.tier = 3
+			# Heavy: slow but crushing, needs more strength.
+			w.delay_factor = 1.2
+			w.damage_multiplier = 1.2
+			w.str_req_bonus = 1
 			w.icon_color = Color(0.55, 0.55, 0.6)  # iron
 		"scimitar":
 			w.item_name = "Scimitar"
 			w.description = "A curved blade designed for swift, sweeping cuts."
 			w.tier = 3
+			# Fast sweeping cuts: quicker with a small damage trade.
+			w.delay_factor = 0.85
+			w.damage_multiplier = 0.9
 			w.icon_color = Color(0.85, 0.8, 0.6)  # gold-steel
 		"round_shield":
 			w.item_name = "Round Shield"
 			w.description = "An offensive shield with a reinforced boss for bashing."
 			w.tier = 3
+			# Defensive: a touch slower, needs more strength.
+			w.delay_factor = 1.1
+			w.str_req_bonus = 1
 			w.icon_color = Color(0.6, 0.5, 0.3)  # bronze-brown
 		"sai":
 			w.item_name = "Sai"
 			w.description = "A pronged weapon from the east. Excellent for trapping blades."
 			w.tier = 3
+			# Light and fast: low strength, low damage, quick.
+			w.delay_factor = 0.7
+			w.damage_multiplier = 0.7
+			w.str_req_bonus = -1
 			w.icon_color = Color(0.5, 0.5, 0.55)  # grey-steel
 
 		# ===== TIER 4 (str req 16, 4-35 base) =====
@@ -129,26 +171,39 @@ static func create(weapon_id: String) -> MeleeWeapon:
 			w.item_name = "Longsword"
 			w.description = "A large two-handed blade. Requires strength but deals heavy damage."
 			w.tier = 4
+			# Standard: the tier baseline.
 			w.icon_color = Color(0.75, 0.75, 0.8)  # polished steel
 		"battle_axe":
 			w.item_name = "Battle Axe"
 			w.description = "A massive double-headed axe that cleaves through anything."
 			w.tier = 4
+			# Heavy: slow, cleaving, needs more strength.
+			w.delay_factor = 1.25
+			w.damage_multiplier = 1.25
+			w.str_req_bonus = 1
 			w.icon_color = Color(0.45, 0.35, 0.25)  # dark bronze
 		"flail":
 			w.item_name = "Flail"
 			w.description = "A spiked ball on a chain. Unpredictable but devastating."
 			w.tier = 4
+			# Unwieldy: slower with a modest damage boost.
+			w.delay_factor = 1.15
+			w.damage_multiplier = 1.1
 			w.icon_color = Color(0.35, 0.35, 0.4)  # dark iron
 		"runic_blade":
 			w.item_name = "Runic Blade"
 			w.description = "An ancient blade etched with glowing runes. Scales well with upgrades."
 			w.tier = 4
+			# Standard: scales with upgrades, no base trade-off.
 			w.icon_color = Color(0.3, 0.5, 0.9)  # runic blue
 		"assassins_blade":
 			w.item_name = "Assassin's Blade"
 			w.description = "A long, wickedly sharp blade designed for lethal surprise attacks."
 			w.tier = 4
+			# Light and fast: built for surprise strikes.
+			w.delay_factor = 0.85
+			w.damage_multiplier = 0.85
+			w.str_req_bonus = -1
 			w.icon_color = Color(0.2, 0.2, 0.25)  # near-black
 
 		# ===== TIER 5 (str req 18, 5-50 base) =====
@@ -156,27 +211,42 @@ static func create(weapon_id: String) -> MeleeWeapon:
 			w.item_name = "Greatsword"
 			w.description = "An enormous two-handed sword. Only the strongest can wield it."
 			w.tier = 5
+			# Standard: the tier baseline.
 			w.icon_color = Color(0.85, 0.85, 0.9)  # bright steel
 		"war_hammer":
 			w.item_name = "War Hammer"
 			w.description = "A titanic hammer. Each blow lands like a siege weapon."
 			w.tier = 5
+			# Heaviest: very slow, devastating, needs the most strength.
+			w.delay_factor = 1.4
+			w.damage_multiplier = 1.4
+			w.str_req_bonus = 1
 			w.icon_color = Color(0.5, 0.45, 0.4)  # heavy iron
 		"glaive":
 			w.item_name = "Glaive"
 			w.description = "A long polearm with a heavy blade. Strikes foes two cells away."
 			w.tier = 5
+			# Reach polearm: slightly slower, slightly harder.
+			w.delay_factor = 1.1
+			w.damage_multiplier = 1.05
 			w.reach = 2
 			w.icon_color = Color(0.6, 0.55, 0.4)  # aged steel
 		"greataxe":
 			w.item_name = "Greataxe"
 			w.description = "A colossal axe that trades speed for raw destruction."
 			w.tier = 5
+			# Heavy: trades speed for raw destruction.
+			w.delay_factor = 1.3
+			w.damage_multiplier = 1.3
+			w.str_req_bonus = 1
 			w.icon_color = Color(0.4, 0.3, 0.2)  # dark iron
 		"greatshield":
 			w.item_name = "Greatshield"
 			w.description = "A tower shield used as a weapon. Provides unmatched defense."
 			w.tier = 5
+			# Defensive tower shield: slow, needs more strength.
+			w.delay_factor = 1.2
+			w.str_req_bonus = 1
 			w.icon_color = Color(0.65, 0.6, 0.45)  # gold-bronze
 		_:
 			push_warning("MeleeWeapon.create: unknown id '%s'" % weapon_id)
