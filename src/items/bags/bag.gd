@@ -10,6 +10,9 @@ var size: int = 20
 var accepted_category: int = ConstantsData.ItemCategory.MISC
 ## Secondary accepted category (-1 means none).
 var accepted_category_secondary: int = -1
+## When true, this bag also accepts missile weapons (which share the WEAPON
+## category with melee weapons). Used by the Magical Holster.
+var accepts_missiles: bool = false
 ## Items stored in this bag.
 var items: Array[Item] = []
 
@@ -29,29 +32,45 @@ func is_upgradeable() -> bool:
 # Bag Interface
 # ---------------------------------------------------------------------------
 
-## Check whether a given item can be stored in this bag.
-func can_hold(item: Item) -> bool:
+## Whether this bag accepts the item's category at all (ignoring capacity).
+func accepts_category(item: Item) -> bool:
 	if item == null:
-		return false
-	if items.size() >= size:
 		return false
 	var item_cat: int = item.category
 	if item_cat == accepted_category:
 		return true
 	if accepted_category_secondary >= 0 and item_cat == accepted_category_secondary:
 		return true
+	if accepts_missiles and item is MissileWeapon:
+		return true
+	return false
+
+## Check whether a given item can be stored in this bag right now. A full bag
+## can still accept a stackable item that merges into an existing stack, since
+## that does not consume a new slot.
+func can_hold(item: Item) -> bool:
+	if not accepts_category(item):
+		return false
+	if items.size() < size:
+		return true
+	if item.is_stackable():
+		for existing: Item in items:
+			if existing.can_stack_with(item):
+				return true
 	return false
 
 ## Add an item to the bag. Returns true if successful.
 func add_to_bag(item: Item) -> bool:
-	if not can_hold(item):
+	if not accepts_category(item):
 		return false
-	# Try stacking with existing items
+	# Try stacking with existing items first — a merge never needs a free slot.
 	if item.is_stackable():
 		for existing: Item in items:
 			if existing.can_stack_with(item):
 				existing.merge_stack(item)
 				return true
+	if items.size() >= size:
+		return false
 	items.append(item)
 	return true
 
@@ -106,6 +125,7 @@ func serialize() -> Dictionary:
 	data["size"] = size
 	data["accepted_category"] = accepted_category
 	data["accepted_category_secondary"] = accepted_category_secondary
+	data["accepts_missiles"] = accepts_missiles
 	var items_data: Array[Dictionary] = []
 	for item: Item in items:
 		if item != null:
@@ -118,6 +138,7 @@ func deserialize(data: Dictionary) -> void:
 	size = data.get("size", 20)
 	accepted_category = data.get("accepted_category", ConstantsData.ItemCategory.MISC)
 	accepted_category_secondary = data.get("accepted_category_secondary", -1)
+	accepts_missiles = data.get("accepts_missiles", false)
 	# Restore stored items. Append directly (rather than routing through
 	# can_hold/add_to_bag) so a round-trip preserves exact contents even if
 	# capacity or category rules later change.
@@ -174,8 +195,9 @@ static func create(bag_id: String) -> Bag:
 			bag.description = "A holster imbued with magic. Holds wands and missile weapons."
 			bag.size = 20
 			bag.accepted_category = ConstantsData.ItemCategory.WAND
-			# Missile weapons would use WEAPON category but are a subtype;
-			# for now we accept wands as primary. Missiles handled via can_hold override.
+			# Missile weapons share the WEAPON category with melee weapons, so
+			# they are admitted by type rather than by category.
+			bag.accepts_missiles = true
 			bag.icon_color = Color(0.5, 0.4, 0.7)
 
 		_:

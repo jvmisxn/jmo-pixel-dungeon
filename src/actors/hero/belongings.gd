@@ -47,6 +47,14 @@ func _init(hero: Char = null) -> void:
 func add_item(item: Item) -> bool:
 	if item == null:
 		return false
+	# Route matching pickups into a held bag before consuming a backpack slot.
+	# A bag never nests inside another bag.
+	if not (item is Bag):
+		var bag: Bag = _bag_that_accepts(item)
+		if bag != null and bag.add_to_bag(item):
+			if item.has_method("on_pickup"):
+				item.on_pickup(owner)
+			return true
 	# Try to stack with existing items
 	if item.has_method("is_stackable") and item.is_stackable():
 		for existing in backpack:
@@ -64,25 +72,61 @@ func add_item(item: Item) -> bool:
 		item.on_pickup(owner)
 	return true
 
-## Remove an item from inventory. Returns the item or null.
-func remove_item(item: Item) -> Item:
+## Return the first bag in the backpack that will accept [item], or null.
+func _bag_that_accepts(item: Item) -> Bag:
+	for entry: Item in backpack:
+		if entry is Bag and (entry as Bag).can_hold(item):
+			return entry as Bag
+	return null
+
+## Backpack items plus the contents of any bags, as a flat snapshot. Used by
+## lookups so items tucked inside a bag stay reachable to the rest of the game.
+func _all_backpack_items() -> Array[Item]:
+	var result: Array[Item] = []
+	for entry: Item in backpack:
+		result.append(entry)
+		if entry is Bag:
+			result.append_array((entry as Bag).items)
+	return result
+
+## Clear an item from every quickslot it occupies.
+func _clear_from_quickslots(item: Item) -> void:
+	for i: int in range(QUICKSLOT_COUNT):
+		if quickslots[i] == item:
+			quickslots[i] = null
+
+## Remove a specific item object from the backpack or from whichever bag holds
+## it. Returns true if it was found and removed.
+func _remove_item_object(item: Item) -> bool:
 	var idx: int = backpack.find(item)
 	if idx >= 0:
 		backpack.remove_at(idx)
-		# Clear from quickslots if present
-		for i: int in range(QUICKSLOT_COUNT):
-			if quickslots[i] == item:
-				quickslots[i] = null
+		_clear_from_quickslots(item)
+		return true
+	for entry: Item in backpack:
+		if entry is Bag and (entry as Bag).remove_from_bag(item) != null:
+			_clear_from_quickslots(item)
+			return true
+	return false
+
+## Remove an item from inventory. Returns the item or null.
+func remove_item(item: Item) -> Item:
+	if _remove_item_object(item):
 		return item
 	return null
 
-## Check if an item is in the inventory.
+## Check if an item is in the inventory (backpack or a held bag).
 func has_item(item: Item) -> bool:
-	return item in backpack
+	if item in backpack:
+		return true
+	for entry: Item in backpack:
+		if entry is Bag and item in (entry as Bag).items:
+			return true
+	return false
 
 ## Find an item by its class name or item_id.
 func find_item_by_id(search_id: String) -> Item:
-	for item: Item in backpack:
+	for item: Item in _all_backpack_items():
 		if item.item_id == search_id:
 			return item
 	# Also check equipped items
@@ -256,7 +300,7 @@ func get_quickslot_index(item: Item) -> int:
 
 ## Find an item by its item_name (e.g. "ankh"). Checks backpack then equipment.
 func find_item(search_name: String) -> Item:
-	for item: Item in backpack:
+	for item: Item in _all_backpack_items():
 		if item.item_name == search_name:
 			return item
 		if item.item_id == search_name:
@@ -286,8 +330,7 @@ func get_equipped_spirit_bow() -> Item:
 
 ## Return all items (backpack + equipped). Useful for NPC quests scanning inventory.
 func get_items() -> Array[Item]:
-	var result: Array[Item] = []
-	result.append_array(backpack)
+	var result: Array[Item] = _all_backpack_items()
 	for slot in [weapon, armor, artifact, misc, spirit_bow, ring_left, ring_right]:
 		if slot != null:
 			result.append(slot)
@@ -315,31 +358,30 @@ func notify_hero_gain_exp(level_percent: float) -> void:
 ## Count items with the given item_id in backpack.
 func count_item(search_id: String) -> int:
 	var count: int = 0
-	for item: Item in backpack:
+	for item: Item in _all_backpack_items():
 		if item.item_id == search_id:
 			count += item.quantity if item.quantity > 0 else 1
 	return count
 
-## Remove the first item matching item_id from backpack. Returns the removed item or null.
+## Remove the first item matching item_id from the backpack or a held bag.
+## Returns the removed item or null.
 func remove_item_by_id(search_id: String) -> Item:
-	for i: int in range(backpack.size()):
-		var item: Item = backpack[i]
+	for item: Item in _all_backpack_items():
 		if item.item_id == search_id:
-			backpack.remove_at(i)
-			for qi in range(QUICKSLOT_COUNT):
-				if quickslots[qi] == item:
-					quickslots[qi] = null
+			_remove_item_object(item)
 			return item
 	return null
 
-## Remove up to [amount] quantity of items matching [search_id] from the backpack.
-## Returns the number of units removed.
+## Remove up to [amount] quantity of items matching [search_id] from the
+## backpack or any held bag. Returns the number of units removed.
 func remove_item_quantity(search_id: String, amount: int = 1) -> int:
 	if amount <= 0:
 		return 0
 	var remaining: int = amount
-	for i: int in range(backpack.size() - 1, -1, -1):
-		var item: Item = backpack[i]
+	# Snapshot so removing items mid-iteration is safe.
+	for item: Item in _all_backpack_items():
+		if remaining <= 0:
+			break
 		if item == null or item.item_id != search_id:
 			continue
 		var item_amount: int = item.quantity if item.stackable else 1
@@ -348,12 +390,7 @@ func remove_item_quantity(search_id: String, amount: int = 1) -> int:
 		if item.stackable and item.quantity > removed_here:
 			item.quantity -= removed_here
 		else:
-			backpack.remove_at(i)
-			for qi: int in range(QUICKSLOT_COUNT):
-				if quickslots[qi] == item:
-					quickslots[qi] = null
-		if remaining <= 0:
-			break
+			_remove_item_object(item)
 	return amount - remaining
 
 # ---------------------------------------------------------------------------
