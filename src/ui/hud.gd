@@ -379,9 +379,12 @@ func show_window(window_node: Control) -> void:
 	# Listen for sub-window requests ("signal up" pattern — avoids get_parent())
 	if window_node.has_signal("open_sub_window"):
 		var wnd: Variant = window_node
-		wnd.open_sub_window.connect(_on_sub_window_requested)
+		if not wnd.open_sub_window.is_connected(_on_sub_window_requested):
+			wnd.open_sub_window.connect(_on_sub_window_requested)
 		if wnd.has_signal("window_closed"):
-			wnd.window_closed.connect(_on_active_window_self_closed)
+			var active_closed: Callable = Callable(self, "_on_active_window_self_closed")
+			if not wnd.window_closed.is_connected(active_closed):
+				wnd.window_closed.connect(active_closed)
 	window_layer.add_child(window_node)
 	window_layer.visible = true
 	window_layer.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -390,9 +393,20 @@ func show_window(window_node: Control) -> void:
 ## Handle sub-window open requests from active windows.
 func _on_sub_window_requested(wnd: Variant) -> void:
 	# Also wire up the sub-window's own sub-window signal
-	wnd.open_sub_window.connect(_on_sub_window_requested)
+	if wnd.has_signal("open_sub_window") and not wnd.open_sub_window.is_connected(_on_sub_window_requested):
+		wnd.open_sub_window.connect(_on_sub_window_requested)
+	if wnd.has_signal("window_closed"):
+		var sub_closed: Callable = Callable(self, "_on_sub_window_self_closed").bind(wnd)
+		if not wnd.window_closed.is_connected(sub_closed):
+			wnd.window_closed.connect(sub_closed)
 	_sub_windows.append(wnd)
 	window_layer.add_child(wnd)
+
+
+## Called when a child popup closes itself.
+func _on_sub_window_self_closed(wnd: Variant) -> void:
+	_sub_windows.erase(wnd)
+	_release_window_layer_if_empty()
 
 
 ## Called when the active window closes itself (X button, Escape key).
@@ -402,11 +416,10 @@ func _on_active_window_self_closed() -> void:
 	# We just need to reset HUD tracking state.
 	for sub_wnd: Variant in _sub_windows:
 		if is_instance_valid(sub_wnd):
-			sub_wnd.queue_free()
+			_free_window_node(sub_wnd)
 	_sub_windows.clear()
 	_active_window = null
-	window_layer.visible = false
-	window_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_release_window_layer_if_empty()
 
 
 ## Close the active popup window and all sub-windows.
@@ -414,11 +427,29 @@ func close_window() -> void:
 	# Clean up tracked sub-windows first
 	for sub_wnd: Variant in _sub_windows:
 		if is_instance_valid(sub_wnd):
-			sub_wnd.queue_free()
+			_free_window_node(sub_wnd)
 	_sub_windows.clear()
 	if _active_window and is_instance_valid(_active_window):
-		_active_window.queue_free()
+		_free_window_node(_active_window)
 		_active_window = null
+	_release_window_layer_if_empty()
+
+
+func _free_window_node(window_node: Variant) -> void:
+	if window_node == null or not is_instance_valid(window_node):
+		return
+	var overlay: Variant = window_node.get("_background_overlay") if window_node is Object else null
+	if overlay != null and is_instance_valid(overlay):
+		overlay.queue_free()
+	window_node.queue_free()
+
+
+func _release_window_layer_if_empty() -> void:
+	if _active_window != null and is_instance_valid(_active_window):
+		return
+	for sub_wnd: Variant in _sub_windows:
+		if is_instance_valid(sub_wnd):
+			return
 	window_layer.visible = false
 	window_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 

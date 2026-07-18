@@ -42,6 +42,8 @@ static func handle_cell_click(scene: Variant, cell: int) -> void:
 			elif not scene._current_level.passable[cell]:
 				scene._submit_hero_action({"type": "search"})
 			else:
+				if not _stair_action_for_cell(scene, cell).is_empty():
+					scene._start_auto_walk(cell)
 				scene._submit_hero_action({"type": "move", "target_pos": cell})
 		else:
 			scene._start_auto_walk(cell)
@@ -175,3 +177,13 @@ static func attack_adjacent_enemy(scene: Variant) -> void:
 		return
 	if MessageLog:
 		MessageLog.add_warning("No adjacent enemy to attack.")
+
+static func _stair_action_for_cell(scene: Variant, cell: int) -> String:
+	if scene == null or scene._current_level == null:
+		return ""
+	var terrain: int = scene._current_level.terrain_at(cell)
+	if terrain == ConstantsData.Terrain.ENTRANCE and cell == scene._current_level.entrance:
+		return "ascend"
+	if terrain == ConstantsData.Terrain.EXIT and cell == scene._current_level.exit_pos:
+		return "descend"
+	return ""

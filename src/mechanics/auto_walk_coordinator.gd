@@ -25,7 +25,10 @@ static func process_step(scene: Variant, step_delay: float) -> void:
 		cancel(scene)
 		return
 	if hero.pos == scene._auto_walk_target:
+		var stair_action: String = _stair_action_for_cell(scene, hero.pos)
 		cancel(scene)
+		if not stair_action.is_empty():
+			scene._submit_hero_action({"type": stair_action})
 		return
 	if scene._auto_walk_prev_hp >= 0 and hero.hp < scene._auto_walk_prev_hp:
 		cancel(scene)
@@ -82,3 +85,13 @@ static func interrupt_rest_if_needed(scene: Variant) -> void:
 	var visible_mobs: Dictionary[int, bool] = get_visible_mob_positions(scene)
 	if not visible_mobs.is_empty() and hero.has_method("interrupt"):
 		hero.interrupt()
+
+static func _stair_action_for_cell(scene: Variant, cell: int) -> String:
+	if scene == null or scene._current_level == null:
+		return ""
+	var terrain: int = scene._current_level.terrain_at(cell)
+	if terrain == ConstantsData.Terrain.ENTRANCE and cell == scene._current_level.entrance:
+		return "ascend"
+	if terrain == ConstantsData.Terrain.EXIT and cell == scene._current_level.exit_pos:
+		return "descend"
+	return ""
