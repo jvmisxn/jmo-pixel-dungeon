@@ -21,6 +21,15 @@ var target_pos: int = -1  # Last known target position
 var awareness: float = 0.1  # Chance to wake up per turn when hero is in view
 var aggro_range: int = 8  # Max range to begin hunting
 
+# --- Alliance ---
+## When true this mob fights FOR the hero: it hunts other (non-ally) mobs,
+## follows the hero when no enemy is near, ignores hero damage, and yields no
+## XP. Set by CorruptionBuff and by summoned/warding allies. Non-ally mobs are
+## completely unaffected — every ally behavior is gated behind this flag.
+var is_ally: bool = false
+## The hero this ally follows when idle (single-player: GameManager.hero).
+var ally_hero: Char = null
+
 # --- Loot & XP ---
 var xp_value: int = 1
 var loot_table: Array[Dictionary] = []  # [{item_id: String, chance: float}]
@@ -109,6 +118,12 @@ func act() -> void:
 	# Original uses the paralysed counter, not specific buff checks
 	if paralysed > 0:
 		spend_turn()
+		return
+
+	# Corrupted / summoned allies use a dedicated behavior instead of the
+	# enemy state machine: hunt the nearest hostile mob, else follow the hero.
+	if is_ally:
+		_act_ally()
 		return
 
 	match state:
@@ -230,6 +245,48 @@ func _act_fleeing() -> void:
 func _act_passive() -> void:
 	# Do nothing (stationary mobs, NPCs)
 	spend_turn()
+
+## Allied behavior (corrupted mobs, summoned helpers). Mirrors the proven
+## SummonedElemental loop: attack the nearest visible hostile mob, otherwise
+## trail the hero, otherwise wander. Never targets the hero.
+func _act_ally() -> void:
+	var enemy: Mob = _find_nearest_enemy_mob()
+	if enemy != null:
+		target = enemy
+		target_pos = enemy.pos
+		if is_adjacent(enemy.pos):
+			attack(enemy)
+			spend_attack()
+			return
+		_move_toward(enemy.pos)
+		spend_move()
+		return
+	# No enemy in range — follow the hero so the ally stays useful.
+	target = null
+	if ally_hero != null and ally_hero.is_alive and not is_adjacent(ally_hero.pos):
+		_move_toward(ally_hero.pos)
+		spend_move()
+		return
+	_wander()
+	spend_turn()
+
+## Find the nearest visible, hostile (non-ally) mob within aggro range.
+func _find_nearest_enemy_mob() -> Mob:
+	if level == null or not level.has_method("get_mobs"):
+		return null
+	var best: Mob = null
+	var best_dist: int = 999
+	for node: Variant in level.get_mobs():
+		if node == self or not (node is Mob):
+			continue
+		var mob: Mob = node as Mob
+		if not mob.is_alive or mob.is_ally:
+			continue
+		var d: int = distance_to(mob.pos)
+		if d <= aggro_range and d < best_dist and can_see(mob.pos):
+			best = mob
+			best_dist = d
+	return best
 
 # ---------------------------------------------------------------------------
 # AI Helpers
@@ -403,6 +460,9 @@ func _drop_loot() -> void:
 
 ## Override take_damage to wake sleeping mobs and trigger flee checks.
 func take_damage(dmg: int, source: Variant = null) -> int:
+	# Allies shrug off friendly fire from the hero (e.g. bumping, area zaps).
+	if is_ally and source is Char and (source as Char).is_hero:
+		return 0
 	if is_boss():
 		_ensure_boss_bar_started()
 	var actual: int = super.take_damage(dmg, source)
@@ -550,6 +610,7 @@ func serialize() -> Dictionary:
 	data["max_level"] = max_level
 	data["awareness"] = awareness
 	data["aggro_range"] = aggro_range
+	data["is_ally"] = is_ally
 	data["last_visible_action"] = last_visible_action
 	data["last_visible_target_pos"] = last_visible_target_pos
 	data["buffs"] = _serialize_buffs()
@@ -583,6 +644,11 @@ func deserialize(data: Dictionary) -> void:
 	max_level = int(data.get("max_level", max_level))
 	awareness = float(data.get("awareness", awareness))
 	aggro_range = int(data.get("aggro_range", aggro_range))
+	is_ally = bool(data.get("is_ally", false))
+	# ally_hero is re-linked from GameManager on load (CorruptionBuff re-applies
+	# on buff deserialize; single-player has exactly one hero).
+	if is_ally and GameManager and GameManager.hero is Char:
+		ally_hero = GameManager.hero as Char
 	last_visible_action = str(data.get("last_visible_action", ""))
 	last_visible_target_pos = int(data.get("last_visible_target_pos", -1))
 	_deserialize_buffs(data.get("buffs", []))

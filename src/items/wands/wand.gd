@@ -897,13 +897,27 @@ class WandOfWarding extends Wand:
 			if MessageLog:
 				MessageLog.add_warning("Can't place a ward on solid terrain.")
 			return
-		# Remove oldest sentry if at capacity
-		if _sentry_positions.size() >= MAX_SENTRIES + level:
-			_sentry_positions.pop_front()
+		# Remove oldest sentry (and its actor) if at capacity.
+		var cap: int = MAX_SENTRIES + level
+		while _sentry_positions.size() >= cap:
+			var oldest: int = _sentry_positions.pop_front()
+			_despawn_sentry_at(lvl, oldest)
+		# Spawn a real sentry actor that zaps enemies each turn.
+		var dmg_range: Array[int] = get_damage(level)
+		WardSentry.spawn_at(target_pos, lvl, hero, level, dmg_range[0], dmg_range[1])
 		_sentry_positions.append(target_pos)
 		if MessageLog:
-			MessageLog.add_positive("A magical ward is placed! " \
-				+ "(%d/%d active)" % [_sentry_positions.size(), MAX_SENTRIES + level])
+			MessageLog.add_positive("A magical ward sentry appears! " \
+				+ "(%d/%d active)" % [_sentry_positions.size(), cap])
+
+	## Remove the sentry actor occupying [cell], if any, so the wand's tracked
+	## positions stay in sync with the live actors when it hits its cap.
+	func _despawn_sentry_at(lvl: Variant, cell: int) -> void:
+		if lvl == null or not lvl.has_method("find_char_at"):
+			return
+		var occupant: Variant = lvl.find_char_at(cell)
+		if occupant is WardSentry:
+			(occupant as WardSentry)._on_death(null)
 
 	func serialize() -> Dictionary:
 		var data: Dictionary = super.serialize()
@@ -1015,6 +1029,17 @@ class WandOfCorruption extends Wand:
 			return
 		if not target_char.has_method("take_damage"):
 			return
+		# Bosses and already-corrupted allies cannot be corrupted (SPD parity).
+		if target_char.has_method("is_boss") and target_char.is_boss():
+			if MessageLog:
+				MessageLog.add("The %s is too powerful to corrupt!" \
+					% (target_char.name if target_char.get("name") else "enemy"))
+			return
+		if target_char.get("is_ally") == true or target_char.has_buff("Corruption"):
+			if MessageLog:
+				MessageLog.add("The %s is already on your side." \
+					% (target_char.name if target_char.get("name") else "enemy"))
+			return
 		# Corruption chance based on enemy HP ratio and wand level
 		var hp_ratio: float = float(target_char.hp) / float(maxi(1, target_char.hp_max))
 		var corrupt_power: float = float(level + 1) * 10.0
@@ -1027,17 +1052,10 @@ class WandOfCorruption extends Wand:
 		corrupt_power += float(debuff_count) * 15.0
 		var resist: float = float(target_char.hp_max) * hp_ratio
 		if corrupt_power >= resist:
-			# Full corruption — convert to ally
-			if target_char.has_method("set") and target_char.get("alignment") != null:
-				target_char.alignment = "ally"
-			# Apply amok to simulate ally behavior
+			# Full corruption — convert to a real ally via CorruptionBuff, which
+			# flips the mob's alignment through the Mob ally mechanism.
 			if target_char.has_method("add_buff"):
-				var amok: Amok = Amok.new()
-				amok.set_duration(-1.0)  # Permanent
-				target_char.add_buff(amok)
-			if MessageLog:
-				MessageLog.add_positive("The %s has been corrupted to your side!" \
-					% (target_char.name if target_char.get("name") else "enemy"))
+				target_char.add_buff(CorruptionBuff.new())
 		else:
 			# Partial corruption — apply terror and weakness
 			if target_char.has_method("add_buff"):

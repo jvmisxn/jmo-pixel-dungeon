@@ -3,7 +3,6 @@ extends Mob
 ## Temporary allied elemental created by Summon Elemental.
 ## Hunts nearby enemies, otherwise follows the hero for a limited duration.
 
-var ally_hero: Char = null
 var elemental_kind: String = "fire"
 var turns_left: int = 12
 var _saved_ally_hero_actor_id: int = -1
@@ -18,6 +17,7 @@ func _init() -> void:
 	max_level = 30
 	awareness = 1.0
 	aggro_range = 8
+	is_ally = true  # So other allies (corrupted mobs, sentries) don't target it
 	state = AIState.HUNTING
 
 func configure(hero: Char, kind: String, depth: int) -> void:

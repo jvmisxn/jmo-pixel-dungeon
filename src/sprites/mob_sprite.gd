@@ -41,6 +41,7 @@ static var MOB_VISUALS: Dictionary = {
 	"monk": { "body": Color(0.7, 0.5, 0.35), "accent": Color(0.6, 0.4, 0.2), "eye": Color(0.1, 0.5, 0.9), "shape": "humanoid" },
 	"golem": { "body": Color(0.5, 0.45, 0.4), "accent": Color(0.6, 0.55, 0.5), "eye": Color(0.9, 0.6, 0.1), "shape": "large" },
 	"elemental": { "body": Color(0.9, 0.4, 0.1), "accent": Color(1.0, 0.6, 0.1), "eye": Color(1.0, 1.0, 0.5), "shape": "blob" },
+	"sentry": { "body": Color(0.4, 0.6, 0.4), "accent": Color(0.5, 0.8, 0.6), "eye": Color(0.7, 1.0, 0.8), "shape": "flying" },
 	# --- Halls ---
 	"succubus": { "body": Color(0.6, 0.3, 0.4), "accent": Color(0.7, 0.2, 0.4), "eye": Color(0.9, 0.1, 0.5), "shape": "humanoid" },
 	"eye": { "body": Color(0.5, 0.2, 0.3), "accent": Color(0.6, 0.3, 0.4), "eye": Color(0.9, 0.9, 0.1), "shape": "flying" },
@@ -126,6 +127,7 @@ static var _MOB_SHEETS: Dictionary = {
 	"monk":            { "path": "monk.png",           "fw": 15, "fh": 14 },
 	"golem":           { "path": "golem.png",          "fw": 16, "fh": 16 },
 	"elemental":       { "path": "elemental.png",      "fw": 12, "fh": 14 },
+	"sentry":          { "path": "wards.png",          "fw": 16, "fh": 16 },
 	# --- Halls ---
 	"succubus":        { "path": "succubus.png",       "fw": 12, "fh": 15 },
 	"eye":             { "path": "eye.png",            "fw": 16, "fh": 18 },

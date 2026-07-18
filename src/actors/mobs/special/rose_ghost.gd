@@ -3,7 +3,6 @@ extends Mob
 ## Allied ghost summoned by the Dried Rose artifact.
 ## Follows the hero and attacks nearby hostile mobs on the current floor.
 
-var ally_hero: Char = null
 var source_artifact: Variant = null
 
 func _init() -> void:
@@ -16,6 +15,7 @@ func _init() -> void:
 	max_level = 30
 	awareness = 1.0
 	aggro_range = 8
+	is_ally = true  # So other allies don't target it
 	state = AIState.HUNTING
 	flying = true
 

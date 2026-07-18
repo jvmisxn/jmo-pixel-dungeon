@@ -3,7 +3,6 @@ extends Mob
 ## Bee: Ally mob spawned from a thrown honeypot.
 ## Attacks nearby enemies and follows the hero.
 
-var ally_hero: Char = null  # The hero this bee follows
 var pot_pos: int = -1  # Position the honeypot shattered (bee returns here if no enemies)
 var _saved_ally_hero_actor_id: int = -1
 
@@ -17,6 +16,7 @@ func _init() -> void:
 	max_level = 30
 	awareness = 1.0
 	aggro_range = 10
+	is_ally = true  # So other allies don't target it
 	state = AIState.HUNTING  # Always active
 
 ## Initialize the bee as an ally of the hero.
