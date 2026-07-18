@@ -167,12 +167,24 @@ func run(t: Object) -> void:
 		"mobile HUD accepts the browser visual viewport probe size"
 	)
 	t.check(
+		GameManager._parse_mobile_web_viewport_size("393x752") == Vector2i(393, 752),
+		"mobile content scale accepts the same visual viewport probe size as HUD layout"
+	)
+	t.check(
 		HUD._parse_browser_viewport_size("0x752") == Vector2i.ZERO,
 		"mobile HUD rejects zero-width browser viewport probe results"
 	)
 	t.check(
+		GameManager._parse_mobile_web_viewport_size("393x0") == Vector2i.ZERO,
+		"mobile content scale rejects zero-height browser viewport probe results"
+	)
+	t.check(
 		HUD._parse_browser_viewport_size("393") == Vector2i.ZERO,
 		"mobile HUD rejects malformed browser viewport probe results"
+	)
+	t.check(
+		GameManager._parse_mobile_web_viewport_size("393") == Vector2i.ZERO,
+		"mobile content scale rejects malformed browser viewport probe results"
 	)
 
 	var layout_hud := LayoutHud.new()

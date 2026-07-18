@@ -205,9 +205,22 @@ func _get_mobile_web_viewport_size() -> Vector2i:
 	if OS.get_name() != "Web":
 		return Vector2i.ZERO
 	var js_result: Variant = JavaScriptBridge.eval(
-		"(function(){return Math.round(window.innerWidth) + 'x' + Math.round(window.innerHeight);})()",
+		"(function(){var v=window.visualViewport;" +
+		"var w=(v&&v.width)?v.width:window.innerWidth;" +
+		"var h=(v&&v.height)?v.height:window.innerHeight;" +
+		"return Math.round(w) + 'x' + Math.round(h);})()",
 		true
 	)
+	var browser_size: Vector2i = _parse_mobile_web_viewport_size(js_result)
+	if browser_size != Vector2i.ZERO:
+		return browser_size
+	var window: Window = get_window()
+	if window != null and window.size.x > 0 and window.size.y > 0:
+		return window.size
+	return Vector2i.ZERO
+
+
+static func _parse_mobile_web_viewport_size(js_result: Variant) -> Vector2i:
 	if js_result is String:
 		var parts: PackedStringArray = str(js_result).split("x")
 		if parts.size() == 2:
@@ -215,9 +228,6 @@ func _get_mobile_web_viewport_size() -> Vector2i:
 			var height: int = int(parts[1])
 			if width > 0 and height > 0:
 				return Vector2i(width, height)
-	var window: Window = get_window()
-	if window != null and window.size.x > 0 and window.size.y > 0:
-		return window.size
 	return Vector2i.ZERO
 
 
