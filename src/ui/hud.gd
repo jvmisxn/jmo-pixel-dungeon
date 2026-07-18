@@ -1057,7 +1057,12 @@ func _apply_responsive_layout() -> void:
 
 func _layout_game_log(log_container: Control, status_container: Control, party_row: Control) -> void:
 	var is_mobile_layout: bool = _is_mobile_layout()
-	var log_width: float = minf(300.0, _vp_size.x - (HUD_MARGIN * 2.0))
+	var safe_left: float = _safe_area_inset("left") if is_mobile_layout else 0.0
+	var safe_right: float = _safe_area_inset("right") if is_mobile_layout else 0.0
+	var log_width: float = minf(
+		300.0,
+		_vp_size.x - safe_left - safe_right - (HUD_MARGIN * 2.0)
+	)
 	var desired_log_height: float = 74.0 if _is_mobile_portrait_layout() else (96.0 if is_mobile_layout else 195.0)
 	var log_height: float = desired_log_height
 	var log_y: float = _toolbar_top_y() - log_height - HUD_MARGIN
@@ -1075,7 +1080,7 @@ func _layout_game_log(log_container: Control, status_container: Control, party_r
 		log_y = maxf(top_controls_bottom + HUD_MARGIN, _toolbar_top_y() - log_height - HUD_MARGIN)
 	log_container.custom_minimum_size = Vector2(log_width, log_height)
 	log_container.size = Vector2(log_width, log_height)
-	log_container.position = Vector2(HUD_MARGIN, log_y)
+	log_container.position = Vector2(safe_left + HUD_MARGIN, log_y)
 
 
 func _layout_status_overlay(status_container: Control) -> void:

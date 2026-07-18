@@ -391,6 +391,12 @@ func run(t: Object) -> void:
 				and landscape_log.position.y + landscape_log.size.y <= landscape_hud.toolbar.position.y - HUD.HUD_MARGIN,
 		"mobile landscape game log stays clear of the toolbar"
 	)
+	t.check(
+		landscape_log != null
+				and is_equal_approx(landscape_log.position.x, 50.0)
+				and landscape_log.position.x >= landscape_hud.fake_safe_left + HUD.HUD_MARGIN,
+		"mobile landscape game log avoids the horizontal safe area"
+	)
 	landscape_hud.free()
 
 	var short_landscape_hud := LayoutHud.new()
@@ -418,6 +424,12 @@ func run(t: Object) -> void:
 	t.check(
 		short_log != null and short_log.size.y < 96.0 and short_log.size.y >= 48.0,
 		"short mobile landscape preserves a usable but reduced game log"
+	)
+	t.check(
+		short_log != null
+				and is_equal_approx(short_log.position.x, 50.0)
+				and short_log.position.x >= short_landscape_hud.fake_safe_left + HUD.HUD_MARGIN,
+		"short mobile landscape game log avoids the horizontal safe area"
 	)
 	short_landscape_hud.free()
 
