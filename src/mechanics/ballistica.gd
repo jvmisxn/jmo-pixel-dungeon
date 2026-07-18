@@ -76,23 +76,42 @@ func cast(from_pos: int, to_pos: int, passable: Array[bool], params: int,
 	var step_b: int  # Step along minor axis (as flat-array offset)
 	var d_a: int     # Major axis distance
 	var d_b: int     # Minor axis distance
+	# Per-step x/y components, so we can bound on TRUE grid coordinates instead
+	# of re-deriving them from a flat index. A pure horizontal step is a flat
+	# offset of +-1, which silently wraps x from width-1 to 0 of the next row;
+	# tracking cur_x/cur_y explicitly (as SPD's Ballistica does) prevents rays
+	# from teleporting across the map edge to an adjacent row.
+	var maj_dx: int
+	var maj_dy: int
+	var min_dx: int
+	var min_dy: int
 
 	if dx > dy:
 		step_a = step_x
 		step_b = step_y * width
 		d_a = dx
 		d_b = dy
+		maj_dx = step_x
+		maj_dy = 0
+		min_dx = 0
+		min_dy = step_y
 	else:
 		step_a = step_y * width
 		step_b = step_x
 		d_a = dy
 		d_b = dx
+		maj_dx = 0
+		maj_dy = step_y
+		min_dx = step_x
+		min_dy = 0
 
 	var cell: int = from_pos
+	var cur_x: int = x0
+	var cur_y: int = y0
 	var err: int = d_a >> 1 if d_a > 0 else 0
 
 	# Build the FULL path to the map edge (original continues past collision)
-	while _inside_map(cell, width, height):
+	while cur_x >= 0 and cur_x < width and cur_y >= 0 and cur_y < height:
 		# Check collision BEFORE adding to path for terrain that's impassable
 		# with no character present — collide at the PREVIOUS cell
 		if collision_pos < 0 and (params & STOP_SOLID) != 0 and cell != from_pos:
@@ -132,10 +151,14 @@ func cast(from_pos: int, to_pos: int, passable: Array[bool], params: int,
 
 		# DDA step: always step along major axis
 		cell += step_a
+		cur_x += maj_dx
+		cur_y += maj_dy
 		err += d_b
 		if err >= d_a and d_a > 0:
 			err -= d_a
 			cell += step_b
+			cur_x += min_dx
+			cur_y += min_dy
 
 	# If nothing collided, collision is last cell in path
 	if collision_pos < 0 and not path.is_empty():
@@ -152,13 +175,6 @@ func cast(from_pos: int, to_pos: int, passable: Array[bool], params: int,
 
 	return self
 
-
-## Check if a flat-index cell is inside the map bounds.
-func _inside_map(cell: int, width: int, height: int) -> bool:
-	var x: int = cell % width
-	@warning_ignore("integer_division")
-	var y: int = cell / width
-	return x >= 0 and x < width and y >= 0 and y < height
 
 func _is_soft_solid_terrain(cell: int, terrain: Array[int]) -> bool:
 	if terrain.is_empty() or cell < 0 or cell >= terrain.size():

@@ -53,6 +53,9 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_swarm_split.gd",
 	"res://tests/cases/test_weapon_differentiation.gd",
 	"res://tests/cases/test_blacksmith_ore_quest.gd",
+	"res://tests/cases/test_ballistica.gd",
+	"res://tests/cases/test_pathfinder.gd",
+	"res://tests/cases/test_shadow_caster.gd",
 ]
 
 var _checks: int = 0
