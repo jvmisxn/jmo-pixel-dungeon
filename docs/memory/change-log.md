@@ -2,6 +2,9 @@
 
 ## 2026-07-18
 
+- Tags: quests, sad-ghost, rewards, enchantments, source-fidelity, tests, audit-S21
+- Restored Sad Ghost enchanted reward parity. SPD generates a pending weapon enchantment and armor glyph up front, rolls the reward magic chance, stores the magic separately so the choice preview does not reveal it, then applies only the chosen item's magic after confirmation. The port already rolled and saved `reward_enchanted`, but never consumed it, so enchanted ghost rewards were always plain. `SadGhost` now stores pending `reward_weapon_enchantment` / `reward_armor_glyph`, serializes them separately from `reward_weapon` / `reward_armor`, and `_apply_enchanted_reward()` attaches the stored magic only to the claimed reward. Added `test_sad_ghost_rewards.gd` and registered it in the headless runner.
+
 - Tags: mobile, hud, safe-area, controls, tests
 - Kept the mobile landscape game log out of horizontal safe areas. The toolbar, status panel, party row, and online-state label already honored mobile landscape left/right safe-area insets, but `HUD._layout_game_log()` still anchored the floating log at raw `HUD_MARGIN`, so notched landscape/browser layouts could hide log text under the unsafe edge. The log now uses the same mobile safe-area width budget and x-offset as the rest of the HUD while preserving desktop behavior (`safe_left/right = 0`). Extended `test_mobile_hud_input.gd` to cover normal and short landscape safe-area log placement. Local `git diff --check`, Godot import, and full headless suite passed (1214 checks, 0 failures, Godot 4.7.1). Fable final diff review approved.
 

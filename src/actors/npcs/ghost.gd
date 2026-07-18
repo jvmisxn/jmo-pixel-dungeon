@@ -16,6 +16,8 @@ var target_slain: bool = false
 var reward_weapon: Variant = null
 var reward_armor: Variant = null
 var reward_given: bool = false
+var reward_weapon_enchantment: WeaponEnchantment = null
+var reward_armor_glyph: ArmorGlyph = null
 
 # ---------------------------------------------------------------------------
 # Initialization
@@ -145,9 +147,14 @@ func _generate_rewards() -> void:
 	else:
 		item_level = 3
 
-	# Original: 20% base chance for rewards to be enchanted
-	# Generate outcome first so it doesn't affect RNG sequence
+	# Original: generate magic first so the outcome doesn't affect RNG rolls,
+	# then store it separately so reward previews don't reveal enchant status.
+	reward_weapon_enchantment = WeaponEnchantment.random()
+	reward_armor_glyph = ArmorGlyph.random()
 	reward_enchanted = randf() < 0.2
+	if not reward_enchanted:
+		reward_weapon_enchantment = null
+		reward_armor_glyph = null
 
 	# Generate a weapon reward using the proper tier
 	var weapon_ids_by_tier: Dictionary = {
@@ -180,6 +187,14 @@ func _generate_rewards() -> void:
 		for _j: int in range(item_level):
 			if reward_armor.has_method("upgrade"):
 				reward_armor.upgrade()
+
+func _apply_enchanted_reward(chosen_item: Variant) -> void:
+	if not reward_enchanted or chosen_item == null:
+		return
+	if chosen_item is Weapon and reward_weapon_enchantment != null and chosen_item.enchantment == null:
+		chosen_item.enchant(reward_weapon_enchantment)
+	elif chosen_item is Armor and reward_armor_glyph != null and chosen_item.glyph == null:
+		chosen_item.inscribe(reward_armor_glyph)
 
 # ---------------------------------------------------------------------------
 # Interaction
@@ -319,6 +334,7 @@ func _offer_reward(hero: Variant) -> void:
 func _on_reward_window_closed(_chosen_item: Variant) -> void:
 	if reward_given:
 		return
+	_apply_enchanted_reward(_chosen_item)
 	reward_given = true
 	if EventBus:
 		EventBus.quest_updated.emit(quest_id, "reward_chosen")
@@ -342,6 +358,10 @@ func serialize() -> Dictionary:
 	data["reward_given"] = reward_given
 	data["quest_mob_spawned"] = quest_mob_spawned
 	data["reward_enchanted"] = reward_enchanted
+	if reward_weapon_enchantment != null:
+		data["reward_weapon_enchantment"] = reward_weapon_enchantment.serialize()
+	if reward_armor_glyph != null:
+		data["reward_armor_glyph"] = reward_armor_glyph.serialize()
 	data["reward_weapon"] = reward_weapon.serialize() if reward_weapon != null and reward_weapon.has_method("serialize") else {}
 	data["reward_armor"] = reward_armor.serialize() if reward_armor != null and reward_armor.has_method("serialize") else {}
 	return data
@@ -354,6 +374,11 @@ func deserialize(data: Dictionary) -> void:
 	reward_given = bool(data.get("reward_given", reward_given))
 	quest_mob_spawned = bool(data.get("quest_mob_spawned", quest_mob_spawned))
 	reward_enchanted = bool(data.get("reward_enchanted", reward_enchanted))
+	reward_weapon_enchantment = _deserialize_reward_enchantment(data.get("reward_weapon_enchantment", {}))
+	reward_armor_glyph = _deserialize_reward_glyph(data.get("reward_armor_glyph", {}))
+	if reward_enchanted and reward_weapon_enchantment == null and reward_armor_glyph == null:
+		reward_weapon_enchantment = WeaponEnchantment.random()
+		reward_armor_glyph = ArmorGlyph.random()
 	var reward_weapon_data: Variant = data.get("reward_weapon", {})
 	if reward_weapon_data is Dictionary and not (reward_weapon_data as Dictionary).is_empty():
 		var item_id: String = str((reward_weapon_data as Dictionary).get("item_id", ""))
@@ -368,3 +393,25 @@ func deserialize(data: Dictionary) -> void:
 			reward_armor = Generator.create_item(item_id_armor)
 			if reward_armor != null and reward_armor.has_method("deserialize"):
 				reward_armor.deserialize(reward_armor_data as Dictionary)
+
+func _deserialize_reward_enchantment(raw_data: Variant) -> WeaponEnchantment:
+	if not raw_data is Dictionary or (raw_data as Dictionary).is_empty():
+		return null
+	var enchant_id: String = str((raw_data as Dictionary).get("enchant_id", ""))
+	if enchant_id == "":
+		return null
+	var enchantment: WeaponEnchantment = WeaponEnchantment.create(enchant_id)
+	if enchantment != null:
+		enchantment.deserialize(raw_data as Dictionary)
+	return enchantment
+
+func _deserialize_reward_glyph(raw_data: Variant) -> ArmorGlyph:
+	if not raw_data is Dictionary or (raw_data as Dictionary).is_empty():
+		return null
+	var glyph_id: String = str((raw_data as Dictionary).get("glyph_id", ""))
+	if glyph_id == "":
+		return null
+	var glyph: ArmorGlyph = ArmorGlyph.create(glyph_id)
+	if glyph != null:
+		glyph.deserialize(raw_data as Dictionary)
+	return glyph
