@@ -651,20 +651,6 @@ func _on_level_changed(_new_depth: int) -> void:
 	_refresh_status_overlay()
 	if _status_pane:
 		_status_pane.update_all()
-	if _minimap and GameManager and GameManager.current_level:
-		var lvl: Variant = GameManager.current_level
-		var level_map: Array[int] = lvl.map if lvl.get("map") != null else []
-		var visited: Array[bool] = lvl.visited if lvl.get("visited") != null else []
-		var visible_cells: Array[bool] = lvl.visible if lvl.get("visible") != null else []
-		var hero_ref: Variant = _get_local_hero()
-		var hero_pos: int = hero_ref.pos if hero_ref != null else -1
-		var mob_positions: Array[int] = []
-		var party_positions: Array[int] = []
-		if GameManager.has_method("get_active_heroes"):
-			for party_hero: Node in GameManager.get_active_heroes():
-				if party_hero != null:
-					party_positions.append(int(party_hero.pos))
-		_minimap.update_map(level_map, visited, visible_cells, hero_pos, mob_positions, party_positions)
 
 
 func _on_gold_collected(_amount: int, _total: int) -> void:

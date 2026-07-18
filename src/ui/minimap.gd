@@ -272,6 +272,8 @@ func _collect_party_positions() -> Array[int]:
 
 
 func _on_level_changed(_new_depth: int = 0) -> void:
+	if _refresh_from_game_manager():
+		return
 	_level_map.clear()
 	_visited.clear()
 	_visible_cells.clear()
@@ -280,3 +282,34 @@ func _on_level_changed(_new_depth: int = 0) -> void:
 	_mob_positions.clear()
 	_image.fill(COLOR_UNEXPLORED)
 	_image_texture.update(_image)
+
+
+func _refresh_from_game_manager() -> bool:
+	_ensure_image_ready()
+	var gm: Node = GameManager
+	if gm == null:
+		return false
+	var level: Variant = gm.get("current_level")
+	if level == null:
+		return false
+
+	var level_map: Array[int] = level.map if level.get("map") != null else []
+	var visited: Array[bool] = level.visited if level.get("visited") != null else []
+	var visible_cells_arr: Array[bool] = level.visible if level.get("visible") != null else []
+	var focused_hero: Variant = gm.get_local_hero() if gm.has_method("get_local_hero") else gm.get("hero")
+	var hero_pos: int = int(focused_hero.pos) if focused_hero != null else -1
+	var mob_positions: Array[int] = []
+	if level.has_method("get_mobs"):
+		for mob: Variant in level.get_mobs():
+			if mob != null and mob.get("pos") != null:
+				mob_positions.append(int(mob.pos))
+
+	update_map(
+		level_map,
+		visited,
+		visible_cells_arr,
+		hero_pos,
+		mob_positions,
+		_collect_party_positions()
+	)
+	return true
