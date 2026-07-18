@@ -27,4 +27,15 @@ func run(t: Object) -> void:
 		scene._portrait_action_row_bottom(safari_safe_viewport) <= safari_safe_viewport.y - 52.0,
 		"portrait hero select places the Start row within the safe viewport"
 	)
+
+	var discord_viewport := Vector2(393, 852)
+	var discord_safe_viewport: Vector2 = scene._apply_mobile_safe_layout_reserve(discord_viewport)
+	t.check(
+		discord_safe_viewport == Vector2(377, 660),
+		"Discord mobile webview hero select reserves its bottom browser chrome"
+	)
+	t.check(
+		scene._portrait_action_row_bottom(discord_safe_viewport) <= discord_safe_viewport.y - 52.0,
+		"Discord mobile webview keeps the Start row above bottom controls"
+	)
 	scene.free()

@@ -58,6 +58,7 @@ const ACTION_BUTTON_WIDTH: float = 145.0
 const PORTRAIT_TIGHT_HEIGHT: float = 390.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
 const PORTRAIT_WEB_SAFE_BOTTOM_RESERVE: float = 92.0
+const PORTRAIT_WEB_SAFE_MAX_HEIGHT: float = 660.0
 const PORTRAIT_WEB_SAFE_SIDE_RESERVE: float = 16.0
 
 # Hero class splash art paths (800x450 JPGs)
@@ -816,9 +817,13 @@ func _should_layout_against_browser_size(browser_size: Vector2i) -> bool:
 func _apply_mobile_safe_layout_reserve(viewport_size: Vector2) -> Vector2:
 	if viewport_size.y <= viewport_size.x:
 		return viewport_size
+	var bottom_reserve: float = maxf(
+		PORTRAIT_WEB_SAFE_BOTTOM_RESERVE,
+		viewport_size.y - PORTRAIT_WEB_SAFE_MAX_HEIGHT
+	)
 	return Vector2(
 		maxf(1.0, viewport_size.x - PORTRAIT_WEB_SAFE_SIDE_RESERVE),
-		maxf(1.0, viewport_size.y - PORTRAIT_WEB_SAFE_BOTTOM_RESERVE)
+		maxf(1.0, viewport_size.y - bottom_reserve)
 	)
 
 func _portrait_single_player_min_content_height(viewport_size: Vector2) -> float:
