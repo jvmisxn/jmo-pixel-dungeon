@@ -790,6 +790,11 @@ func drop_random_item() -> void:
 func earn_xp(amount: int) -> void:
 	if amount <= 0:
 		return
+	# SPD computes levelPercent against the current level's requirement BEFORE
+	# consuming XP, then lets carried wands regenerate their use-based-ID pool.
+	if belongings != null and xp_to_next > 0:
+		belongings.notify_hero_gain_exp(float(amount) / float(xp_to_next))
+
 	xp += amount
 	xp_gained.emit(amount)
 	if MessageLog:

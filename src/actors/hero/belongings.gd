@@ -304,6 +304,14 @@ func recharge_wands(turns: int = 1) -> void:
 			var wand: Variant = item
 			wand.recharge(turns, owner)
 
+## Notify carried items (wands) that the hero earned XP so their use-based
+## identification pools can regenerate. Mirrors SPD Hero.earnExp iterating
+## belongings and calling Item.onHeroGainExp(levelPercent, hero).
+func notify_hero_gain_exp(level_percent: float) -> void:
+	for item: Item in get_items():
+		if item != null and item.has_method("on_hero_gain_exp"):
+			item.on_hero_gain_exp(level_percent)
+
 ## Count items with the given item_id in backpack.
 func count_item(search_id: String) -> int:
 	var count: int = 0

@@ -2,6 +2,12 @@
 
 ## 2026-07-17
 
+- Tags: mobile, hud, safe-area, controls
+- Tightened mobile HUD safe-area layout so the game log anchors above the safe-area-adjusted toolbar instead of using a separate bottom calculation, and mobile landscape layout is detected when both dimensions fit the mobile web bounds. Extended `test_mobile_hud_input.gd` to cover portrait/landscape log clearance and bottom safe-area toolbar placement.
+
+- Tags: wands, identification, source-fidelity, audit-S14
+- Fixed wand use-based identification permanently stalling after 5 zaps (audit S14 P1). `Wand` ported SPD's two-pool scheme (`_uses_left_to_id = 10`, `_available_uses_to_id = 5`) but never ported the regeneration: `_use_for_identification()` early-returns once `_available_uses_to_id <= 0`, and nothing ever refilled it, so every wand froze at 5/10 uses and could NEVER be identified by use — a defining SPD mechanic silently dead. SPD refills the pool in `Wand.onHeroGainExp(levelPercent, hero)` (`availableUsesToID = min(USES_TO_ID/2, availableUsesToID + levelPercent*USES_TO_ID/2)`), called for every carried item from `Hero.earnExp` with `levelPercent = exp/maxExp()` computed before consuming XP. Ported faithfully: added `Wand.on_hero_gain_exp(level_percent)` (guards identified wands, caps at the half-pool), `Belongings.notify_hero_gain_exp()` iterating `get_items()` by `has_method`, and a call in `Hero.earn_xp()` using `amount/xp_to_next` before mutating XP. Added `test_wand_use_identification.gd` (up-front pool stalls without XP, uses-left frozen at half, XP refills to the cap without overfilling, identified wands stop regenerating, and an end-to-end hero-XP-interleaved zap loop that IDs the wand — the end-to-end case fails without the wiring). Full local headless suite green (744 checks, Godot 4.7.1). Remaining open S14 P1s: Corruption produces an enemy not an ally, Warding spawns no sentry.
+
 - Tags: targeting, controls, source-fidelity, audit-S23
 - Guarded targeting resolution against out-of-bounds cells before range/visibility checks or item callbacks run. This keeps SPD-style targeting/cell-selection from resolving an invalid cell after mobile/browser coordinate drift or stale input, and leaves targeting active so the player can pick again. Extended `test_targeting_input.gd` to cover invalid-cell rejection and a valid-cell callback path. Local headless suite green (732 checks, Godot 4.7.1).
 

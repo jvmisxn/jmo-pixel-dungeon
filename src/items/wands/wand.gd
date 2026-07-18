@@ -18,8 +18,13 @@ const NORMAL_SCALE_FACTOR: float = 0.875
 ## Whether the wand produces a cursed (harmful to user) effect when zapped.
 var cursed_effect: bool = false
 ## Use-based identification tracking. Wands identify through repeated zaps.
-var _uses_left_to_id: float = 10.0
-var _available_uses_to_id: float = 5.0
+## Mirrors SPD: USES_TO_ID uses required, but only USES_TO_ID/2 are available
+## up front; the rest of the pool refills as the hero earns XP (see
+## on_hero_gain_exp), so a wand can't be spam-identified in one fight yet still
+## identifies through continued play.
+const USES_TO_ID: float = 10.0
+var _uses_left_to_id: float = USES_TO_ID
+var _available_uses_to_id: float = USES_TO_ID / 2.0
 
 func _init() -> void:
 	category = ConstantsData.ItemCategory.WAND
@@ -119,6 +124,18 @@ func _use_for_identification() -> void:
 		identify()
 		if MessageLog:
 			MessageLog.add_positive("You have identified the %s." % item_name)
+
+## Regenerate the use-based-ID pool as the hero earns XP. Mirrors SPD
+## Wand.onHeroGainExp: availableUsesToID refills toward USES_TO_ID/2 by
+## level_percent * USES_TO_ID/2 (capped at the half-pool). [level_percent] is the
+## fraction of the current level's XP requirement just earned. Without this the
+## pool empties after USES_TO_ID/2 zaps and the wand can never identify by use.
+func on_hero_gain_exp(level_percent: float) -> void:
+	if identified or is_identified():
+		return
+	if _available_uses_to_id <= USES_TO_ID / 2.0:
+		_available_uses_to_id = minf(USES_TO_ID / 2.0,
+			_available_uses_to_id + level_percent * USES_TO_ID / 2.0)
 
 ## Build the zap trajectory using Ballistica. Returns the subpath.
 func _build_zap_path(hero: Char, target_pos: int) -> Array[int]:

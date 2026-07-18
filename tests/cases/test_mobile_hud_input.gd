@@ -154,6 +154,12 @@ func run(t: Object) -> void:
 		status_container != null and is_equal_approx(status_container.size.x, 381.0),
 		"mobile status panel leaves HUD margins while staying visible"
 	)
+	var log_container: Control = layout_root.get_node_or_null("GameLog") as Control
+	t.check(
+		log_container != null
+				and log_container.position.y + log_container.size.y <= layout_hud.toolbar.position.y - HUD.HUD_MARGIN,
+		"mobile game log stays clear of the safe-area-adjusted toolbar"
+	)
 	t.check(
 		layout_hud._status_overlay != null and layout_hud._status_overlay.visible,
 		"mobile status overlay remains visible in portrait layout"
@@ -200,6 +206,24 @@ func run(t: Object) -> void:
 		"scaled mobile HUD converts backing-canvas touches before activating toolbar controls"
 	)
 	scaled_hud.free()
+
+	var landscape_hud := LayoutHud.new()
+	landscape_hud._vp_size = Vector2(852, 393)
+	landscape_hud.fake_safe_bottom = 21.0
+	landscape_hud._build_layout()
+	landscape_hud._apply_responsive_layout()
+	var landscape_root: Control = landscape_hud.get_node_or_null("HUDRoot") as Control
+	var landscape_log: Control = landscape_root.get_node_or_null("GameLog") as Control
+	t.check(
+		landscape_hud.toolbar != null and is_equal_approx(landscape_hud.toolbar.position.y, 300.0),
+		"mobile landscape toolbar stays above the bottom safe area"
+	)
+	t.check(
+		landscape_log != null
+				and landscape_log.position.y + landscape_log.size.y <= landscape_hud.toolbar.position.y - HUD.HUD_MARGIN,
+		"mobile landscape game log stays clear of the toolbar"
+	)
+	landscape_hud.free()
 
 	var scaled_party_hud := TestHud.new()
 	scaled_party_hud.scale = Vector2(3.0, 2.0)

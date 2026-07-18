@@ -949,7 +949,10 @@ func _apply_responsive_layout() -> void:
 		var log_height: float = 74.0 if _is_mobile_portrait_layout() else (96.0 if is_mobile_layout else 195.0)
 		log_container.custom_minimum_size = Vector2(log_width, log_height)
 		log_container.size = Vector2(log_width, log_height)
-		log_container.position = Vector2(HUD_MARGIN, _vp_size.y - _toolbar_height() - log_height - HUD_MARGIN)
+		log_container.position = Vector2(
+			HUD_MARGIN,
+			_toolbar_top_y() - log_height - HUD_MARGIN
+		)
 
 	if info_row:
 		var info_width: float = 180.0
@@ -1019,14 +1022,17 @@ func _layout_toolbar() -> void:
 		return
 	var safe_left: float = _safe_area_inset("left")
 	var safe_right: float = _safe_area_inset("right")
-	var safe_bottom: float = _safe_area_inset("bottom")
 	var height: float = float(_toolbar_height())
 	var width: float = maxf(1.0, _vp_size.x - safe_left - safe_right)
-	toolbar.position = Vector2(safe_left, _vp_size.y - height - safe_bottom)
+	toolbar.position = Vector2(safe_left, _toolbar_top_y())
 	toolbar.custom_minimum_size = Vector2(width, height)
 	toolbar.size = Vector2(width, height)
 	if _toolbar_bar != null and _toolbar_bar.has_method("set_available_width"):
 		_toolbar_bar.set_available_width(width)
+
+
+func _toolbar_top_y() -> float:
+	return _vp_size.y - float(_toolbar_height()) - _safe_area_inset("bottom")
 
 
 func _refresh_status_overlay() -> void:
@@ -1066,7 +1072,8 @@ func _refresh_status_overlay() -> void:
 
 func _is_mobile_layout() -> bool:
 	return _is_mobile_web_context() \
-			or _vp_size.x <= MOBILE_BREAKPOINT \
+			or minf(_vp_size.x, _vp_size.y) <= MOBILE_BREAKPOINT \
+					and maxf(_vp_size.x, _vp_size.y) <= MOBILE_WEB_MAX_VIEWPORT \
 			or _vp_size.y > _vp_size.x
 
 
