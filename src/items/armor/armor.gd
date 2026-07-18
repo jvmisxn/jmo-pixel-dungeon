@@ -357,7 +357,7 @@ static func all_ids() -> Array[String]:
 
 ## Apply random upgrade, curse, and glyph chances to this armor.
 ## Called by Generator when spawning loot. Matches original Armor.random().
-## +0: 75%, +1: 20%, +2: 5%. Then 30% cursed (with curse glyph), 15% inscribed.
+## +0: 75%, +1: 20%, +2: 5%. Then 30% cursed, 15% inscribed with a random glyph.
 func random() -> Armor:
 	# Upgrade level: +0 (75%), +1 (20%), +2 (5%)
 	var n: int = 0
@@ -367,15 +367,13 @@ func random() -> Armor:
 			n += 1
 	level = n
 
-	# 30% chance to be cursed with curse glyph
+	# 30% chance to be cursed
 	# 15% chance to get a good glyph (only if not cursed)
 	var effect_roll: float = randf()
 	if effect_roll < 0.3:
 		cursed = true
-		# Curse glyph would be applied here with a full glyph system
 	elif effect_roll >= 0.85:
-		# Good glyph would be applied here with a full glyph system
-		pass
+		inscribe(ArmorGlyph.random())
 
 	_update_str_requirement()
 	return self
