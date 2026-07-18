@@ -49,6 +49,18 @@ var _cached_game_scene: Node = null
 ## The hero currently owning local input/focus.
 var current_input_actor: Node = null
 
+func _ready() -> void:
+	# SceneManager registers after TurnManager in the autoload order, so defer
+	# the hookup until all autoloads exist.
+	_connect_scene_manager.call_deferred()
+
+## Invalidate the cached GameScene whenever a transition completes so the turn
+## loop never dispatches on_mob_action to a stale/freed scene node.
+func _connect_scene_manager() -> void:
+	if SceneManager != null and SceneManager.has_signal("scene_changed"):
+		if not SceneManager.scene_changed.is_connected(_on_scene_changed):
+			SceneManager.scene_changed.connect(_on_scene_changed)
+
 func _is_time_frozen_for_nonhero(actor_node: Node) -> bool:
 	if actor_node == null or actor_node.get("is_hero") == true:
 		return false
@@ -280,11 +292,24 @@ func hero_action_complete(actor_node: Node = null) -> void:
 func _get_game_scene_cached() -> Node:
 	if _cached_game_scene != null and is_instance_valid(_cached_game_scene):
 		return _cached_game_scene
+	# Prefer SceneManager's tracked scene: it is updated synchronously on every
+	# transition, whereas get_tree().current_scene only agrees once SceneManager
+	# has mirrored it. Falling back to the tree keeps this working in bare-tree
+	# contexts where the SceneManager autoload is absent.
+	if SceneManager != null and SceneManager.current_scene != null and is_instance_valid(SceneManager.current_scene):
+		_cached_game_scene = SceneManager.current_scene
+		return _cached_game_scene
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
 	if tree == null:
 		return null
 	_cached_game_scene = tree.current_scene
 	return _cached_game_scene
+
+## Drop the cached scene when SceneManager reports a transition, so the next
+## mob-processing pass resolves the freshly active scene instead of a stale
+## (possibly freed) node.
+func _on_scene_changed(_new_scene: Node) -> void:
+	_cached_game_scene = null
 
 func _should_abort_async_processing(game_scene: Node) -> bool:
 	if GameManager != null:

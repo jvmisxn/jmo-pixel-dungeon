@@ -55,4 +55,16 @@ func _do_transition(new_scene: Node) -> void:
 func _finalize_transition(new_scene: Node) -> void:
 	if new_scene == null or not is_instance_valid(new_scene):
 		return
+	# Keep Godot's SceneTree.current_scene in sync with our tracked scene.
+	# We add scenes via root.add_child() (not change_scene_to_*), so without
+	# this the engine's current_scene stays pinned to the original MainScene,
+	# and consumers that read get_tree().current_scene (e.g. TurnManager's
+	# on_mob_action refresh) resolve the wrong node.
+	# Resolve the tree without tripping get_tree()'s "node not in tree" error in
+	# bare-instance contexts (e.g. headless tests where autoloads aren't mounted).
+	var tree: SceneTree = get_tree() if is_inside_tree() else Engine.get_main_loop() as SceneTree
+	# set_current_scene() requires the node to be parented to the tree root
+	# (which _do_transition guarantees via root.add_child before this runs).
+	if tree != null and new_scene.get_parent() == tree.root:
+		tree.set_current_scene(new_scene)
 	scene_changed.emit(new_scene)
