@@ -19,6 +19,8 @@ class LayoutHud:
 
 	var fake_safe_bottom: float = 0.0
 	var fake_canvas_size: Vector2 = Vector2.ZERO
+	var inventory_taps: int = 0
+	var toolbar_action_taps: int = 0
 
 	class StubComponent:
 		extends Control
@@ -39,6 +41,10 @@ class LayoutHud:
 			pass
 
 	func _instantiate_script(_path: String) -> Variant:
+		if _path == "res://src/ui/toolbar.gd":
+			var toolbar := Toolbar.new()
+			toolbar._ready()
+			return toolbar
 		return StubComponent.new()
 
 	func _safe_area_inset(edge: String) -> float:
@@ -50,6 +56,13 @@ class LayoutHud:
 		if fake_canvas_size != Vector2.ZERO:
 			return fake_canvas_size
 		return _vp_size
+
+	func _on_inventory_pressed() -> void:
+		inventory_taps += 1
+		toolbar_action_taps += 1
+
+	func _on_toolbar_action_pressed() -> void:
+		toolbar_action_taps += 1
 
 func _visible_toolbar_min_width(toolbar: Toolbar) -> float:
 	var width: float = 0.0
@@ -145,6 +158,20 @@ func run(t: Object) -> void:
 		layout_hud._status_overlay != null and layout_hud._status_overlay.visible,
 		"mobile status overlay remains visible in portrait layout"
 	)
+	layout_hud._connect_signals()
+	layout_hud._toolbar_bar.wait_pressed.connect(layout_hud._on_toolbar_action_pressed)
+	layout_hud._toolbar_bar.search_pressed.connect(layout_hud._on_toolbar_action_pressed)
+	layout_hud._toolbar_bar.quickslot_used.connect(func(_slot_index: int, _item: RefCounted) -> void:
+		layout_hud._on_toolbar_action_pressed()
+	)
+	t.check(
+		layout_hud.handle_screen_tap(Vector2(26, 790)),
+		"mobile HUD touch release activates a toolbar control"
+	)
+	t.check(
+		layout_hud.toolbar_action_taps == 1,
+		"mobile toolbar tap emits the matching toolbar action"
+	)
 	layout_hud.free()
 
 	var scaled_hud := LayoutHud.new()
@@ -157,7 +184,8 @@ func run(t: Object) -> void:
 		"mobile HUD scales CSS-viewport layout up to the backing canvas"
 	)
 	t.check(
-		scaled_hud.toolbar != null and is_equal_approx(scaled_hud.toolbar.size.x * scaled_hud.scale.x, 1179.0),
+		scaled_hud.toolbar != null
+				and is_equal_approx(scaled_hud.toolbar.size.x * scaled_hud.scale.x, 1179.0),
 		"scaled mobile toolbar remains full-width on a larger backing canvas"
 	)
 	t.check(
@@ -165,7 +193,10 @@ func run(t: Object) -> void:
 		"scaled mobile HUD hit-testing accepts backing-canvas touch coordinates"
 	)
 	t.check(
-		scaled_hud._screen_position_for_control(scaled_hud.toolbar, Vector2(590, 1632)).is_equal_approx(Vector2(196.66667, 816.0)),
+		scaled_hud._screen_position_for_control(
+			scaled_hud.toolbar,
+			Vector2(590, 1632)
+		).is_equal_approx(Vector2(196.66667, 816.0)),
 		"scaled mobile HUD converts backing-canvas touches before activating toolbar controls"
 	)
 	scaled_hud.free()

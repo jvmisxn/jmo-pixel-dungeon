@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: mobile, hud, toolbar, controls, web, playtesting
+- Hardened mobile toolbar tap activation against nested/scaled Control coordinate drift. `Toolbar.activate_button_at_screen_position()` now resolves touches in toolbar-local space as well as global space, so HUD-forwarded mobile taps still hit the intended action buttons when browser/backing-canvas scaling or nested panel containers shift rect spaces. Extended `test_mobile_hud_input.gd` to assert a real HUD touch on the bottom toolbar emits a toolbar action. Local headless suite green (399 checks, Godot 4.7.1); no real-device/iPhone confirmation yet.
+
 - Tags: buffs, plants, scrolls, stones, source-fidelity, audit-S15, audit-S17, audit-S19
 - Replaced the remaining renamed-Paralysis sleep/freeze substitutes in Scroll of Lullaby, Stone of Deepened Sleep, Dreamfoil, and Icecap with the dedicated `SleepBuff` / `Frozen` effects. Sleep now uses the wake-on-damage contract instead of generic paralysis, and Icecap now gets Frozen's shared freeze semantics rather than an unrelated paralysis timer. Added `test_sleep_freeze_effects.gd` to cover sleep wakeup and Icecap Frozen attachment. Local headless suite green (397 checks, Godot 4.7.1).
 

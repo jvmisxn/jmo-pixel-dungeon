@@ -247,7 +247,12 @@ func _get_item_texture(item: RefCounted) -> Texture2D:
 			return null
 	var col: int = sprite_index % ITEM_SHEET_COLUMNS
 	var row: int = sprite_index / ITEM_SHEET_COLUMNS
-	var region := Rect2(col * ITEM_SPRITE_SIZE, row * ITEM_SPRITE_SIZE, ITEM_SPRITE_SIZE, ITEM_SPRITE_SIZE)
+	var region := Rect2(
+		col * ITEM_SPRITE_SIZE,
+		row * ITEM_SPRITE_SIZE,
+		ITEM_SPRITE_SIZE,
+		ITEM_SPRITE_SIZE
+	)
 	var atlas := AtlasTexture.new()
 	atlas.atlas = _item_sheet_texture
 	atlas.region = region
@@ -385,6 +390,7 @@ func set_action_controls_enabled(is_enabled: bool) -> void:
 
 
 func activate_button_at_screen_position(screen_pos: Vector2) -> bool:
+	var toolbar_pos: Vector2 = _to_toolbar_position(screen_pos)
 	var button_actions: Array[Dictionary] = [
 		{"button": _btn_inventory, "callback": Callable(self, "_on_inventory")},
 		{"button": _btn_map, "callback": Callable(self, "_on_map")},
@@ -395,24 +401,32 @@ func activate_button_at_screen_position(screen_pos: Vector2) -> bool:
 	]
 	for entry: Dictionary in button_actions:
 		var button: Button = entry.get("button") as Button
-		if _button_accepts_screen_position(button, screen_pos):
+		if _button_accepts_position(button, screen_pos, toolbar_pos):
 			var callback: Callable = entry.get("callback") as Callable
 			callback.call()
 			return true
 
 	for index: int in range(_quickslots.size()):
 		var button: Button = _quickslots[index]
-		if _button_accepts_screen_position(button, screen_pos):
+		if _button_accepts_position(button, screen_pos, toolbar_pos):
 			_on_quickslot_pressed(index)
 			return true
 	return false
 
 
-func _button_accepts_screen_position(button: Button, screen_pos: Vector2) -> bool:
-	return button != null \
-			and button.visible \
-			and not button.disabled \
-			and button.get_global_rect().has_point(screen_pos)
+func _to_toolbar_position(screen_pos: Vector2) -> Vector2:
+	var global_rect: Rect2 = get_global_rect()
+	if global_rect.has_point(screen_pos):
+		return screen_pos - global_rect.position
+	return screen_pos
+
+
+func _button_accepts_position(button: Button, screen_pos: Vector2, toolbar_pos: Vector2) -> bool:
+	if button == null or not button.visible or button.disabled:
+		return false
+	if button.get_global_rect().has_point(screen_pos):
+		return true
+	return Rect2(button.position, button.size).has_point(toolbar_pos)
 
 
 # --- Signal Callbacks ---

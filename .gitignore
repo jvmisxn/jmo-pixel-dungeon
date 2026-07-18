@@ -3,6 +3,7 @@
 /android/
 /exports/
 exports/
+test-results/
 
 # Local/editor artifacts
 .DS_Store
