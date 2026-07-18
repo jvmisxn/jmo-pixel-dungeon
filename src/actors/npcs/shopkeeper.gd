@@ -235,8 +235,7 @@ func sell_item(hero: Variant, item: Variant) -> int:
 		return 0
 	if not Shopkeeper.can_sell(item):
 		return 0
-	var base_value: int = item.value() if item.has_method("value") else 0
-	var sell_price: int = maxi(1, int(float(base_value) * 0.5))
+	var sell_price: int = item.value() if item.has_method("value") else 0
 	if sell_price <= 0:
 		return 0
 
@@ -247,9 +246,7 @@ func sell_item(hero: Variant, item: Variant) -> int:
 
 	# Give gold
 	if GameManager:
-		GameManager.gold += sell_price
-		if GameManager.has_signal("gold_changed"):
-			GameManager.gold_changed.emit(GameManager.gold)
+		GameManager.add_gold(sell_price, hero)
 
 	# Add to buyback list
 	if buyback_items.size() >= MAX_BUYBACK_HISTORY:

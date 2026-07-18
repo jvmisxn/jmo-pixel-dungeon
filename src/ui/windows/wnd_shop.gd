@@ -16,8 +16,8 @@ var _shop_grid: GridContainer = null
 var _sell_area: Panel = null
 var _info_label: Label = null
 
-## Sell price multiplier (items sell at half value).
-const SELL_MULTIPLIER: float = 0.5
+## SPD item.value() is already the sale value; shop purchase price applies the markup.
+const SELL_MULTIPLIER: float = 1.0
 
 
 func _init() -> void:
@@ -245,7 +245,7 @@ func sell_item(item: Variant) -> void:
 		sell_price = maxi(1, int(float(base_price) * SELL_MULTIPLIER))
 		_hero.belongings.remove_item(item)
 		if GameManager:
-			GameManager.gold += sell_price
+			GameManager.add_gold(sell_price, _hero)
 
 	if sell_price <= 0:
 		_set_info("That item can't be sold.")

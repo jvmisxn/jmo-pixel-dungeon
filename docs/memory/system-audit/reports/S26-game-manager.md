@@ -24,13 +24,11 @@
   P1 the moment a flag gates progression.
 
 ## Optimizations
-- [P2] `spend_gold()` is dead — all gold spending open-codes `GameManager.gold -= price`
-  with inconsistent signalling (`wnd_shop.gd:199` emits nothing; `shopkeeper.gd:204-207`
-  emits `gold_collected(-price)` on buy but only `gold_changed` on sell at :254-255). Since
-  the HUD listens to `gold_collected`, not `gold_changed` (`hud.gd:245`), the gold display
-  can go stale after a shop transaction. `spend_gold()` already guards underflow + emits;
-  routing every spend through it (and having it emit `gold_collected(-amount, gold)`) removes
-  the divergence. `add_gold()` is already the canonical add path — spend should mirror it.
+- [DONE] Shop gold changes now route through canonical helpers: buys use `GameManager.spend_gold()`
+  and sales use `GameManager.add_gold(sell_price, hero)`, so HUD listeners, collected-gold stats,
+  and gold-pickup artifact hooks stay in sync. `Shopkeeper.sell_item()` pays `item.value()` to match
+  SPD's `new Gold(item.value()).doPickUp(hero)` sale path, and `test_shop_gold_events.gd` locks the
+  sale event/stat/hook contract.
 
 ## Additions
 - [P2] No `serialize_run_state()`/`apply_run_state()` on GameManager despite the "Save / Load"
