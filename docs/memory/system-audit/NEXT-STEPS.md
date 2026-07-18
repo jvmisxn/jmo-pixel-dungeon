@@ -4,10 +4,53 @@ Synthesized 2026-07-11 from the 37-system audit (`reports/S01–S37`), `backlog.
 (~140 tagged findings), and the repo's own strategy docs (active-context,
 framework-extraction-roadmap, multiplayer-roadmap, persistence-notes).
 
-**Status (2026-07-15):** WS0 is complete (PR #1 merged), WS1 is complete
-(CI/headless test harness landed), PR #2 has the first quick-win crash/data-loss
-batch open and CI-green, and WS2 is in progress. Next priority after finishing
-WS2 is the WS2.5 wand-recharge P0 micro-PR, then the WS3/WS4 save-contract spine.
+**Status (2026-07-18, reconciled against `src/` + `tests/` + `change-log.md`):**
+This plan is now largely *executed* — the file lags the code. Treat the §3
+workstream bodies below as historical rationale, not open work; the current
+source of truth for per-item status is `backlog.md` (DONE/PARTIAL/FIXED tags)
+and `change-log.md`.
+
+**Verified LANDED** (source + committed headless tests):
+- WS1 — broad headless test harness: 60+ cases in `tests/cases/` incl. geometry
+  (Ballistica/Pathfinder/ShadowCaster), EventBus contract, item round-trips, and a
+  headless save→descend→reload smoke (`test_headless_save_descend_reload.gd`).
+- WS2 — atomic save write + `.bak` rotation, migration path (`SAVE_VERSION=2`),
+  floor transitions routed through `GameManager.descend()/ascend()` (MAX_DEPTH cap
+  restored), `quest_flags` persisted, MessageLog reset on new-game/load.
+- WS2.5 — wand per-turn recharge P0 (`test_wand_recharge.gd`).
+- WS3 — Fury single-apply, `get_speed()` folds `modify_speed`, Doom amplifier,
+  interval-gated Barkskin/ArcaneArmor, Barrier shield API, Ring of Might via a
+  non-persistent hook (no more save-stat corruption).
+- WS5 — blob sim driven (`Level.tick_blobs()` per round) + thrown-potion shatter
+  seeds real ToxicGas/Paralytic/Fire/Freezing blobs.
+- WS6 — `split()` factory fix, thrown-potion shatter branch, iron-key locked
+  doors, and working bags (pickup routing + serialize).
+- WS9 — boss HP-bar signals emitted (`mob.gd:261,410,476`) + Halls trap pool
+  override (`test_boss_hp_signals.gd`, `test_halls_traps.gd`).
+- WS10 — SceneManager `current_scene` fix, so per-mob-action FOV/sprite refresh
+  is live again (`test_scene_transition_current_scene.gd`).
+- WS11 — same-tier weapon differentiation, random-armor glyphs, curse-weapon and
+  Flow/Entanglement enchant procs.
+- Plus S03 bell-curve damage roll + surprise hits, S05 swarm split, S07 mob
+  under-spawn, S23 targeting input-swallow, S35 minimap live FOV.
+
+**Still genuinely OPEN** (source-verified 2026-07-18 — these are the real next work):
+- **WS4** — `Char.serialize_char()/deserialize_char()` combat-block serializer is
+  NOT implemented; subclasses still hand-roll hp/stats. Also open: TurnManager
+  cooldown persistence, charm/terror `source_id` deserialize, `_generated_artifacts`
+  persistence, NPC lazy reward generation. (Ring/artifact passive rebuild on load
+  IS done.) **This is the largest remaining save-contract hole — top priority.**
+- **WS7** — Corruption still applies Amok (attacks the hero) not `CorruptionBuff`;
+  Warding spawns no sentry; shared `Balance.normal_int_range()` helper not extracted.
+- **WS8** — chasm fall + iron keys landed; still open: paralytic/fire trap inert
+  buffs, unpooled trap classes, periodic mob respawn, mimic keeps its item.
+- **WS12 / WS13** — UI offline-action-path unification, `Ring/Wand.all_ids()`
+  transmute, and the level-gen door system are largely untouched.
+- Cross-cutting tails: WS2's dead ~200-line serialization block + `spend_gold()`
+  routing + per-floor-transition autosave; WS3's Furor/Haste attack-vs-move split.
+
+Next priority order: **WS4 `Char` combat serializer → WS7 wand subclasses → WS8
+trap/respawn wiring → WS12/WS13.**
 
 **Standing constraints (apply to every workstream):**
 - No Godot engine on this machine → verification is `gdparse`/`gdlint` + reasoning.
@@ -310,8 +353,25 @@ small reviewable buckets rather than trickling one-off commits into main.
 14. `wnd_item.gd:284` — mirror ring_left/ring_right in `_action_drop` (runtime crash) [S36 P1] **[TRUNC — careful edit + gdparse]**.
 15. `ghost.gd:48-50` — drop the double `mob_defeated` subscription [audit:S21 P2].
 
-Each verified with gdparse + gdlint; none alter the save contract (item 6 only
-*reads* data already being written).
+**Quick-win status (reconciled 2026-07-18 against source/tests):**
+- **DONE:** #3 fetid_rat arg crash (`test_blobs.gd`), #4 disarming_trap arg swap
+  (`test_disarming_trap.gd`), #5 swarm split (`test_swarm_split.gd`), #6 spirit_bow
+  deserialize (`test_spirit_bow_serialization.gd`), #7 frozen dedent
+  (`test_frozen.gd`), #9 minimap `level.visible` (`test_minimap_refresh.gd`),
+  #10 badges 3 missing IDs (`badges.gd:441-444`), #11 `set_local_ready` icon arg
+  (`network_manager.gd:313`).
+- **STILL OPEN (verified):** #2 file the 7 S36 findings into `backlog.md` — still
+  NOT filed (no `[audit:S36]` tag in backlog); #8 charm/terror `deserialize` for
+  `source_id` (no override in either file); #12 client re-sanitizes host run config
+  (`network_manager.gd:672` still calls `_sanitize_run_config` on receive — whole-run
+  desync risk); #13 `item_catalog.gd` typed-dict coercion (still `.assign()` of an
+  untyped dict); #14 `wnd_item.gd` ring-drop crash — `_action_drop` still reads the
+  non-existent `belongings.ring` (`:284`) though `_action_unequip` was fixed to
+  ring_left/ring_right; #15 ghost double `mob_defeated` subscribe.
+- **#1 (merge PR #1):** external PR state — not verifiable from the working tree.
+
+Originals below verified with gdparse + gdlint; none alter the save contract
+(item 6 only *reads* data already being written).
 
 Recommended slicing for any remaining quick wins:
 - Pure-read/no-contract crash and data-loss fixes can share one PR.
@@ -351,11 +411,15 @@ roadmap Phase A):
 
 ## Suggested execution order (TL;DR)
 
-Quick wins/WS0/WS1 are done or in review. Current order:
+As of 2026-07-18, WS1/WS2/WS2.5/WS3/WS5/WS6/WS9/WS10/WS11 are landed (see the
+reconciled Status block at the top). Remaining order:
 
-WS2 (durability+APIs) → WS2.5 (wand recharge P0) → WS3 (buff hooks) →
-WS4 (save contract) → WS5 (blobs) → WS6 (items) → WS7 (wand subclasses) →
-WS8 (world) → WS9 (bosses) → WS10 (scene/render) → WS11 (weapons/identity) →
-WS12 (UI/quests) → WS13 (doors). WS5–WS9 parallelize reasonably after WS4;
-WS10 and WS13 want the most in-engine time, so schedule them around when
-Godot/CI playtesting exists.
+**WS4** (Char combat-state serializer — the last big save-contract hole) →
+**WS7** (wand subclasses: Corruption/Warding + `Balance.normal_int_range`) →
+**WS8** (trap buffs, trap-pool wiring, mob respawn, mimic item) →
+**WS12** (UI offline-action-path + `Ring/Wand.all_ids()` transmute) →
+**WS13** (level-gen door system — highest regen risk, wants in-engine time).
+Also close the cross-cutting tails noted in Status: WS2's dead serialization
+block + `spend_gold()` routing + per-floor autosave, and WS3's Furor/Haste split.
+WS13 still wants the most in-engine playtesting, so schedule it around Godot/CI
+availability.
