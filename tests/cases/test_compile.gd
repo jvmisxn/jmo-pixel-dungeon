@@ -1,29 +1,35 @@
 extends RefCounted
-## Compile smoke test: every autoload script — the runtime spine that compiles
-## on real boot — must load as a valid GDScript. A parse error or truncated file
-## makes load() return null, so this catches the exact failure mode this repo has
-## historically suffered (partial-file writes breaking a global class).
+## Compile smoke test: every script under src must load as a valid GDScript. A
+## parse error or truncated file makes load() return null, so this catches the
+## exact failure mode this repo has historically suffered.
 
-const MUST_COMPILE: Array[String] = [
-	"res://src/autoloads/constants.gd",
-	"res://src/autoloads/event_bus.gd",
-	"res://src/autoloads/message_log.gd",
-	"res://src/autoloads/turn_manager.gd",
-	"res://src/autoloads/game_manager.gd",
-	"res://src/autoloads/save_manager.gd",
-	"res://src/autoloads/audio_manager.gd",
-	"res://src/autoloads/badges.gd",
-	"res://src/autoloads/item_catalog.gd",
-	"res://src/autoloads/item_appearance.gd",
-	"res://src/autoloads/discovery_catalog.gd",
-	"res://src/autoloads/scene_manager.gd",
-	"res://src/autoloads/network_manager.gd",
-	"res://src/autoloads/player_profile.gd",
-	"res://src/actors/respawner.gd",
-	"res://src/actors/blobs/freezing_blob.gd",
-]
+const SOURCE_ROOT: String = "res://src"
 
 func run(t: Object) -> void:
-	for path: String in MUST_COMPILE:
+	var paths: Array[String] = []
+	_collect_gd_scripts(SOURCE_ROOT, paths)
+	paths.sort()
+	t.check(not paths.is_empty(), "compile smoke discovered source scripts")
+	for path: String in paths:
 		var res: Variant = load(path)
 		t.check(res != null and res is GDScript, "compiles: " + path)
+
+
+func _collect_gd_scripts(dir_path: String, paths: Array[String]) -> void:
+	var dir: DirAccess = DirAccess.open(dir_path)
+	if dir == null:
+		return
+
+	dir.list_dir_begin()
+	var file_name: String = dir.get_next()
+	while file_name != "":
+		if file_name.begins_with("."):
+			file_name = dir.get_next()
+			continue
+		var child_path: String = dir_path.path_join(file_name)
+		if dir.current_is_dir():
+			_collect_gd_scripts(child_path, paths)
+		elif file_name.ends_with(".gd"):
+			paths.append(child_path)
+		file_name = dir.get_next()
+	dir.list_dir_end()

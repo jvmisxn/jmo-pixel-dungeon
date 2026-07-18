@@ -558,7 +558,7 @@ func set_compact_mode(is_compact: bool) -> void:
 		_xp_label.add_theme_font_size_override("font_size", 12 if _compact_mode else 11)
 	if _hunger_section:
 		_hunger_section.visible = not _compact_mode
-	minimum_size_changed()
+	update_minimum_size()
 	queue_sort()
 
 

@@ -421,7 +421,7 @@ static func _transmute_armor(item: Variant) -> Variant:
 	var current_id: String = ConstantsData.get_prop(item, "item_id", "")
 
 	# Armors map 1:1 to tiers, so we pick a random different tier's armor
-	var all_ids: Array[String] = Armor.all_armor_ids()
+	var all_ids: Array[String] = Armor.all_ids()
 	all_ids.erase(current_id)
 
 	if all_ids.size() == 0:

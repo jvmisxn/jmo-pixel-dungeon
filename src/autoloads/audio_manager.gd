@@ -33,6 +33,110 @@ const CROSSFADE_DURATION: float = 1.5
 # --- Asset Paths ---
 const SFX_DIR: String = "res://assets/spd/sounds/"
 const MUSIC_DIR: String = "res://assets/spd/music/"
+const SFX_EXTENSIONS: Array[String] = ["mp3", "wav", "ogg"]
+const MUSIC_EXTENSIONS: Array[String] = ["ogg", "mp3", "wav"]
+const SFX_MANIFEST: Array[String] = [
+	"alert",
+	"atk_crossbow",
+	"atk_spiritbow",
+	"badge",
+	"beacon",
+	"bee",
+	"blast",
+	"bones",
+	"boss",
+	"burning",
+	"chains",
+	"challenge",
+	"chargeup",
+	"charms",
+	"click",
+	"cursed",
+	"death",
+	"debuff",
+	"degrade",
+	"descend",
+	"dewdrop",
+	"door_open",
+	"drink",
+	"eat",
+	"evoke",
+	"falling",
+	"gas",
+	"ghost",
+	"gold",
+	"grass",
+	"health_critical",
+	"health_warn",
+	"hit",
+	"hit_arrow",
+	"hit_crush",
+	"hit_magic",
+	"hit_parry",
+	"hit_slash",
+	"hit_stab",
+	"hit_strong",
+	"item",
+	"levelup",
+	"lightning",
+	"lullaby",
+	"mastery",
+	"meld",
+	"mimic",
+	"mine",
+	"miss",
+	"plant",
+	"puff",
+	"ray",
+	"read",
+	"rocks",
+	"scan",
+	"secret",
+	"shatter",
+	"sheep",
+	"step",
+	"sturdy",
+	"teleport",
+	"tomb",
+	"trample",
+	"trap",
+	"unlock",
+	"water",
+	"zap",
+]
+const MUSIC_MANIFEST: Array[String] = [
+	"caves_1",
+	"caves_2",
+	"caves_3",
+	"caves_boss",
+	"caves_boss_finale",
+	"caves_tense",
+	"city_1",
+	"city_2",
+	"city_3",
+	"city_boss",
+	"city_boss_finale",
+	"city_tense",
+	"halls_1",
+	"halls_2",
+	"halls_3",
+	"halls_boss",
+	"halls_boss_finale",
+	"halls_tense",
+	"prison_1",
+	"prison_2",
+	"prison_3",
+	"prison_boss",
+	"prison_tense",
+	"sewers_1",
+	"sewers_2",
+	"sewers_3",
+	"sewers_boss",
+	"sewers_tense",
+	"theme_1",
+	"theme_2",
+	"theme_finale",
+]
 
 # --- Per-Region Music Track Lists (matches original Java SewerLevel.playLevelMusic() etc.) ---
 # Each region has ambient tracks (weighted equally), a tense track, and a boss track.
@@ -144,24 +248,12 @@ func _create_players() -> void:
 
 ## Load all real SPD sound effects from res://assets/spd/sounds/.
 func _load_real_sfx() -> void:
-	var dir: DirAccess = DirAccess.open(SFX_DIR)
-	if dir == null:
-		push_warning("AudioManager: Cannot open SFX directory '%s'. Falling back to procedural." % SFX_DIR)
-		_generate_fallback_sfx()
-		return
-
-	dir.list_dir_begin()
-	var file_name: String = dir.get_next()
-	var loaded_count: int = 0
-	while file_name != "":
-		if file_name.ends_with(".mp3") or file_name.ends_with(".wav") or file_name.ends_with(".ogg"):
-			var sfx_name: String = file_name.get_basename()
-			var stream: AudioStream = load(SFX_DIR + file_name) as AudioStream
-			if stream:
-				_sfx_cache[sfx_name] = stream
-				loaded_count += 1
-		file_name = dir.get_next()
-	dir.list_dir_end()
+	var loaded_count: int = _load_manifest_streams(
+		_sfx_cache,
+		SFX_DIR,
+		SFX_MANIFEST,
+		SFX_EXTENSIONS
+	)
 	print("AudioManager: Loaded %d sound effects from %s" % [loaded_count, SFX_DIR])
 
 	# If no real assets loaded, fall back to procedural
@@ -172,24 +264,42 @@ func _load_real_sfx() -> void:
 
 ## Load all real SPD music tracks from res://assets/spd/music/.
 func _load_real_music() -> void:
-	var dir: DirAccess = DirAccess.open(MUSIC_DIR)
-	if dir == null:
-		push_warning("AudioManager: Cannot open music directory '%s'." % MUSIC_DIR)
-		return
-
-	dir.list_dir_begin()
-	var file_name: String = dir.get_next()
-	var loaded_count: int = 0
-	while file_name != "":
-		if file_name.ends_with(".ogg") or file_name.ends_with(".mp3") or file_name.ends_with(".wav"):
-			var track_name: String = file_name.get_basename()
-			var stream: AudioStream = load(MUSIC_DIR + file_name) as AudioStream
-			if stream:
-				_music_cache[track_name] = stream
-				loaded_count += 1
-		file_name = dir.get_next()
-	dir.list_dir_end()
+	var loaded_count: int = _load_manifest_streams(
+		_music_cache,
+		MUSIC_DIR,
+		MUSIC_MANIFEST,
+		MUSIC_EXTENSIONS
+	)
 	print("AudioManager: Loaded %d music tracks from %s" % [loaded_count, MUSIC_DIR])
+
+
+func _load_manifest_streams(
+	cache: Dictionary,
+	asset_dir: String,
+	manifest: Array[String],
+	extensions: Array[String]
+) -> int:
+	var loaded_count: int = 0
+	for asset_name: String in manifest:
+		var stream: AudioStream = _load_manifest_stream(asset_dir, asset_name, extensions)
+		if stream == null:
+			push_warning("AudioManager: Missing audio asset '%s' in %s" % [asset_name, asset_dir])
+			continue
+		cache[asset_name] = stream
+		loaded_count += 1
+	return loaded_count
+
+
+func _load_manifest_stream(
+	asset_dir: String,
+	asset_name: String,
+	extensions: Array[String]
+) -> AudioStream:
+	for ext: String in extensions:
+		var stream: AudioStream = load("%s%s.%s" % [asset_dir, asset_name, ext]) as AudioStream
+		if stream != null:
+			return stream
+	return null
 
 
 # ---------------------------------------------------------------------------

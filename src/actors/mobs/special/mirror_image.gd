@@ -15,12 +15,11 @@ func _init() -> void:
 	description = "A " + "" + "shimmering " + "copy of the hero."
 	hp = 1
 	ht = 1
+	hp_max = 1
+	attack_skill = _attack_skill
+	defense_skill = _defense_skill
 	xp_value = 0
 	state = AIState.HUNTING
-	icon_color = Color(0.6, 0.8, 1.0)
-	body_color = Color(0.6, 0.8, 1.0)
-	accent_color = Color(0.4, 0.6, 0.9)
-	eye_color = Color(1.0, 1.0, 1.0)
 
 func setup_from_hero(hero: Variant) -> void:
 	_source_hero = hero
@@ -32,20 +31,14 @@ func setup_from_hero(hero: Variant) -> void:
 		_image_hp = 1 + hero_lvl
 		hp = _image_hp
 		ht = _image_hp
-
-func attack_skill() -> int:
-	return _attack_skill
-
-func defense_skill() -> int:
-	return _defense_skill
+		hp_max = _image_hp
+		attack_skill = _attack_skill
+		defense_skill = _defense_skill
 
 func damage_roll() -> int:
 	if _source_hero and _source_hero.has_method("damage_roll"):
 		return _source_hero.damage_roll()
 	return randi_range(1, 5)
-
-func die(cause: Variant) -> void:
-	super.die(cause)
 
 func get_display_name() -> String:
 	return "Mirror Image"
@@ -64,3 +57,7 @@ func deserialize(data: Dictionary) -> void:
 	_image_hp = int(data.get("image_hp", _image_hp))
 	_attack_skill = int(data.get("attack_skill_override", _attack_skill))
 	_defense_skill = int(data.get("defense_skill_override", _defense_skill))
+	hp_max = _image_hp
+	ht = _image_hp
+	attack_skill = _attack_skill
+	defense_skill = _defense_skill

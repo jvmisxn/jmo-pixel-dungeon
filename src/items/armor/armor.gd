@@ -346,6 +346,10 @@ static func create(armor_id: String) -> Armor:
 	a._update_str_requirement()
 	return a
 
+
+static func all_ids() -> Array[String]:
+	return ["cloth_armor", "leather_armor", "mail_armor", "scale_armor", "plate_armor"]
+
 # ---------------------------------------------------------------------------
 # Serialization
 # ---------------------------------------------------------------------------
