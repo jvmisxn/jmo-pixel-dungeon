@@ -21,7 +21,10 @@ func _do_effect(char: Variant, level: Variant) -> void:
 	var affected_positions: Array[int] = [pos]
 	for dir: int in ConstantsData.DIRS_8:
 		var adj: int = pos + dir
-		if adj >= 0 and adj < Level.LEN:
+		# Column-safe adjacency: reject cells that wrap across a map edge
+		# (e.g. a West step from column 0 lands on the previous row's last
+		# column), which would otherwise freeze a character across the map.
+		if adj >= 0 and adj < Level.LEN and absi(adj % Level.W - pos % Level.W) <= 1:
 			affected_positions.append(adj)
 
 	# Freeze all characters in range

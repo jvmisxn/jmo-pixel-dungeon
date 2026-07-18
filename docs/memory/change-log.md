@@ -2,6 +2,9 @@
 
 ## 2026-07-17
 
+- Tags: plants, aoe, source-fidelity, audit-S19
+- Fixed grid edge-wrap in `icecap.gd` and `firebloom.gd`: `DIRS_8` neighbours are now column-safe, so a wall-edge freeze/ignite can no longer affect a cell wrapped across the map edge. Added `test_plant_edge_wrap.gd`.
+
 - Tags: mobile, hud, safe-area, controls
 - Tightened mobile HUD safe-area layout so the game log anchors above the safe-area-adjusted toolbar instead of using a separate bottom calculation, and mobile landscape layout is detected when both dimensions fit the mobile web bounds. Extended `test_mobile_hud_input.gd` to cover portrait/landscape log clearance and bottom safe-area toolbar placement.
 

@@ -22,7 +22,10 @@ func _do_effect(char: Variant, level: Variant) -> void:
 	if level != null and level.has_method("set_terrain"):
 		for dir: int in ConstantsData.DIRS_8:
 			var adj: int = pos + dir
-			if adj >= 0 and adj < Level.LEN:
+			# Column-safe adjacency: reject cells that wrap across a map edge
+			# (e.g. a West step from column 0 lands on the previous row's last
+			# column), which would otherwise ignite grass across the map.
+			if adj >= 0 and adj < Level.LEN and absi(adj % Level.W - pos % Level.W) <= 1:
 				var t: int = level.terrain_at(adj)
 				if t == ConstantsData.Terrain.HIGH_GRASS:
 					level.set_terrain(adj, ConstantsData.Terrain.EMBERS)
