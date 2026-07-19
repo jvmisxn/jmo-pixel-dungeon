@@ -15,6 +15,7 @@ const MOBILE_WEB_MAX_VIEWPORT: float = 960.0
 const HUD_MARGIN: float = 6.0
 const MOBILE_STATUS_HEIGHT: float = 88.0
 const MOBILE_STATUS_LANDSCAPE_HEIGHT: float = 76.0
+const MOBILE_STATUS_LANDSCAPE_MAX_WIDTH: float = 360.0
 const MOBILE_SAFE_TOP_INSET: float = 18.0
 const MOBILE_SAFE_LANDSCAPE_TOP_INSET: float = 8.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
@@ -995,9 +996,14 @@ func _apply_responsive_layout() -> void:
 			_vp_size.x - safe_left - safe_right - (HUD_MARGIN * 2.0)
 		)
 		var mobile_status_height: float = MOBILE_STATUS_HEIGHT if _is_mobile_portrait_layout() else MOBILE_STATUS_LANDSCAPE_HEIGHT
+		var mobile_status_width: float = (
+			available_width
+			if _is_mobile_portrait_layout()
+			else minf(available_width, MOBILE_STATUS_LANDSCAPE_MAX_WIDTH)
+		)
 		status_container.position = Vector2(safe_left + HUD_MARGIN, _hud_top_margin())
 		status_container.custom_minimum_size = (
-			Vector2(available_width, mobile_status_height)
+			Vector2(mobile_status_width, mobile_status_height)
 			if is_mobile_layout
 			else Vector2(180 if is_mobile_layout else 220, 140)
 		)

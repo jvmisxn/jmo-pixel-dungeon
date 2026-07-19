@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: mobile, hud, landscape, controls, tests
+- Kept the mobile landscape status pane compact instead of stretching across the full safe viewport width. `HUD` now caps landscape mobile status width at 360px while preserving portrait's full-width status strip, giving the dungeon view and co-op/control rows more breathing room on notched landscape layouts. Extended `test_mobile_hud_input.gd` with an 852x393 safe-area regression. Local `git diff --check`, Godot import, and full headless suite passed (1309 checks, 0 failures, Godot 4.7.1). Fable reviewed the change as a low-risk mobile layout adaptation, not a source-gameplay divergence.
+
 - Tags: hud, buffs, source-fidelity, tests
 - Replaced the status pane's flat ColorRect buff markers with the existing `BuffIcon` component, restoring readable lettered/colored buff indicators and duration tooltips instead of anonymous color squares. `BuffIcon` now refreshes its tooltip when a buff is assigned, and `StatusPane` removes stale buff children immediately before rebuilding so same-frame refreshes don't leave old icons in the flow container. Extended `test_status_pane.gd` with a headless fixture that verifies active buffs render as `BuffIcon`s with duration text. Local `git diff --check`, Godot import, and full headless suite passed (1308 checks, 0 failures, Godot 4.7.1). Fable triage noted S25 mob-action observe coalescing remains the higher-value next fidelity/perf target; this patch is a smaller HUD readability/fidelity fix.
 
