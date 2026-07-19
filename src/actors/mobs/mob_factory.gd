@@ -76,12 +76,22 @@ static func _city_table(depth: int) -> Array[Dictionary]:
 		table.append({"mob_id": "elemental", "weight": 1.5})
 	return table
 
-static func _halls_table(_depth: int) -> Array[Dictionary]:
+static func _halls_table(depth: int) -> Array[Dictionary]:
 	var table: Array[Dictionary] = []
-	table.append({"mob_id": "succubus", "weight": 2.0})
-	table.append({"mob_id": "eye", "weight": 2.0})
-	table.append({"mob_id": "scorpio", "weight": 2.0})
-	table.append({"mob_id": "ripper", "weight": 2.0})
+	if depth <= 21:
+		table.append({"mob_id": "succubus", "weight": 2.0})
+		table.append({"mob_id": "eye", "weight": 1.0})
+	elif depth == 22:
+		table.append({"mob_id": "succubus", "weight": 1.0})
+		table.append({"mob_id": "eye", "weight": 1.0})
+	elif depth == 23:
+		table.append({"mob_id": "succubus", "weight": 1.0})
+		table.append({"mob_id": "eye", "weight": 2.0})
+		table.append({"mob_id": "scorpio", "weight": 1.0})
+	else:
+		table.append({"mob_id": "succubus", "weight": 1.0})
+		table.append({"mob_id": "eye", "weight": 2.0})
+		table.append({"mob_id": "scorpio", "weight": 3.0})
 	return table
 
 ## Create a mob instance by ID.
@@ -167,4 +177,5 @@ static func create_boss(depth: int) -> Mob:
 		15: return DM300.new()
 		20: return DwarfKing.new()
 		25: return Yog.new()
-	return Mob.new()
+	push_warning("MobFactory: No boss configured for depth %d" % depth)
+	return null

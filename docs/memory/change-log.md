@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: mobs, demon-halls, level-generation, source-fidelity, tests
+- Matched Demon Halls regular mob rotation to upstream SPD's depth-ramped `MobSpawner.standardMobRotation`: depth 21 now favors Succubi with one Evil Eye, depth 22 is even, depth 23 introduces Scorpios, and depth 24+ weights Scorpios heavily. Removed Ripper Demons from ordinary Halls room spawns; in SPD they come from Demon Spawners/Yog rather than the standard room rotation. `MobFactory.create_boss()` also now returns `null` with a warning for unknown depths instead of a statless base `Mob`, matching `create_mob()`'s unknown-id contract. Added `test_mob_factory.gd`. Local `git diff --check`, Godot import, and full headless suite passed (1324 checks, 0 failures, Godot 4.7.1). Fable final review approved the diff.
+
 - Tags: mobile, title, layout, controls, tests
 - Fixed the portrait title menu clipping shown on phone screenshots when a save exists. `TitleScene` now stacks `Continue` under `New Game` on narrow portrait layouts instead of forcing both into one split HBox row, keeps the split row in landscape/desktop, and hard-caps portrait buttons to a narrower phone-safe width so the exported web canvas cannot push them into the right edge. Extended `test_title_mobile_layout.gd` to cover the portrait stack behavior, landscape split behavior, reparenting path, and both portrait menu insets. Local `git diff --check`, Godot import, and full headless suite passed (1315 checks, 0 failures, Godot 4.7.1).
 
