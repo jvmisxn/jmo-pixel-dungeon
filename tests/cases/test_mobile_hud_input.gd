@@ -305,6 +305,18 @@ func run(t: Object) -> void:
 				and _row_min_width(portrait_party_row as HBoxContainer) <= portrait_party_row.size.x,
 		"mobile portrait party row fits four focus buttons within the visible row width"
 	)
+	layout_hud._vp_size = Vector2(320, 720)
+	layout_hud._apply_responsive_layout()
+	layout_hud._refresh_party_row()
+	t.check(
+		portrait_party_row != null
+				and portrait_party_row.get_child_count() == 4
+				and (portrait_party_row.get_child(0) as Control).custom_minimum_size.x < 86.0
+				and _row_min_width(portrait_party_row as HBoxContainer) <= portrait_party_row.size.x,
+		"narrow mobile portrait compresses four party buttons instead of clipping them"
+	)
+	layout_hud._vp_size = Vector2(393, 852)
+	layout_hud._apply_responsive_layout()
 	GameManager.heroes = original_heroes
 	GameManager.hero = original_hero
 	GameManager.local_hero_index = original_local_hero_index

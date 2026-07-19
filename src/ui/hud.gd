@@ -780,6 +780,7 @@ func _refresh_party_row() -> void:
 	if _party_row == null or GameManager == null:
 		return
 	for child: Node in _party_row.get_children():
+		_party_row.remove_child(child)
 		child.queue_free()
 	var heroes: Array[Node] = GameManager.get_active_heroes() if GameManager.has_method("get_active_heroes") else []
 	if heroes.size() <= 1:
@@ -787,7 +788,7 @@ func _refresh_party_row() -> void:
 		return
 	_party_row.visible = true
 	_party_row.add_theme_constant_override("separation", 4 if _is_mobile_layout() else 6)
-	var button_width: float = 86.0 if _is_mobile_layout() else 104.0
+	var button_width: float = _party_button_width(heroes.size())
 	var focused_hero: Variant = _get_local_hero()
 	var local_owned_hero: Variant = _get_local_owned_hero()
 	var input_hero: Variant = _get_input_hero()
@@ -817,6 +818,25 @@ func _refresh_party_row() -> void:
 			btn.set_meta("hero_index", idx)
 			btn.pressed.connect(_on_party_focus_pressed.bind(idx))
 		_party_row.add_child(btn)
+
+
+func _party_button_width(hero_count: int) -> float:
+	if not _is_mobile_layout():
+		return 104.0
+	if hero_count <= 0:
+		return 86.0
+	var safe_left: float = _safe_area_inset("left")
+	var safe_right: float = _safe_area_inset("right")
+	var available_width: float = maxf(
+		1.0,
+		_vp_size.x - safe_left - safe_right - (HUD_MARGIN * 2.0)
+	)
+	var separation: float = 4.0
+	var max_button_width: float = 86.0
+	var min_button_width: float = 64.0
+	var fitted_width: float = floorf((available_width - (separation * float(hero_count - 1))) / float(hero_count))
+	return clampf(fitted_width, min_button_width, max_button_width)
+
 
 func _refresh_action_controls() -> void:
 	if _toolbar_bar == null or not _toolbar_bar.has_method("set_action_controls_enabled"):

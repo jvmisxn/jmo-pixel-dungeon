@@ -3,6 +3,9 @@
 ## 2026-07-19
 
 - Tags: mobile, hud, multiplayer, controls, tests
+- Kept four-hero mobile co-op party controls inside narrow portrait viewports. `HUD` now fits party focus button widths to the safe-area-adjusted mobile row instead of always using 86px buttons, so 320-360px portrait layouts no longer clip the rightmost player controls. Party-row refresh also removes old buttons from the row immediately before queue-freeing them, preventing stale controls from affecting same-frame resize/refresh layout math. Extended `test_mobile_hud_input.gd` with a 320px four-hero regression. Local full headless suite passed (1282 checks, 0 failures, Godot 4.7.1).
+
+- Tags: mobile, hud, multiplayer, controls, tests
 - Kept the online/co-op turn-state label from overlapping the toolbar on ultra-short mobile landscape layouts. `HUD` now tracks whether online state text is logically active separately from whether it currently fits on-screen, so cramped layouts can hide the label without making it sticky-hidden after rotate/resize; hidden labels also no longer reserve game-log space. Extended `test_mobile_hud_input.gd` with ultra-short hide and roomier-resize reappearance coverage. Local `git diff --check`, Godot import, and full headless suite passed (1281 checks, 0 failures, Godot 4.7.1).
 
 - Tags: mimic, loot, level-generation, source-fidelity, tests
