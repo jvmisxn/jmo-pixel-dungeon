@@ -43,17 +43,19 @@ func _create_secret_room() -> Room:
 func _create_random_trap() -> Trap:
 	# Original PrisonLevel trapClasses with weights:
 	# ChillingTrap(4), ShockingTrap(4), ToxicTrap/PoisonTrap(4), BurningTrap/FireTrap(4),
-	# AlarmTrap(2), GrippingTrap(2)
+	# ParalyticTrap(2), AlarmTrap(2), GrippingTrap(2)
 	var roll: float = randf()
-	if roll < 0.2:
+	if roll < 0.1818:
 		return ChillingTrap.new()
-	elif roll < 0.4:
+	elif roll < 0.3636:
 		return ShockingTrap.new()
-	elif roll < 0.6:
+	elif roll < 0.5455:
 		return PoisonTrap.new()
-	elif roll < 0.8:
+	elif roll < 0.7273:
 		return FireTrap.new()
-	elif roll < 0.9:
+	elif roll < 0.8182:
+		return ParalyticTrap.new()
+	elif roll < 0.9091:
 		return AlarmTrap.new()
 	else:
 		return GrippingTrap.new()
