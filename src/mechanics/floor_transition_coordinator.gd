@@ -24,6 +24,8 @@ static func handle_descend(scene: Variant) -> void:
 			MessageLog.add_warning("The way deeper is sealed.")
 		scene._awaiting_hero_input = true
 		return
+	if not _consume_skeleton_key_for_boss_exit(scene, hero):
+		return
 	if MessageLog:
 		MessageLog.add("You descend deeper into the dungeon...")
 	if AudioManager:
@@ -96,6 +98,68 @@ static func handle_fall(scene: Variant, hero_node: Variant) -> void:
 	if scene._is_online_host():
 		OnlineEventCodec.broadcast_level_transition(NetworkManager, GameManager.depth, "fall")
 	transition_to_loading(scene, "fall", {"fall_actor_id": fall_actor_id})
+
+static func _consume_skeleton_key_for_boss_exit(scene: Variant, hero: Variant) -> bool:
+	if GameManager == null or not _is_skeleton_key_depth(GameManager.depth):
+		return true
+	var key_holder: Variant = _find_skeleton_key_holder(hero)
+	if key_holder != null:
+		if _consume_skeleton_key(key_holder):
+			return true
+		if key_holder.has_method("use_key"):
+			key_holder.use_key("skeleton")
+		return true
+	if MessageLog:
+		MessageLog.add_warning("You need the skeleton key to unlock the way forward.")
+	if scene != null:
+		scene._awaiting_hero_input = true
+	return false
+
+static func _find_skeleton_key_holder(fallback_hero: Variant) -> Variant:
+	if GameManager != null and GameManager.has_method("get_active_heroes"):
+		for party_hero: Variant in GameManager.get_active_heroes():
+			if _has_skeleton_key_for_current_depth(party_hero):
+				return party_hero
+	if _has_skeleton_key_for_current_depth(fallback_hero):
+		return fallback_hero
+	return null
+
+static func _has_skeleton_key_for_current_depth(hero: Variant) -> bool:
+	if hero == null:
+		return false
+	var belongings: Variant = hero.get("belongings") if hero is Object else null
+	var backpack: Variant = belongings.get("backpack") if belongings != null else null
+	if backpack is Array:
+		for item: Variant in backpack:
+			if _is_current_depth_skeleton_key(item):
+				return true
+		return false
+	return hero.has_method("has_key") and hero.has_key("skeleton")
+
+static func _consume_skeleton_key(hero: Variant) -> bool:
+	if hero == null:
+		return false
+	var belongings: Variant = hero.get("belongings") if hero is Object else null
+	var backpack: Variant = belongings.get("backpack") if belongings != null else null
+	if not (backpack is Array):
+		return false
+	for item: Variant in backpack:
+		if not _is_current_depth_skeleton_key(item):
+			continue
+		if belongings.has_method("remove_item"):
+			belongings.remove_item(item)
+			if MessageLog:
+				MessageLog.add("You use the %s." % ConstantsData.get_prop(item, "item_name", "key"))
+			return true
+	return false
+
+static func _is_current_depth_skeleton_key(item: Variant) -> bool:
+	return item != null \
+			and ConstantsData.get_prop(item, "item_id", "") == "skeleton_key" \
+			and int(ConstantsData.get_prop(item, "depth", -1)) == GameManager.depth
+
+static func _is_skeleton_key_depth(depth: int) -> bool:
+	return depth > 0 and depth % 5 == 0 and depth < ConstantsData.MAX_DEPTH
 
 static func party_ready_for_stairs(scene: Variant, stair_pos: int, failure_message: String) -> bool:
 	if scene == null or GameManager == null or not GameManager.has_method("get_active_heroes"):

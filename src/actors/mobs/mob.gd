@@ -454,6 +454,16 @@ func _drop_loot() -> void:
 			if item != null and level.has_method("drop_item"):
 				level.drop_item(pos, item)
 
+func _drop_skeleton_key() -> void:
+	if level == null or not level.has_method("drop_item"):
+		return
+	var key: Variant = Generator.create_item("skeleton_key") if Generator else null
+	if key == null:
+		return
+	if key.get("depth") != null and GameManager != null:
+		key.depth = GameManager.depth
+	level.drop_item(pos, key)
+
 # ---------------------------------------------------------------------------
 # Combat
 # ---------------------------------------------------------------------------
@@ -519,6 +529,8 @@ func _on_death(_source: Variant) -> void:
 		if mark.has_method("on_marked_death"):
 			mark.on_marked_death(self)
 	# Drop loot
+	if is_boss():
+		_drop_skeleton_key()
 	_drop_loot()
 	# Grant XP to the hero (with over-level cap matching original)
 	if GameManager and GameManager.hero and GameManager.hero.is_alive:
