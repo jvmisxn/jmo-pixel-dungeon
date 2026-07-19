@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: gladiator, subclass, combat, source-fidelity, tests
+- Added a focused Gladiator combo regression after Fable flagged the stale S06 audit item as the next highest-value gameplay-fidelity target. Current source already routes landed melee attacks through `Char.attack()` -> `on_damage_dealt` and `GladiatorCombo.modify_damage()`, so the test now locks the intended simplified behavior: subclass application attaches the tracker, successive melee hits build combo, the finisher threshold boosts damage, the finisher starts a new chain, and combo state serializes. Marked the backlog item done with a follow-up noting that this remains an automatic simplified finisher rather than SPD's explicit combo-move picker. Local `git diff --check`, Godot import, and full headless suite passed (1273 checks, 0 failures, Godot 4.7.1).
+
 - Tags: mobile, hud, toolbar, quickslots, controls, tests
 - Tightened ultra-narrow mobile toolbar behavior for sub-300px safe-area widths. Compact toolbar paging now preserves the currently visible quickslot group when a resize changes the page size, drops to one quickslot per page only at ultra-narrow widths, hides Search before shrinking Bag/Menu/pager into unusable controls, and uses minimum-size fallback hit boxes after relayout so touch taps still activate visible buttons. Extended `test_mobile_hud_input.gd` with quickslot-page preservation, ultra-narrow Search hiding, and fallback hit-testing regressions. Local `git diff --check`, Godot import, and full headless suite passed (1258 checks, 0 failures, Godot 4.7.1).
 
