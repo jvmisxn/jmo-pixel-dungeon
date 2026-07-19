@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-19
+
+- Tags: mobile, hud, toolbar, quickslots, controls, tests
+- Tightened ultra-narrow mobile toolbar behavior for sub-300px safe-area widths. Compact toolbar paging now preserves the currently visible quickslot group when a resize changes the page size, drops to one quickslot per page only at ultra-narrow widths, hides Search before shrinking Bag/Menu/pager into unusable controls, and uses minimum-size fallback hit boxes after relayout so touch taps still activate visible buttons. Extended `test_mobile_hud_input.gd` with quickslot-page preservation, ultra-narrow Search hiding, and fallback hit-testing regressions. Local `git diff --check`, Godot import, and full headless suite passed (1258 checks, 0 failures, Godot 4.7.1).
+
 ## 2026-07-18
 
 - Tags: mobs, respawn, vision, source-fidelity, tests

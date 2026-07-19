@@ -50,6 +50,7 @@ const MOBILE_NARROW_PAGE_BUTTON_MIN_SIZE: Vector2 = Vector2(36, 56)
 const MOBILE_NARROW_QUICKSLOT_SIZE: Vector2 = Vector2(44, 56)
 const MOBILE_NARROW_QUICKSLOT_ICON_SIZE: Vector2 = Vector2(28, 28)
 const MOBILE_NARROW_BREAKPOINT: float = 430.0
+const MOBILE_ULTRA_NARROW_BREAKPOINT: float = 300.0
 
 # --- Constants ---
 const BUTTON_MIN_SIZE: Vector2 = Vector2(80, 36)
@@ -279,7 +280,9 @@ func set_compact_mode(is_compact: bool) -> void:
 func set_available_width(available_width: float) -> void:
 	if is_equal_approx(_available_width, available_width):
 		return
+	var first_visible_quickslot: int = _quickslot_page * _visible_quickslots_per_page()
 	_available_width = maxf(0.0, available_width)
+	_quickslot_page = floori(float(first_visible_quickslot) / float(maxi(1, _visible_quickslots_per_page())))
 	_apply_button_labels()
 
 
@@ -287,8 +290,18 @@ func _is_narrow_compact_mode() -> bool:
 	return _compact_mode and _available_width > 0.0 and _available_width <= MOBILE_NARROW_BREAKPOINT
 
 
+func _is_ultra_narrow_compact_mode() -> bool:
+	return _compact_mode and _available_width > 0.0 and _available_width <= MOBILE_ULTRA_NARROW_BREAKPOINT
+
+
+func _visible_quickslots_per_page() -> int:
+	return 1 if _is_ultra_narrow_compact_mode() else MOBILE_VISIBLE_QUICKSLOTS
+
+
 func _apply_button_labels() -> void:
 	var is_narrow_compact: bool = _is_narrow_compact_mode()
+	var visible_quickslots_per_page: int = _visible_quickslots_per_page()
+	_quickslot_page = clampi(_quickslot_page, 0, _quickslot_page_count() - 1)
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	var button_size: Vector2 = (
 		MOBILE_NARROW_BUTTON_MIN_SIZE
@@ -311,28 +324,35 @@ func _apply_button_labels() -> void:
 	if _btn_inventory:
 		_btn_inventory.text = "Bag" if _compact_mode else "Inventory [I]"
 		_btn_inventory.custom_minimum_size = button_size
+		_btn_inventory.size = button_size
 		_btn_inventory.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_map:
 		_btn_map.text = "Map [M]"
 		_btn_map.visible = not _compact_mode
 		_btn_map.custom_minimum_size = button_size
+		_btn_map.size = button_size
 		_btn_map.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_wait:
 		_btn_wait.text = "Wait" if _compact_mode else "Wait [Space]"
 		_btn_wait.custom_minimum_size = button_size
+		_btn_wait.size = button_size
 		_btn_wait.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_rest:
 		_btn_rest.text = "Rest [R]"
 		_btn_rest.visible = not _compact_mode
 		_btn_rest.custom_minimum_size = button_size
+		_btn_rest.size = button_size
 		_btn_rest.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_search:
 		_btn_search.text = "Find" if _compact_mode else "Search [S]"
+		_btn_search.visible = not _is_ultra_narrow_compact_mode()
 		_btn_search.custom_minimum_size = button_size
+		_btn_search.size = button_size
 		_btn_search.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_settings:
 		_btn_settings.text = "Menu" if _compact_mode else "Settings [Esc]"
 		_btn_settings.custom_minimum_size = button_size
+		_btn_settings.size = button_size
 		_btn_settings.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_quickslot_page:
 		_btn_quickslot_page.visible = _compact_mode
@@ -341,13 +361,14 @@ func _apply_button_labels() -> void:
 			if is_narrow_compact
 			else button_size
 		)
+		_btn_quickslot_page.size = _btn_quickslot_page.custom_minimum_size
 		_btn_quickslot_page.add_theme_font_size_override(
 			"font_size",
 			13 if is_narrow_compact else action_font_size
 		)
 		var next_page: int = (_quickslot_page + 1) % _quickslot_page_count()
-		var next_start: int = next_page * MOBILE_VISIBLE_QUICKSLOTS
-		var next_end: int = mini(QUICKSLOT_COUNT, next_start + MOBILE_VISIBLE_QUICKSLOTS)
+		var next_start: int = next_page * visible_quickslots_per_page
+		var next_end: int = mini(QUICKSLOT_COUNT, next_start + visible_quickslots_per_page)
 		_btn_quickslot_page.text = "%d-%d" % [next_start + 1, next_end]
 		_btn_quickslot_page.tooltip_text = (
 			"Show quickslots %d-%d" % [next_start + 1, next_end]
@@ -356,8 +377,8 @@ func _apply_button_labels() -> void:
 		_quickslot_sep.visible = not is_narrow_compact
 	if _settings_sep:
 		_settings_sep.visible = not is_narrow_compact
-	var first_visible_quickslot: int = _quickslot_page * MOBILE_VISIBLE_QUICKSLOTS
-	var last_visible_quickslot: int = first_visible_quickslot + MOBILE_VISIBLE_QUICKSLOTS
+	var first_visible_quickslot: int = _quickslot_page * visible_quickslots_per_page
+	var last_visible_quickslot: int = first_visible_quickslot + visible_quickslots_per_page
 	for i: int in range(_quickslots.size()):
 		var is_mobile_hidden_slot: bool = (
 			_compact_mode
@@ -393,9 +414,11 @@ func _fit_compact_width_to_viewport() -> void:
 		if button == null or not button.visible:
 			continue
 		button.custom_minimum_size.x = floorf(button.custom_minimum_size.x * scale_factor)
+		button.size.x = button.custom_minimum_size.x
 		button.add_theme_font_size_override("font_size", 12 if scale_factor < 0.85 else 13)
 	if _btn_quickslot_page != null and _btn_quickslot_page.visible:
 		_btn_quickslot_page.custom_minimum_size.x = floorf(_btn_quickslot_page.custom_minimum_size.x * scale_factor)
+		_btn_quickslot_page.size.x = _btn_quickslot_page.custom_minimum_size.x
 		_btn_quickslot_page.add_theme_font_size_override("font_size", 12 if scale_factor < 0.85 else 13)
 	for i: int in range(_quickslots.size()):
 		if not _quickslots[i].visible:
@@ -504,7 +527,14 @@ func _button_accepts_position(button: Button, screen_pos: Vector2, toolbar_pos: 
 		return false
 	if button.get_global_rect().has_point(screen_pos):
 		return true
-	return Rect2(button.position, button.size).has_point(toolbar_pos)
+	return Rect2(button.position, _hit_size_for_button(button)).has_point(toolbar_pos)
+
+
+func _hit_size_for_button(button: Button) -> Vector2:
+	return Vector2(
+		maxf(button.size.x, button.custom_minimum_size.x),
+		maxf(button.size.y, button.custom_minimum_size.y)
+	)
 
 
 # --- Signal Callbacks ---
@@ -529,7 +559,7 @@ func _on_quickslot_page() -> void:
 	_apply_button_labels()
 
 func _quickslot_page_count() -> int:
-	return ceili(float(QUICKSLOT_COUNT) / float(MOBILE_VISIBLE_QUICKSLOTS))
+	return ceili(float(QUICKSLOT_COUNT) / float(_visible_quickslots_per_page()))
 
 func _on_settings() -> void:
 	settings_pressed.emit()

@@ -198,6 +198,12 @@ func run(t: Object) -> void:
 		toolbar._btn_inventory.visible and toolbar._btn_settings.visible,
 		"very narrow mobile toolbar keeps Bag and Menu visible"
 	)
+	toolbar.set_available_width(375.0)
+	toolbar._on_quickslot_page()
+	t.check(
+		toolbar._quickslots[2].visible and toolbar._quickslots[3].visible,
+		"mobile toolbar can return to quickslots 3-4 before an ultra-narrow resize"
+	)
 	toolbar.set_available_width(280.0)
 	t.check(
 		_visible_toolbar_min_width(toolbar) <= 280.0,
@@ -208,6 +214,20 @@ func run(t: Object) -> void:
 				and toolbar._btn_settings.custom_minimum_size.x > 0.0
 				and toolbar._btn_quickslot_page.custom_minimum_size.x > 0.0,
 		"foldable-width mobile toolbar preserves tappable core controls"
+	)
+	t.check(
+		toolbar._quickslots[2].visible and not toolbar._quickslots[3].visible,
+		"ultra-narrow mobile toolbar preserves the active quickslot group while showing one slot per page"
+	)
+	t.check(
+		not toolbar._btn_search.visible,
+		"ultra-narrow mobile toolbar hides search before shrinking core controls too far"
+	)
+	toolbar._btn_inventory.position = Vector2.ZERO
+	toolbar._btn_inventory.size = Vector2.ZERO
+	t.check(
+		toolbar.activate_button_at_screen_position(Vector2(12, 12)),
+		"mobile toolbar fallback hit-testing uses visible minimum button sizes after relayout"
 	)
 	toolbar.free()
 
