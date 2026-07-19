@@ -311,6 +311,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	# --- Mouse Click ---
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and _should_suppress_synthesized_touch_mouse_event(mb.position):
+			get_viewport().set_input_as_handled()
+			return
 		if mb.pressed:
 			if mb.button_index == MOUSE_BUTTON_LEFT and _is_screen_position_over_hud(mb.position):
 				get_viewport().set_input_as_handled()
@@ -367,7 +370,7 @@ func _is_local_action_key(keycode: int) -> bool:
 	]
 
 func _suppress_synthesized_touch_mouse() -> void:
-	_suppress_touch_mouse_until_msec = Time.get_ticks_msec() + 500
+	_suppress_touch_mouse_until_msec = Time.get_ticks_msec() + 1000
 
 func _is_synthesized_touch_mouse_suppressed() -> bool:
 	return Time.get_ticks_msec() <= _suppress_touch_mouse_until_msec

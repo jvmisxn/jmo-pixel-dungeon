@@ -11,6 +11,20 @@ class FakeHud:
 	func has_active_window() -> bool:
 		return active_window
 
+class FakeCamera:
+	extends RefCounted
+
+	func get_cell_under_mouse() -> int:
+		return 42
+
+class ClickSpyScene:
+	extends GameScene
+
+	var clicked_cells: Array[int] = []
+
+	func _handle_cell_click(cell: int) -> void:
+		clicked_cells.append(cell)
+
 func run(t: Object) -> void:
 	var scene := GameScene.new()
 	var hud := FakeHud.new()
@@ -33,3 +47,26 @@ func run(t: Object) -> void:
 
 	hud.free()
 	scene.free()
+
+	var click_scene := ClickSpyScene.new()
+	click_scene._awaiting_hero_input = true
+	click_scene.game_camera = FakeCamera.new()
+	click_scene._suppress_synthesized_touch_mouse()
+
+	var synthetic_click := InputEventMouseButton.new()
+	synthetic_click.button_index = MOUSE_BUTTON_LEFT
+	synthetic_click.pressed = true
+	synthetic_click.position = Vector2(120, 220)
+	click_scene._unhandled_input(synthetic_click)
+	t.check(
+		click_scene.clicked_cells.is_empty(),
+		"touch-generated mouse clicks are suppressed in unhandled input"
+	)
+
+	click_scene._suppress_touch_mouse_until_msec = 0
+	click_scene._unhandled_input(synthetic_click)
+	t.check(
+		click_scene.clicked_cells == [42],
+		"normal mouse clicks still route to the dungeon cell"
+	)
+	click_scene.free()

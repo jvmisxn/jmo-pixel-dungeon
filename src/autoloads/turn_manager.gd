@@ -40,9 +40,9 @@ var waiting_for_input: bool = false
 var processing_mobs: bool = false
 
 ## Delay (seconds) between visible mob actions (move/attack in hero's FOV).
-## Set to 0 so visible mobs still animate/update in order, but don't add
-## extra post-action waiting before control returns to the hero.
-const MOB_ACTION_DELAY: float = 0.0
+## Mirrors Shattered Pixel Dungeon's short movement interval so attacks and
+## movement remain readable when several mobs act after the hero.
+const MOB_ACTION_DELAY: float = 0.1
 
 ## Cached reference to the active GameScene (cleared on level transitions).
 var _cached_game_scene: Node = null
