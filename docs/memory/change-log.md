@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: traps, curses, equipment, source-fidelity, tests
+- Restored Cursing Trap's live equipment-cursing path. The port was still calling a missing `Hero.get_equipped_items()` helper, so the trap could never curse gear and always fell back to `Hex`. `CursingTrap` now reads the hero's live `Belongings` slots, prioritizes weapon/armor without existing enchantment/glyphs, skips Mage's Staff like SPD, marks the selected item cursed and curse-known, and adds an existing weapon curse enchantment when a bare non-staff weapon is cursed. Added `test_cursing_trap.gd` covering bare weapon curse enchantment, preserving an existing weapon enchantment, armor curse selection, Mage's Staff exclusion, and the no-equipment Hex fallback. Local full headless suite passed (1306 checks, 0 failures, Godot 4.7.1). Remaining fidelity tail: armor curse glyphs are not implemented yet, so armor traps cannot inscribe a curse glyph.
+
 - Tags: mobile, hud, multiplayer, controls, tests
 - Kept four-hero mobile co-op party controls inside narrow portrait viewports. `HUD` now fits party focus button widths to the safe-area-adjusted mobile row instead of always using 86px buttons, so 320-360px portrait layouts no longer clip the rightmost player controls. Party-row refresh also removes old buttons from the row immediately before queue-freeing them, preventing stale controls from affecting same-frame resize/refresh layout math. Extended `test_mobile_hud_input.gd` with a 320px four-hero regression. Local full headless suite passed (1282 checks, 0 failures, Godot 4.7.1).
 
