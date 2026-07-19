@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: mobile, hud, buffs, source-fidelity, tests
+- Restored active buff visibility on the mobile HUD. The compact HUD path was drawing HP/XP/depth through its own status overlay while keeping the full `StatusPane` hidden, so active buffs rendered by `StatusPane` were not visible on mobile. `HUD` now builds a mobile-only `BuffIcon` strip under the top status panel, refreshes it from the local hero's active buffs, and includes it in the top-control spacing so party controls, online turn labels, and the game log stay below it instead of overlapping. Extended `test_mobile_hud_input.gd` with a portrait regression covering visible buff icons and party-row reflow. Local `git diff --check`, Godot import, and full headless suite passed (1326 checks, 0 failures, Godot 4.7.1). Fable approved this as a narrow mobile layout adaptation that improves SPD status fidelity.
+
 - Tags: mobs, demon-halls, level-generation, source-fidelity, tests
 - Matched Demon Halls regular mob rotation to upstream SPD's depth-ramped `MobSpawner.standardMobRotation`: depth 21 now favors Succubi with one Evil Eye, depth 22 is even, depth 23 introduces Scorpios, and depth 24+ weights Scorpios heavily. Removed Ripper Demons from ordinary Halls room spawns; in SPD they come from Demon Spawners/Yog rather than the standard room rotation. `MobFactory.create_boss()` also now returns `null` with a warning for unknown depths instead of a statless base `Mob`, matching `create_mob()`'s unknown-id contract. Added `test_mob_factory.gd`. Local `git diff --check`, Godot import, and full headless suite passed (1324 checks, 0 failures, Godot 4.7.1). Fable final review approved the diff.
 

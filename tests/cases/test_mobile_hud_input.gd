@@ -15,6 +15,10 @@ class FakeHero:
 	var hero_class: int = ConstantsData.HeroClass.WARRIOR
 	var hero_name: String = ""
 	var hero_slot_index: int = 0
+	var buffs: Array[Node] = []
+
+	func get_buffs() -> Array[Node]:
+		return buffs
 
 class TestHud:
 	extends HUD
@@ -356,7 +360,25 @@ func run(t: Object) -> void:
 	GameManager.heroes = party_heroes
 	GameManager.hero = party_heroes[0]
 	GameManager.local_hero_index = 0
+	var mobile_buff := Buff.new()
+	mobile_buff.buff_id = "TestMobileBuff"
+	mobile_buff.buff_name = "Mobile Buff"
+	mobile_buff.time_left = 3.0
+	(party_heroes[0] as FakeHero).buffs.append(mobile_buff)
 	layout_hud.update_all()
+	var mobile_buffs_row: HFlowContainer = layout_root.get_node_or_null("MobileBuffsRow") as HFlowContainer
+	t.check(
+		mobile_buffs_row != null
+				and mobile_buffs_row.visible
+				and mobile_buffs_row.get_child_count() == 1
+				and (mobile_buffs_row.get_child(0) as BuffIcon) != null,
+		"mobile HUD renders local hero buffs as visible status icons"
+	)
+	t.check(
+		mobile_buffs_row != null
+				and portrait_party_row.position.y >= mobile_buffs_row.position.y + mobile_buffs_row.size.y + HUD.HUD_MARGIN,
+		"mobile party controls move below the visible status buff row"
+	)
 	t.check(
 		portrait_party_row.visible
 				and is_equal_approx(portrait_party_row.position.x, stale_party_x)
@@ -374,6 +396,7 @@ func run(t: Object) -> void:
 	GameManager.heroes = original_heroes
 	GameManager.hero = original_hero
 	GameManager.local_hero_index = original_local_hero_index
+	mobile_buff.free()
 	for hero_node: Node in party_heroes:
 		hero_node.free()
 	layout_hud._connect_signals()

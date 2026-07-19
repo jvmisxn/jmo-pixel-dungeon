@@ -42,6 +42,7 @@ var _status_xp_bar: ProgressBar = null
 var _status_xp_label: Label = null
 var _status_depth_label: Label = null
 var _status_str_label: Label = null
+var _mobile_buffs_row: HFlowContainer = null
 
 # --- Active popup window ---
 var _active_window: Control = null
@@ -155,6 +156,7 @@ func _build_layout() -> void:
 	status_container.add_child(_status_pane)
 	root.add_child(status_container)
 	_build_status_overlay(root)
+	_build_mobile_buffs_row(root)
 
 	# --- Game Log (bottom-left, floating over game world) ---
 	var log_container: MarginContainer = MarginContainer.new()
@@ -663,6 +665,16 @@ func _build_status_overlay(root: Control) -> void:
 	_status_overlay.add_child(_status_str_label)
 
 
+func _build_mobile_buffs_row(root: Control) -> void:
+	_mobile_buffs_row = HFlowContainer.new()
+	_mobile_buffs_row.name = "MobileBuffsRow"
+	_mobile_buffs_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mobile_buffs_row.visible = false
+	_mobile_buffs_row.add_theme_constant_override("h_separation", 3)
+	_mobile_buffs_row.add_theme_constant_override("v_separation", 2)
+	root.add_child(_mobile_buffs_row)
+
+
 func _on_viewport_resized() -> void:
 	_apply_viewport_size(_get_viewport_size())
 
@@ -1016,6 +1028,8 @@ func _apply_responsive_layout() -> void:
 			)
 			_status_pane.size = _status_pane.custom_minimum_size
 		_layout_status_overlay(status_container)
+		_refresh_status_overlay()
+		_layout_mobile_buffs_row(status_container)
 
 	if log_container:
 		_layout_game_log(log_container, status_container, party_row)
@@ -1040,7 +1054,7 @@ func _apply_responsive_layout() -> void:
 		)
 		var party_y: float = _hud_top_margin()
 		if is_mobile_layout and status_container != null:
-			party_y = status_container.position.y + status_container.size.y + HUD_MARGIN
+			party_y = _mobile_top_controls_bottom(status_container, null) + HUD_MARGIN
 		party_row.position = Vector2(
 			party_safe_left + HUD_MARGIN
 			if is_mobile_layout
@@ -1086,7 +1100,6 @@ func _apply_responsive_layout() -> void:
 			_toolbar_bar.set_available_width(toolbar.size.x if toolbar != null else _vp_size.x)
 
 	_layout_toolbar()
-	_refresh_status_overlay()
 
 
 func _layout_game_log(log_container: Control, status_container: Control, party_row: Control) -> void:
@@ -1102,9 +1115,7 @@ func _layout_game_log(log_container: Control, status_container: Control, party_r
 	var log_height: float = desired_log_height
 	var log_y: float = _toolbar_top_y() - log_height - HUD_MARGIN
 	if is_mobile_layout:
-		var top_controls_bottom: float = 0.0
-		if status_container != null:
-			top_controls_bottom = maxf(top_controls_bottom, status_container.position.y + status_container.size.y)
+		var top_controls_bottom: float = _mobile_top_controls_bottom(status_container, party_row)
 		if party_row != null:
 			top_controls_bottom = maxf(top_controls_bottom, party_row.position.y + maxf(34.0, party_row.size.y))
 		if _online_state_label != null and _online_state_label.visible:
@@ -1118,6 +1129,17 @@ func _layout_game_log(log_container: Control, status_container: Control, party_r
 	log_container.custom_minimum_size = Vector2(log_width, log_height)
 	log_container.size = Vector2(log_width, log_height)
 	log_container.position = Vector2(safe_left + HUD_MARGIN, log_y)
+
+
+func _mobile_top_controls_bottom(status_container: Control, party_row: Control) -> float:
+	var bottom: float = 0.0
+	if status_container != null:
+		bottom = maxf(bottom, status_container.position.y + status_container.size.y)
+	if _mobile_buffs_row != null and _mobile_buffs_row.visible:
+		bottom = maxf(bottom, _mobile_buffs_row.position.y + _mobile_buffs_row.size.y)
+	if party_row != null:
+		bottom = maxf(bottom, party_row.position.y + maxf(34.0, party_row.size.y))
+	return bottom
 
 
 func _layout_status_overlay(status_container: Control) -> void:
@@ -1149,6 +1171,18 @@ func _layout_status_overlay(status_container: Control) -> void:
 		_status_str_label.visible = not is_portrait_mobile
 		_status_str_label.custom_minimum_size = Vector2(58.0 if is_mobile_layout else 70.0, 0.0)
 		_status_str_label.add_theme_font_size_override("font_size", 13 if is_mobile_layout else 13)
+
+
+func _layout_mobile_buffs_row(status_container: Control) -> void:
+	if _mobile_buffs_row == null or status_container == null:
+		return
+	_mobile_buffs_row.visible = _is_mobile_layout() and _mobile_buffs_row.get_child_count() > 0
+	if not _mobile_buffs_row.visible:
+		_mobile_buffs_row.size = Vector2.ZERO
+		return
+	_mobile_buffs_row.position = Vector2(status_container.position.x, status_container.position.y + status_container.size.y + 2.0)
+	_mobile_buffs_row.custom_minimum_size = Vector2(status_container.size.x, 24.0)
+	_mobile_buffs_row.size = _mobile_buffs_row.custom_minimum_size
 
 
 func _layout_toolbar() -> void:
@@ -1202,6 +1236,27 @@ func _refresh_status_overlay() -> void:
 		_status_depth_label.text = "D%d" % depth_val
 	if _status_str_label:
 		_status_str_label.text = "STR %d" % str_val
+	_refresh_mobile_buffs(hero_ref)
+
+
+func _refresh_mobile_buffs(hero_ref: Variant) -> void:
+	if _mobile_buffs_row == null:
+		return
+	for child: Node in _mobile_buffs_row.get_children():
+		_mobile_buffs_row.remove_child(child)
+		child.queue_free()
+	var buffs: Array = hero_ref.get_buffs() if hero_ref != null and hero_ref.has_method("get_buffs") else []
+	for buff: Variant in buffs:
+		var icon: BuffIcon = BuffIcon.new()
+		icon.buff_ref = buff as Node
+		icon.custom_minimum_size = Vector2(20, 20)
+		_mobile_buffs_row.add_child(icon)
+		icon.update_flash_state()
+	var root_node: Control = get_node_or_null("HUDRoot") as Control
+	if root_node == null:
+		return
+	var status_container: Control = root_node.get_node_or_null("StatusContainer") as Control
+	_layout_mobile_buffs_row(status_container)
 
 
 func _is_mobile_layout() -> bool:
