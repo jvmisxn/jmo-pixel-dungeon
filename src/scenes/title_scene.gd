@@ -71,6 +71,7 @@ const SUBMENU_CONTENT_WIDTH: float = 712.0
 const SUBMENU_ACTION_WIDTH: float = 350.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
 const PORTRAIT_MENU_MAX_WIDTH: float = 320.0
+const PORTRAIT_MENU_SIDE_MARGIN: float = 72.0
 const PORTRAIT_TOP_ACTION_GAP: float = 12.0
 const PROFILE_ICON_SPRITES: Dictionary = {
 	"warrior": "res://assets/spd/sprites/warrior.png",
@@ -695,7 +696,7 @@ func _apply_layout() -> void:
 		_pd_title_label.custom_minimum_size = Vector2(title_width, 42 if is_portrait else 50)
 		_pd_title_label.size = _pd_title_label.custom_minimum_size
 	if _menu_box:
-		_menu_box.position = Vector2(floor((viewport_size.x - menu_width) * 0.5), title_top + (150.0 if is_portrait else 170.0))
+		_menu_box.position = Vector2(_title_menu_x(viewport_size, menu_width), title_top + (150.0 if is_portrait else 170.0))
 		_menu_box.custom_minimum_size = Vector2(menu_width, 300)
 		_menu_box.size = Vector2(menu_width, 300)
 		_menu_box.add_theme_constant_override("separation", PORTRAIT_TOP_ACTION_GAP if stack_top_actions else 12.0)
@@ -774,9 +775,13 @@ func _should_stack_title_actions(viewport_size: Vector2) -> bool:
 	return viewport_size.y > viewport_size.x and viewport_size.x <= 430.0
 
 
+func _title_menu_x(viewport_size: Vector2, menu_width: float) -> float:
+	return floor((viewport_size.x - menu_width) * 0.5)
+
+
 func _title_menu_width(viewport_size: Vector2) -> float:
 	var is_portrait: bool = viewport_size.y > viewport_size.x
-	var margin: float = 56.0 if is_portrait else 24.0
+	var margin: float = PORTRAIT_MENU_SIDE_MARGIN if is_portrait else 24.0
 	var max_width: float = PORTRAIT_MENU_MAX_WIDTH if is_portrait else 400.0
 	return maxf(1.0, minf(max_width, viewport_size.x - (margin * 2.0)))
 
