@@ -43,3 +43,21 @@ func run(t: Object) -> void:
 		"settings zoom applies immediately instead of snapping back next frame"
 	)
 	camera.free()
+
+	var workflow := FileAccess.get_file_as_string("res://.github/workflows/deploy-web.yml")
+	t.check(
+		workflow.contains("user-scalable=no"),
+		"web export disables browser page zoom so Godot can handle camera pinch"
+	)
+	t.check(
+		not workflow.contains("user-scalable=yes"),
+		"web export does not re-enable browser pinch zoom"
+	)
+	t.check(
+		workflow.contains("touch-action: none"),
+		"web export lets Godot receive canvas touch gestures"
+	)
+	t.check(
+		not workflow.contains("width: 100vw !important;\\n\\theight: 100dvh !important;\\n\\ttouch-action: auto;"),
+		"web export does not inject browser-owned canvas touch gestures"
+	)

@@ -56,15 +56,15 @@ jobs:
           html = page.read_text()
           html = html.replace(
               "width=device-width, user-scalable=no, initial-scale=1.0",
-              "width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover",
+              "width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1, viewport-fit=cover",
           )
           html = html.replace(
-              "overflow: hidden;\n\ttouch-action: none;",
               "overflow: hidden;\n\ttouch-action: auto;",
+              "overflow: hidden;\n\ttouch-action: none;",
           )
           html = html.replace(
               "#canvas {\n\tdisplay: block;\n}",
-              "#canvas {\n\tdisplay: block;\n\twidth: 100vw !important;\n\theight: 100dvh !important;\n\ttouch-action: auto;\n}",
+              "#canvas {\n\tdisplay: block;\n\twidth: 100vw !important;\n\theight: 100dvh !important;\n\ttouch-action: none;\n}",
           )
           page.write_text(html)
           PY

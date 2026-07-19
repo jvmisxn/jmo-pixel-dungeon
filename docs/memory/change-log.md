@@ -2,6 +2,9 @@
 
 ## 2026-07-18
 
+- Tags: mobile, zoom, web-export, touch, tests
+- Restored mobile web pinch zoom after the deploy shell patch had re-enabled browser-owned gestures. The GitHub Pages workflow was rewriting Godot's exported viewport from `user-scalable=no` to `user-scalable=yes` and setting `touch-action: auto`, so mobile browsers could consume two-finger pinches as page gestures before `GameCamera` received the touch stream. The web shell now keeps page zoom disabled and canvas touch handling claimed by Godot (`touch-action: none`), and `GameCamera._claim_web_canvas_touch_gestures()` now replaces the viewport content with one consistent no-page-zoom policy instead of appending potentially contradictory flags at runtime. Added a workflow regression to `test_game_camera_mobile_zoom.gd`.
+
 - Tags: docs, mobile, combat-input, combat-pacing, follow-up
 - Documented the remaining playtest follow-ups from the mobile attack/pacing fix in `backlog.md` and `active-context.md`: real-device verification for tap attacks/damage numbers, windowed/device tuning against SPD feel for visible mob pacing and possible action animation gating, and a separate online-only duplicate-damage-feedback investigation path if co-op still reproduces stacked numbers.
 

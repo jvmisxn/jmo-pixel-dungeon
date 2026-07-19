@@ -240,10 +240,7 @@ func _claim_web_canvas_touch_gestures() -> void:
 		"document.body.style.overscrollBehavior='none';" +
 		"var viewport=document.querySelector('meta[name=viewport]');" +
 		"if(viewport){" +
-		"var content=viewport.getAttribute('content')||'';" +
-		"if(content.indexOf('user-scalable=no')===-1){" +
-		"viewport.setAttribute('content', content + ', user-scalable=no, maximum-scale=1');" +
-		"}" +
+		"viewport.setAttribute('content','width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1, viewport-fit=cover');" +
 		"}" +
 		"})()",
 		true
