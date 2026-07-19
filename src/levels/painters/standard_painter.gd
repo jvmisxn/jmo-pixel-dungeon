@@ -33,7 +33,7 @@ static func paint_level(level: Level) -> void:
 # ---------------------------------------------------------------------------
 
 static func _carve_tunnels(level: Level) -> void:
-	var carved: Dictionary[int, bool] = {}  # Track which pairs we've already tunneled
+	var carved: Dictionary[String, bool] = {}  # Track which pairs we've already tunneled
 
 	for room: Room in level.rooms:
 		if room == null:
@@ -46,7 +46,7 @@ static func _carve_tunnels(level: Level) -> void:
 			if room.is_connected_to(neighbor):
 				continue
 			# Skip if we already carved this pair
-			var pair_key: int = mini(room.get_instance_id(), neighbor.get_instance_id()) * 100000 + maxi(room.get_instance_id(), neighbor.get_instance_id())
+			var pair_key: String = _room_pair_key(room, neighbor)
 			if carved.has(pair_key):
 				continue
 			carved[pair_key] = true
@@ -57,18 +57,37 @@ static func _carve_tunnels(level: Level) -> void:
 
 			Builder.build_tunnel(level, from_pos, to_pos)
 
-			# Secret rooms need an actual hidden entrance tile, not just a carved opening.
-			# Direct `connected` rooms already paint their own doors, but `neighbors`
-			# only get tunnel carving, so without this secret rooms become open passages.
-			if room.type == Room.Type.SECRET:
-				level.set_terrain(from_pos, ConstantsData.Terrain.SECRET_DOOR)
-			if neighbor.type == Room.Type.SECRET:
-				level.set_terrain(to_pos, ConstantsData.Terrain.SECRET_DOOR)
+			_place_tunnel_door(level, room, from_pos)
+			_place_tunnel_door(level, neighbor, to_pos)
 
-			# NOTE: Doors are placed by each Room's paint() method using its
-			# `connected` dictionary. The tunnel just carves empty space between
-			# rooms. Do NOT place extra doors here — doing so creates orphan
-			# doors in walls that lead nowhere.
+
+static func _room_pair_key(a: Room, b: Room) -> String:
+	var a_id: int = a.get_instance_id()
+	var b_id: int = b.get_instance_id()
+	return "%d:%d" % [mini(a_id, b_id), maxi(a_id, b_id)]
+
+
+static func _place_tunnel_door(level: Level, room: Room, pos: int) -> void:
+	if pos < 0 or pos >= Level.LEN:
+		return
+	if _has_adjacent_door(level, pos):
+		return
+	var terrain: int = _tunnel_door_terrain(room)
+	if terrain < 0:
+		return
+	if not _is_valid_doorframe(level, pos):
+		return
+	level.set_terrain(pos, terrain)
+
+
+static func _tunnel_door_terrain(room: Room) -> int:
+	if room.type == Room.Type.SECRET:
+		return ConstantsData.Terrain.SECRET_DOOR
+	if room is CrystalVaultRoom:
+		return ConstantsData.Terrain.CRYSTAL_DOOR
+	if room is VaultRoom or room is ArmoryRoom:
+		return ConstantsData.Terrain.LOCKED_DOOR
+	return ConstantsData.Terrain.DOOR
 
 ## Check if the position forms a valid doorframe — walls on two opposite sides
 ## (N+S or E+W). A door with open space on 3 sides is pointless.
