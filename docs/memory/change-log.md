@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: mobile, title, layout, controls, tests
+- Fixed the portrait title menu clipping shown on phone screenshots when a save exists. `TitleScene` now stacks `Continue` under `New Game` on narrow portrait layouts instead of forcing both into one split HBox row, while keeping the split row in landscape/desktop. Extended `test_title_mobile_layout.gd` to cover the portrait stack behavior, landscape split behavior, and reparenting path. Local `git diff --check`, Godot import, and full headless suite passed (1313 checks, 0 failures, Godot 4.7.1).
+
 - Tags: mobile, hud, landscape, controls, tests
 - Kept the mobile landscape status pane compact instead of stretching across the full safe viewport width. `HUD` now caps landscape mobile status width at 360px while preserving portrait's full-width status strip, giving the dungeon view and co-op/control rows more breathing room on notched landscape layouts. Extended `test_mobile_hud_input.gd` with an 852x393 safe-area regression. Local `git diff --check`, Godot import, and full headless suite passed (1309 checks, 0 failures, Godot 4.7.1). Fable reviewed the change as a low-risk mobile layout adaptation, not a source-gameplay divergence.
 

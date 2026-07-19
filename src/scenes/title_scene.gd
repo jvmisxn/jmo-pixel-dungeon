@@ -71,6 +71,7 @@ const SUBMENU_CONTENT_WIDTH: float = 712.0
 const SUBMENU_ACTION_WIDTH: float = 350.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
 const PORTRAIT_MENU_MAX_WIDTH: float = 320.0
+const PORTRAIT_TOP_ACTION_GAP: float = 12.0
 const PROFILE_ICON_SPRITES: Dictionary = {
 	"warrior": "res://assets/spd/sprites/warrior.png",
 	"mage": "res://assets/spd/sprites/mage.png",
@@ -677,6 +678,7 @@ func _apply_layout() -> void:
 	var viewport_size: Vector2 = _get_layout_viewport_size()
 	_layout_viewport_size = viewport_size
 	var is_portrait: bool = viewport_size.y > viewport_size.x
+	var stack_top_actions: bool = _should_stack_title_actions(viewport_size)
 	var margin: float = 56.0 if is_portrait else 24.0
 	var menu_width: float = _title_menu_width(viewport_size)
 	var title_width: float = maxf(1.0, viewport_size.x - (margin * 2.0))
@@ -696,15 +698,20 @@ func _apply_layout() -> void:
 		_menu_box.position = Vector2(floor((viewport_size.x - menu_width) * 0.5), title_top + (150.0 if is_portrait else 170.0))
 		_menu_box.custom_minimum_size = Vector2(menu_width, 300)
 		_menu_box.size = Vector2(menu_width, 300)
+		_menu_box.add_theme_constant_override("separation", PORTRAIT_TOP_ACTION_GAP if stack_top_actions else 12.0)
+		_arrange_top_actions(stack_top_actions)
 	if _top_menu_row:
 		_top_menu_row.custom_minimum_size = Vector2(menu_width, 44)
 		_top_menu_row.size = Vector2(menu_width, 44)
-	if _btn_continue:
+	if _btn_continue and not stack_top_actions:
 		var split_gap: float = 12.0
+		_top_menu_row.add_theme_constant_override("separation", split_gap)
 		_set_button_width(_btn_new_game, floor((menu_width - split_gap) * 0.62), 44)
 		_set_button_width(_btn_continue, ceil((menu_width - split_gap) * 0.38), 44)
 	elif _btn_new_game:
 		_set_button_width(_btn_new_game, menu_width, 44)
+		if _btn_continue:
+			_set_button_width(_btn_continue, menu_width, 44)
 	for btn: Button in [_btn_multiplayer, _btn_profile, _btn_settings]:
 		if btn:
 			_set_button_width(btn, menu_width, 44)
@@ -746,6 +753,25 @@ func _set_button_width(btn: Button, width: float, height: float) -> void:
 	btn.custom_minimum_size = button_size
 	btn.size = button_size
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+
+func _arrange_top_actions(stack_top_actions: bool) -> void:
+	if _menu_box == null or _top_menu_row == null or _btn_continue == null:
+		return
+	if stack_top_actions:
+		if _btn_continue.get_parent() == _top_menu_row:
+			_top_menu_row.remove_child(_btn_continue)
+		if _btn_continue.get_parent() != _menu_box:
+			_menu_box.add_child(_btn_continue)
+		_menu_box.move_child(_btn_continue, min(1, _menu_box.get_child_count() - 1))
+	elif _btn_continue.get_parent() != _top_menu_row:
+		if _btn_continue.get_parent() != null:
+			_btn_continue.get_parent().remove_child(_btn_continue)
+		_top_menu_row.add_child(_btn_continue)
+
+
+func _should_stack_title_actions(viewport_size: Vector2) -> bool:
+	return viewport_size.y > viewport_size.x and viewport_size.x <= 430.0
 
 
 func _title_menu_width(viewport_size: Vector2) -> float:
