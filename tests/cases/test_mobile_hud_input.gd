@@ -9,6 +9,9 @@ class FakeHud:
 class FakeHero:
 	extends Node
 
+	signal buff_added(buff: Node)
+	signal buff_removed(buff: Node)
+
 	var is_alive: bool = true
 	var hp: int = 20
 	var hp_max: int = 20
@@ -379,6 +382,22 @@ func run(t: Object) -> void:
 				and portrait_party_row.position.y >= mobile_buffs_row.position.y + mobile_buffs_row.size.y + HUD.HUD_MARGIN,
 		"mobile party controls move below the visible status buff row"
 	)
+	var live_buff := Buff.new()
+	live_buff.buff_id = "LiveMobileBuff"
+	live_buff.buff_name = "Live Buff"
+	live_buff.time_left = 5.0
+	(party_heroes[0] as FakeHero).buffs.append(live_buff)
+	(party_heroes[0] as FakeHero).buff_added.emit(live_buff)
+	t.check(
+		mobile_buffs_row != null and mobile_buffs_row.get_child_count() == 2,
+		"mobile HUD refreshes buff icons immediately when the local hero gains a buff"
+	)
+	(party_heroes[0] as FakeHero).buffs.erase(live_buff)
+	(party_heroes[0] as FakeHero).buff_removed.emit(live_buff)
+	t.check(
+		mobile_buffs_row != null and mobile_buffs_row.get_child_count() == 1,
+		"mobile HUD refreshes buff icons immediately when the local hero loses a buff"
+	)
 	t.check(
 		portrait_party_row.visible
 				and is_equal_approx(portrait_party_row.position.x, stale_party_x)
@@ -396,6 +415,7 @@ func run(t: Object) -> void:
 	GameManager.heroes = original_heroes
 	GameManager.hero = original_hero
 	GameManager.local_hero_index = original_local_hero_index
+	live_buff.free()
 	mobile_buff.free()
 	for hero_node: Node in party_heroes:
 		hero_node.free()

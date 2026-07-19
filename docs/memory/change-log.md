@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: mobile, hud, buffs, controls, tests
+- Made the mobile HUD buff strip update live when local hero buffs are added, refreshed, or removed. The previous compact HUD drew a separate mobile `BuffIcon` row, but only rebuilt it during broad HUD/stat refreshes, so poison/chill/haste/etc. could appear stale or invisible until another unrelated HUD update happened. `HUD` now tracks the local hero's `buff_added`/`buff_removed` signals, refreshes on `status_effect_applied`, and immediately reflows the party controls/log around the changing buff row. Extended `test_mobile_hud_input.gd` with add/remove signal regressions. Local `git diff --check`, Godot import, and full headless suite passed (1328 checks, 0 failures, Godot 4.7.1).
+
 - Tags: mobile, hud, buffs, source-fidelity, tests
 - Restored active buff visibility on the mobile HUD. The compact HUD path was drawing HP/XP/depth through its own status overlay while keeping the full `StatusPane` hidden, so active buffs rendered by `StatusPane` were not visible on mobile. `HUD` now builds a mobile-only `BuffIcon` strip under the top status panel, refreshes it from the local hero's active buffs, and includes it in the top-control spacing so party controls, online turn labels, and the game log stay below it instead of overlapping. Extended `test_mobile_hud_input.gd` with a portrait regression covering visible buff icons and party-row reflow. Local `git diff --check`, Godot import, and full headless suite passed (1326 checks, 0 failures, Godot 4.7.1). Fable approved this as a narrow mobile layout adaptation that improves SPD status fidelity.
 

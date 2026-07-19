@@ -53,6 +53,7 @@ var _sub_windows: Array[Variant] = []
 var _vp_size: Vector2 = Vector2(1280, 720)
 var _web_layout_poll_elapsed: float = 0.0
 var _web_viewport_resize_callback: JavaScriptObject = null
+var _tracked_buff_hero: Node = null
 
 func _get_local_hero() -> Variant:
 	if GameManager == null:
@@ -358,6 +359,7 @@ func _connect_signals() -> void:
 		event_bus.gold_collected.connect(_on_gold_collected)
 		event_bus.hero_moved.connect(_on_hero_moved)
 		event_bus.show_window.connect(_on_show_window_requested)
+		event_bus.status_effect_applied.connect(_on_status_effect_applied)
 		# Boss fight signals (now defined in EventBus)
 		event_bus.boss_fight_started.connect(_on_boss_fight_started)
 		event_bus.boss_damaged.connect(_on_boss_damaged)
@@ -462,6 +464,7 @@ func _release_window_layer_if_empty() -> void:
 
 ## Force update all HUD elements.
 func update_all() -> void:
+	_track_local_hero_buff_signals()
 	_update_info_row()
 	_refresh_quickslots()
 	_refresh_party_row()
@@ -721,6 +724,15 @@ func _on_level_changed(_new_depth: int) -> void:
 	_refresh_status_overlay()
 	if _status_pane:
 		_status_pane.update_all()
+
+
+func _on_status_effect_applied(target: Variant, _effect_id: String) -> void:
+	if target != _get_local_hero():
+		return
+	_refresh_status_overlay()
+	if _status_pane:
+		_status_pane.update_all()
+	_apply_responsive_layout()
 
 
 func _on_gold_collected(_amount: int, _total: int) -> void:
@@ -1257,6 +1269,40 @@ func _refresh_mobile_buffs(hero_ref: Variant) -> void:
 		return
 	var status_container: Control = root_node.get_node_or_null("StatusContainer") as Control
 	_layout_mobile_buffs_row(status_container)
+
+
+func _track_local_hero_buff_signals() -> void:
+	var hero_node: Node = _get_local_hero() as Node
+	if hero_node == _tracked_buff_hero:
+		return
+	_disconnect_tracked_buff_hero()
+	_tracked_buff_hero = hero_node
+	if _tracked_buff_hero == null:
+		return
+	var changed_callback: Callable = Callable(self, "_on_tracked_hero_buff_changed")
+	if _tracked_buff_hero.has_signal("buff_added") and not _tracked_buff_hero.is_connected("buff_added", changed_callback):
+		_tracked_buff_hero.connect("buff_added", changed_callback)
+	if _tracked_buff_hero.has_signal("buff_removed") and not _tracked_buff_hero.is_connected("buff_removed", changed_callback):
+		_tracked_buff_hero.connect("buff_removed", changed_callback)
+
+
+func _disconnect_tracked_buff_hero() -> void:
+	if _tracked_buff_hero == null or not is_instance_valid(_tracked_buff_hero):
+		_tracked_buff_hero = null
+		return
+	var changed_callback: Callable = Callable(self, "_on_tracked_hero_buff_changed")
+	if _tracked_buff_hero.has_signal("buff_added") and _tracked_buff_hero.is_connected("buff_added", changed_callback):
+		_tracked_buff_hero.disconnect("buff_added", changed_callback)
+	if _tracked_buff_hero.has_signal("buff_removed") and _tracked_buff_hero.is_connected("buff_removed", changed_callback):
+		_tracked_buff_hero.disconnect("buff_removed", changed_callback)
+	_tracked_buff_hero = null
+
+
+func _on_tracked_hero_buff_changed(_buff: Node) -> void:
+	_refresh_status_overlay()
+	if _status_pane:
+		_status_pane.update_all()
+	_apply_responsive_layout()
 
 
 func _is_mobile_layout() -> bool:
