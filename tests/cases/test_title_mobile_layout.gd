@@ -9,8 +9,8 @@ func run(t: Object) -> void:
 		"mobile web title layout uses browser viewport with a right-edge safe reserve"
 	)
 	t.check(
-		scene._title_menu_width(chosen_viewport) <= 320.0,
-		"portrait title menu is capped below the full desktop button width"
+		scene._title_menu_width(chosen_viewport) <= 180.0,
+		"portrait title menu has a hard narrow-phone width cap"
 	)
 	t.check(
 		scene._title_menu_width(chosen_viewport) <= chosen_viewport.x - 144.0,
@@ -19,6 +19,10 @@ func run(t: Object) -> void:
 	t.check(
 		scene._title_menu_x(chosen_viewport, scene._title_menu_width(chosen_viewport)) >= 72.0,
 		"portrait title menu keeps a wide left inset"
+	)
+	t.check(
+		scene._title_menu_x(chosen_viewport, scene._title_menu_width(chosen_viewport)) + scene._title_menu_width(chosen_viewport) <= chosen_viewport.x - 72.0,
+		"portrait title menu keeps a wide right inset"
 	)
 	t.check(
 		scene._should_stack_title_actions(chosen_viewport),
