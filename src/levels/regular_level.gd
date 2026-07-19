@@ -517,7 +517,12 @@ func _is_valid_respawn_cell(pos: int) -> bool:
 	for hero: Char in get_heroes():
 		if hero == null or not is_instance_valid(hero):
 			continue
-		if hero.distance_to(pos) <= ConstantsData.VIEW_DISTANCE:
+		var view_distance: int = (
+			hero.get_view_distance()
+			if hero.has_method("get_view_distance")
+			else ConstantsData.VIEW_DISTANCE
+		)
+		if hero.distance_to(pos) <= view_distance:
 			return false
 	return true
 

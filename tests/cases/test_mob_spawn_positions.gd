@@ -126,6 +126,36 @@ func run(t: Object) -> void:
 	)
 	_free_level_mobs(respawn_level)
 
+	var extended_sight_level := SpawnLevel.new()
+	_fill_empty(extended_sight_level)
+	extended_sight_level.depth = 2
+	extended_sight_level.visible.resize(ConstantsData.LENGTH)
+	extended_sight_level.visible.fill(false)
+	var huntress := Hero.new()
+	huntress.hero_class = ConstantsData.HeroClass.HUNTRESS
+	huntress.pos = ConstantsData.xy_to_pos(5, 5)
+	huntress.level = extended_sight_level
+	var old_heroes: Array[Node] = GameManager.heroes.duplicate() if GameManager != null else []
+	if GameManager != null:
+		GameManager.heroes.clear()
+		GameManager.heroes.append(huntress)
+	var base_hidden_cell: int = ConstantsData.xy_to_pos(14, 5)
+	var extended_hidden_cell: int = ConstantsData.xy_to_pos(17, 5)
+	extended_sight_level.fallback_positions = [base_hidden_cell, extended_hidden_cell]
+	extended_sight_level.respawn_target_mob_count = 1
+	t.check(
+		extended_sight_level.respawn_mob_if_needed(),
+		"respawner still finds a spawn outside the hero's effective sight radius"
+	)
+	t.check(
+		int(extended_sight_level.mobs[0].get("pos")) == extended_hidden_cell,
+		"respawner skips cells inside extended hero sight, not just base view distance"
+	)
+	if GameManager != null:
+		GameManager.heroes = old_heroes
+	huntress.free()
+	_free_level_mobs(extended_sight_level)
+
 	var capped_level := SpawnLevel.new()
 	_fill_empty(capped_level)
 	capped_level.depth = 2

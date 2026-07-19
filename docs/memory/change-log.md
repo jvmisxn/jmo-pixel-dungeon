@@ -2,6 +2,9 @@
 
 ## 2026-07-18
 
+- Tags: mobs, respawn, vision, source-fidelity, tests
+- Tightened regular-floor respawn placement so replacement mobs respect each hero's effective sight radius, not just the base `ConstantsData.VIEW_DISTANCE`. Offscreen mob respawn is intentional SPD-style balance, but the previous guard could allow a spawn at distance 9-10 for a Huntress or other extended-sight hero because `_is_valid_respawn_cell()` rejected only visible cells and cells within the base radius. Respawn placement now asks `hero.get_view_distance()` when available, preserving normal offscreen respawns while preventing visible/extended-vision pop-in. Extended `test_mob_spawn_positions.gd` with a Huntress sight regression and marked the stale backlog respawn item done.
+
 - Tags: mobile, zoom, web-export, touch, tests
 - Restored mobile web pinch zoom after the deploy shell patch had re-enabled browser-owned gestures. The GitHub Pages workflow was rewriting Godot's exported viewport from `user-scalable=no` to `user-scalable=yes` and setting `touch-action: auto`, so mobile browsers could consume two-finger pinches as page gestures before `GameCamera` received the touch stream. The web shell now keeps page zoom disabled and canvas touch handling claimed by Godot (`touch-action: none`), and `GameCamera._claim_web_canvas_touch_gestures()` now replaces the viewport content with one consistent no-page-zoom policy instead of appending potentially contradictory flags at runtime. Added a workflow regression to `test_game_camera_mobile_zoom.gd`.
 
