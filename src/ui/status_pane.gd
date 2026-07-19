@@ -54,7 +54,6 @@ var _compact_mode: bool = false
 const SLOT_SIZE: Vector2 = Vector2(28, 28)
 const BAR_HEIGHT: int = 14
 const COMPACT_MINIMUM_SIZE: Vector2 = Vector2(1, 76)
-const BUFF_ICON_SIZE: Vector2 = Vector2(16, 16)
 const STATUS_PANE_PATH: String = "res://assets/spd/interfaces/status_pane.png"
 const HERO_ICONS_PATH: String = "res://assets/spd/interfaces/hero_icons.png"
 const BUFFS_PATH: String = "res://assets/spd/interfaces/buffs.png"
@@ -260,6 +259,7 @@ func _build_ui() -> void:
 	add_child(_buffs_label)
 
 	_buffs_container = HFlowContainer.new()
+	_buffs_container.name = "BuffsContainer"
 	_buffs_container.add_theme_constant_override("h_separation", 2)
 	_buffs_container.add_theme_constant_override("v_separation", 2)
 	add_child(_buffs_container)
@@ -715,19 +715,14 @@ func _update_buffs(hero: Variant) -> void:
 		return
 	# Clear existing buff icons
 	for child: Node in _buffs_container.get_children():
+		_buffs_container.remove_child(child)
 		child.queue_free()
 	# Add current buffs
 	var buffs: Array = hero.get_buffs() if hero.has_method("get_buffs") else []
 	for buff: Variant in buffs:
-		var icon: ColorRect = ColorRect.new()
-		icon.custom_minimum_size = BUFF_ICON_SIZE
-		var buff_color: Color = Color(0.4, 0.6, 0.8)
-		if buff and buff.get("icon_color") != null:
-			buff_color = buff.get("icon_color")
-		elif buff and buff.get("positive") == false:
-			buff_color = Color(0.8, 0.3, 0.3)
-		icon.color = buff_color
-		icon.tooltip_text = str(buff.get("buff_name")) if buff and buff.get("buff_name") != null else "Buff"
+		var icon: BuffIcon = BuffIcon.new()
+		icon.buff_ref = buff as Node
+		icon.update_flash_state()
 		_buffs_container.add_child(icon)
 
 

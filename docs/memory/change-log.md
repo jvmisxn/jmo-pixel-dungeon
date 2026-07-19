@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: hud, buffs, source-fidelity, tests
+- Replaced the status pane's flat ColorRect buff markers with the existing `BuffIcon` component, restoring readable lettered/colored buff indicators and duration tooltips instead of anonymous color squares. `BuffIcon` now refreshes its tooltip when a buff is assigned, and `StatusPane` removes stale buff children immediately before rebuilding so same-frame refreshes don't leave old icons in the flow container. Extended `test_status_pane.gd` with a headless fixture that verifies active buffs render as `BuffIcon`s with duration text. Local `git diff --check`, Godot import, and full headless suite passed (1308 checks, 0 failures, Godot 4.7.1). Fable triage noted S25 mob-action observe coalescing remains the higher-value next fidelity/perf target; this patch is a smaller HUD readability/fidelity fix.
+
 - Tags: traps, curses, equipment, source-fidelity, tests
 - Restored Cursing Trap's live equipment-cursing path. The port was still calling a missing `Hero.get_equipped_items()` helper, so the trap could never curse gear and always fell back to `Hex`. `CursingTrap` now reads the hero's live `Belongings` slots, prioritizes weapon/armor without existing enchantment/glyphs, skips Mage's Staff like SPD, marks the selected item cursed and curse-known, and adds an existing weapon curse enchantment when a bare non-staff weapon is cursed. Added `test_cursing_trap.gd` covering bare weapon curse enchantment, preserving an existing weapon enchantment, armor curse selection, Mage's Staff exclusion, and the no-equipment Hex fallback. Local full headless suite passed (1306 checks, 0 failures, Godot 4.7.1). Remaining fidelity tail: armor curse glyphs are not implemented yet, so armor traps cannot inscribe a curse glyph.
 

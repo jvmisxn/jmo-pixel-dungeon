@@ -8,6 +8,7 @@ extends Control
 var buff_ref: Node = null:
 	set(value):
 		buff_ref = value
+		_update_tooltip()
 		queue_redraw()
 
 var _flash_visible: bool = true
