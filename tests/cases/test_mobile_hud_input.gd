@@ -307,6 +307,42 @@ func run(t: Object) -> void:
 		layout_hud._status_overlay != null and layout_hud._status_overlay.visible,
 		"mobile status overlay remains visible in portrait layout"
 	)
+	var stale_party_x: float = portrait_party_row.position.x
+	portrait_party_row.position = Vector2(250.0, 6.0)
+	log_container.position = Vector2(6.0, 100.0)
+	layout_hud.toolbar.position = Vector2.ZERO
+	original_heroes = GameManager.heroes.duplicate()
+	original_hero = GameManager.hero
+	original_local_hero_index = GameManager.local_hero_index
+	party_heroes = []
+	for hero_index: int in range(4):
+		var relayout_hero := FakeHero.new()
+		relayout_hero.hero_name = "Relayout%d" % (hero_index + 1)
+		relayout_hero.hero_slot_index = hero_index
+		party_heroes.append(relayout_hero)
+	GameManager.heroes = party_heroes
+	GameManager.hero = party_heroes[0]
+	GameManager.local_hero_index = 0
+	layout_hud.update_all()
+	t.check(
+		portrait_party_row.visible
+				and is_equal_approx(portrait_party_row.position.x, stale_party_x)
+				and is_equal_approx(portrait_party_row.size.x, 381.0),
+		"mobile HUD update_all relayouts newly visible party controls"
+	)
+	t.check(
+		log_container.position.y + log_container.size.y <= layout_hud.toolbar.position.y - HUD.HUD_MARGIN,
+		"mobile HUD update_all relayouts the log after state refresh"
+	)
+	t.check(
+		is_equal_approx(layout_hud.toolbar.position.y, 756.0),
+		"mobile HUD update_all restores the safe-area toolbar position"
+	)
+	GameManager.heroes = original_heroes
+	GameManager.hero = original_hero
+	GameManager.local_hero_index = original_local_hero_index
+	for hero_node: Node in party_heroes:
+		hero_node.free()
 	layout_hud._connect_signals()
 	layout_hud._toolbar_bar.wait_pressed.connect(layout_hud._on_toolbar_action_pressed)
 	layout_hud._toolbar_bar.search_pressed.connect(layout_hud._on_toolbar_action_pressed)

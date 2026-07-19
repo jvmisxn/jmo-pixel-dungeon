@@ -46,7 +46,8 @@ func on_turn() -> void:
 		var dmg: int = randi_range(1, maxi(1, max_dmg))
 		target.take_damage(dmg, self)
 		if MessageLog:
-			MessageLog.add_negative("%s is burning! (%d dmg)" % [target.mob_name, dmg])
+			var target_name: String = str(ConstantsData.get_prop(target, "mob_name", "Hero"))
+			MessageLog.add_negative("%s is burning! (%d dmg)" % [target_name, dmg])
 
 	left -= 1.0
 	if left <= 0.0:

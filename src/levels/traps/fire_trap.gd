@@ -12,8 +12,9 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 
 	# Apply burning buff to the triggerer
 	if triggerer != null and triggerer.has_method("add_buff"):
-		# Burning buff would be applied here
-		pass
+		var burn: Burning = Burning.new()
+		burn.left = Burning.DURATION
+		triggerer.add_buff(burn)
 
 	# Deal fire damage
 	if triggerer != null and triggerer.has_method("take_damage"):

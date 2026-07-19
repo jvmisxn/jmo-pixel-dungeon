@@ -463,11 +463,11 @@ func update_all() -> void:
 	_refresh_party_row()
 	_refresh_online_state()
 	_refresh_action_controls()
-	_refresh_status_overlay()
 	if _status_pane:
 		_status_pane.update_all()
 	if _game_log_display:
 		_game_log_display.refresh()
+	_apply_responsive_layout()
 
 
 # --- Info Row Updates ---
