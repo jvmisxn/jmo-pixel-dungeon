@@ -433,6 +433,29 @@ func run(t: Object) -> void:
 	)
 	short_landscape_hud.free()
 
+	var ultra_short_landscape_hud := LayoutHud.new()
+	ultra_short_landscape_hud._vp_size = Vector2(640, 240)
+	ultra_short_landscape_hud.fake_safe_bottom = 21.0
+	ultra_short_landscape_hud.fake_safe_left = 44.0
+	ultra_short_landscape_hud.fake_safe_right = 44.0
+	ultra_short_landscape_hud._build_layout()
+	ultra_short_landscape_hud._apply_responsive_layout()
+	var ultra_short_root: Control = ultra_short_landscape_hud.get_node_or_null("HUDRoot") as Control
+	var ultra_short_log: Control = ultra_short_root.get_node_or_null("GameLog") as Control
+	t.check(
+		ultra_short_log != null
+				and ultra_short_landscape_hud.toolbar != null
+				and ultra_short_log.position.y + ultra_short_log.size.y <= ultra_short_landscape_hud.toolbar.position.y - HUD.HUD_MARGIN,
+		"ultra-short mobile landscape never lets the game log overlap the toolbar"
+	)
+	t.check(
+		ultra_short_log != null
+				and not ultra_short_log.visible
+				and is_zero_approx(ultra_short_log.size.y),
+		"ultra-short mobile landscape hides the log when no usable vertical gap remains"
+	)
+	ultra_short_landscape_hud.free()
+
 	var scaled_party_hud := TestHud.new()
 	scaled_party_hud.scale = Vector2(3.0, 2.0)
 	var scaled_party_row := HBoxContainer.new()

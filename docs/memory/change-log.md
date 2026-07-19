@@ -2,6 +2,9 @@
 
 ## 2026-07-18
 
+- Tags: mobile, hud, game-log, safe-area, tests
+- Fixed the remaining short-landscape mobile HUD overlap that Fable identified in the existing `LayoutHud` harness. `_layout_game_log()` only shrank the mobile game log when the vertical gap between top controls and the safe-area-adjusted toolbar was positive; on ultra-short landscape viewports, the log kept its 96px default height and could overlap the toolbar. The log now clamps to the actual available gap and hides when no usable vertical space remains, preserving the action/status controls instead of drawing a floating log over them. Extended `test_mobile_hud_input.gd` with an ultra-short landscape regression that asserts the log never crosses the toolbar and collapses cleanly when the vertical gap is gone. Local `git diff --check`, Godot import, and full headless suite passed (1230 checks, 0 failures, Godot 4.7.1). Fable triage selected the fix and final diff review approved it.
+
 - Tags: quests, sad-ghost, rewards, enchantments, source-fidelity, tests, audit-S21
 - Restored Sad Ghost enchanted reward parity. SPD generates a pending weapon enchantment and armor glyph up front, rolls the reward magic chance, stores the magic separately so the choice preview does not reveal it, then applies only the chosen item's magic after confirmation. The port already rolled and saved `reward_enchanted`, but never consumed it, so enchanted ghost rewards were always plain. `SadGhost` now stores pending `reward_weapon_enchantment` / `reward_armor_glyph`, serializes them separately from `reward_weapon` / `reward_armor`, and `_apply_enchanted_reward()` attaches the stored magic only to the claimed reward. Added `test_sad_ghost_rewards.gd` and registered it in the headless runner.
 
