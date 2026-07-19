@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: mimic, loot, level-generation, source-fidelity, tests
+- Fixed regular-floor mimic generation so the item rolled for a mimic heap is stored inside the spawned `Mimic` and drops when the mimic dies, instead of being silently deleted. The spawned mimic now also runs `scale_to_depth(depth)`, matching the floor-scaled risk/reward behavior intended by SPD-style mimic chests. Added `test_mimic_loot.gd` to cover prize storage, depth scaling, level registration, and death drops. Local `git diff --check`, Godot import, and full headless suite passed (1279 checks, 0 failures, Godot 4.7.1). Fable selected this as the next narrow source-fidelity fix after confirming recent mobile HUD work left only real-device verification follow-ups.
+
 - Tags: gladiator, subclass, combat, source-fidelity, tests
 - Added a focused Gladiator combo regression after Fable flagged the stale S06 audit item as the next highest-value gameplay-fidelity target. Current source already routes landed melee attacks through `Char.attack()` -> `on_damage_dealt` and `GladiatorCombo.modify_damage()`, so the test now locks the intended simplified behavior: subclass application attaches the tracker, successive melee hits build combo, the finisher threshold boosts damage, the finisher starts a new chain, and combo state serializes. Marked the backlog item done with a follow-up noting that this remains an automatic simplified finisher rather than SPD's explicit combo-move picker. Local `git diff --check`, Godot import, and full headless suite passed (1273 checks, 0 failures, Godot 4.7.1).
 

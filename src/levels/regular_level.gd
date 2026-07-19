@@ -120,17 +120,27 @@ func _build() -> bool:
 			drop_item(item_pos, item, "chest")
 		elif heap_roll == 5 and depth > 1 and mob_at(item_pos) == null:
 			# MIMIC (5%) — spawn a mimic holding the item instead of dropping
-			var mimic: Mob = MobFactory.create_mob("mimic")
-			if mimic != null:
-				mimic.pos = item_pos
-				add_mob(mimic)
-			else:
+			var mimic: Mimic = _spawn_mimic_with_item(item_pos, item, depth)
+			if mimic == null:
 				drop_item(item_pos, item, "chest")
 		else:
 			# Regular HEAP (70%)
 			drop_item(item_pos, item)
 
 	return true
+
+
+func _spawn_mimic_with_item(item_pos: int, item: Item, p_depth: int) -> Mimic:
+	var mimic: Mimic = MobFactory.create_mob("mimic") as Mimic
+	if mimic == null:
+		return null
+	mimic.pos = item_pos
+	mimic.level = self
+	mimic.scale_to_depth(p_depth)
+	if item != null:
+		mimic.stored_items.append(item)
+	add_mob(mimic)
+	return mimic
 
 # ---------------------------------------------------------------------------
 # Feeling
