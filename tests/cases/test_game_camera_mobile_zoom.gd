@@ -32,4 +32,14 @@ func run(t: Object) -> void:
 		camera._target_zoom > 3.9,
 		"pinch distance expansion zooms the camera in"
 	)
+
+	camera.set_zoom_level(3.0)
+	t.check(
+		is_equal_approx(camera._target_zoom, 3.0),
+		"settings zoom updates the smooth camera target"
+	)
+	t.check(
+		is_equal_approx(camera.zoom.x, 3.0),
+		"settings zoom applies immediately instead of snapping back next frame"
+	)
 	camera.free()

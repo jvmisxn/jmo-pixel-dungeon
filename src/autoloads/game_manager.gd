@@ -56,6 +56,7 @@ const MOBILE_ORIENTATION_AUTO: String = "auto"
 const MOBILE_ORIENTATION_PORTRAIT: String = "portrait"
 const MOBILE_ORIENTATION_LANDSCAPE: String = "landscape"
 var mobile_orientation_mode: String = MOBILE_ORIENTATION_AUTO
+var zoom_level: float = 1.5
 
 # --- Statistics ---
 var stats: Dictionary[String, int] = {}
@@ -152,6 +153,7 @@ func save_display_settings() -> void:
 		return
 	var settings: Dictionary = SaveManager.load_settings()
 	settings["mobile_orientation_mode"] = mobile_orientation_mode
+	settings["zoom_level"] = zoom_level
 	if SaveManager.has_method("save_settings"):
 		SaveManager.save_settings(settings)
 
@@ -162,6 +164,7 @@ func _load_display_settings() -> void:
 		mobile_orientation_mode = _normalize_mobile_orientation_mode(
 			str(settings.get("mobile_orientation_mode", MOBILE_ORIENTATION_AUTO))
 		)
+		zoom_level = clampf(float(settings.get("zoom_level", zoom_level)), 1.0, 10.0)
 	_apply_platform_content_scale()
 
 

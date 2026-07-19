@@ -1280,8 +1280,8 @@ func _on_save_settings_pressed() -> void:
 		GameManager.set("setting_brightness", brightness_value)
 		GameManager.set("setting_music_muted", music_muted)
 		GameManager.set("setting_sfx_muted", sfx_muted)
-		if GameManager.has_method("save_settings"):
-			GameManager.save_settings()
+		if GameManager.has_method("save_display_settings"):
+			GameManager.save_display_settings()
 	if SaveManager and SaveManager.has_method("save_audio_settings"):
 		SaveManager.save_audio_settings()
 	if _settings_panel:

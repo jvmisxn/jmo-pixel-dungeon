@@ -40,7 +40,7 @@ var _has_bounds: bool = false
 func _ready() -> void:
 	_claim_web_canvas_touch_gestures()
 	_apply_platform_zoom_limits()
-	_target_zoom = default_zoom_level
+	_target_zoom = _initial_zoom_level()
 	zoom = Vector2(_target_zoom, _target_zoom)
 	position_smoothing_enabled = false  # We handle smoothing manually
 
@@ -146,10 +146,11 @@ func zoom_out() -> void:
 ## Set zoom to a specific level.
 func set_zoom_level(level: float) -> void:
 	_target_zoom = clampf(level, min_zoom, max_zoom)
+	zoom = Vector2(_target_zoom, _target_zoom)
 
 ## Reset zoom to default.
 func reset_zoom() -> void:
-	_target_zoom = default_zoom_level
+	set_zoom_level(default_zoom_level)
 
 ## Get the current cell position under the mouse cursor.
 ## Uses floori() instead of int()/ to correctly handle negative coordinates
@@ -174,6 +175,15 @@ func get_cell_at_screen_position(screen_pos: Vector2) -> int:
 func _on_shake_done() -> void:
 	_shake_intensity = 0.0
 	offset = Vector2.ZERO
+
+
+func _initial_zoom_level() -> float:
+	var configured: float = default_zoom_level
+	if GameManager != null:
+		var saved_zoom: Variant = GameManager.get("zoom_level")
+		if saved_zoom is float or saved_zoom is int:
+			configured = float(saved_zoom)
+	return clampf(configured, min_zoom, max_zoom)
 
 
 func _clamp_to_bounds(pos: Vector2) -> Vector2:

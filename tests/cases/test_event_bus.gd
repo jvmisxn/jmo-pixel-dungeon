@@ -21,6 +21,14 @@ const REQUIRED_SIGNALS: Array[String] = [
 	"badge_unlocked", "quest_updated",
 ]
 
+class CountingEffectManager:
+	extends Node
+
+	var damage_calls: int = 0
+
+	func show_damage(_pos: int, _amount: int, _is_crit: bool = false) -> void:
+		damage_calls += 1
+
 func run(t: Object) -> void:
 	var script: Variant = load("res://src/autoloads/event_bus.gd")
 	t.check(script != null and script is GDScript, "event_bus.gd compiles")
@@ -31,3 +39,21 @@ func run(t: Object) -> void:
 		t.check(bus.has_signal(sig), "EventBus declares signal: " + sig)
 	if bus is Node:
 		(bus as Node).free()
+	_test_game_scene_event_bus_connections_are_idempotent(t)
+
+
+func _test_game_scene_event_bus_connections_are_idempotent(t: Object) -> void:
+	var scene := GameScene.new()
+	var effects := CountingEffectManager.new()
+	scene.effect_manager = effects
+	scene.add_child(effects)
+	scene._connect_signals()
+	scene._connect_signals()
+
+	EventBus.mob_damaged.emit(42, 7)
+	t.check(
+		effects.damage_calls == 1,
+		"GameScene connects mob damage feedback once even if setup runs twice"
+	)
+
+	scene.free()

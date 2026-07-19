@@ -213,6 +213,8 @@ func _on_zoom_changed(index: int) -> void:
 		var game_manager: Node = GameManager
 		if game_manager:
 			game_manager.set("zoom_level", zoom_val)
+			if game_manager.has_method("save_display_settings"):
+				game_manager.save_display_settings()
 		# Also try to apply directly to the camera
 		var game_scene: Node = get_tree().root.get_node_or_null("GameScene")
 		if game_scene:
@@ -224,7 +226,10 @@ func _on_zoom_changed(index: int) -> void:
 						camera = child as Camera2D
 						break
 			if camera:
-				camera.zoom = Vector2(zoom_val, zoom_val)
+				if camera.has_method("set_zoom_level"):
+					camera.set_zoom_level(zoom_val)
+				else:
+					camera.zoom = Vector2(zoom_val, zoom_val)
 
 
 func _on_orientation_changed(index: int) -> void:

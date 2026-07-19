@@ -980,58 +980,58 @@ func _create_layers() -> void:
 func _connect_signals() -> void:
 	if EventBus:
 		if EventBus.has_signal("hero_moved_detailed"):
-			EventBus.hero_moved_detailed.connect(_on_hero_moved_detailed)
+			_connect_event_bus_signal("hero_moved_detailed", _on_hero_moved_detailed)
 		else:
-			EventBus.hero_moved.connect(_on_hero_moved)
-		EventBus.mob_defeated.connect(_on_mob_defeated)
-		EventBus.item_picked_up.connect(_on_item_picked_up)
-		EventBus.door_opened.connect(_on_door_opened)
+			_connect_event_bus_signal("hero_moved", _on_hero_moved)
+		_connect_event_bus_signal("mob_defeated", _on_mob_defeated)
+		_connect_event_bus_signal("item_picked_up", _on_item_picked_up)
+		_connect_event_bus_signal("door_opened", _on_door_opened)
 		if EventBus.has_signal("hero_damaged_detailed"):
-			EventBus.hero_damaged_detailed.connect(_on_hero_damaged_detailed)
+			_connect_event_bus_signal("hero_damaged_detailed", _on_hero_damaged_detailed)
 		else:
-			EventBus.hero_damaged.connect(_on_hero_damaged)
+			_connect_event_bus_signal("hero_damaged", _on_hero_damaged)
 		if EventBus.has_signal("hero_died_detailed"):
-			EventBus.hero_died_detailed.connect(_on_hero_died_detailed)
+			_connect_event_bus_signal("hero_died_detailed", _on_hero_died_detailed)
 		else:
-			EventBus.hero_died.connect(_on_hero_died)
+			_connect_event_bus_signal("hero_died", _on_hero_died)
 		if EventBus.has_signal("hero_fell"):
-			EventBus.hero_fell.connect(_on_hero_fell)
+			_connect_event_bus_signal("hero_fell", _on_hero_fell)
 		if EventBus.has_signal("mob_revealed"):
-			EventBus.mob_revealed.connect(_on_mob_revealed)
+			_connect_event_bus_signal("mob_revealed", _on_mob_revealed)
 		if EventBus.has_signal("mob_moved_detailed"):
-			EventBus.mob_moved_detailed.connect(_on_mob_moved_detailed)
+			_connect_event_bus_signal("mob_moved_detailed", _on_mob_moved_detailed)
 		if EventBus.has_signal("mob_damaged"):
-			EventBus.mob_damaged.connect(_on_mob_damaged)
+			_connect_event_bus_signal("mob_damaged", _on_mob_damaged)
 		if EventBus.has_signal("hero_attack_missed"):
-			EventBus.hero_attack_missed.connect(_on_hero_attack_missed)
-		EventBus.gold_collected.connect(_on_gold_collected)
-		EventBus.trap_triggered.connect(_on_trap_triggered)
-		EventBus.enchantment_proc.connect(_on_enchantment_proc)
-		EventBus.glyph_proc.connect(_on_glyph_proc)
+			_connect_event_bus_signal("hero_attack_missed", _on_hero_attack_missed)
+		_connect_event_bus_signal("gold_collected", _on_gold_collected)
+		_connect_event_bus_signal("trap_triggered", _on_trap_triggered)
+		_connect_event_bus_signal("enchantment_proc", _on_enchantment_proc)
+		_connect_event_bus_signal("glyph_proc", _on_glyph_proc)
 		# Additional audio-relevant signals
 		if EventBus.has_signal("item_used"):
-			EventBus.item_used.connect(_on_item_used_sfx)
+			_connect_event_bus_signal("item_used", _on_item_used_sfx)
 		if EventBus.has_signal("hero_trampled_grass"):
-			EventBus.hero_trampled_grass.connect(_on_grass_trampled_sfx)
+			_connect_event_bus_signal("hero_trampled_grass", _on_grass_trampled_sfx)
 		if EventBus.has_signal("seed_planted"):
-			EventBus.seed_planted.connect(_on_seed_planted)
+			_connect_event_bus_signal("seed_planted", _on_seed_planted)
 		if EventBus.has_signal("plant_activated"):
-			EventBus.plant_activated.connect(_on_plant_activated_vfx)
+			_connect_event_bus_signal("plant_activated", _on_plant_activated_vfx)
 		if EventBus.has_signal("status_effect_applied"):
-			EventBus.status_effect_applied.connect(_on_status_effect_applied)
+			_connect_event_bus_signal("status_effect_applied", _on_status_effect_applied)
 		if EventBus.has_signal("badge_unlocked"):
-			EventBus.badge_unlocked.connect(_on_badge_unlocked_sfx)
+			_connect_event_bus_signal("badge_unlocked", _on_badge_unlocked_sfx)
 		if EventBus.has_signal("item_equipped"):
-			EventBus.item_equipped.connect(_on_item_equipped_sfx)
+			_connect_event_bus_signal("item_equipped", _on_item_equipped_sfx)
 		if EventBus.has_signal("item_unequipped"):
-			EventBus.item_unequipped.connect(_on_item_unequipped_visuals)
+			_connect_event_bus_signal("item_unequipped", _on_item_unequipped_visuals)
 
 		if EventBus.has_signal("enter_targeting"):
-			EventBus.enter_targeting.connect(_on_enter_targeting)
+			_connect_event_bus_signal("enter_targeting", _on_enter_targeting)
 		if EventBus.has_signal("cancel_targeting"):
-			EventBus.cancel_targeting.connect(_on_cancel_targeting)
+			_connect_event_bus_signal("cancel_targeting", _on_cancel_targeting)
 		if EventBus.has_signal("request_hero_action"):
-			EventBus.request_hero_action.connect(_on_request_hero_action)
+			_connect_event_bus_signal("request_hero_action", _on_request_hero_action)
 
 	if TurnManager and not TurnManager.round_completed.is_connected(_on_round_completed):
 		TurnManager.round_completed.connect(_on_round_completed)
@@ -1077,6 +1077,13 @@ func _connect_signals() -> void:
 		if tb.has_signal("search_pressed"):
 			if not tb.search_pressed.is_connected(_on_toolbar_search):
 				tb.search_pressed.connect(_on_toolbar_search)
+
+
+func _connect_event_bus_signal(signal_name: StringName, callback: Callable) -> void:
+	if EventBus == null or not EventBus.has_signal(signal_name):
+		return
+	if not EventBus.is_connected(signal_name, callback):
+		EventBus.connect(signal_name, callback)
 
 # ---------------------------------------------------------------------------
 # Entity Sprite Management
