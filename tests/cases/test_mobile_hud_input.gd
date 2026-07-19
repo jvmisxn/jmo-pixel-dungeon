@@ -260,6 +260,7 @@ func run(t: Object) -> void:
 	layout_hud._vp_size = Vector2(393, 852)
 	layout_hud.fake_safe_bottom = 24.0
 	layout_hud._build_layout()
+	layout_hud._online_state_active = true
 	layout_hud._apply_responsive_layout()
 	var layout_root: Control = layout_hud.get_node_or_null("HUDRoot") as Control
 	var status_container: Control = layout_root.get_node_or_null("StatusContainer") as Control
@@ -412,6 +413,7 @@ func run(t: Object) -> void:
 	landscape_hud.fake_safe_left = 44.0
 	landscape_hud.fake_safe_right = 44.0
 	landscape_hud._build_layout()
+	landscape_hud._online_state_active = true
 	landscape_hud._apply_responsive_layout()
 	var landscape_root: Control = landscape_hud.get_node_or_null("HUDRoot") as Control
 	var landscape_status: Control = landscape_root.get_node_or_null("StatusContainer") as Control
@@ -461,6 +463,7 @@ func run(t: Object) -> void:
 	short_landscape_hud.fake_safe_left = 44.0
 	short_landscape_hud.fake_safe_right = 44.0
 	short_landscape_hud._build_layout()
+	short_landscape_hud._online_state_active = true
 	short_landscape_hud._apply_responsive_layout()
 	var short_root: Control = short_landscape_hud.get_node_or_null("HUDRoot") as Control
 	var short_online_label: Control = short_root.get_node_or_null("OnlineStateLabel") as Control
@@ -495,6 +498,11 @@ func run(t: Object) -> void:
 	ultra_short_landscape_hud.fake_safe_left = 44.0
 	ultra_short_landscape_hud.fake_safe_right = 44.0
 	ultra_short_landscape_hud._build_layout()
+	var ultra_short_online_label: Control = ultra_short_landscape_hud.get_node_or_null("HUDRoot/OnlineStateLabel") as Control
+	if ultra_short_online_label != null:
+		ultra_short_online_label.visible = true
+		ultra_short_online_label.text = "Waiting for P2 Mage"
+		ultra_short_landscape_hud._online_state_active = true
 	ultra_short_landscape_hud._apply_responsive_layout()
 	var ultra_short_root: Control = ultra_short_landscape_hud.get_node_or_null("HUDRoot") as Control
 	var ultra_short_log: Control = ultra_short_root.get_node_or_null("GameLog") as Control
@@ -509,6 +517,20 @@ func run(t: Object) -> void:
 				and not ultra_short_log.visible
 				and is_zero_approx(ultra_short_log.size.y),
 		"ultra-short mobile landscape hides the log when no usable vertical gap remains"
+	)
+	t.check(
+		ultra_short_online_label != null
+				and not ultra_short_online_label.visible
+				and ultra_short_online_label.position.y + ultra_short_online_label.size.y > ultra_short_landscape_hud.toolbar.position.y - HUD.HUD_MARGIN,
+		"ultra-short mobile landscape hides the online state label before it overlaps the toolbar"
+	)
+	ultra_short_landscape_hud._vp_size = Vector2(640, 300)
+	ultra_short_landscape_hud._apply_responsive_layout()
+	t.check(
+		ultra_short_online_label != null
+				and ultra_short_online_label.visible
+				and ultra_short_online_label.position.y + ultra_short_online_label.size.y <= ultra_short_landscape_hud.toolbar.position.y - HUD.HUD_MARGIN,
+		"mobile online state label reappears after a roomier resize without requiring a network-state refresh"
 	)
 	ultra_short_landscape_hud.free()
 

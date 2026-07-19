@@ -31,6 +31,7 @@ var _boss_hp_bar: Variant = null
 var _minimap: Variant = null
 var _party_row: HBoxContainer = null
 var _online_state_label: Label = null
+var _online_state_active: bool = false
 var _status_overlay: Control = null
 var _status_level_label: Label = null
 var _status_hp_bar: ProgressBar = null
@@ -746,6 +747,7 @@ func _refresh_online_state() -> void:
 	if _online_state_label == null:
 		return
 	if NetworkManager == null or not NetworkManager.has_method("is_online_session") or not NetworkManager.is_online_session():
+		_online_state_active = false
 		_online_state_label.visible = false
 		return
 	var local_hero: Variant = _get_local_hero()
@@ -771,7 +773,8 @@ func _refresh_online_state() -> void:
 		state_color = Color(0.82, 0.9, 1.0)
 	_online_state_label.text = state_text
 	_online_state_label.add_theme_color_override("font_color", state_color)
-	_online_state_label.visible = not state_text.is_empty()
+	_online_state_active = not state_text.is_empty()
+	_online_state_label.visible = _online_state_active
 
 func _refresh_party_row() -> void:
 	if _party_row == null or GameManager == null:
@@ -1037,6 +1040,11 @@ func _apply_responsive_layout() -> void:
 			else maxf(HUD_MARGIN + 200.0, (_vp_size.x - online_width) * 0.5),
 			(party_row.position.y + 38.0) if is_mobile_layout and party_row != null else (_hud_top_margin() + 38.0)
 		)
+		var show_online_state: bool = _online_state_active
+		if is_mobile_layout and show_online_state:
+			var online_bottom: float = _online_state_label.position.y + _online_state_label.size.y
+			show_online_state = online_bottom <= _toolbar_top_y() - HUD_MARGIN
+		_online_state_label.visible = show_online_state
 
 	if log_container:
 		_layout_game_log(log_container, status_container, party_row)
@@ -1073,7 +1081,7 @@ func _layout_game_log(log_container: Control, status_container: Control, party_r
 			top_controls_bottom = maxf(top_controls_bottom, status_container.position.y + status_container.size.y)
 		if party_row != null:
 			top_controls_bottom = maxf(top_controls_bottom, party_row.position.y + maxf(34.0, party_row.size.y))
-		if _online_state_label != null:
+		if _online_state_label != null and _online_state_label.visible:
 			top_controls_bottom = maxf(top_controls_bottom, _online_state_label.position.y + _online_state_label.size.y)
 		var available_height: float = _toolbar_top_y() - top_controls_bottom - (HUD_MARGIN * 2.0)
 		log_height = minf(desired_log_height, maxf(0.0, available_height))
