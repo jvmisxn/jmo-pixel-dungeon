@@ -32,6 +32,29 @@ func run(t: Object) -> void:
 		camera._target_zoom > 3.9,
 		"pinch distance expansion zooms the camera in"
 	)
+	camera._target_zoom = 4.0
+	camera._touch_points = {
+		0: Vector2(100, 100),
+		1: Vector2(300, 100),
+	}
+	camera._begin_pinch()
+	camera._touch_points[1] = Vector2(150, 100)
+	camera._update_pinch_zoom()
+	t.check(
+		camera._target_zoom < 1.1,
+		"pinch distance contraction zooms the camera back out"
+	)
+	camera.zoom = Vector2(2.0, 2.0)
+	camera.pan_by_screen_delta(Vector2(40, -20))
+	t.check(
+		camera.get_look_offset() == Vector2(-20, 10),
+		"single-finger camera pan converts screen drag through zoom"
+	)
+	camera.reset_look_offset()
+	t.check(
+		camera.get_look_offset() == Vector2.ZERO,
+		"camera look offset can recenter on the hero"
+	)
 
 	camera.set_zoom_level(3.0)
 	t.check(

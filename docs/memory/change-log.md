@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: mobile, touch, camera, zoom, controls, tests
+- Added mobile dungeon look-around via one-finger drag while preserving tap-to-move. Single-finger touch drags now enter a camera-look gesture after a small movement threshold, pan the `GameCamera` with a persistent look offset, cancel auto-walk, consume the release, and avoid submitting a movement/attack tap. The next normal gameplay tap recenters the camera back to hero-follow before acting. Also added missing pinch-in coverage so mobile zoom-out remains tested alongside zoom-in. Extended `test_touch_gesture_routing.gd` and `test_game_camera_mobile_zoom.gd`. Local `git diff --check`, Godot import, and full headless suite passed (1338 checks, 0 failures, Godot 4.7.1).
+
 - Tags: mobile, hud, buffs, controls, tests
 - Made the mobile HUD buff strip update live when local hero buffs are added, refreshed, or removed. The previous compact HUD drew a separate mobile `BuffIcon` row, but only rebuilt it during broad HUD/stat refreshes, so poison/chill/haste/etc. could appear stale or invisible until another unrelated HUD update happened. `HUD` now tracks the local hero's `buff_added`/`buff_removed` signals, refreshes on `status_effect_applied`, and immediately reflows the party controls/log around the changing buff row. Fable also caught and fixed the wrapped-row case: when many active buffs spill onto a second `HFlowContainer` row, the strip now reserves the actual multi-row height instead of letting lower controls overlap it. Extended `test_mobile_hud_input.gd` with add/remove signal and wrapped-buff-row regressions. Local `git diff --check`, Godot import, and full headless suite passed (1331 checks, 0 failures, Godot 4.7.1).
 

@@ -116,12 +116,15 @@ var _held_move_dir: int = 0
 var _held_move_keys: Array[int] = []
 var _held_move_repeat_cooldown: float = 0.0
 var _active_touch_points: Dictionary = {}
+var _touch_start_points: Dictionary = {}
 var _ui_touch_points: Dictionary = {}
 var _touch_gesture_started: bool = false
+var _camera_look_touch_index: int = -1
 var _suppress_touch_mouse_until_msec: int = 0
 var _last_action_from_touch: bool = false
 const HELD_MOVE_REPEAT_DELAY: float = 0.25
 const TOUCH_MOVE_DURATION: float = 0.28
+const TOUCH_LOOK_DRAG_THRESHOLD: float = 10.0
 
 # --- Auto-Walk State ---
 ## When > 0, the hero is auto-walking toward this destination cell.
@@ -272,12 +275,15 @@ func _input(event: InputEvent) -> void:
 				_mark_input_as_handled()
 				return
 			_active_touch_points[touch.index] = touch.position
+			_touch_start_points[touch.index] = touch.position
 			if _active_touch_points.size() >= 2:
 				_touch_gesture_started = true
+				_camera_look_touch_index = -1
 				_cancel_auto_walk()
 		else:
 			if _ui_touch_points.has(touch.index):
 				_ui_touch_points.erase(touch.index)
+				_touch_start_points.erase(touch.index)
 				_handle_hud_touch_release(touch.position)
 				_mark_input_as_handled()
 				return
@@ -285,10 +291,14 @@ func _input(event: InputEvent) -> void:
 					and _active_touch_points.size() == 1 \
 					and _active_touch_points.has(touch.index)
 			_active_touch_points.erase(touch.index)
+			_touch_start_points.erase(touch.index)
+			if _camera_look_touch_index == touch.index:
+				_camera_look_touch_index = -1
 			if should_tap:
 				_handle_touch_tap(touch.position)
 			if _active_touch_points.is_empty():
 				_touch_gesture_started = false
+				_camera_look_touch_index = -1
 	elif event is InputEventScreenDrag:
 		var drag: InputEventScreenDrag = event as InputEventScreenDrag
 		_suppress_synthesized_touch_mouse()
@@ -301,7 +311,15 @@ func _input(event: InputEvent) -> void:
 			_active_touch_points[drag.index] = drag.position
 			if _active_touch_points.size() >= 2:
 				_touch_gesture_started = true
+				_camera_look_touch_index = -1
 				_cancel_auto_walk()
+			elif _should_start_touch_camera_look(drag.index, drag.position):
+				_touch_gesture_started = true
+				_camera_look_touch_index = drag.index
+				_cancel_auto_walk()
+			if _camera_look_touch_index == drag.index:
+				_pan_camera_by_touch_drag(drag.relative)
+				_mark_input_as_handled()
 	elif event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and _should_suppress_synthesized_touch_mouse_event(mb.position):
@@ -406,8 +424,30 @@ func _handle_touch_tap(screen_pos: Vector2) -> void:
 		cell = game_camera.get_cell_at_screen_position(screen_pos)
 	if cell >= 0:
 		_last_action_from_touch = true
+		_reset_camera_look_offset()
 		_handle_cell_click(cell)
 		_mark_input_as_handled()
+
+
+func _should_start_touch_camera_look(touch_index: int, screen_pos: Vector2) -> bool:
+	if _active_touch_points.size() != 1:
+		return false
+	if not _touch_start_points.has(touch_index):
+		return false
+	var start_pos: Variant = _touch_start_points[touch_index]
+	return start_pos is Vector2 and (screen_pos - start_pos).length() >= TOUCH_LOOK_DRAG_THRESHOLD
+
+
+func _pan_camera_by_touch_drag(screen_delta: Vector2) -> void:
+	if screen_delta == Vector2.ZERO:
+		return
+	if game_camera != null and game_camera.has_method("pan_by_screen_delta"):
+		game_camera.pan_by_screen_delta(screen_delta)
+
+
+func _reset_camera_look_offset() -> void:
+	if game_camera != null and game_camera.has_method("reset_look_offset"):
+		game_camera.reset_look_offset()
 
 func _mark_input_as_handled() -> void:
 	var viewport: Viewport = get_viewport()

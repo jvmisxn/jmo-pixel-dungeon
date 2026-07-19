@@ -24,6 +24,7 @@ var _target_zoom: float = 3.0
 var _touch_points: Dictionary = {}
 var _pinch_start_distance: float = 0.0
 var _pinch_start_zoom: float = 3.0
+var _look_offset: Vector2 = Vector2.ZERO
 const MOBILE_DEFAULT_ZOOM: float = 1.5
 const MOBILE_MIN_ZOOM: float = 1.0
 const MOBILE_MAX_ZOOM: float = 10.0
@@ -47,7 +48,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	# Smooth follow — lock tightly to hero
 	var current: Vector2 = global_position
-	var desired: Vector2 = _target_position
+	var desired: Vector2 = _target_position + _look_offset
 	if _has_bounds:
 		desired = _clamp_to_bounds(desired)
 	# Use min() to cap the lerp factor at 1.0 so we never overshoot
@@ -151,6 +152,21 @@ func set_zoom_level(level: float) -> void:
 ## Reset zoom to default.
 func reset_zoom() -> void:
 	set_zoom_level(default_zoom_level)
+
+
+## Pan the view by a touch/mouse drag delta without changing the hero-follow target.
+func pan_by_screen_delta(screen_delta: Vector2) -> void:
+	var zoom_factor: float = maxf(zoom.x, 0.01)
+	_look_offset -= screen_delta / zoom_factor
+
+
+## Return to following the current target directly.
+func reset_look_offset() -> void:
+	_look_offset = Vector2.ZERO
+
+
+func get_look_offset() -> Vector2:
+	return _look_offset
 
 ## Get the current cell position under the mouse cursor.
 ## Uses floori() instead of int()/ to correctly handle negative coordinates
