@@ -21,6 +21,8 @@
 - Persistence/save-load contracts are not fully reliable across all runtime objects.
 - Global autoload coupling is still high.
 - Some systems are broad in coverage but not yet hardened enough for framework reuse.
+- Mobile combat input and real-time pacing need real-device/windowed validation after `b0c8971`: confirm tap attacks no longer double-submit, damage numbers are not duplicated, and the restored `0.1s` visible-mob delay feels close to Shattered Pixel Dungeon.
+- If duplicate damage numbers are still reported only in online/co-op, investigate snapshot HP-delta feedback echoing local combat feedback rather than re-opening the fixed single-player/mobile tap path.
 
 ## Working Assumptions
 

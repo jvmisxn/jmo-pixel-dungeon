@@ -2,6 +2,9 @@
 
 ## 2026-07-18
 
+- Tags: docs, mobile, combat-input, combat-pacing, follow-up
+- Documented the remaining playtest follow-ups from the mobile attack/pacing fix in `backlog.md` and `active-context.md`: real-device verification for tap attacks/damage numbers, windowed/device tuning against SPD feel for visible mob pacing and possible action animation gating, and a separate online-only duplicate-damage-feedback investigation path if co-op still reproduces stacked numbers.
+
 - Tags: mobile, combat-input, turn-pacing, source-fidelity, tests
 - Fixed mobile tap attacks double-submitting through synthesized mouse events and restored readable visible-mob turn pacing. The touch path already suppressed generated mouse events in `_input`, but `_unhandled_input` could still receive a delayed left-click after `_handle_touch_tap()` had submitted the real attack, making a mobile tap appear to hit twice and stack feedback at the same cell. `GameScene._unhandled_input()` now applies the same synthesized-touch guard before dungeon click routing, and the suppression window is 1s to cover slower mobile/browser click synthesis. Input handled-marking is routed through a null-safe helper so bare headless scene tests stay clean under Godot 4.5. `TurnManager.MOB_ACTION_DELAY` is back to `0.1s`, matching SPD's short movement interval so visible mob moves/attacks do not all snap through instantly after the hero acts. Added a touch-routing regression for the tap-then-synthetic-click path.
 

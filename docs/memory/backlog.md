@@ -4,6 +4,9 @@
 
 - Harden save/load contracts for `Hero`, `Level`, `Mob`, and related runtime state.
 - Identify which systems should be moved toward cleaner core-vs-presentation boundaries.
+- [P1][mobile][combat-input][follow-up] Real-device verify mobile melee taps after `b0c8971`: a tap attack should submit exactly one hero action, show one damage number, and not be followed by a synthesized mouse click. The headless regression covers `_unhandled_input` suppression, but iOS/Android/browser timing still needs a physical-device smoke test. If doubles persist, add a last-touch-cell/action debounce in `GameScene` or `InputCoordinator`.
+- [P1][combat-pacing][source-fidelity][follow-up] Validate combat/movement feel against Shattered Pixel Dungeon in a windowed/device playtest. `TurnManager.MOB_ACTION_DELAY` was restored to `0.1s` after zero-delay mob turns made counterattacks snap through too quickly; if hero click/key actions still feel too fast, evaluate animation-gating discrete actions or tuning the visible-action delay with SPD as the reference.
+- [P2][online][combat-feedback][follow-up] Investigate duplicate damage numbers specifically in online/co-op after the local mobile path fix. Possible remaining source: local `EventBus.mob_damaged` feedback plus snapshot HP-delta feedback both displaying the same damage on the same cell. Only act if reproduced in online play; single-player/mobile double-submit was fixed separately.
 
 ## Medium Priority
 
