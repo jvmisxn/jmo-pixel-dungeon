@@ -16,6 +16,7 @@ const HUD_MARGIN: float = 6.0
 const MOBILE_STATUS_HEIGHT: float = 88.0
 const MOBILE_STATUS_LANDSCAPE_HEIGHT: float = 76.0
 const MOBILE_STATUS_LANDSCAPE_MAX_WIDTH: float = 360.0
+const MOBILE_BUFFS_ROW_MIN_HEIGHT: float = 24.0
 const MOBILE_SAFE_TOP_INSET: float = 18.0
 const MOBILE_SAFE_LANDSCAPE_TOP_INSET: float = 8.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
@@ -1193,8 +1194,35 @@ func _layout_mobile_buffs_row(status_container: Control) -> void:
 		_mobile_buffs_row.size = Vector2.ZERO
 		return
 	_mobile_buffs_row.position = Vector2(status_container.position.x, status_container.position.y + status_container.size.y + 2.0)
-	_mobile_buffs_row.custom_minimum_size = Vector2(status_container.size.x, 24.0)
+	var row_width: float = status_container.size.x
+	_mobile_buffs_row.custom_minimum_size = Vector2(row_width, _mobile_buffs_row_content_height(row_width))
 	_mobile_buffs_row.size = _mobile_buffs_row.custom_minimum_size
+
+
+## Compute the height the mobile buff strip needs so wrapped icon rows stay reserved.
+## The strip is an HFlowContainer; when more icons than fit on one line are active it
+## wraps to additional rows, so a fixed height would let the extra rows overlap the party
+## controls and game log positioned below it.
+func _mobile_buffs_row_content_height(row_width: float) -> float:
+	var count: int = _mobile_buffs_row.get_child_count()
+	if count <= 0:
+		return MOBILE_BUFFS_ROW_MIN_HEIGHT
+	var icon_width: float = 0.0
+	var icon_height: float = 0.0
+	for child: Node in _mobile_buffs_row.get_children():
+		var control := child as Control
+		if control == null:
+			continue
+		icon_width = maxf(icon_width, control.custom_minimum_size.x)
+		icon_height = maxf(icon_height, control.custom_minimum_size.y)
+	if icon_width <= 0.0 or icon_height <= 0.0:
+		return MOBILE_BUFFS_ROW_MIN_HEIGHT
+	var h_sep: float = float(_mobile_buffs_row.get_theme_constant("h_separation"))
+	var v_sep: float = float(_mobile_buffs_row.get_theme_constant("v_separation"))
+	var per_row: int = maxi(1, int(floorf((maxf(row_width, icon_width) + h_sep) / (icon_width + h_sep))))
+	var rows: int = int(ceilf(float(count) / float(per_row)))
+	var content_height: float = float(rows) * icon_height + float(maxi(0, rows - 1)) * v_sep
+	return maxf(MOBILE_BUFFS_ROW_MIN_HEIGHT, content_height)
 
 
 func _layout_toolbar() -> void:

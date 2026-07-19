@@ -398,6 +398,36 @@ func run(t: Object) -> void:
 		mobile_buffs_row != null and mobile_buffs_row.get_child_count() == 1,
 		"mobile HUD refreshes buff icons immediately when the local hero loses a buff"
 	)
+	var overflow_buffs: Array[Buff] = []
+	for buff_index: int in range(18):
+		var overflow_buff := Buff.new()
+		overflow_buff.buff_id = "OverflowBuff%d" % buff_index
+		overflow_buff.buff_name = "Overflow %d" % buff_index
+		overflow_buff.time_left = 4.0
+		overflow_buffs.append(overflow_buff)
+		(party_heroes[0] as FakeHero).buffs.append(overflow_buff)
+	layout_hud.update_all()
+	t.check(
+		mobile_buffs_row != null
+				and mobile_buffs_row.get_child_count() == 19
+				and mobile_buffs_row.size.y >= 40.0,
+		"mobile buff strip reserves extra height when active buffs wrap to a second row"
+	)
+	t.check(
+		mobile_buffs_row != null
+				and portrait_party_row.position.y >= mobile_buffs_row.position.y + mobile_buffs_row.size.y + HUD.HUD_MARGIN,
+		"mobile party controls stay below a wrapped multi-row buff strip"
+	)
+	for overflow_buff: Buff in overflow_buffs:
+		(party_heroes[0] as FakeHero).buffs.erase(overflow_buff)
+		overflow_buff.free()
+	layout_hud.update_all()
+	t.check(
+		mobile_buffs_row != null
+				and mobile_buffs_row.get_child_count() == 1
+				and is_equal_approx(mobile_buffs_row.size.y, HUD.MOBILE_BUFFS_ROW_MIN_HEIGHT),
+		"mobile buff strip collapses back to a single-row height when buffs no longer wrap"
+	)
 	t.check(
 		portrait_party_row.visible
 				and is_equal_approx(portrait_party_row.position.x, stale_party_x)
