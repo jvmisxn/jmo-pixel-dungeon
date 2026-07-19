@@ -269,7 +269,7 @@ func _input(event: InputEvent) -> void:
 		if touch.pressed:
 			if _should_route_touch_to_hud(touch.position):
 				_ui_touch_points[touch.index] = true
-				get_viewport().set_input_as_handled()
+				_mark_input_as_handled()
 				return
 			_active_touch_points[touch.index] = touch.position
 			if _active_touch_points.size() >= 2:
@@ -279,7 +279,7 @@ func _input(event: InputEvent) -> void:
 			if _ui_touch_points.has(touch.index):
 				_ui_touch_points.erase(touch.index)
 				_handle_hud_touch_release(touch.position)
-				get_viewport().set_input_as_handled()
+				_mark_input_as_handled()
 				return
 			var should_tap: bool = not _touch_gesture_started \
 					and _active_touch_points.size() == 1 \
@@ -295,7 +295,7 @@ func _input(event: InputEvent) -> void:
 		if _should_defer_touch_to_modal_window():
 			return
 		if _ui_touch_points.has(drag.index):
-			get_viewport().set_input_as_handled()
+			_mark_input_as_handled()
 			return
 		if _active_touch_points.has(drag.index):
 			_active_touch_points[drag.index] = drag.position
@@ -305,34 +305,34 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and _should_suppress_synthesized_touch_mouse_event(mb.position):
-			get_viewport().set_input_as_handled()
+			_mark_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
 	# --- Mouse Click ---
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and _should_suppress_synthesized_touch_mouse_event(mb.position):
-			get_viewport().set_input_as_handled()
+			_mark_input_as_handled()
 			return
 		if mb.pressed:
 			if mb.button_index == MOUSE_BUTTON_LEFT and _is_screen_position_over_hud(mb.position):
-				get_viewport().set_input_as_handled()
+				_mark_input_as_handled()
 				return
 			if not _awaiting_hero_input:
 				if mb.button_index == MOUSE_BUTTON_LEFT and _is_online_client():
 					_show_local_action_blocked_feedback()
-					get_viewport().set_input_as_handled()
+					_mark_input_as_handled()
 				return
 			if mb.button_index == MOUSE_BUTTON_LEFT:
 				var cell: int = game_camera.get_cell_under_mouse() if game_camera else -1
 				if cell >= 0:
 					_handle_cell_click(cell)
-					get_viewport().set_input_as_handled()
+					_mark_input_as_handled()
 			elif mb.button_index == MOUSE_BUTTON_RIGHT:
 				# Right-click cancels targeting mode
 				if _targeting_active:
 					_cancel_targeting_mode()
-					get_viewport().set_input_as_handled()
+					_mark_input_as_handled()
 
 	# --- Keyboard ---
 	if event is InputEventKey:
@@ -346,15 +346,15 @@ func _unhandled_input(event: InputEvent) -> void:
 				if _is_passive_hud_key(key.keycode):
 					var passive_handled: bool = _handle_key_input(key.keycode)
 					if passive_handled:
-						get_viewport().set_input_as_handled()
+						_mark_input_as_handled()
 					return
 				if _is_online_client() and _is_local_action_key(key.keycode):
 					_show_local_action_blocked_feedback()
-					get_viewport().set_input_as_handled()
+					_mark_input_as_handled()
 				return
 			var handled: bool = _handle_key_input(key.keycode)
 			if handled:
-				get_viewport().set_input_as_handled()
+				_mark_input_as_handled()
 
 func _is_passive_hud_key(keycode: int) -> bool:
 	return keycode in [KEY_TAB, KEY_I, KEY_M, KEY_ESCAPE]
@@ -407,7 +407,12 @@ func _handle_touch_tap(screen_pos: Vector2) -> void:
 	if cell >= 0:
 		_last_action_from_touch = true
 		_handle_cell_click(cell)
-		get_viewport().set_input_as_handled()
+		_mark_input_as_handled()
+
+func _mark_input_as_handled() -> void:
+	var viewport: Viewport = get_viewport()
+	if viewport != null:
+		viewport.set_input_as_handled()
 
 
 func _handle_hud_touch_release(screen_pos: Vector2) -> void:
