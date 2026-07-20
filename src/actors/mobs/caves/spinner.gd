@@ -38,10 +38,25 @@ func _act_hunting() -> void:
 		super._act_hunting()
 		return
 
+	if has_buff("Amok"):
+		var nearest: Char = _find_nearest_char()
+		if nearest:
+			target = nearest
+
+	var can_see_target: bool = can_see(target.pos)
+	if can_see_target:
+		target_pos = target.pos
+	elif pos == target_pos:
+		_set_state(AIState.WANDERING)
+		target = null
+		target_pos = -1
+		spend_turn()
+		return
+
 	var dist: int = distance_to(target.pos)
 
 	# Shoot web ahead of enemy if cooldown ready
-	if web_cooldown <= 0 and dist <= 6 and can_see(target.pos):
+	if web_cooldown <= 0 and dist <= 6 and can_see_target:
 		_shoot_web()
 		spend_attack()
 		return
@@ -55,7 +70,7 @@ func _act_hunting() -> void:
 			state = AIState.FLEEING
 		return
 	else:
-		_move_toward(target.pos)
+		_move_toward(target_pos)
 		spend_move()
 		return
 

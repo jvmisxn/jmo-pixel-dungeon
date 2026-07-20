@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: spinner, mob-ai, amok, source-fidelity, tests
+- Restored part of Cave Spinner's base hunting-state parity while preserving its web/poison specialization. Fable identified Spinner AI as a higher-value source-fidelity target than another headless-only mobile HUD tweak: the custom `_act_hunting()` path ignored base Amok retargeting and chased an unseen target's live position instead of its last-known cell, letting spinners track through walls/invisibility. Spinner hunting now retargets under Amok, updates/uses `target_pos` like base `Mob._act_hunting()`, gives up when it reaches the last-known cell without sight, and still shoots webs/attacks adjacent visible targets as before. Added `test_spinner_ai.gd`. Local `git diff --check`, Godot import, and full headless suite passed (1392 checks, 0 failures, Godot 4.7.1).
+
 - Tags: mobile, hud, toolbar, controls, readability, tests
 - Improved ultra-narrow mobile toolbar readability and safe-area sizing without changing toolbar actions. The compact mobile toolbar already squeezed to fit cramped portrait/foldable widths, but Wait/Search could still become hard to read once the width fitter compressed text-heavy buttons. Narrow compact mode now uses single-letter `W`/`S` labels with full tooltips, while roomier compact and desktop labels are unchanged. Fable also removed a redundant pre-layout toolbar width update that used stale raw width before `_layout_toolbar()` applied the safe-area-adjusted width, eliminating a transient wrong-width pass on notched landscape layouts. Extended `test_mobile_hud_input.gd` across both sides of the 430px compact breakpoint. Local `git diff --check`, Godot import, and full headless suite passed (1374 checks, 0 failures, Godot 4.7.1). Fable approved the final diff as a safe mobile layout/control adaptation.
 
