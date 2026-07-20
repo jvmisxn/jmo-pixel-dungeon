@@ -327,8 +327,11 @@ func _apply_button_labels() -> void:
 		_btn_inventory.size = button_size
 		_btn_inventory.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_map:
-		_btn_map.text = "Map [M]"
-		_btn_map.visible = not _compact_mode
+		# Map access is essential on mobile: the minimap widget and the M
+		# keyboard shortcut are both unavailable there, so keep the toolbar
+		# Map button visible in compact mode instead of desktop-only.
+		_btn_map.text = "Map" if _compact_mode else "Map [M]"
+		_btn_map.visible = true
 		_btn_map.custom_minimum_size = button_size
 		_btn_map.size = button_size
 		_btn_map.add_theme_font_size_override("font_size", action_font_size)
@@ -350,7 +353,7 @@ func _apply_button_labels() -> void:
 		_btn_search.size = button_size
 		_btn_search.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_settings:
-		_btn_settings.text = "Menu" if _compact_mode else "Settings [Esc]"
+		_btn_settings.text = "Menu" if _compact_mode else "Menu [Esc]"
 		_btn_settings.custom_minimum_size = button_size
 		_btn_settings.size = button_size
 		_btn_settings.add_theme_font_size_override("font_size", action_font_size)
@@ -410,7 +413,7 @@ func _fit_compact_width_to_viewport() -> void:
 		return
 	var scale_factor: float = maxf(0.6, _available_width / min_width)
 	alignment = BoxContainer.ALIGNMENT_BEGIN
-	for button: Button in [_btn_inventory, _btn_wait, _btn_search, _btn_settings]:
+	for button: Button in [_btn_inventory, _btn_map, _btn_wait, _btn_search, _btn_settings]:
 		if button == null or not button.visible:
 			continue
 		button.custom_minimum_size.x = floorf(button.custom_minimum_size.x * scale_factor)

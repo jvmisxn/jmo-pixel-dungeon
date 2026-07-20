@@ -56,6 +56,12 @@ func _build_content() -> Control:
 	resume_btn.pressed.connect(_on_resume)
 	btn_container.add_child(resume_btn)
 
+	# Map: reachable full-dungeon-map entry from the game menu, matching SPD's
+	# in-menu map access and giving a fallback where the minimap is hidden.
+	var map_btn: Button = WndBase.create_spd_button("Map")
+	map_btn.pressed.connect(_on_map)
+	btn_container.add_child(map_btn)
+
 	var settings_btn: Button = WndBase.create_spd_button("Settings")
 	settings_btn.pressed.connect(_on_settings)
 	btn_container.add_child(settings_btn)
@@ -77,9 +83,15 @@ func _on_resume() -> void:
 	close_window()
 
 
+func _on_map() -> void:
+	# Layer the map over the game menu (same pattern as inventory -> item view)
+	# so closing the map returns here instead of stranding the window stack.
+	open_sub_window.emit(WndMap.new())
+
+
 func _on_settings() -> void:
-	close_window()
-	# Open settings window via signal — avoids walking up the tree with get_parent()
+	# Layer settings over the game menu via the sub-window signal (avoids walking
+	# up the tree with get_parent()); closing settings returns to this menu.
 	var wnd: WndSettings = WndSettings.new()
 	open_sub_window.emit(wnd)
 

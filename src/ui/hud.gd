@@ -10,6 +10,10 @@ extends CanvasLayer
 # --- Constants ---
 const DESKTOP_TOOLBAR_HEIGHT: int = 40
 const MOBILE_TOOLBAR_HEIGHT: int = 72
+## Horizontal content margin the toolbar PanelContainer reserves (8px each side).
+## The toolbar buttons live inside that inset, so the fit logic must be told the
+## inner width, not the full panel width, or its widest layout can overflow.
+const TOOLBAR_PANEL_H_MARGIN: float = 16.0
 const MOBILE_BREAKPOINT: float = 720.0
 const MOBILE_WEB_MAX_VIEWPORT: float = 960.0
 const HUD_MARGIN: float = 6.0
@@ -927,7 +931,9 @@ func _visible_enemy_present() -> bool:
 
 
 func _on_settings_pressed() -> void:
-	var wnd: Variant = _instantiate_script("res://src/ui/windows/wnd_settings.gd")
+	# The toolbar "Menu" button (and Esc) opens the in-game game menu, which is
+	# the only touch-reachable path to Settings, the full Map, and Save & Quit.
+	var wnd: Variant = _instantiate_script("res://src/ui/windows/wnd_game.gd")
 	show_window(wnd)
 
 
@@ -972,7 +978,7 @@ func toggle_map() -> void:
 	_on_map_pressed()
 
 func open_settings() -> void:
-	if has_active_window() and _active_window != null and _active_window.get_script() != null and str(_active_window.get_script().resource_path).ends_with("wnd_settings.gd"):
+	if has_active_window() and _active_window != null and _active_window.get_script() != null and str(_active_window.get_script().resource_path).ends_with("wnd_game.gd"):
 		close_window()
 		return
 	_on_settings_pressed()
@@ -1110,7 +1116,8 @@ func _apply_responsive_layout() -> void:
 	if _toolbar_bar:
 		_toolbar_bar.set_compact_mode(is_mobile_layout)
 		if _toolbar_bar.has_method("set_available_width"):
-			_toolbar_bar.set_available_width(toolbar.size.x if toolbar != null else _vp_size.x)
+			var toolbar_outer_width: float = toolbar.size.x if toolbar != null else _vp_size.x
+			_toolbar_bar.set_available_width(maxf(1.0, toolbar_outer_width - TOOLBAR_PANEL_H_MARGIN))
 
 	_layout_toolbar()
 
@@ -1236,7 +1243,7 @@ func _layout_toolbar() -> void:
 	toolbar.custom_minimum_size = Vector2(width, height)
 	toolbar.size = Vector2(width, height)
 	if _toolbar_bar != null and _toolbar_bar.has_method("set_available_width"):
-		_toolbar_bar.set_available_width(width)
+		_toolbar_bar.set_available_width(maxf(1.0, width - TOOLBAR_PANEL_H_MARGIN))
 
 
 func _toolbar_top_y() -> float:

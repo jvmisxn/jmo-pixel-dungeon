@@ -156,10 +156,14 @@ func run(t: Object) -> void:
 	var toolbar := Toolbar.new()
 	toolbar._ready()
 	toolbar.set_compact_mode(true)
-	toolbar.set_available_width(375.0)
+	# The HUD hands the toolbar its panel-inner width (viewport minus the toolbar
+	# PanelContainer's horizontal content margins), so a 375px portrait phone gives
+	# the buttons this much room to fit within.
+	var portrait_inner_width: float = 375.0 - HUD.TOOLBAR_PANEL_H_MARGIN
+	toolbar.set_available_width(portrait_inner_width)
 	t.check(
-		_visible_toolbar_min_width(toolbar) <= 343.0,
-		"narrow mobile toolbar fits a 375px portrait viewport after HUD panel margins"
+		_visible_toolbar_min_width(toolbar) <= portrait_inner_width,
+		"narrow mobile toolbar fits inside a 375px portrait viewport's panel margins"
 	)
 	t.check(
 		toolbar._quickslots[0].visible and toolbar._quickslots[1].visible,
@@ -230,6 +234,20 @@ func run(t: Object) -> void:
 		not toolbar._btn_search.visible,
 		"ultra-narrow mobile toolbar hides search before shrinking core controls too far"
 	)
+	t.check(
+		toolbar._btn_map != null and toolbar._btn_map.visible,
+		"ultra-narrow mobile toolbar keeps Map reachable (no minimap/keyboard on mobile)"
+	)
+	t.check(
+		toolbar._btn_map.text == "Map",
+		"compact mobile Map button drops the keyboard-shortcut label"
+	)
+	toolbar.set_available_width(375.0)
+	t.check(
+		toolbar._btn_map.visible,
+		"narrow mobile toolbar exposes the full-map button"
+	)
+	toolbar.set_available_width(280.0)
 	toolbar._btn_inventory.position = Vector2.ZERO
 	toolbar._btn_inventory.size = Vector2.ZERO
 	t.check(
