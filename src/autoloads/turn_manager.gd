@@ -160,8 +160,9 @@ func actor_count() -> int:
 func spend_energy(actor_node: Node, turns: float = TICK) -> void:
 	for entry: Dictionary in _actors:
 		if entry["node"] == actor_node:
-			# Slower actors pay more cooldown; faster actors pay less.
-			var speed: float = entry["speed"]
+			# Slower actors pay more cooldown; faster actors pay less. Re-query
+			# live so buffs/rings that change speed affect the very next action.
+			var speed: float = _current_speed_for_actor(actor_node, entry)
 			if speed <= 0.0:
 				speed = 0.1  # safety floor
 			entry["cooldown"] += turns / speed
@@ -185,9 +186,15 @@ func get_cooldown(actor_node: Node) -> float:
 func refresh_speed(actor_node: Node) -> void:
 	for entry: Dictionary in _actors:
 		if entry["node"] == actor_node:
-			if actor_node.has_method("get_speed"):
-				entry["speed"] = actor_node.get_speed()
+			_current_speed_for_actor(actor_node, entry)
 			return
+
+func _current_speed_for_actor(actor_node: Node, entry: Dictionary) -> float:
+	var speed: float = float(entry.get("speed", 1.0))
+	if actor_node != null and actor_node.has_method("get_speed"):
+		speed = float(actor_node.get_speed())
+		entry["speed"] = speed
+	return speed
 
 # ---------------------------------------------------------------------------
 # Turn Processing

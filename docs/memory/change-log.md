@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: turn-manager, speed, buffs, source-fidelity, tests
+- Restored live speed re-querying in the turn scheduler. `TurnManager` still cached actor speed at registration, so buffs or ring passives that changed `get_speed()` after registration only affected cooldown math if some caller remembered to call `refresh_speed()`. `spend_energy()` now re-queries the actor's current speed before charging cooldown, matching SPD's live per-action timing model while preserving the existing safety floor for zero-speed actors. Extended `test_speed_modifiers.gd` with a scheduler regression for speed-up and slow-down changes after registration. Local full headless suite passed (1354 checks, 0 failures, Godot 4.7.1).
+
 - Tags: mobile, touch, camera, zoom, controls, tests
 - Added mobile dungeon look-around via one-finger drag while preserving tap-to-move. Single-finger touch drags now enter a camera-look gesture after a small movement threshold, pan the `GameCamera` with a persistent look offset, cancel auto-walk, consume the release, and avoid submitting a movement/attack tap. The next normal gameplay tap recenters the camera back to hero-follow before acting. Also added missing pinch-in coverage so mobile zoom-out remains tested alongside zoom-in. Extended `test_touch_gesture_routing.gd` and `test_game_camera_mobile_zoom.gd`. Local `git diff --check`, Godot import, and full headless suite passed (1338 checks, 0 failures, Godot 4.7.1).
 

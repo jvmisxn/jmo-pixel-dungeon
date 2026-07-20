@@ -1,5 +1,13 @@
 extends RefCounted
 
+class SpeedActor:
+	extends Node
+
+	var speed: float = 1.0
+
+	func get_speed() -> float:
+		return speed
+
 func run(t: Object) -> void:
 	var ch: Char = Char.new()
 	ch.base_speed = 1.0
@@ -36,8 +44,26 @@ func run(t: Object) -> void:
 	monk.add_buff(flurry)
 	t.check(is_equal_approx(monk.get_speed(), 1.0), "Monk Flurry does not change movement speed")
 
+	var scheduler := TurnManagerNode.new()
+	var actor := SpeedActor.new()
+	scheduler.register_actor(actor)
+	actor.speed = 2.0
+	scheduler.spend_energy(actor)
+	t.check(
+		is_equal_approx(scheduler.get_cooldown(actor), 0.5),
+		"TurnManager spends energy against live actor speed, not the registration cache"
+	)
+	actor.speed = 0.5
+	scheduler.spend_energy(actor)
+	t.check(
+		is_equal_approx(scheduler.get_cooldown(actor), 2.5),
+		"TurnManager applies later speed changes without a manual refresh"
+	)
+
 	ch.free()
 	dread_target.free()
 	sleeping.free()
 	runner.free()
 	monk.free()
+	actor.free()
+	scheduler.free()
