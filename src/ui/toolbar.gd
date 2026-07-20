@@ -51,6 +51,7 @@ const MOBILE_NARROW_QUICKSLOT_SIZE: Vector2 = Vector2(44, 56)
 const MOBILE_NARROW_QUICKSLOT_ICON_SIZE: Vector2 = Vector2(28, 28)
 const MOBILE_NARROW_BREAKPOINT: float = 430.0
 const MOBILE_ULTRA_NARROW_BREAKPOINT: float = 300.0
+const MOBILE_REST_VISIBLE_MIN_WIDTH: float = 560.0
 
 # --- Constants ---
 const BUTTON_MIN_SIZE: Vector2 = Vector2(80, 36)
@@ -294,6 +295,10 @@ func _is_ultra_narrow_compact_mode() -> bool:
 	return _compact_mode and _available_width > 0.0 and _available_width <= MOBILE_ULTRA_NARROW_BREAKPOINT
 
 
+func _can_show_compact_rest_button() -> bool:
+	return _compact_mode and _available_width >= MOBILE_REST_VISIBLE_MIN_WIDTH
+
+
 func _visible_quickslots_per_page() -> int:
 	return 1 if _is_ultra_narrow_compact_mode() else MOBILE_VISIBLE_QUICKSLOTS
 
@@ -342,8 +347,9 @@ func _apply_button_labels() -> void:
 		_btn_wait.size = button_size
 		_btn_wait.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_rest:
-		_btn_rest.text = "Rest [R]"
-		_btn_rest.visible = not _compact_mode
+		_btn_rest.text = "Rest" if _compact_mode else "Rest [R]"
+		_btn_rest.tooltip_text = "Rest until interrupted"
+		_btn_rest.visible = not _compact_mode or _can_show_compact_rest_button()
 		_btn_rest.custom_minimum_size = button_size
 		_btn_rest.size = button_size
 		_btn_rest.add_theme_font_size_override("font_size", action_font_size)
@@ -416,7 +422,7 @@ func _fit_compact_width_to_viewport() -> void:
 		return
 	var scale_factor: float = maxf(0.6, _available_width / min_width)
 	alignment = BoxContainer.ALIGNMENT_BEGIN
-	for button: Button in [_btn_inventory, _btn_map, _btn_wait, _btn_search, _btn_settings]:
+	for button: Button in [_btn_inventory, _btn_map, _btn_wait, _btn_rest, _btn_search, _btn_settings]:
 		if button == null or not button.visible:
 			continue
 		button.custom_minimum_size.x = floorf(button.custom_minimum_size.x * scale_factor)

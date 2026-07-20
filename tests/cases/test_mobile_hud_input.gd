@@ -255,6 +255,25 @@ func run(t: Object) -> void:
 		"roomier compact toolbar restores full mobile action labels"
 	)
 	t.check(
+		not toolbar._btn_rest.visible,
+		"portrait-width compact toolbar keeps Rest hidden instead of clipping core controls"
+	)
+	toolbar.set_available_width(560.0)
+	t.check(
+		toolbar._btn_rest.visible
+				and _visible_toolbar_min_width(toolbar) <= 560.0,
+		"compact toolbar fits Rest at the landscape visibility threshold"
+	)
+	toolbar.set_available_width(748.0)
+	t.check(
+		toolbar._btn_rest.visible
+				and toolbar._btn_rest.text == "Rest"
+				and toolbar._btn_rest.tooltip_text == "Rest until interrupted"
+				and _visible_toolbar_min_width(toolbar) <= 748.0,
+		"landscape-width compact toolbar exposes Rest while keeping the controls inside the safe-area width"
+	)
+	toolbar.set_available_width(480.0)
+	t.check(
 		toolbar._btn_map.visible,
 		"narrow mobile toolbar exposes the full-map button"
 	)
