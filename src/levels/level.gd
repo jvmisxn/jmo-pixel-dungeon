@@ -274,14 +274,22 @@ func update_fov(hero_pos: int, view_dist: int = -1) -> void:
 				for i: int in range(blocking.size()):
 					if blocking[i] and (map[i] == ConstantsData.Terrain.HIGH_GRASS or map[i] == ConstantsData.Terrain.FURROWED_GRASS):
 						blocking[i] = false
-			# SmokeScreen: add smoke cells as blocking (only for non-ally characters)
+			# SmokeScreen: block LOS at EVERY cell the smoke occupies (non-ally
+			# viewers only). Mirrors SPD Level.updateFieldOfView, which scans the
+			# whole SmokeScreen field and marks each cell where `cur[i] > 0` as
+			# blocking -- not just one representative cell. Walking the blob's
+			# active_cells shrouds the entire spread footprint, so a screen that
+			# has diffused past its seed still hides everything behind it.
 			if has_smoke:
 				for blob_entry: Dictionary in blobs:
 					var b: Variant = blob_entry.get("blob")
-					if b != null and b.get("blob_id") == "smoke_screen":
-						var smoke_pos: int = blob_entry.get("pos", -1)
-						if smoke_pos >= 0 and smoke_pos < LEN and not blocking[smoke_pos]:
-							blocking[smoke_pos] = true
+					if b == null or b.get("blob_id") != "smoke_screen":
+						continue
+					var smoke_cells: Variant = b.get("active_cells")
+					if smoke_cells is Array:
+						for smoke_pos: int in (smoke_cells as Array):
+							if smoke_pos >= 0 and smoke_pos < LEN and not blocking[smoke_pos]:
+								blocking[smoke_pos] = true
 
 		visible = ShadowCaster.cast_fov(hero_pos, blocking, W, view_dist)
 	else:
