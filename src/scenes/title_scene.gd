@@ -708,6 +708,7 @@ func _apply_layout() -> void:
 		var top_row_width: float = viewport_size.x if is_portrait else menu_width
 		_top_menu_row.custom_minimum_size = Vector2(top_row_width, 44)
 		_top_menu_row.size = Vector2(top_row_width, 44)
+		_top_menu_row.alignment = BoxContainer.ALIGNMENT_CENTER if is_portrait else BoxContainer.ALIGNMENT_BEGIN
 	if _btn_continue and not stack_top_actions:
 		var split_gap: float = 12.0
 		_top_menu_row.add_theme_constant_override("separation", split_gap)
