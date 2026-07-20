@@ -65,6 +65,21 @@ func run(t: Object) -> void:
 		is_equal_approx(camera.zoom.x, 3.0),
 		"settings zoom applies immediately instead of snapping back next frame"
 	)
+	camera.set_zoom_level(2.0)
+	camera.handle_touch_event(0, Vector2(100, 100), true)
+	camera.handle_touch_event(1, Vector2(200, 100), true)
+	camera.handle_touch_drag(1, Vector2(300, 100))
+	t.check(
+		camera._target_zoom > 3.9,
+		"scene-routed two-finger drag can zoom the camera in"
+	)
+	camera.handle_touch_drag(1, Vector2(150, 100))
+	t.check(
+		camera._target_zoom < 1.1,
+		"scene-routed two-finger drag can zoom the camera back out"
+	)
+	camera.handle_touch_event(0, Vector2(100, 100), false)
+	camera.handle_touch_event(1, Vector2(150, 100), false)
 	camera.free()
 
 	var workflow := FileAccess.get_file_as_string("res://.github/workflows/deploy-web.yml")

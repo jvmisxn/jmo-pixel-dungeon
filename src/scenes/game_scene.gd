@@ -276,10 +276,12 @@ func _input(event: InputEvent) -> void:
 				return
 			_active_touch_points[touch.index] = touch.position
 			_touch_start_points[touch.index] = touch.position
+			_track_camera_touch(touch.index, touch.position, true)
 			if _active_touch_points.size() >= 2:
 				_touch_gesture_started = true
 				_camera_look_touch_index = -1
 				_cancel_auto_walk()
+				_mark_input_as_handled()
 		else:
 			if _ui_touch_points.has(touch.index):
 				_ui_touch_points.erase(touch.index)
@@ -290,6 +292,8 @@ func _input(event: InputEvent) -> void:
 			var should_tap: bool = not _touch_gesture_started \
 					and _active_touch_points.size() == 1 \
 					and _active_touch_points.has(touch.index)
+			if _active_touch_points.has(touch.index):
+				_track_camera_touch(touch.index, touch.position, false)
 			_active_touch_points.erase(touch.index)
 			_touch_start_points.erase(touch.index)
 			if _camera_look_touch_index == touch.index:
@@ -313,6 +317,8 @@ func _input(event: InputEvent) -> void:
 				_touch_gesture_started = true
 				_camera_look_touch_index = -1
 				_cancel_auto_walk()
+				_track_camera_touch_drag(drag.index, drag.position)
+				_mark_input_as_handled()
 			elif _should_start_touch_camera_look(drag.index, drag.position):
 				_touch_gesture_started = true
 				_camera_look_touch_index = drag.index
@@ -443,6 +449,16 @@ func _pan_camera_by_touch_drag(screen_delta: Vector2) -> void:
 		return
 	if game_camera != null and game_camera.has_method("pan_by_screen_delta"):
 		game_camera.pan_by_screen_delta(screen_delta)
+
+
+func _track_camera_touch(touch_index: int, screen_pos: Vector2, pressed: bool) -> void:
+	if game_camera != null and game_camera.has_method("handle_touch_event"):
+		game_camera.handle_touch_event(touch_index, screen_pos, pressed)
+
+
+func _track_camera_touch_drag(touch_index: int, screen_pos: Vector2) -> void:
+	if game_camera != null and game_camera.has_method("handle_touch_drag"):
+		game_camera.handle_touch_drag(touch_index, screen_pos)
 
 
 func _reset_camera_look_offset() -> void:

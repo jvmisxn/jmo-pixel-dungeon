@@ -15,6 +15,8 @@ class FakeCamera:
 	extends RefCounted
 
 	var pan_deltas: Array[Vector2] = []
+	var touch_events: Array[Dictionary] = []
+	var touch_drags: Array[Dictionary] = []
 	var reset_count: int = 0
 
 	func get_cell_under_mouse() -> int:
@@ -25,6 +27,13 @@ class FakeCamera:
 
 	func pan_by_screen_delta(screen_delta: Vector2) -> void:
 		pan_deltas.append(screen_delta)
+
+	func handle_touch_event(touch_index: int, screen_pos: Vector2, pressed: bool) -> void:
+		touch_events.append({"index": touch_index, "pos": screen_pos, "pressed": pressed})
+
+	func handle_touch_drag(touch_index: int, screen_pos: Vector2) -> bool:
+		touch_drags.append({"index": touch_index, "pos": screen_pos})
+		return true
 
 	func reset_look_offset() -> void:
 		reset_count += 1
@@ -133,3 +142,53 @@ func run(t: Object) -> void:
 		"ordinary touch tap still submits a dungeon cell action"
 	)
 	drag_scene.free()
+
+	var pinch_scene := ClickSpyScene.new()
+	var pinch_camera := FakeCamera.new()
+	pinch_scene._awaiting_hero_input = true
+	pinch_scene.game_camera = pinch_camera
+
+	var pinch_down_a := InputEventScreenTouch.new()
+	pinch_down_a.index = 0
+	pinch_down_a.pressed = true
+	pinch_down_a.position = Vector2(100, 100)
+	pinch_scene._input(pinch_down_a)
+	var pinch_down_b := InputEventScreenTouch.new()
+	pinch_down_b.index = 1
+	pinch_down_b.pressed = true
+	pinch_down_b.position = Vector2(200, 100)
+	pinch_scene._input(pinch_down_b)
+
+	var pinch_drag := InputEventScreenDrag.new()
+	pinch_drag.index = 1
+	pinch_drag.position = Vector2(240, 100)
+	pinch_drag.relative = Vector2(40, 0)
+	pinch_scene._input(pinch_drag)
+
+	var pinch_up_a := InputEventScreenTouch.new()
+	pinch_up_a.index = 0
+	pinch_up_a.pressed = false
+	pinch_up_a.position = Vector2(100, 100)
+	pinch_scene._input(pinch_up_a)
+	var pinch_up_b := InputEventScreenTouch.new()
+	pinch_up_b.index = 1
+	pinch_up_b.pressed = false
+	pinch_up_b.position = Vector2(240, 100)
+	pinch_scene._input(pinch_up_b)
+	t.check(
+		pinch_camera.touch_events.size() == 4,
+		"game scene forwards gameplay touch presses/releases to camera pinch tracking"
+	)
+	t.check(
+		pinch_camera.touch_drags == [{"index": 1, "pos": Vector2(240, 100)}],
+		"game scene forwards two-finger drags to camera zoom tracking"
+	)
+	t.check(
+		pinch_camera.pan_deltas.is_empty(),
+		"two-finger pinch does not fall through to one-finger look pan"
+	)
+	t.check(
+		pinch_scene.clicked_cells.is_empty(),
+		"two-finger pinch does not submit movement on release"
+	)
+	pinch_scene.free()

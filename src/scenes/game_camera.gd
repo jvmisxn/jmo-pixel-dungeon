@@ -80,20 +80,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 	elif event is InputEventScreenTouch:
 		var touch: InputEventScreenTouch = event as InputEventScreenTouch
-		if touch.pressed:
-			_touch_points[touch.index] = touch.position
-		else:
-			_touch_points.erase(touch.index)
-			_pinch_start_distance = 0.0
-		if _touch_points.size() == 2:
-			_begin_pinch()
+		handle_touch_event(touch.index, touch.position, touch.pressed)
 	elif event is InputEventScreenDrag:
 		var drag: InputEventScreenDrag = event as InputEventScreenDrag
-		if _touch_points.has(drag.index):
-			_touch_points[drag.index] = drag.position
-			if _touch_points.size() == 2:
-				_update_pinch_zoom()
-				get_viewport().set_input_as_handled()
+		if handle_touch_drag(drag.index, drag.position):
+			get_viewport().set_input_as_handled()
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -152,6 +143,26 @@ func set_zoom_level(level: float) -> void:
 ## Reset zoom to default.
 func reset_zoom() -> void:
 	set_zoom_level(default_zoom_level)
+
+
+func handle_touch_event(touch_index: int, screen_pos: Vector2, pressed: bool) -> void:
+	if pressed:
+		_touch_points[touch_index] = screen_pos
+	else:
+		_touch_points.erase(touch_index)
+		_pinch_start_distance = 0.0
+	if _touch_points.size() == 2:
+		_begin_pinch()
+
+
+func handle_touch_drag(touch_index: int, screen_pos: Vector2) -> bool:
+	if not _touch_points.has(touch_index):
+		return false
+	_touch_points[touch_index] = screen_pos
+	if _touch_points.size() != 2:
+		return false
+	_update_pinch_zoom()
+	return true
 
 
 ## Pan the view by a touch/mouse drag delta without changing the hero-follow target.
