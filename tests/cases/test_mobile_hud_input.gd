@@ -242,7 +242,18 @@ func run(t: Object) -> void:
 		toolbar._btn_map.text == "Map",
 		"compact mobile Map button drops the keyboard-shortcut label"
 	)
-	toolbar.set_available_width(375.0)
+	t.check(
+		toolbar._btn_wait.text == "W"
+				and toolbar._btn_wait.tooltip_text == "Wait"
+				and toolbar._btn_search.text == "S"
+				and toolbar._btn_search.tooltip_text == "Search",
+		"narrow mobile toolbar uses compact readable action labels with full tooltips"
+	)
+	toolbar.set_available_width(480.0)
+	t.check(
+		toolbar._btn_wait.text == "Wait" and toolbar._btn_search.text == "Find",
+		"roomier compact toolbar restores full mobile action labels"
+	)
 	t.check(
 		toolbar._btn_map.visible,
 		"narrow mobile toolbar exposes the full-map button"

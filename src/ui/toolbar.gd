@@ -336,7 +336,8 @@ func _apply_button_labels() -> void:
 		_btn_map.size = button_size
 		_btn_map.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_wait:
-		_btn_wait.text = "Wait" if _compact_mode else "Wait [Space]"
+		_btn_wait.text = "W" if is_narrow_compact else ("Wait" if _compact_mode else "Wait [Space]")
+		_btn_wait.tooltip_text = "Wait"
 		_btn_wait.custom_minimum_size = button_size
 		_btn_wait.size = button_size
 		_btn_wait.add_theme_font_size_override("font_size", action_font_size)
@@ -347,13 +348,15 @@ func _apply_button_labels() -> void:
 		_btn_rest.size = button_size
 		_btn_rest.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_search:
-		_btn_search.text = "Find" if _compact_mode else "Search [S]"
+		_btn_search.text = "S" if is_narrow_compact else ("Find" if _compact_mode else "Search [S]")
+		_btn_search.tooltip_text = "Search"
 		_btn_search.visible = not _is_ultra_narrow_compact_mode()
 		_btn_search.custom_minimum_size = button_size
 		_btn_search.size = button_size
 		_btn_search.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_settings:
 		_btn_settings.text = "Menu" if _compact_mode else "Menu [Esc]"
+		_btn_settings.tooltip_text = "Menu"
 		_btn_settings.custom_minimum_size = button_size
 		_btn_settings.size = button_size
 		_btn_settings.add_theme_font_size_override("font_size", action_font_size)

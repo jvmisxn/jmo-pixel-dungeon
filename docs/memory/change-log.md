@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: mobile, hud, toolbar, controls, readability, tests
+- Improved ultra-narrow mobile toolbar readability without changing toolbar actions. The compact mobile toolbar already squeezed to fit cramped portrait/foldable widths, but Wait/Search could still become hard to read once the width fitter compressed text-heavy buttons. Narrow compact mode now uses single-letter `W`/`S` labels with full tooltips, while roomier compact and desktop labels are unchanged. Extended `test_mobile_hud_input.gd` across both sides of the 430px compact breakpoint. Local `git diff --check`, Godot import, and full headless suite passed (1374 checks, 0 failures, Godot 4.7.1). Fable approved the final diff as a safe mobile layout/control adaptation.
+
 - Tags: mobile, touch, camera, zoom, controls, tests
 - Restored mobile pinch zoom after adding one-finger look-around. Pinch tracking previously lived only in `GameCamera._unhandled_input()`, while the new touch router handled look-around in `GameScene._input()`, so mobile/browser event routing could let drag work while starving the camera's zoom path. `GameScene` now forwards gameplay touch presses, releases, and drags directly to `GameCamera`'s touch handlers, consumes two-finger gestures before they become look-pan or tap-to-move input, and leaves HUD/modal touches isolated. Single-finger look drags also keep camera touch tracking current so a later second finger starts pinch from the live position. Extended touch-routing and camera zoom regressions to cover scene-routed pinch in/out, no one-finger pan fallback, and no movement submission after pinching. Local `git diff --check`, Godot import, and full headless suite passed (1372 checks, 0 failures, Godot 4.7.1).
 
