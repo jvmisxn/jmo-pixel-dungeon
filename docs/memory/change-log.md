@@ -2,6 +2,9 @@
 
 ## 2026-07-20
 
+- Tags: buffs, weakness, source-fidelity, tests
+- Corrected the Weakness audit item instead of landing a non-source STR penalty. Upstream current Shattered Pixel Dungeon keeps `Weakness` as a flavour debuff, applies its combat effect in `Char.attack()` as `dmg *= 0.67f`, and does not subtract Weakness inside `Hero.STR()`; the port already had the outgoing-damage multiplier, so the proposed `STR_PENALTY`/equipment-encumbrance change would have stacked a divergence. Updated `Weakness` to use SPD's 20-turn duration and removed the stale strength-penalty comments. Extended `test_combat_buffs.gd` to lock the 20-turn duration and 67% outgoing-damage behavior.
+
 - Tags: rogue, search, secrets, source-fidelity, tests
 - Restored Rogue's SPD-style wider intentional search reach. Upstream Shattered Pixel Dungeon gives Rogue a base search distance of 2 tiles while other classes search 1 tile before Wide Search/Foresight modifiers; the port always searched only adjacent cells, so Rogues did not actually detect traps/secret doors more easily despite the class perk text. `Hero._do_search()` now passes a class-specific radius into `Door.search()`, and `Door.search()` scans a bounded square radius without edge wrapping while preserving the default adjacent behavior for non-Rogues. Added `test_hero_search_radius.gd` for Warrior adjacent-only and Rogue two-tile secret door/trap reveal. Local `git diff --check`, Godot import, and full headless suite passed (1411 checks, 0 failures, Godot 4.7.1).
 

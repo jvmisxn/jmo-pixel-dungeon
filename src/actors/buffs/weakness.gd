@@ -1,11 +1,8 @@
 class_name Weakness
 extends Buff
-## Reduces the character's effective strength by 2.
-## In the original, this makes heavy equipment harder to use (excess STR penalty)
-## and also halves accuracy for the hero specifically.
+## Reduces outgoing attack damage while active.
 
-const BASE_DURATION: float = 50.0  # Original: 50 turns
-const STR_PENALTY: int = 2
+const BASE_DURATION: float = 20.0
 
 func _init() -> void:
 	buff_id = "Weakness"
