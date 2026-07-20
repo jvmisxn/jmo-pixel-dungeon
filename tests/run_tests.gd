@@ -27,6 +27,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_wnd_item_drop_slots.gd",
 	"res://tests/cases/test_targeting_input.gd",
 	"res://tests/cases/test_stairs_click_input.gd",
+	"res://tests/cases/test_hero_search_radius.gd",
 	"res://tests/cases/test_title_mobile_layout.gd",
 	"res://tests/cases/test_hero_select_portrait_layout.gd",
 	"res://tests/cases/test_game_camera_mobile_zoom.gd",

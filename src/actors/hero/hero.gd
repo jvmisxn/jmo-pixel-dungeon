@@ -407,7 +407,8 @@ func _do_search() -> void:
 	last_visible_action = "search"
 	last_visible_target_pos = pos
 	var door_feature: RefCounted = DoorFeature.new()
-	var found: int = int(door_feature.call("search", level, pos))
+	var search_radius: int = 2 if hero_class == ConstantsData.HeroClass.ROGUE else 1
+	var found: int = int(door_feature.call("search", level, pos, search_radius))
 	var equipped_artifact: Variant = belongings.get_equipped_artifact() if belongings != null else null
 	if equipped_artifact != null and equipped_artifact.has_method("on_search"):
 		equipped_artifact.on_search()

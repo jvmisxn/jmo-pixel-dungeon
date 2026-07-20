@@ -79,23 +79,27 @@ static func close(level: Level, pos: int) -> bool:
 		return true
 	return false
 
-## Search adjacent cells for secret doors. Called when hero uses the search action.
-static func search(level: Level, hero_pos: int) -> int:
+## Search nearby cells for secret doors/traps. Called when hero uses the search action.
+static func search(level: Level, hero_pos: int, radius: int = 1) -> int:
 	var found: int = 0
-	for dir: int in ConstantsData.DIRS_8:
-		var adj: int = hero_pos + dir
-		if adj < 0 or adj >= Level.LEN:
-			continue
-		if level.terrain_at(adj) == ConstantsData.Terrain.SECRET_DOOR:
-			level.set_terrain(adj, ConstantsData.Terrain.DOOR)
-			found += 1
-			if MessageLog:
-				MessageLog.add("You discover a hidden door!")
-		elif level.terrain_at(adj) == ConstantsData.Terrain.SECRET_TRAP:
-			# Reveal hidden traps too
-			level.set_terrain(adj, ConstantsData.Terrain.TRAP)
-			var trap: Variant = level.trap_at(adj)
-			if trap != null and trap.has_method("reveal"):
-				trap.reveal(level)
-			found += 1
+	var search_radius: int = maxi(1, radius)
+	var hero_x: int = ConstantsData.pos_to_x(hero_pos)
+	var hero_y: int = ConstantsData.pos_to_y(hero_pos)
+	for y: int in range(maxi(0, hero_y - search_radius), mini(ConstantsData.HEIGHT - 1, hero_y + search_radius) + 1):
+		for x: int in range(maxi(0, hero_x - search_radius), mini(ConstantsData.WIDTH - 1, hero_x + search_radius) + 1):
+			var cell: int = ConstantsData.xy_to_pos(x, y)
+			if cell == hero_pos:
+				continue
+			if level.terrain_at(cell) == ConstantsData.Terrain.SECRET_DOOR:
+				level.set_terrain(cell, ConstantsData.Terrain.DOOR)
+				found += 1
+				if MessageLog:
+					MessageLog.add("You discover a hidden door!")
+			elif level.terrain_at(cell) == ConstantsData.Terrain.SECRET_TRAP:
+				# Reveal hidden traps too
+				level.set_terrain(cell, ConstantsData.Terrain.TRAP)
+				var trap: Variant = level.trap_at(cell)
+				if trap != null and trap.has_method("reveal"):
+					trap.reveal(level)
+				found += 1
 	return found

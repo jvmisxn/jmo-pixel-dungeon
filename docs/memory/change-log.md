@@ -2,6 +2,9 @@
 
 ## 2026-07-20
 
+- Tags: rogue, search, secrets, source-fidelity, tests
+- Restored Rogue's SPD-style wider intentional search reach. Upstream Shattered Pixel Dungeon gives Rogue a base search distance of 2 tiles while other classes search 1 tile before Wide Search/Foresight modifiers; the port always searched only adjacent cells, so Rogues did not actually detect traps/secret doors more easily despite the class perk text. `Hero._do_search()` now passes a class-specific radius into `Door.search()`, and `Door.search()` scans a bounded square radius without edge wrapping while preserving the default adjacent behavior for non-Rogues. Added `test_hero_search_radius.gd` for Warrior adjacent-only and Rogue two-tile secret door/trap reveal. Local `git diff --check`, Godot import, and full headless suite passed (1411 checks, 0 failures, Godot 4.7.1).
+
 - Tags: mobile, hud, landscape, readability, tests
 - Gave the mobile landscape status strip enough vertical room for its HP/XP readout. The compact landscape pane stayed width-capped for safe-area breathing room, but its 76px height left only a 60px overlay budget for controls whose bar stack wants about 64px, making status information feel cramped or uncovered on landscape phones. `HUD` now uses an 84px landscape status height and slightly tighter mobile overlay spacing, preserving portrait and toolbar behavior. Extended `test_mobile_hud_input.gd` with an 852x393 safe-area regression that asserts the status pane stays compact while leaving readable height for HP/XP bars. Local `git diff --check`, Godot import, and full headless suite passed (1406 checks, 0 failures, Godot 4.7.1).
 
