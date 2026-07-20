@@ -5,7 +5,13 @@ extends Item
 ## characters and destroying breakable terrain in a radius.
 
 # --- Enums ---
-enum BombType { NORMAL, FIRE, FROST, HOLY, WOOLY, NOISEMAKER, FLASHBANG, SHOCK, REGROWTH, ARCANE }
+enum BombType { NORMAL, FIRE, FROST, HOLY, WOOLY, NOISEMAKER, FLASHBANG, SHOCK, REGROWTH, ARCANE, SMOKE }
+
+# --- Constants ---
+## SmokeScreen volume seeded per cell by a Smoke Bomb, mirroring SPD
+## SmokeBomb.explode() which pours `Blob.seed(i, 40, SmokeScreen.class)` into
+## every non-solid cell of its radius-2 blast (25 cells → SPD's 40*25 budget).
+const SMOKE_SEED_VOLUME: float = 40.0
 
 # --- Properties ---
 ## Number of turns before detonation after being thrown/placed.
@@ -191,6 +197,21 @@ func _apply_area_effect(bomb_pos: int, cells: Array[int], dungeon_level: Variant
 			if MessageLog:
 				MessageLog.add_info("Arcane energy rips through all defenses!")
 
+		BombType.SMOKE:
+			# SPD SmokeBomb.explode() seeds SmokeScreen at 40 volume across every
+			# non-solid cell within its radius-2 blast (buildDistanceMap footprint).
+			# It calls super.explode() first, so the standard blast damage + terrain
+			# destruction handled by detonate() is RETAINED -- the smoke is additive,
+			# not a replacement. blast_cells() gives the same passable-filtered,
+			# edge-safe radius-2 footprint (5x5 = 25 cells in the open) SPD walks.
+			if dungeon_level != null and dungeon_level.has_method("add_blob"):
+				var smoke_cells: Array[int] = Blob.blast_cells(dungeon_level, bomb_pos, radius)
+				for cell: int in smoke_cells:
+					var smoke: SmokeScreen = SmokeScreen.new()
+					dungeon_level.add_blob(smoke, cell, SMOKE_SEED_VOLUME)
+			if MessageLog:
+				MessageLog.add_info("A thick cloud of smoke billows across the area!")
+
 ## Get all cell positions within a Chebyshev radius of a center position.
 func _get_cells_in_radius(center: int, rad: int) -> Array[int]:
 	var cells: Array[int] = []
@@ -343,6 +364,18 @@ static func create(bomb_id: String) -> Bomb:
 			bomb.damage_max = 40
 			bomb.bomb_type = BombType.ARCANE
 			bomb.icon_color = Color(0.7, 0.3, 0.9)
+
+		"smoke_bomb":
+			bomb.item_name = "Smoke Bomb"
+			bomb.description = "Bursts into a wide, vision-blocking cloud of smoke. Its blast still injures anyone close by."
+			# SPD SmokeBomb overrides explosionRange() -> 2 (used for BOTH the blast
+			# damage and the smoke footprint) and still calls super.explode(), so it
+			# keeps the standard bomb blast damage rather than being harmless.
+			bomb.radius = 2
+			bomb.damage_min = 10
+			bomb.damage_max = 30
+			bomb.bomb_type = BombType.SMOKE
+			bomb.icon_color = Color(0.55, 0.55, 0.6)
 
 		_:
 			bomb.item_name = "Bomb"

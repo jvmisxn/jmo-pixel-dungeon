@@ -142,6 +142,7 @@ const FOODS: Array[String] = [
 const BOMBS: Array[String] = [
 	"bomb", "fire_bomb", "frost_bomb", "holy_bomb", "wooly_bomb",
 	"noisemaker", "flashbang", "shock_bomb", "regrowth_bomb", "arcane_bomb",
+	"smoke_bomb",
 ]
 
 ## Spells — IDs matching Spell.create().
@@ -672,6 +673,7 @@ const SPRITE_INDICES: Dictionary = {
 	"flashbang": 86,
 	"shock_bomb": 91,
 	"regrowth_bomb": 84,
+	"smoke_bomb": 85,
 	"arcane_bomb": 90,
 	# --- Melee weapons tier 1 (row 7) ---
 	"worn_shortsword": 96,
