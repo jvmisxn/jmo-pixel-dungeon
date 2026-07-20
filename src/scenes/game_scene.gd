@@ -119,6 +119,8 @@ var _active_touch_points: Dictionary = {}
 var _touch_start_points: Dictionary = {}
 var _ui_touch_points: Dictionary = {}
 var _touch_gesture_started: bool = false
+enum TouchGestureMode { TOUCH_NONE, TOUCH_TAP, TOUCH_LOOK, TOUCH_PINCH }
+var _touch_gesture_mode: int = TouchGestureMode.TOUCH_NONE
 var _camera_look_touch_index: int = -1
 var _suppress_touch_mouse_until_msec: int = 0
 var _last_action_from_touch: bool = false
@@ -274,14 +276,15 @@ func _input(event: InputEvent) -> void:
 				_ui_touch_points[touch.index] = true
 				_mark_input_as_handled()
 				return
+			var was_empty: bool = _active_touch_points.is_empty()
 			_active_touch_points[touch.index] = touch.position
 			_touch_start_points[touch.index] = touch.position
 			_track_camera_touch(touch.index, touch.position, true)
+			if was_empty:
+				_touch_gesture_mode = TouchGestureMode.TOUCH_TAP
 			if _active_touch_points.size() >= 2:
-				_touch_gesture_started = true
-				_camera_look_touch_index = -1
-				_cancel_auto_walk()
-				_mark_input_as_handled()
+				_begin_touch_pinch_gesture()
+			_mark_input_as_handled()
 		else:
 			if _ui_touch_points.has(touch.index):
 				_ui_touch_points.erase(touch.index)
@@ -289,10 +292,11 @@ func _input(event: InputEvent) -> void:
 				_handle_hud_touch_release(touch.position)
 				_mark_input_as_handled()
 				return
-			var should_tap: bool = not _touch_gesture_started \
+			var was_active_touch: bool = _active_touch_points.has(touch.index)
+			var should_tap: bool = _touch_gesture_mode == TouchGestureMode.TOUCH_TAP \
 					and _active_touch_points.size() == 1 \
-					and _active_touch_points.has(touch.index)
-			if _active_touch_points.has(touch.index):
+					and was_active_touch
+			if was_active_touch:
 				_track_camera_touch(touch.index, touch.position, false)
 			_active_touch_points.erase(touch.index)
 			_touch_start_points.erase(touch.index)
@@ -301,8 +305,9 @@ func _input(event: InputEvent) -> void:
 			if should_tap:
 				_handle_touch_tap(touch.position)
 			if _active_touch_points.is_empty():
-				_touch_gesture_started = false
-				_camera_look_touch_index = -1
+				_reset_touch_gesture_state()
+			if was_active_touch:
+				_mark_input_as_handled()
 	elif event is InputEventScreenDrag:
 		var drag: InputEventScreenDrag = event as InputEventScreenDrag
 		_suppress_synthesized_touch_mouse()
@@ -315,17 +320,17 @@ func _input(event: InputEvent) -> void:
 			_active_touch_points[drag.index] = drag.position
 			_track_camera_touch_drag(drag.index, drag.position)
 			if _active_touch_points.size() >= 2:
-				_touch_gesture_started = true
-				_camera_look_touch_index = -1
-				_cancel_auto_walk()
+				_begin_touch_pinch_gesture()
 				_mark_input_as_handled()
-			elif _should_start_touch_camera_look(drag.index, drag.position):
-				_touch_gesture_started = true
-				_camera_look_touch_index = drag.index
-				_cancel_auto_walk()
-			if _camera_look_touch_index == drag.index:
+				return
+			if _touch_gesture_mode == TouchGestureMode.TOUCH_PINCH:
+				_mark_input_as_handled()
+				return
+			if _touch_gesture_mode == TouchGestureMode.TOUCH_TAP and _should_start_touch_camera_look(drag.index, drag.position):
+				_begin_touch_look_gesture(drag.index)
+			if _touch_gesture_mode == TouchGestureMode.TOUCH_LOOK and _camera_look_touch_index == drag.index:
 				_pan_camera_by_touch_drag(drag.relative)
-				_mark_input_as_handled()
+			_mark_input_as_handled()
 	elif event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and _should_suppress_synthesized_touch_mouse_event(mb.position):
@@ -442,6 +447,26 @@ func _should_start_touch_camera_look(touch_index: int, screen_pos: Vector2) -> b
 		return false
 	var start_pos: Variant = _touch_start_points[touch_index]
 	return start_pos is Vector2 and (screen_pos - start_pos).length() >= TOUCH_LOOK_DRAG_THRESHOLD
+
+
+func _begin_touch_look_gesture(touch_index: int) -> void:
+	_touch_gesture_started = true
+	_touch_gesture_mode = TouchGestureMode.TOUCH_LOOK
+	_camera_look_touch_index = touch_index
+	_cancel_auto_walk()
+
+
+func _begin_touch_pinch_gesture() -> void:
+	_touch_gesture_started = true
+	_touch_gesture_mode = TouchGestureMode.TOUCH_PINCH
+	_camera_look_touch_index = -1
+	_cancel_auto_walk()
+
+
+func _reset_touch_gesture_state() -> void:
+	_touch_gesture_started = false
+	_touch_gesture_mode = TouchGestureMode.TOUCH_NONE
+	_camera_look_touch_index = -1
 
 
 func _pan_camera_by_touch_drag(screen_delta: Vector2) -> void:

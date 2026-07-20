@@ -35,10 +35,63 @@ func run(t: Object) -> void:
 		"dropping equipped right ring preserves the item reference"
 	)
 
+	var weapon: Weapon = MeleeWeapon.create("shortsword")
+	var item_wnd := WndItem.new()
+	item_wnd.setup(weapon, hero, false)
+	var item_content: Control = item_wnd._build_content()
+	var action_flow: HFlowContainer = item_content.get_child(item_content.get_child_count() - 1) as HFlowContainer
+	t.check(
+		action_flow != null,
+		"item action buttons wrap in a flow container on mobile-width windows"
+	)
+	t.check(
+		_find_button_with_text(action_flow, "Equip") != null,
+		"equippable item detail exposes the Equip action"
+	)
+	t.check(
+		_find_button_with_text(action_flow, "Close") != null,
+		"item detail exposes an explicit Close action for touch users"
+	)
+
+	var inv_wnd := WndInventory.new()
+	t.check(
+		inv_wnd._inventory_grid_columns_for_width(393.0) == 4,
+		"mobile inventory grid uses fewer columns to avoid right-edge clipping"
+	)
+	t.check(
+		inv_wnd._inventory_equip_slot_size_for_width(393.0) < inv_wnd._inventory_equip_slot_size_for_width(852.0),
+		"mobile inventory equipment slots shrink before wrapping"
+	)
+
+	var touch_slot := ItemSlot.new()
+	touch_slot.item = weapon
+	var touched_items: Array[Variant] = []
+	touch_slot.slot_clicked.connect(func(item: RefCounted) -> void:
+		touched_items.append(item)
+	)
+	var slot_touch := InputEventScreenTouch.new()
+	slot_touch.pressed = true
+	touch_slot._gui_input(slot_touch)
+	t.check(
+		touched_items == [weapon],
+		"inventory item slots emit inspection clicks from mobile screen touches"
+	)
+
 	EventBus.request_hero_action.disconnect(_on_request_hero_action)
+	item_content.free()
+	item_wnd.free()
+	inv_wnd.free()
+	touch_slot.free()
 	left_wnd.free()
 	right_wnd.free()
 	hero.free()
 
 func _on_request_hero_action(action: Dictionary) -> void:
 	_last_action = action
+
+func _find_button_with_text(root: Node, text: String) -> Button:
+	for child: Node in root.get_children():
+		var btn: Button = child as Button
+		if btn != null and btn.text == text:
+			return btn
+	return null

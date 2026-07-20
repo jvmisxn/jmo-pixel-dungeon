@@ -19,6 +19,10 @@ var _gold_label: Label = null
 var _filter_buttons: Array[Button] = []
 var _hero: Hero = null
 
+const COMPACT_VIEWPORT_WIDTH: float = 480.0
+const DESKTOP_EQUIP_SLOT_SIZE: float = 56.0
+const MOBILE_EQUIP_SLOT_SIZE: float = 44.0
+
 
 func _init() -> void:
 	window_title = "Inventory"
@@ -36,15 +40,18 @@ func _build_content() -> Control:
 	equip_label.text = "Equipment"
 	main.add_child(equip_label)
 
-	var equip_row: HBoxContainer = HBoxContainer.new()
+	var equip_row: HFlowContainer = HFlowContainer.new()
 	equip_row.add_theme_constant_override("separation", 4)
+	equip_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main.add_child(equip_row)
 
 	var slot_names: Array[String] = ["weapon", "spirit_bow", "armor", "artifact", "ring_left", "ring_right", "misc"]
 	var slot_labels: Array[String] = ["Weapon", "Bow", "Armor", "Artifact", "Ring L", "Ring R", "Misc"]
+	var equip_slot_size: float = _inventory_equip_slot_size()
 	for i: int in range(slot_names.size()):
 		var equip_slot: ItemSlot = ItemSlot.new()
-		equip_slot.custom_minimum_size = Vector2(56, 56)
+		equip_slot.custom_minimum_size = Vector2(equip_slot_size, equip_slot_size)
+		equip_slot.size = equip_slot.custom_minimum_size
 		equip_slot.tooltip_text = slot_labels[i]
 		# Set the equipped item on the slot
 		var equipped_item: Variant = _get_equipped_item(slot_names[i])
@@ -62,8 +69,9 @@ func _build_content() -> Control:
 	main.add_child(_gold_label)
 
 	# --- Filter Tabs ---
-	var filter_row: HBoxContainer = HBoxContainer.new()
+	var filter_row: HFlowContainer = HFlowContainer.new()
 	filter_row.add_theme_constant_override("separation", 2)
+	filter_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main.add_child(filter_row)
 
 	var filter_names: Array[String] = ["All", "Weapons", "Armor", "Potions", "Scrolls", "Other"]
@@ -72,6 +80,7 @@ func _build_content() -> Control:
 		fb.text = filter_names[i]
 		fb.toggle_mode = true
 		fb.button_pressed = (i == 0)
+		fb.custom_minimum_size = Vector2(72, 32)
 		fb.pressed.connect(_on_filter_pressed.bind(i))
 		filter_row.add_child(fb)
 		_filter_buttons.append(fb)
@@ -79,6 +88,7 @@ func _build_content() -> Control:
 	# --- Sort Button ---
 	var sort_btn: Button = Button.new()
 	sort_btn.text = "Sort"
+	sort_btn.custom_minimum_size = Vector2(72, 32)
 	sort_btn.pressed.connect(_on_sort_pressed)
 	filter_row.add_child(sort_btn)
 
@@ -89,13 +99,18 @@ func _build_content() -> Control:
 	main.add_child(scroll)
 
 	_item_grid = GridContainer.new()
-	_item_grid.columns = 5
+	_item_grid.columns = _inventory_grid_columns()
 	_item_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_item_grid.add_theme_constant_override("h_separation", 4)
 	_item_grid.add_theme_constant_override("v_separation", 4)
 	scroll.add_child(_item_grid)
 
 	_refresh_grid()
+
+	var close_btn: Button = WndBase.create_spd_button("Close")
+	close_btn.pressed.connect(close_window)
+	main.add_child(close_btn)
+
 	return main
 
 
@@ -142,6 +157,29 @@ func _refresh_grid() -> void:
 			slot.slot_clicked.connect(_on_item_pressed)
 			slot.tooltip_text = ConstantsData.get_prop(itm, "item_name", "")
 		_item_grid.add_child(slot)
+
+
+func _inventory_equip_slot_size() -> float:
+	return _inventory_equip_slot_size_for_width(_viewport_width())
+
+
+func _inventory_grid_columns() -> int:
+	return _inventory_grid_columns_for_width(_viewport_width())
+
+
+func _viewport_width() -> float:
+	var vp: Viewport = get_viewport()
+	if vp == null:
+		return 1280.0
+	return vp.get_visible_rect().size.x
+
+
+func _inventory_equip_slot_size_for_width(width: float) -> float:
+	return MOBILE_EQUIP_SLOT_SIZE if width <= COMPACT_VIEWPORT_WIDTH else DESKTOP_EQUIP_SLOT_SIZE
+
+
+func _inventory_grid_columns_for_width(width: float) -> int:
+	return 4 if width <= COMPACT_VIEWPORT_WIDTH else 5
 
 
 func _get_item_display_text(item: Variant) -> String:

@@ -206,3 +206,47 @@ func run(t: Object) -> void:
 		"two-finger pinch does not submit movement on release"
 	)
 	pinch_scene.free()
+
+	var pinch_lock_scene := ClickSpyScene.new()
+	var pinch_lock_camera := FakeCamera.new()
+	pinch_lock_scene._awaiting_hero_input = true
+	pinch_lock_scene.game_camera = pinch_lock_camera
+
+	var lock_down_a := InputEventScreenTouch.new()
+	lock_down_a.index = 0
+	lock_down_a.pressed = true
+	lock_down_a.position = Vector2(100, 100)
+	pinch_lock_scene._input(lock_down_a)
+	var lock_down_b := InputEventScreenTouch.new()
+	lock_down_b.index = 1
+	lock_down_b.pressed = true
+	lock_down_b.position = Vector2(200, 100)
+	pinch_lock_scene._input(lock_down_b)
+
+	var lock_up_b := InputEventScreenTouch.new()
+	lock_up_b.index = 1
+	lock_up_b.pressed = false
+	lock_up_b.position = Vector2(200, 100)
+	pinch_lock_scene._input(lock_up_b)
+
+	var leftover_drag := InputEventScreenDrag.new()
+	leftover_drag.index = 0
+	leftover_drag.position = Vector2(150, 100)
+	leftover_drag.relative = Vector2(50, 0)
+	pinch_lock_scene._input(leftover_drag)
+
+	var lock_up_a := InputEventScreenTouch.new()
+	lock_up_a.index = 0
+	lock_up_a.pressed = false
+	lock_up_a.position = Vector2(150, 100)
+	pinch_lock_scene._input(lock_up_a)
+
+	t.check(
+		pinch_lock_camera.pan_deltas.is_empty(),
+		"pinch mode stays locked until all fingers lift instead of becoming look-around"
+	)
+	t.check(
+		pinch_lock_scene.clicked_cells.is_empty(),
+		"pinch mode does not become a movement tap after one finger remains"
+	)
+	pinch_lock_scene.free()

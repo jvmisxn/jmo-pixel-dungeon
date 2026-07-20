@@ -62,6 +62,11 @@ func _gui_input(event: InputEvent) -> void:
 			elif mb.button_index == MOUSE_BUTTON_RIGHT:
 				slot_right_clicked.emit(item)
 				accept_event()
+	elif event is InputEventScreenTouch:
+		var touch: InputEventScreenTouch = event as InputEventScreenTouch
+		if touch.pressed:
+			slot_clicked.emit(item)
+			accept_event()
 
 
 func _draw() -> void:

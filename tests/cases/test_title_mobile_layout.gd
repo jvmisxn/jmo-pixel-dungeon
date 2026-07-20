@@ -5,8 +5,8 @@ func run(t: Object) -> void:
 	var browser_viewport := Vector2(393, 687)
 	var chosen_viewport: Vector2 = scene._apply_mobile_safe_layout_reserve(scene._choose_layout_viewport_size(Vector2(1280, 720), Vector2i(393, 687)))
 	t.check(
-		chosen_viewport == Vector2(377, 687),
-		"mobile web title layout uses browser viewport with a right-edge safe reserve"
+		chosen_viewport == Vector2(361, 687),
+		"mobile web title layout uses browser viewport with a stronger right-edge safe reserve"
 	)
 	t.check(
 		scene._title_menu_width(chosen_viewport) <= 180.0,
@@ -23,6 +23,12 @@ func run(t: Object) -> void:
 	t.check(
 		scene._title_menu_x(chosen_viewport, scene._title_menu_width(chosen_viewport)) + scene._title_menu_width(chosen_viewport) <= chosen_viewport.x - 72.0,
 		"portrait title menu keeps a wide right inset"
+	)
+	var narrow_viewport := Vector2(288, 640)
+	var narrow_width: float = scene._title_menu_width(narrow_viewport)
+	t.check(
+		scene._title_menu_x(narrow_viewport, narrow_width) + narrow_width <= narrow_viewport.x - 72.0,
+		"ultra-narrow portrait title menu clamps away from the right edge"
 	)
 	t.check(
 		scene._should_stack_title_actions(chosen_viewport),

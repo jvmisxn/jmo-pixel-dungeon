@@ -72,6 +72,7 @@ const SUBMENU_ACTION_WIDTH: float = 350.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
 const PORTRAIT_MENU_MAX_WIDTH: float = 180.0
 const PORTRAIT_MENU_SIDE_MARGIN: float = 72.0
+const PORTRAIT_WEB_RIGHT_RESERVE: float = 32.0
 const PORTRAIT_TOP_ACTION_GAP: float = 12.0
 const PROFILE_ICON_SPRITES: Dictionary = {
 	"warrior": "res://assets/spd/sprites/warrior.png",
@@ -717,7 +718,11 @@ func _apply_layout() -> void:
 		if btn:
 			_set_button_width(btn, menu_width, 44)
 	if _version_label:
-		_version_label.position = Vector2(maxf(margin, viewport_size.x - 70.0), maxf(margin, viewport_size.y - 24.0))
+		var version_width: float = 64.0
+		_version_label.custom_minimum_size = Vector2(version_width, 20.0)
+		_version_label.size = _version_label.custom_minimum_size
+		_version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_version_label.position = Vector2(maxf(margin, viewport_size.x - margin - version_width), maxf(margin, viewport_size.y - 24.0))
 
 	var submenu_size: Vector2 = _get_submenu_panel_size()
 	for panel: PanelContainer in [_network_panel, _profile_panel, _settings_panel]:
@@ -776,7 +781,11 @@ func _should_stack_title_actions(viewport_size: Vector2) -> bool:
 
 
 func _title_menu_x(viewport_size: Vector2, menu_width: float) -> float:
-	return floor((viewport_size.x - menu_width) * 0.5)
+	var centered_x: float = floor((viewport_size.x - menu_width) * 0.5)
+	if viewport_size.y <= viewport_size.x:
+		return centered_x
+	var right_safe_x: float = viewport_size.x - PORTRAIT_MENU_SIDE_MARGIN - menu_width
+	return clampf(centered_x, PORTRAIT_MENU_SIDE_MARGIN, maxf(PORTRAIT_MENU_SIDE_MARGIN, right_safe_x))
 
 
 func _title_menu_width(viewport_size: Vector2) -> float:
@@ -825,7 +834,7 @@ func _should_layout_against_browser_size(browser_size: Vector2i) -> bool:
 func _apply_mobile_safe_layout_reserve(viewport_size: Vector2) -> Vector2:
 	if viewport_size.y <= viewport_size.x:
 		return viewport_size
-	return Vector2(maxf(1.0, viewport_size.x - 16.0), viewport_size.y)
+	return Vector2(maxf(1.0, viewport_size.x - PORTRAIT_WEB_RIGHT_RESERVE), viewport_size.y)
 
 
 func _get_submenu_panel_size() -> Vector2:
@@ -847,6 +856,7 @@ func _get_centered_submenu_position(panel_size: Vector2) -> Vector2:
 func _create_spd_button(text: String, min_size: Vector2 = Vector2(400, 44)) -> Button:
 	var btn: Button = Button.new()
 	btn.text = text
+	btn.clip_text = true
 	btn.custom_minimum_size = min_size
 	btn.add_theme_font_size_override("font_size", 18)
 	btn.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))

@@ -85,9 +85,9 @@ func _build_content() -> Control:
 	main.add_child(sep)
 
 	# --- Action Buttons ---
-	var actions: HBoxContainer = HBoxContainer.new()
+	var actions: HFlowContainer = HFlowContainer.new()
 	actions.add_theme_constant_override("separation", 6)
-	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main.add_child(actions)
 
 	_add_action_buttons(actions)
@@ -118,7 +118,7 @@ func _get_name_color() -> Color:
 	return Color(0.85, 0.85, 0.85)
 
 
-func _add_action_buttons(container: HBoxContainer) -> void:
+func _add_action_buttons(container: HFlowContainer) -> void:
 	# Equip / Unequip
 	if _item.has_method("is_equippable") and _item.is_equippable():
 		if _is_equipped:
@@ -154,10 +154,16 @@ func _add_action_buttons(container: HBoxContainer) -> void:
 	# Quickslot assignment
 	_add_button(container, "Quickslot", _action_quickslot)
 
+	# Explicit close action keeps mobile item inspection usable when the title-bar
+	# X is hard to hit.
+	_add_button(container, "Close", close_window)
 
-func _add_button(container: HBoxContainer, text: String, callback: Callable) -> void:
+
+func _add_button(container: HFlowContainer, text: String, callback: Callable) -> void:
 	var btn: Button = Button.new()
 	btn.text = text
+	btn.clip_text = true
+	btn.custom_minimum_size = Vector2(92, 36)
 	btn.pressed.connect(callback)
 	container.add_child(btn)
 
