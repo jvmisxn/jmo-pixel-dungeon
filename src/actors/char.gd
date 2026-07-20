@@ -39,6 +39,15 @@ var flying: bool = false  # can fly over chasms/water without penalty
 
 # --- Buffs ---
 var _buffs: Array[Node] = []
+## Shared-timeline position at which this character's buffs were last advanced.
+## Negative = uninitialized. Timed buffs burn down by the game-time elapsed on the
+## TurnManager clock between this character's actions, so a Hasted owner (which acts
+## more often but advances the clock less each action) does not shorten its debuffs.
+var _buff_time_marker: float = -1.0
+## Fractional game-turn remainder carried between actions. Buffs tick in whole
+## turns; sub-turn slices (e.g. a Hasted actor's 0.5-turn actions) accumulate here
+## until a full turn is owed, keeping the total tick count faithful to game-time.
+var _buff_pending: float = 0.0
 
 # --- Properties ---
 var is_hero: bool = false  # Override in Hero class
@@ -458,9 +467,58 @@ func get_buff(buff_id: String) -> Buff:
 func get_buffs() -> Array[Node]:
 	return _buffs.duplicate()
 
-## Process all buffs (called each turn).
-func process_buffs() -> void:
+## Advance buffs by a fixed number of game turns (default one).
+## This is the low-level primitive: `elapsed_turns` whole turns of buff time pass,
+## regardless of who is acting. Tests and one-off callers use the 1-turn default,
+## which is identical to the historical "one tick per call" behavior. Real actors
+## should instead call act_buffs(), which measures elapsed game-time off the shared
+## timeline so Haste/Slow do not distort how fast timed effects expire.
+func process_buffs(elapsed_turns: float = 1.0) -> void:
+	_advance_buffs(maxf(elapsed_turns, 0.0))
+
+## Advance buffs by the real game-time elapsed on the shared TurnManager timeline
+## since this character last acted. Called from each actor's own act()/turn so a
+## timed buff burns down by game-time, not by the owner's action frequency: a Hasted
+## actor acts twice as often but advances the clock half as much per action, so its
+## debuffs still expire on the same game-time schedule. Falls back to a single turn
+## when no timeline clock is available (e.g. isolated unit tests).
+func act_buffs() -> void:
+	_advance_buffs(_consume_timeline_elapsed())
+
+## Read (and consume) the game-time elapsed on the shared timeline since this
+## character's buffs were last advanced. Seeds the marker one turn back on first use
+## so a standard-speed actor still gets exactly one tick on its opening action.
+func _consume_timeline_elapsed() -> float:
+	if TurnManager != null and is_instance_valid(TurnManager) and TurnManager.has_method("now"):
+		var now: float = TurnManager.now()
+		if _buff_time_marker < 0.0:
+			_buff_time_marker = now - 1.0
+		var elapsed: float = now - _buff_time_marker
+		_buff_time_marker = now
+		return maxf(elapsed, 0.0)
+	return 1.0
+
+## Apply `elapsed_turns` of buff time, ticking each active buff once per whole turn
+## owed and carrying any fractional remainder to the next advance.
+func _advance_buffs(elapsed_turns: float) -> void:
+	_buff_pending += elapsed_turns
+	# Small epsilon so an exact whole-turn total (e.g. 0.5 + 0.5) isn't lost to
+	# floating-point representation just below 1.0.
+	var ticks: int = int(floor(_buff_pending + 0.0001))
+	if ticks <= 0:
+		return
+	_buff_pending -= float(ticks)
+	for _i: int in range(ticks):
+		if not is_alive:
+			break
+		_tick_buffs_once()
+
+## Run a single game-turn of buff processing: every active buff acts once, then any
+## that have expired are removed.
+func _tick_buffs_once() -> void:
 	for b: Node in _buffs.duplicate():
+		if not is_instance_valid(b):
+			continue
 		if b.has_method("act"):
 			b.act()
 		# Check if buff expired
@@ -521,6 +579,8 @@ func serialize_char(overrides: Dictionary = {}) -> Dictionary:
 	data["flying"] = bool(overrides.get("flying", flying))
 	data["invisible"] = int(overrides.get("invisible", invisible))
 	data["paralysed"] = int(overrides.get("paralysed", paralysed))
+	data["buff_time_marker"] = float(overrides.get("buff_time_marker", _buff_time_marker))
+	data["buff_pending"] = float(overrides.get("buff_pending", _buff_pending))
 	data["buffs"] = overrides.get("buffs", _serialize_buffs())
 	return data
 
@@ -541,6 +601,8 @@ func deserialize_char(data: Dictionary) -> void:
 	flying = bool(data.get("flying", flying))
 	invisible = int(data.get("invisible", invisible))
 	paralysed = int(data.get("paralysed", paralysed))
+	_buff_time_marker = float(data.get("buff_time_marker", -1.0))
+	_buff_pending = float(data.get("buff_pending", 0.0))
 	_deserialize_buffs(data.get("buffs", []))
 
 func serialize() -> Dictionary:

@@ -2,6 +2,7 @@
 
 ## High Priority
 
+- [P1][timeline][source-fidelity][next] SPD parity plan Phase 1 slice 3: move blobs/gases onto the shared scheduled actor timeline (drive them per game-timeline turn via `TurnManager.now()`, not per hero round), then slice 4: port SPD-style volume-conserving blob diffusion. Slice 1 (scheduler persistence) and slice 2 (timed buffs advance by shared game-time via `Char.act_buffs()` + `TurnManager.now()`) are done; blobs still tick off the hero round, which desyncs their spread from actual game-time under Haste/Slow and in co-op.
 - Harden save/load contracts for `Hero`, `Level`, `Mob`, and related runtime state.
 - Identify which systems should be moved toward cleaner core-vs-presentation boundaries.
 - [P1][mobile][combat-input][follow-up] Real-device verify mobile melee taps after `b0c8971`: a tap attack should submit exactly one hero action, show one damage number, and not be followed by a synthesized mouse click. The headless regression covers `_unhandled_input` suppression, but iOS/Android/browser timing still needs a physical-device smoke test. If doubles persist, add a last-touch-cell/action debounce in `GameScene` or `InputCoordinator`.

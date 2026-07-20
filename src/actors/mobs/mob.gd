@@ -105,7 +105,8 @@ func act() -> void:
 	did_visible_action = false
 	last_visible_action = ""
 	last_visible_target_pos = -1
-	process_buffs()
+	# Advance buffs by shared game-time so Haste/Slow do not distort debuff duration.
+	act_buffs()
 	# Refresh cached speed in TurnManager after buffs may have changed it.
 	if TurnManager:
 		TurnManager.refresh_speed(self)

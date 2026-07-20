@@ -32,7 +32,7 @@ func _init() -> void:
 
 ## NPCs simply spend their turn doing nothing. They never move or attack.
 func act() -> void:
-	process_buffs()
+	act_buffs()
 	spend_turn()
 
 # ---------------------------------------------------------------------------

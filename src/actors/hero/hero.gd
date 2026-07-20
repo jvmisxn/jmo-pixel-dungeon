@@ -223,7 +223,9 @@ func execute_action() -> void:
 
 	# Process buffs at the start of each hero turn (hunger, regen, poison, etc.).
 	# TurnManager pauses before calling act() for heroes, so we must do it here.
-	process_buffs()
+	# act_buffs() burns buff time by shared game-time, so Haste/Slow change how often
+	# the hero acts, not how fast their timed effects expire.
+	act_buffs()
 	var equipped_artifact: Variant = belongings.get_equipped_artifact() if belongings != null else null
 	if equipped_artifact != null and equipped_artifact.has_method("on_turn"):
 		equipped_artifact.on_turn(self)

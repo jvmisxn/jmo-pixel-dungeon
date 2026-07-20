@@ -30,7 +30,7 @@ func act() -> void:
 		deactivate()
 		return
 
-	process_buffs()
+	act_buffs()
 	if TurnManager:
 		TurnManager.refresh_speed(self)
 	if has_buff("Paralysis"):

@@ -40,7 +40,7 @@ func act() -> void:
 	if not is_alive:
 		deactivate()
 		return
-	process_buffs()
+	act_buffs()
 	if TurnManager:
 		TurnManager.refresh_speed(self)
 	if paralysed > 0:

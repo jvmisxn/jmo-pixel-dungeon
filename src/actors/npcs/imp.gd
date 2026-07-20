@@ -88,7 +88,7 @@ func act() -> void:
 			_deliver_message("\"Hey!\" calls out a tiny imp.")
 	else:
 		_seen_before = false
-	process_buffs()
+	act_buffs()
 	spend_turn()
 
 # ---------------------------------------------------------------------------

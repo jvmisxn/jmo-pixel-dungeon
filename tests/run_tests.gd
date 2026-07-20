@@ -17,6 +17,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_network_run_config_authority.gd",
 	"res://tests/cases/test_save_manager.gd",
 	"res://tests/cases/test_turn_manager_schedule_persistence.gd",
+	"res://tests/cases/test_buff_timeline.gd",
 	"res://tests/cases/test_status_pane.gd",
 	"res://tests/cases/test_minimap_refresh.gd",
 	"res://tests/cases/test_scene_transition_current_scene.gd",

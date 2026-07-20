@@ -61,7 +61,7 @@ func get_speed() -> float:
 
 ## Ghost wanders on its own turn instead of using the passive NPC act loop.
 func act() -> void:
-	process_buffs()
+	act_buffs()
 	if paralysed > 0:
 		spend_turn()
 		return

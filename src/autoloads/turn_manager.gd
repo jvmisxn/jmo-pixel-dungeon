@@ -24,6 +24,11 @@ var _actors: Array[Dictionary] = []
 
 ## Global turn counter (total individual actor turns taken).
 var _turn_count: int = 0
+## Monotonic game-timeline clock (Shattered PD's Actor.now). Advances by the
+## real game-time elapsed between actions (the min cooldown consumed each step),
+## independent of how many individual actors acted. Timed buffs read this so their
+## duration burns down by shared game-time rather than by their owner's action rate.
+var _now: float = 0.0
 ## Round counter (increments each time all currently registered heroes act once).
 var _round_count: int = 0
 ## Tracks which currently registered heroes still need to act this party round.
@@ -180,6 +185,12 @@ func set_cooldown(actor_node: Node, value: float) -> void:
 			entry["cooldown"] = value
 			return
 
+## Current position on the shared game timeline. Buffs measure elapsed duration
+## against this so Haste/Slow change how often an owner acts, not how fast its
+## timed effects burn down in game-time.
+func now() -> float:
+	return _now
+
 ## Retrieve an actor's current cooldown.
 func get_cooldown(actor_node: Node) -> float:
 	for entry: Dictionary in _actors:
@@ -233,6 +244,10 @@ func process_turn() -> Node:
 	if min_cd > 0.0:
 		for entry: Dictionary in _actors:
 			entry["cooldown"] -= min_cd
+		# The shared timeline moves forward by the same real game-time. Buffs sample
+		# this clock so their duration is measured in game-time, not in owner actions
+		# (a Hasted owner acts more often but the same amount of time passes).
+		_now += min_cd
 
 	var acting_entry: Dictionary = _actors[next_idx]
 
@@ -369,6 +384,7 @@ func clear_actors() -> void:
 	_actors.clear()
 	_turn_count = 0
 	_round_count = 0
+	_now = 0.0
 	_round_hero_ids_pending.clear()
 	current_input_actor = null
 	input_actor_changed.emit(null)
@@ -406,6 +422,7 @@ func serialize_schedule() -> Dictionary:
 	return {
 		"turn_count": _turn_count,
 		"round_count": _round_count,
+		"now": _now,
 		"round_hero_ids_pending": _round_hero_ids_pending.duplicate(),
 		"current_input_actor_id": input_id,
 		"cooldowns": cooldowns,
@@ -462,6 +479,7 @@ func restore_schedule(data: Dictionary) -> void:
 
 	_turn_count = int(data.get("turn_count", _turn_count))
 	_round_count = int(data.get("round_count", _round_count))
+	_now = float(data.get("now", _now))
 
 	var pending: Variant = data.get("round_hero_ids_pending", null)
 	if pending is Array:

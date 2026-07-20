@@ -53,7 +53,7 @@ func act() -> void:
 	# We emit a signal or set facing direction if sprite system supports it.
 	if EventBus and EventBus.has_signal("npc_face_hero"):
 		EventBus.npc_face_hero.emit(self)
-	process_buffs()
+	act_buffs()
 	spend_turn()
 
 # ---------------------------------------------------------------------------
