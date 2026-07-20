@@ -1,44 +1,25 @@
 class_name FrostTrap
 extends Trap
-## Freezes the victim and freezes adjacent water tiles.
+## Erupts into a lasting Freezing blob over a radius-2 footprint, mirroring
+## Shattered Pixel Dungeon's FrostTrap (which flood-fills Freezing out to
+## distance 2). The trap no longer deals a one-shot hit; the seeded Freezing
+## blob rides the shared blob timeline (Level.advance_blobs), freezing anyone
+## standing in it, hardening water, and extinguishing fire.
+
+## SPD seeds 20 units of Freezing per cell; scaled down for our density model
+## (FreezingBlob decays 0.12/tick) so the vapor lingers without persisting for
+## hundreds of ticks.
+const FROST_AMOUNT: float = 5.0
 
 func _init() -> void:
 	trap_name = "frost trap"
 	color = Color(0.3, 0.5, 1.0)
 
-func _do_effect(triggerer: Variant, level: Level) -> void:
+func _do_effect(_triggerer: Variant, level: Level) -> void:
 	if MessageLog:
 		MessageLog.add("A wave of frost erupts!")
-
-	# Freeze the triggerer
-	if triggerer != null and triggerer.has_method("add_buff"):
-		var freeze: Frozen = Frozen.new()
-		var dur: float = 5.0 + float(level.depth) * 0.5
-		freeze.duration = dur
-		freeze.time_left = dur
-		triggerer.add_buff(freeze)
-
-	# Deal cold damage
-	if triggerer != null and triggerer.has_method("take_damage"):
-		@warning_ignore("integer_division")
-		var damage: int = 3 + level.depth / 2
-		triggerer.take_damage(damage, "frost trap")
-
-	# Freeze adjacent water and damage nearby mobs
-	for dir: int in ConstantsData.DIRS_8:
-		var adj: int = pos + dir
-		if adj < 0 or adj >= Level.LEN:
-			continue
-
-		# Freeze water tiles
-		var t: int = level.terrain_at(adj)
-		if t == ConstantsData.Terrain.WATER:
-			level.set_terrain(adj, ConstantsData.Terrain.EMPTY)
-
-		# Freeze adjacent mobs too
-		var mob: Variant = level.mob_at(adj)
-		if mob != null and mob.has_method("add_buff"):
-			var mob_freeze: Frozen = Frozen.new()
-			mob_freeze.duration = 3.0
-			mob_freeze.time_left = 3.0
-			mob.add_buff(mob_freeze)
+	if level == null:
+		return
+	# SPD FrostTrap: seed Freezing across the passable radius-2 footprint.
+	for cell: int in Blob.blast_cells(level, pos, 2):
+		level.add_blob(FreezingBlob.new(), cell, FROST_AMOUNT)

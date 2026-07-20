@@ -1,10 +1,10 @@
 extends RefCounted
-## Coverage for FireTrap seeding a lasting Fire blob, mirroring Shattered Pixel
-## Dungeon's BurningTrap.
+## Coverage for FrostTrap seeding a lasting Freezing blob, mirroring Shattered
+## Pixel Dungeon's FrostTrap (radius-2 Freezing flood-fill).
 ##
-## The trap no longer deals a one-shot hit: it seeds Fire over its 3x3 footprint
-## and the blob applies Burning + converts flammable terrain as it rides the
-## shared blob timeline (Level.advance_blobs / tick_blobs).
+## The trap no longer deals a one-shot hit: it seeds Freezing over its radius-2
+## footprint and the blob freezes characters + hardens water as it rides the
+## shared blob timeline.
 
 func _make_level() -> Level:
 	var level := Level.new()
@@ -34,7 +34,7 @@ func _has_blob(level: Level, blob_id: String) -> bool:
 	return false
 
 func run(t: Object) -> void:
-	seed(0xF17E)
+	seed(0xF305)
 
 	var original_hero: Node = GameManager.hero
 	var original_heroes: Array[Node] = GameManager.heroes.duplicate()
@@ -48,31 +48,26 @@ func run(t: Object) -> void:
 	GameManager.current_level = level
 	GameManager.add_hero(hero)
 
-	# A flammable neighbour the seeded Fire should later convert to embers.
-	var north_cell: int = hero_pos - Level.W
-	level.set_terrain(north_cell, ConstantsData.Terrain.HIGH_GRASS)
+	# Water inside the radius-2 footprint should harden once the vapor lands.
+	var water_cell: int = hero_pos - Level.W
+	level.set_terrain(water_cell, ConstantsData.Terrain.WATER)
 
-	var trap := FireTrap.new()
+	var trap := FrostTrap.new()
 	trap.set_pos(hero_pos)
 	trap.activate(hero, level)
 
-	t.check(_has_blob(level, "fire"), "fire trap seeds a lasting Fire blob")
-	t.check(not hero.has_buff("Burning"), "fire trap waits for the blob tick before burning")
-	t.check(hero.hp == 999, "fire trap deals no one-shot direct damage")
-	t.check(not trap.active, "fire trap remains one-shot after activation")
+	t.check(_has_blob(level, "freezing"), "frost trap seeds a lasting Freezing blob")
+	t.check(not hero.has_buff("Frozen"), "frost trap waits for the blob tick before freezing")
+	t.check(hero.hp == 999, "frost trap deals no one-shot direct damage")
+	t.check(not trap.active, "frost trap remains one-shot after activation")
 
-	# One blob step: the hero standing in the fire ignites, grass turns to embers.
+	# One blob step: the hero freezes and the water tile hardens.
 	level.tick_blobs()
-	var burning: Burning = hero.get_buff("Burning") as Burning
-	t.check(burning != null, "fire trap's Fire blob sets the triggerer on fire")
+	t.check(hero.has_buff("Frozen"), "frost trap's Freezing blob freezes the triggerer")
 	t.check(
-		level.terrain_at(north_cell) == ConstantsData.Terrain.EMBERS,
-		"fire trap's Fire blob converts adjacent flammable terrain to embers"
+		level.terrain_at(water_cell) == ConstantsData.Terrain.EMPTY,
+		"frost trap's Freezing blob hardens water in its footprint"
 	)
-
-	# The Burning buff then burns down on its own timer.
-	hero.process_buffs()
-	t.check(hero.hp < 999, "fire trap Burning deals lingering fire damage")
 
 	GameManager.heroes = original_heroes
 	GameManager.hero = original_hero

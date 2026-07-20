@@ -4,6 +4,8 @@ extends Plant
 
 const FREEZE_DURATION: float = 5.0
 const RADIUS: int = 1
+## Freezing density seeded per footprint cell (see FrostTrap for the scaling).
+const FROST_AMOUNT: float = 5.0
 
 func _init() -> void:
 	plant_id = "Icecap"
@@ -42,3 +44,11 @@ func _do_effect(char: Variant, level: Variant) -> void:
 					MessageLog.add_negative("You are frozen solid!")
 				else:
 					MessageLog.add("The %s is frozen!" % str(target.get("name")))
+
+	# Seed a lasting Freezing blob over the 3x3 footprint so the cold air
+	# persists on the shared blob timeline, matching SPD's Freezing.affect over
+	# NEIGHBOURS9. Guarded so the direct AoE still works on lightweight test
+	# levels that lack the blob layer.
+	if level != null and level.has_method("add_blob"):
+		for cell: int in Blob.blast_cells(level, pos, RADIUS):
+			level.add_blob(FreezingBlob.new(), cell, FROST_AMOUNT)

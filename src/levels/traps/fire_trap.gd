@@ -1,32 +1,23 @@
 class_name FireTrap
 extends Trap
-## Sets the triggering character on fire and spreads fire blobs.
+## Erupts into a lasting Fire blob across its 3x3 footprint, mirroring Shattered
+## Pixel Dungeon's BurningTrap. The trap no longer deals a one-shot hit; the
+## seeded Fire blob rides the shared blob timeline (Level.advance_blobs) and
+## applies Burning + ignites flammable terrain as characters stand in it.
+
+## SPD seeds each footprint cell with 2 units of Fire. Our FireBlob decays 0.15
+## per timeline tick, so 2.0 lingers long enough to burn anyone standing in it.
+const FIRE_AMOUNT: float = 2.0
 
 func _init() -> void:
 	trap_name = "fire trap"
 	color = Color(1.0, 0.4, 0.1)
 
-func _do_effect(triggerer: Variant, level: Level) -> void:
+func _do_effect(_triggerer: Variant, level: Level) -> void:
 	if MessageLog:
 		MessageLog.add("Flames erupt from the floor!")
-
-	# Apply burning buff to the triggerer
-	if triggerer != null and triggerer.has_method("add_buff"):
-		var burn: Burning = Burning.new()
-		burn.left = Burning.DURATION
-		triggerer.add_buff(burn)
-
-	# Deal fire damage
-	if triggerer != null and triggerer.has_method("take_damage"):
-		var damage: int = 4 + level.depth
-		triggerer.take_damage(damage, "fire trap")
-
-	# Spread fire to adjacent cells
-	for dir: int in ConstantsData.DIRS_4:
-		var adj: int = pos + dir
-		if adj >= 0 and adj < Level.LEN:
-			var t: int = level.terrain_at(adj)
-			if t == ConstantsData.Terrain.GRASS or t == ConstantsData.Terrain.HIGH_GRASS:
-				level.set_terrain(adj, ConstantsData.Terrain.EMBERS)
-			elif t == ConstantsData.Terrain.BARRICADE:
-				level.set_terrain(adj, ConstantsData.Terrain.EMBERS)
+	if level == null:
+		return
+	# SPD BurningTrap: seed Fire over the passable NEIGHBOURS9 (3x3) footprint.
+	for cell: int in Blob.blast_cells(level, pos, 1):
+		level.add_blob(FireBlob.new(), cell, FIRE_AMOUNT)

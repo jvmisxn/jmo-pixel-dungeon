@@ -20,6 +20,33 @@ func _init() -> void:
 	density.resize(ConstantsData.LENGTH)
 	density.fill(0.0)
 
+## In-bounds, passable cells within a Chebyshev `radius` of `center`, mirroring
+## Shattered Pixel Dungeon's `PathFinder.NEIGHBOURS9` (radius 1) / distance-map
+## (radius 2) seed footprints used by fire/frost traps and plants.
+##
+## Cells are enumerated by (x, y) rather than raw `center + offset` so the
+## footprint can never wrap across a map edge -- the exact row-wrap bug the
+## plant/blob edge tests guard against. Solid cells are skipped when the level
+## exposes `is_passable`, matching SPD's `!Dungeon.level.solid[cell]` guard.
+static func blast_cells(target_level: Variant, center: int, radius: int) -> Array[int]:
+	var result: Array[int] = []
+	if not ConstantsData.is_valid_pos(center):
+		return result
+	var cx: int = ConstantsData.pos_to_x(center)
+	var cy: int = ConstantsData.pos_to_y(center)
+	for dy: int in range(-radius, radius + 1):
+		for dx: int in range(-radius, radius + 1):
+			var x: int = cx + dx
+			var y: int = cy + dy
+			if x < 0 or x >= ConstantsData.WIDTH or y < 0 or y >= ConstantsData.HEIGHT:
+				continue
+			var cell: int = ConstantsData.xy_to_pos(x, y)
+			if target_level != null and target_level.has_method("is_passable") \
+					and not target_level.is_passable(cell):
+				continue
+			result.append(cell)
+	return result
+
 ## Seed blob at a position with given density.
 func seed(cell: int, amount: float) -> void:
 	if not ConstantsData.is_valid_pos(cell):
