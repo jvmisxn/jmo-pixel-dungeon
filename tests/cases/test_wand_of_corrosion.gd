@@ -6,7 +6,6 @@ class _FakeLevel:
 	extends RefCounted
 	var blobs: Array[Dictionary] = []
 	var target_char: Char = null
-	var pressed_cell: int = -1
 
 	func add_blob(blob: Variant, cell: int, amount: float = 1.0) -> void:
 		if blob == null:
@@ -28,12 +27,10 @@ class _FakeLevel:
 			return target_char
 		return null
 
-	func press_cell(cell: int) -> void:
-		pressed_cell = cell
-
 func run(t: Object) -> void:
 	_test_corrosive_gas_applies_corrosion(t)
 	_test_corrosive_gas_strength_merges_and_serializes(t)
+	_test_level_add_blob_merges_corrosive_strength(t)
 	_test_wand_seeds_corrosive_gas_instead_of_poison(t)
 
 func _center() -> int:
@@ -99,6 +96,28 @@ func _test_corrosive_gas_strength_merges_and_serializes(t: Object) -> void:
 	restored.deserialize(weaker.serialize())
 	t.check(restored.strength == 7 and restored.source_id == "strong",
 			"corrosive gas strength/source survive serialization")
+
+func _test_level_add_blob_merges_corrosive_strength(t: Object) -> void:
+	var level: Level = Level.new()
+	var first: CorrosiveGas = CorrosiveGas.new()
+	first.set_strength(3, "weak")
+	var second: CorrosiveGas = CorrosiveGas.new()
+	second.set_strength(8, "strong")
+	var cell: int = _center()
+	var adjacent: int = cell + 1
+
+	level.add_blob(first, cell, 5.0)
+	level.add_blob(second, adjacent, 9.0)
+
+	t.check(level.blobs.size() == 1,
+			"real Level.add_blob merges corrosive gas into one cloud")
+	var merged: CorrosiveGas = level.blobs[0]["blob"] as CorrosiveGas
+	t.check(merged != null and merged.strength == 8 and merged.source_id == "strong",
+			"real Level.add_blob merges corrosive gas strength/source")
+	t.check(merged != null and is_equal_approx(merged.get_density(cell), 5.0),
+			"real Level.add_blob preserves first corrosive gas seed")
+	t.check(merged != null and is_equal_approx(merged.get_density(adjacent), 9.0),
+			"real Level.add_blob applies second corrosive gas seed")
 
 func _test_wand_seeds_corrosive_gas_instead_of_poison(t: Object) -> void:
 	var cell: int = _center()

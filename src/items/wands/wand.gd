@@ -640,9 +640,6 @@ class WandOfCorrosion extends Wand:
 		gas.set_strength(2 + level, "WandOfCorrosion")
 		if lvl.has_method("add_blob"):
 			lvl.add_blob(gas, target_pos, 50.0 + 10.0 * float(level))
-		if lvl.has_method("find_char_at") and lvl.find_char_at(target_pos) == null:
-			if lvl.has_method("press_cell"):
-				lvl.press_cell(target_pos)
 		if MessageLog:
 			MessageLog.add("Corrosive gas spreads from the impact!")
 
