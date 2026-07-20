@@ -758,7 +758,7 @@ func _set_button_width(btn: Button, width: float, height: float) -> void:
 	var button_size: Vector2 = Vector2(width, height)
 	btn.custom_minimum_size = button_size
 	btn.size = button_size
-	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 
 func _arrange_top_actions(stack_top_actions: bool) -> void:
@@ -1204,12 +1204,18 @@ func _refresh_profile_ui() -> void:
 	]
 
 func _open_profile_prompt() -> void:
-	if _profile_prompt_panel:
-		_profile_prompt_panel.visible = true
+	_set_profile_prompt_visible(true)
 	if _profile_prompt_name_edit:
 		if _profile_prompt_name_edit.text.strip_edges().is_empty() and PlayerProfile:
 			_profile_prompt_name_edit.text = PlayerProfile.get_player_name()
 		_profile_prompt_name_edit.grab_focus()
+
+
+func _set_profile_prompt_visible(visible: bool) -> void:
+	if _profile_prompt_panel:
+		_profile_prompt_panel.visible = visible
+	if _menu_box:
+		_menu_box.visible = not visible
 
 func _on_profile_prompt_confirmed() -> void:
 	if PlayerProfile == null or _profile_prompt_name_edit == null:
@@ -1220,8 +1226,7 @@ func _on_profile_prompt_confirmed() -> void:
 			MessageLog.add_warning("Enter a player name first.")
 		return
 	PlayerProfile.set_player_name(chosen_name)
-	if _profile_prompt_panel:
-		_profile_prompt_panel.visible = false
+	_set_profile_prompt_visible(false)
 	_refresh_profile_ui()
 
 func _on_profile_updated() -> void:

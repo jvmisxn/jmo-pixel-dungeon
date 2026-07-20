@@ -268,9 +268,9 @@ func _process(_delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch: InputEventScreenTouch = event as InputEventScreenTouch
-		_suppress_synthesized_touch_mouse()
 		if _should_defer_touch_to_modal_window():
 			return
+		_suppress_synthesized_touch_mouse()
 		if touch.pressed:
 			if _should_route_touch_to_hud(touch.position):
 				_ui_touch_points[touch.index] = true
@@ -310,9 +310,9 @@ func _input(event: InputEvent) -> void:
 				_mark_input_as_handled()
 	elif event is InputEventScreenDrag:
 		var drag: InputEventScreenDrag = event as InputEventScreenDrag
-		_suppress_synthesized_touch_mouse()
 		if _should_defer_touch_to_modal_window():
 			return
+		_suppress_synthesized_touch_mouse()
 		if _ui_touch_points.has(drag.index):
 			_mark_input_as_handled()
 			return

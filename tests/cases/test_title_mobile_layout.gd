@@ -61,6 +61,10 @@ func run(t: Object) -> void:
 		new_game.size.is_equal_approx(multiplayer.size),
 		"title menu button rects are resized, not just their minimums"
 	)
+	t.check(
+		new_game.size_flags_horizontal == Control.SIZE_SHRINK_CENTER,
+		"title menu buttons keep their explicit mobile width instead of expanding to the old desktop row"
+	)
 	scene._arrange_top_actions(true)
 	t.check(
 		continue_btn.get_parent() == menu_box and menu_box.get_child(1) == continue_btn,
@@ -71,7 +75,20 @@ func run(t: Object) -> void:
 		continue_btn.get_parent() == top_row,
 		"desktop Continue button returns to the split top row"
 	)
+	var prompt_panel := PanelContainer.new()
+	scene._profile_prompt_panel = prompt_panel
+	scene._set_profile_prompt_visible(true)
+	t.check(
+		not menu_box.visible and prompt_panel.visible,
+		"profile name prompt hides the main menu instead of leaving clipped buttons behind it"
+	)
+	scene._set_profile_prompt_visible(false)
+	t.check(
+		menu_box.visible and not prompt_panel.visible,
+		"closing the profile name prompt restores the main menu"
+	)
 	new_game.free()
 	multiplayer.free()
+	prompt_panel.free()
 	menu_box.free()
 	scene.free()

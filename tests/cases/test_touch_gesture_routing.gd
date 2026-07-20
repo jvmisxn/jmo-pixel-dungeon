@@ -75,6 +75,15 @@ func run(t: Object) -> void:
 		scene._should_defer_touch_to_modal_window(),
 		"mobile touches defer to modal window controls instead of being swallowed by gameplay"
 	)
+	scene._suppress_touch_mouse_until_msec = 0
+	var modal_touch := InputEventScreenTouch.new()
+	modal_touch.pressed = true
+	modal_touch.position = Vector2(12, 12)
+	scene._input(modal_touch)
+	t.check(
+		scene._suppress_touch_mouse_until_msec == 0,
+		"modal window touches do not arm mouse suppression that starves close/action buttons"
+	)
 
 	hud.free()
 	scene.free()
