@@ -538,6 +538,8 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 	if item.has_method("damage_roll"):
 		damage = item.damage_roll(self)
 	for b: Node in _buffs:
+		if item is MissileWeapon and b.get("buff_id") == "RingOfForce":
+			continue
 		if b.has_method("modify_damage"):
 			damage = b.modify_damage(damage)
 
@@ -1210,6 +1212,15 @@ func damage_roll() -> int:
 				if b.has_method("modify_damage"):
 					dmg = b.modify_damage(dmg)
 			return maxi(0, dmg)
+		var force_buff: Node = get_buff("RingOfForce")
+		if force_buff != null and force_buff.has_method("force_damage_roll"):
+			var force_dmg: int = force_buff.force_damage_roll(str_val)
+			for b: Node in _buffs:
+				if b == force_buff:
+					continue
+				if b.has_method("modify_damage"):
+					force_dmg = b.modify_damage(force_dmg)
+			return maxi(0, force_dmg)
 	return super.damage_roll()
 
 ## Override dr_roll to use equipped armor's DR calculation.
