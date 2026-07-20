@@ -697,14 +697,17 @@ func _apply_layout() -> void:
 		_pd_title_label.custom_minimum_size = Vector2(title_width, 42 if is_portrait else 50)
 		_pd_title_label.size = _pd_title_label.custom_minimum_size
 	if _menu_box:
-		_menu_box.position = Vector2(_title_menu_x(viewport_size, menu_width), title_top + (150.0 if is_portrait else 170.0))
-		_menu_box.custom_minimum_size = Vector2(menu_width, 300)
-		_menu_box.size = Vector2(menu_width, 300)
+		var menu_box_width: float = viewport_size.x if is_portrait else menu_width
+		var menu_box_x: float = 0.0 if is_portrait else _title_menu_x(viewport_size, menu_width)
+		_menu_box.position = Vector2(menu_box_x, title_top + (150.0 if is_portrait else 170.0))
+		_menu_box.custom_minimum_size = Vector2(menu_box_width, 300)
+		_menu_box.size = Vector2(menu_box_width, 300)
 		_menu_box.add_theme_constant_override("separation", PORTRAIT_TOP_ACTION_GAP if stack_top_actions else 12.0)
 		_arrange_top_actions(stack_top_actions)
 	if _top_menu_row:
-		_top_menu_row.custom_minimum_size = Vector2(menu_width, 44)
-		_top_menu_row.size = Vector2(menu_width, 44)
+		var top_row_width: float = viewport_size.x if is_portrait else menu_width
+		_top_menu_row.custom_minimum_size = Vector2(top_row_width, 44)
+		_top_menu_row.size = Vector2(top_row_width, 44)
 	if _btn_continue and not stack_top_actions:
 		var split_gap: float = 12.0
 		_top_menu_row.add_theme_constant_override("separation", split_gap)
