@@ -1,6 +1,12 @@
 class_name ConfusionGas
 extends Blob
-## Purple gas that causes random movement (amok-like effect for mobs).
+## Purple gas that disorients everything standing in it, mirroring Shattered
+## Pixel Dungeon's ConfusionGas: its evolve() calls `Buff.prolong(ch, Vertigo, 2)`
+## on each affected char every step, randomizing movement rather than applying a
+## one-shot effect at seed time.
+
+## SPD tops Vertigo up to 2 turns per gas tick (Buff.prolong(..., 2)).
+const VERTIGO_DURATION: float = 2.0
 
 func _init() -> void:
 	super._init()
@@ -10,13 +16,12 @@ func _init() -> void:
 	decay_rate = 0.1
 
 func affect_char(ch: Char) -> void:
-	if not ch.has_buff("Amok") and not ch.is_hero:
-		var amok_buff: Amok = Amok.new()
-		amok_buff.set_duration(5.0)
-		ch.add_buff(amok_buff)
-	elif ch.is_hero:
-		# For hero, apply a vertigo/random movement effect
-		if not ch.has_buff("Blindness"):
-			var blind: Blindness = Blindness.new()
-			blind.set_duration(3.0)
-			ch.add_buff(blind)
+	# Source-faithful: hero and mobs alike get Vertigo, and each tick prolongs
+	# (never shortens) the existing debuff to at least VERTIGO_DURATION turns.
+	var existing: Vertigo = ch.get_buff("Vertigo") as Vertigo
+	if existing != null:
+		existing.postpone(VERTIGO_DURATION)
+		return
+	var vert: Vertigo = Vertigo.new()
+	vert.set_duration(VERTIGO_DURATION)
+	ch.add_buff(vert)

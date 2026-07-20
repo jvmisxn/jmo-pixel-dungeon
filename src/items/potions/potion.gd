@@ -537,15 +537,12 @@ class PotionLevitation extends Potion:
 
 	func shatter(spos: int, lvl: Variant) -> void:
 		super.shatter(spos, lvl)
-		# Shattered levitation grants brief float to char at position
-		if lvl == null:
-			return
-		if lvl.has_method("find_char_at"):
-			var target: Variant = lvl.find_char_at(spos)
-			if target and target.has_method("add_buff"):
-				var buff: Levitation = Levitation.new()
-				buff.set_duration(5.0)
-				target.add_buff(buff)
+		# Source-faithful: SPD PotionOfLevitation.shatter() seeds ConfusionGas
+		# at the collision cell (Blob.seed(cell, 1000, ConfusionGas.class)) rather
+		# than granting levitation. The gas disorients whatever wanders into it.
+		_seed_shatter_blob(lvl, spos, ConfusionGas.new())
+		if MessageLog:
+			MessageLog.add_warning("A cloud of confusion gas billows out!")
 
 
 # ---------------------------------------------------------------------------
