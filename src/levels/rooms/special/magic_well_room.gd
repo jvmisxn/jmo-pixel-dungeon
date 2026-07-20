@@ -28,8 +28,12 @@ func paint(level: Level) -> void:
 	Painter.fill_room(level, self, ConstantsData.Terrain.WALL)
 	Painter.fill_interior(level, self, ConstantsData.Terrain.EMPTY)
 
-	# Well at the center
-	level.set_terrain(center(), ConstantsData.Terrain.WELL)
+	# Well at the center, seeded with healing water (SPD WellWater). The heal is
+	# delivered through the WaterOfHealth blob when the hero stands here, not a
+	# hard-coded terrain interaction.
+	var well_cell: int = center()
+	level.set_terrain(well_cell, ConstantsData.Terrain.WELL)
+	WaterOfHealth.seed_well(level, well_cell)
 
 	# Small water puddle around the well for decoration
 	var cx: int = center_x()

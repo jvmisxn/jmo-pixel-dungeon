@@ -25,8 +25,11 @@ func paint(level: Level) -> void:
 	Painter.fill_room(level, self, ConstantsData.Terrain.WALL)
 	Painter.fill_interior(level, self, ConstantsData.Terrain.EMPTY_SP)
 
-	# Well at the center
-	level.set_terrain(center(), ConstantsData.Terrain.WELL)
+	# Well at the center, seeded with healing water (SPD WellWater). Healing runs
+	# through the WaterOfHealth blob layer when the hero stands on the tile.
+	var well_cell: int = center()
+	level.set_terrain(well_cell, ConstantsData.Terrain.WELL)
+	WaterOfHealth.seed_well(level, well_cell)
 
 	# All doors to this room are secret doors
 	for other: Variant in connected:
