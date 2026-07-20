@@ -17,6 +17,7 @@ class FakeCamera:
 	var pan_deltas: Array[Vector2] = []
 	var touch_events: Array[Dictionary] = []
 	var touch_drags: Array[Dictionary] = []
+	var active_touch_points: Dictionary = {}
 	var reset_count: int = 0
 
 	func get_cell_under_mouse() -> int:
@@ -30,8 +31,17 @@ class FakeCamera:
 
 	func handle_touch_event(touch_index: int, screen_pos: Vector2, pressed: bool) -> void:
 		touch_events.append({"index": touch_index, "pos": screen_pos, "pressed": pressed})
+		if pressed:
+			active_touch_points[touch_index] = screen_pos
+		else:
+			active_touch_points.erase(touch_index)
 
 	func handle_touch_drag(touch_index: int, screen_pos: Vector2) -> bool:
+		if not active_touch_points.has(touch_index):
+			return false
+		active_touch_points[touch_index] = screen_pos
+		if active_touch_points.size() != 2:
+			return false
 		touch_drags.append({"index": touch_index, "pos": screen_pos})
 		return true
 
@@ -108,6 +118,10 @@ func run(t: Object) -> void:
 	touch_drag.position = Vector2(160, 220)
 	touch_drag.relative = Vector2(40, 0)
 	drag_scene._input(touch_drag)
+	t.check(
+		drag_camera.active_touch_points.get(0) == Vector2(160, 220),
+		"single-finger look drag keeps camera touch tracking current for a later pinch"
+	)
 
 	var touch_up := InputEventScreenTouch.new()
 	touch_up.index = 0

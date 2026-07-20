@@ -313,11 +313,11 @@ func _input(event: InputEvent) -> void:
 			return
 		if _active_touch_points.has(drag.index):
 			_active_touch_points[drag.index] = drag.position
+			_track_camera_touch_drag(drag.index, drag.position)
 			if _active_touch_points.size() >= 2:
 				_touch_gesture_started = true
 				_camera_look_touch_index = -1
 				_cancel_auto_walk()
-				_track_camera_touch_drag(drag.index, drag.position)
 				_mark_input_as_handled()
 			elif _should_start_touch_camera_look(drag.index, drag.position):
 				_touch_gesture_started = true
