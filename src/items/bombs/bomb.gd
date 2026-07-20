@@ -12,6 +12,13 @@ enum BombType { NORMAL, FIRE, FROST, HOLY, WOOLY, NOISEMAKER, FLASHBANG, SHOCK, 
 ## SmokeBomb.explode() which pours `Blob.seed(i, 40, SmokeScreen.class)` into
 ## every non-solid cell of its radius-2 blast (25 cells → SPD's 40*25 budget).
 const SMOKE_SEED_VOLUME: float = 40.0
+## Regrowth volume seeded per cell by a Regrowth Bomb, mirroring SPD's
+## `Blob.seed(i, 10, Regrowth.class)` over the radius-3 blast footprint.
+const REGROWTH_SEED_VOLUME: float = 10.0
+const HEALING_CURE_IDS: Array[String] = [
+	"Poison", "Cripple", "Weakness", "Bleeding", "Blindness", "Burning",
+	"Ooze", "Paralysis", "Slow", "Vertigo", "Chill", "Charm",
+]
 
 # --- Properties ---
 ## Number of turns before detonation after being thrown/placed.
@@ -179,13 +186,19 @@ func _apply_area_effect(bomb_pos: int, cells: Array[int], dungeon_level: Variant
 				MessageLog.add_warning("Lightning arcs between targets!")
 
 		BombType.REGROWTH:
-			# Grow plants in the area
-			if dungeon_level != null and dungeon_level.has_method("set_terrain"):
-				for cell: int in cells:
-					if dungeon_level.has_method("get_terrain"):
-						var terrain: int = dungeon_level.get_terrain(cell)
-						if terrain == ConstantsData.Terrain.EMPTY or terrain == ConstantsData.Terrain.EMBERS:
-							dungeon_level.set_terrain(cell, ConstantsData.Terrain.HIGH_GRASS)
+			# SPD RegrowthBomb explodes over radius 3, heals allied characters like
+			# Potion of Healing, and seeds Regrowth at 10 volume in every reachable
+			# non-solid cell. The Regrowth blob owns the grass/high-grass/rooting
+			# effects on the shared blob timeline.
+			var regrowth_cells: Array[int] = cells
+			if dungeon_level != null and dungeon_level.has_method("add_blob"):
+				regrowth_cells = Blob.blast_cells(dungeon_level, bomb_pos, radius)
+				for cell: int in regrowth_cells:
+					dungeon_level.add_blob(Regrowth.new(), cell, REGROWTH_SEED_VOLUME)
+			if dungeon_level != null and dungeon_level.has_method("get_chars_at_positions"):
+				for ch: Variant in dungeon_level.get_chars_at_positions(regrowth_cells):
+					if ch != null and ch.get("is_hero") == true:
+						_heal_like_potion(ch)
 			if MessageLog:
 				MessageLog.add_positive("Lush vegetation springs up!")
 
@@ -232,6 +245,17 @@ func _chebyshev_distance(a: int, b: int) -> int:
 	var bx: int = ConstantsData.pos_to_x(b)
 	var by: int = ConstantsData.pos_to_y(b)
 	return maxi(absi(bx - ax), absi(by - ay))
+
+func _heal_like_potion(ch: Variant) -> void:
+	if ch == null:
+		return
+	if ch.has_method("heal"):
+		var missing: int = int(ch.get("hp_max")) - int(ch.get("hp"))
+		if missing > 0:
+			ch.heal(missing)
+	if ch.has_method("remove_buff_by_id"):
+		for buff_id: String in HEALING_CURE_IDS:
+			ch.remove_buff_by_id(buff_id)
 
 ## Remove one from the stack and remove the item if depleted.
 func _consume_one(hero: Char) -> void:
@@ -352,6 +376,7 @@ static func create(bomb_id: String) -> Bomb:
 		"regrowth_bomb":
 			bomb.item_name = "Regrowth Bomb"
 			bomb.description = "Scatters enchanted seeds that cause rapid plant growth."
+			bomb.radius = 3
 			bomb.damage_min = 0
 			bomb.damage_max = 0
 			bomb.bomb_type = BombType.REGROWTH

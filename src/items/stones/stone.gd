@@ -9,6 +9,12 @@ enum StoneType {
 	CLAIRVOYANCE, DEEPENED_SLEEP, DISARMING, FEAR, FLOCK, SHOCK
 }
 
+# --- Constants ---
+## Stone of Disarming range/limit, from SPD StoneOfDisarming (DIST = 8, caps at
+## the nine nearest active traps).
+const DISARM_DIST: int = 8
+const DISARM_MAX_TRAPS: int = 9
+
 # --- Properties ---
 var stone_type: StoneType = StoneType.ENCHANTMENT
 
@@ -346,26 +352,45 @@ func _use_deepened_sleep(hero: Char) -> void:
 				return
 	_notify_hero(hero, "There is no adjacent target to put to sleep.")
 
-## Remove a target's weapon (disarm).
+## Disarm malicious traps in the area (SPD Stone of Disarming). Reveals and
+## disarms up to the nine nearest active traps within DISARM_DIST, matching
+## upstream `StoneOfDisarming.activate()` (`t.reveal(); t.disarm();`, capped at
+## nine). SOURCE-FIDELITY: SPD centres the effect on the thrown-at cell inside a
+## shadow-cast FOV; this port has no thrown-cell target for runestones yet (see
+## backlog S17 P1), so it centres on the hero and uses a Chebyshev-distance
+## radius instead of FOV. The item was previously a mislabelled Weakness debuff
+## on an adjacent character, which is not what SPD's Stone of Disarming does.
 func _use_disarming(hero: Char) -> void:
 	var dungeon_level: Variant = hero.get("level")
 	if dungeon_level == null:
 		return
-	for dir: int in ConstantsData.DIRS_8:
-		var cell: int = hero.pos + dir
-		if not ConstantsData.is_valid_pos(cell):
+	var center: int = hero.pos
+	# Gather active traps in range, so we can disarm the nearest nine.
+	var candidates: Array = []
+	for trap_pos: int in dungeon_level.traps.keys():
+		var trap: Variant = dungeon_level.traps[trap_pos]
+		if trap == null or not bool(trap.get("active")):
 			continue
-		if dungeon_level.has_method("find_char_at"):
-			var ch: Variant = dungeon_level.find_char_at(cell)
-			if ch != null and ch != hero:
-				# Reduce the target's attack skill temporarily
-				if ch.has_method("add_buff"):
-					var weak: Weakness = Weakness.new()
-					weak.set_duration(10.0)
-					ch.add_buff(weak)
-				_notify_hero(hero, "You disarm the target!", "positive")
-				return
-	_notify_hero(hero, "There is no adjacent target to disarm.")
+		var d: int = dungeon_level.distance(center, trap_pos)
+		if d <= DISARM_DIST:
+			candidates.append({"trap": trap, "dist": d})
+	if candidates.is_empty():
+		_notify_hero(hero, "The stone crumbles, but there were no traps to disarm.")
+		return
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return a["dist"] < b["dist"])
+	var disarmed: int = 0
+	for entry: Dictionary in candidates:
+		if disarmed >= DISARM_MAX_TRAPS:
+			break
+		var trap: Variant = entry["trap"]
+		if trap.has_method("reveal"):
+			trap.reveal(dungeon_level)
+		if trap.has_method("disarm"):
+			trap.disarm(dungeon_level)
+		disarmed += 1
+	var plural: String = "" if disarmed == 1 else "s"
+	_notify_hero(hero, "The stone disarms %d trap%s!" % [disarmed, plural], "positive")
 
 ## Terrify targets in the area.
 func _use_fear(hero: Char) -> void:
@@ -505,7 +530,7 @@ static func create(stone_id: String) -> Stone:
 
 		"disarming":
 			stone.item_name = "Stone of Disarming"
-			stone.description = "Weakens an adjacent target, reducing its combat ability."
+			stone.description = "Disables malicious traps in the area, disarming up to nine at once."
 			stone.stone_type = StoneType.DISARMING
 			stone.icon_color = Color(0.7, 0.7, 0.5)
 

@@ -66,6 +66,20 @@ func reveal(level: Level) -> void:
 	if pos >= 0 and level.terrain_at(pos) == ConstantsData.Terrain.SECRET_TRAP:
 		level.set_terrain(pos, ConstantsData.Terrain.TRAP)
 
+## Neutralise this trap without triggering it (Stone of Disarming, disarming
+## kits). Mirrors SPD's `Trap.disarm()` -> `Level.disarmTrap()`: the trap goes
+## inactive, its tile becomes an INACTIVE_TRAP, and it is dropped from the
+## level's live trap table so it can never fire again.
+func disarm(level: Level) -> void:
+	active = false
+	if level == null or pos < 0:
+		return
+	var terr: int = level.terrain_at(pos)
+	if terr == ConstantsData.Terrain.TRAP or terr == ConstantsData.Terrain.SECRET_TRAP:
+		level.set_terrain(pos, ConstantsData.Terrain.INACTIVE_TRAP)
+	if level.traps.has(pos):
+		level.traps.erase(pos)
+
 # ---------------------------------------------------------------------------
 # Serialization
 # ---------------------------------------------------------------------------
