@@ -832,6 +832,19 @@ func earn_xp(amount: int) -> void:
 		if GameManager:
 			GameManager.add_score(hero_level * 50)
 
+	if hero_level >= ConstantsData.MAX_HERO_LEVEL and xp >= xp_to_next:
+		xp = 0
+		var bless: Bless = Bless.new()
+		bless.duration = Bless.BASE_DURATION
+		bless.time_left = Bless.BASE_DURATION
+		add_buff(bless)
+		if MessageLog:
+			MessageLog.add_positive("You cannot grow stronger, but your experiences give you a surge of power!")
+		if AudioManager:
+			AudioManager.play_sfx("levelup")
+		if EventBus:
+			EventBus.hero_stats_changed.emit()
+
 func get_talents() -> Array[TalentData.TalentInfo]:
 	return TalentData.get_talents_for(hero_class, hero_subclass)
 

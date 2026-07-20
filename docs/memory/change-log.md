@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-20
+
+- Tags: hero, xp, level-cap, bless, source-fidelity, tests
+- Restored SPD-style max-level XP cap behavior. `Hero.earn_xp()` now keeps normal partial XP below the cap threshold, but when a level-30 hero crosses the next XP requirement it resets `xp` to 0 and applies `Bless` as the original "surge of power" cap reward instead of serializing unbounded overflow XP. Added `test_hero_xp_cap.gd` for exact-threshold and large-overflow grants. Local full headless suite passed (1405 checks, 0 failures, Godot 4.7.1).
+
 ## 2026-07-19
 
 - Tags: spinner, mob-ai, amok, source-fidelity, tests
