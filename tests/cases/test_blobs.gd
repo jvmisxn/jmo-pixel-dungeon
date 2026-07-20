@@ -28,6 +28,7 @@ func run(t: Object) -> void:
 	_test_freezing_blob_freezes(t)
 	_test_freezing_blob_freezes_water(t)
 	_test_serialize_round_trip(t)
+	_test_level_blob_round_trip(t)
 	_test_level_merge_and_tick(t)
 	_test_advance_blobs_uses_game_time(t)
 	_test_advance_blobs_reports_final_decay(t)
@@ -219,6 +220,94 @@ func _test_serialize_round_trip(t: Object) -> void:
 			"deserialize restores active cell count")
 	t.check(is_equal_approx(restored.get_density(center), gas.get_density(center)),
 			"deserialize restores per-cell density")
+
+## The blob-persistence contract: Level.serialize()/deserialize() must round-trip
+## blobs as plain data reconstructed through Blob.create_from_data() -- NOT by
+## duplicating the live Node into the save dict. Proves two subclasses (FireBlob,
+## ToxicGas) survive as fresh, correctly-typed instances with their active-cell
+## densities intact, and remain functional (evolve on tick) after load.
+func _test_level_blob_round_trip(t: Object) -> void:
+	var level: Level = Level.new()
+	var center: int = _center()
+	for dy: int in range(-2, 3):
+		for dx: int in range(-2, 3):
+			level.set_terrain(ConstantsData.xy_to_pos(16 + dx, 16 + dy),
+					ConstantsData.Terrain.EMPTY)
+	level.add_blob(FireBlob.new(), center, 6.0)
+	level.add_blob(ToxicGas.new(), center + 1, 6.0)
+	level.tick_blobs()  # spread so each blob owns several active cells
+	t.check(level.blobs.size() == 2, "two distinct blob types tracked before save")
+
+	# Snapshot pre-save identity + per-cell densities, keyed by blob_id.
+	var before: Dictionary = {}
+	for entry: Dictionary in level.blobs:
+		var b: Variant = entry.get("blob")
+		var snap: Dictionary = {}
+		for cell: int in b.active_cells:
+			snap[cell] = b.get_density(cell)
+		before[b.blob_id] = {"node": b, "cells": snap, "script": b.get_script().resource_path}
+
+	var restored: Level = Level.new()
+	restored.deserialize(level.serialize())
+	t.check(restored.blobs.size() == 2, "both blobs survive the level round-trip")
+
+	var seen_ids: Array[String] = []
+	for entry: Dictionary in restored.blobs:
+		var b: Variant = entry.get("blob")
+		t.check(b is Blob, "restored entry holds a live Blob node")
+		t.check(before.has(b.blob_id), "restored blob keeps its type id")
+		if not before.has(b.blob_id):
+			continue
+		var prev: Dictionary = before[b.blob_id]
+		# Rebuilt through the factory -- NOT the same object that was serialized.
+		t.check(b != prev["node"],
+				"restored blob is a fresh instance, not a duplicated live node")
+		t.check(b.get_script().resource_path == prev["script"],
+				"restored blob reconstructs its concrete subclass script")
+		var cells: Dictionary = prev["cells"]
+		t.check(b.active_cells.size() == cells.size(),
+				"restored blob keeps its active-cell count")
+		var densities_match: bool = true
+		for cell_variant: Variant in cells.keys():
+			if not is_equal_approx(b.get_density(int(cell_variant)), float(cells[cell_variant])):
+				densities_match = false
+		t.check(densities_match, "restored blob preserves every active-cell density")
+		seen_ids.append(b.blob_id)
+
+	t.check("fire" in seen_ids and "toxic_gas" in seen_ids,
+			"both FireBlob and ToxicGas subclasses round-trip")
+
+	# Functional after load: a tick evolves the reconstructed field without error.
+	var fire_before: float = -1.0
+	for entry: Dictionary in restored.blobs:
+		if entry.get("blob").blob_id == "fire":
+			fire_before = entry.get("blob").get_density(center)
+	restored.tick_blobs()
+	var fire_after: float = -1.0
+	var still_has_fire: bool = false
+	for entry: Dictionary in restored.blobs:
+		if entry.get("blob").blob_id == "fire":
+			still_has_fire = true
+			fire_after = entry.get("blob").get_density(center)
+	t.check(still_has_fire and not is_equal_approx(fire_after, fire_before),
+			"restored blob stays functional and evolves on tick after load")
+
+	var legacy_level: Level = Level.new()
+	var legacy_blob: FireBlob = FireBlob.new()
+	legacy_blob.seed(center, 4.0)
+	legacy_level.deserialize({
+		"visited": [],
+		"mapped": [],
+		"blobs": [{"pos": center, "blob": legacy_blob}],
+	})
+	t.check(legacy_level.blobs.size() == 1,
+			"legacy live-node blob payload is still accepted")
+	if legacy_level.blobs.size() == 1:
+		var loaded_legacy: Blob = legacy_level.blobs[0].get("blob")
+		t.check(loaded_legacy != legacy_blob,
+				"legacy blob payload is rebuilt as a fresh instance")
+		t.check(loaded_legacy is FireBlob and is_equal_approx(loaded_legacy.get_density(center), 4.0),
+				"legacy blob payload preserves concrete type and density")
 
 func _test_level_merge_and_tick(t: Object) -> void:
 	var level: Level = Level.new()

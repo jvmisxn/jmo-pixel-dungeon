@@ -762,9 +762,19 @@ func serialize() -> Dictionary:
 			plants_data[plant_pos] = plant.serialize()
 	data["plants"] = plants_data
 
+	# Persist each blob through its own serialize() contract (plain data + a
+	# `_script_path` for factory reconstruction) rather than duplicating the live
+	# Node into the save dict -- a Node reference is not JSON-serializable and the
+	# old duplicate(true) kept the same object, bypassing Blob.serialize() entirely.
 	var blobs_data: Array[Dictionary] = []
 	for blob_entry: Dictionary in blobs:
-		blobs_data.append(blob_entry.duplicate(true))
+		var blob: Variant = blob_entry.get("blob")
+		if blob == null or not blob.has_method("serialize"):
+			continue
+		blobs_data.append({
+			"pos": blob_entry.get("pos", -1),
+			"blob": blob.serialize(),
+		})
 	data["blobs"] = blobs_data
 	# Persist the blob timeline cursor so a reload does not replay a catch-up
 	# burst; it is restored alongside TurnManager.now() (kept within <1 TICK of
@@ -874,8 +884,22 @@ func deserialize(data: Dictionary) -> void:
 	var blobs_data: Variant = data.get("blobs", [])
 	if blobs_data is Array:
 		for blob_entry: Variant in blobs_data:
-			if blob_entry is Dictionary:
-				blobs.append((blob_entry as Dictionary).duplicate(true))
+			if not (blob_entry is Dictionary):
+				continue
+			var entry: Dictionary = blob_entry as Dictionary
+			var blob_data: Variant = entry.get("blob")
+			if blob_data is Blob:
+				# Backward compatibility for saves written by the old path, which
+				# stored a live Blob node in the blob slot. Convert it through the
+				# structured contract once instead of retaining the saved object.
+				blob_data = (blob_data as Blob).serialize()
+			if not (blob_data is Dictionary):
+				continue
+			# Rebuild the concrete blob subclass through the factory and replay its
+			# densities, so the level holds a live, functional Node again.
+			var blob: Blob = Blob.create_from_data(blob_data as Dictionary)
+			blob.level = self
+			blobs.append({"blob": blob, "pos": int(entry.get("pos", blob.pos))})
 	_blob_time = float(data.get("blob_time", 0.0))
 
 	pending_bombs.clear()

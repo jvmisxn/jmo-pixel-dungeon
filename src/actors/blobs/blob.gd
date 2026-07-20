@@ -202,6 +202,10 @@ func get_speed() -> float:
 
 func serialize() -> Dictionary:
 	var data: Dictionary = serialize_actor()
+	# Stamp the concrete subclass path so Blob.create_from_data() can rebuild the
+	# correct type on load, mirroring the plant/trap reconstruction idiom. This is
+	# what lets Level persist blobs as plain data instead of duplicating a live Node.
+	data["_script_path"] = get_script().resource_path
 	data["blob_id"] = blob_id
 	data["active_cells"] = active_cells.duplicate()
 	var densities: Array[float] = []
@@ -209,6 +213,24 @@ func serialize() -> Dictionary:
 		densities.append(density[cell])
 	data["densities"] = densities
 	return data
+
+## Factory: rebuild a live blob Node from data produced by serialize(). Reads the
+## concrete subclass from the `_script_path` stamped at save time (falling back to
+## the base Blob when absent/invalid), then replays its cell densities via
+## deserialize(). Level save/load uses this instead of storing live Node refs, so
+## every blob round-trips through its own serialize()/deserialize() contract and
+## each subclass's `_init()` restores its spread/decay tuning.
+static func create_from_data(data: Dictionary) -> Blob:
+	var blob: Blob = null
+	var script_path: String = str(data.get("_script_path", ""))
+	if not script_path.is_empty() and ResourceLoader.exists(script_path):
+		var script: Script = load(script_path) as Script
+		if script != null:
+			blob = script.new() as Blob
+	if blob == null:
+		blob = Blob.new()
+	blob.deserialize(data)
+	return blob
 
 func deserialize(data: Dictionary) -> void:
 	deserialize_actor(data)
