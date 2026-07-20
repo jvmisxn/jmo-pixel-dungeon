@@ -52,6 +52,7 @@ const MOBILE_NARROW_QUICKSLOT_ICON_SIZE: Vector2 = Vector2(28, 28)
 const MOBILE_NARROW_BREAKPOINT: float = 430.0
 const MOBILE_ULTRA_NARROW_BREAKPOINT: float = 300.0
 const MOBILE_REST_VISIBLE_MIN_WIDTH: float = 560.0
+const MOBILE_TOUCH_HIT_SLOP: float = 8.0
 
 # --- Constants ---
 const BUTTON_MIN_SIZE: Vector2 = Vector2(80, 36)
@@ -537,9 +538,10 @@ func _to_toolbar_position(screen_pos: Vector2) -> Vector2:
 func _button_accepts_position(button: Button, screen_pos: Vector2, toolbar_pos: Vector2) -> bool:
 	if button == null or not button.visible or button.disabled:
 		return false
-	if button.get_global_rect().has_point(screen_pos):
+	var hit_slop: float = MOBILE_TOUCH_HIT_SLOP if _compact_mode else 0.0
+	if button.get_global_rect().grow(hit_slop).has_point(screen_pos):
 		return true
-	return Rect2(button.position, _hit_size_for_button(button)).has_point(toolbar_pos)
+	return Rect2(button.position, _hit_size_for_button(button)).grow(hit_slop).has_point(toolbar_pos)
 
 
 func _hit_size_for_button(button: Button) -> Vector2:

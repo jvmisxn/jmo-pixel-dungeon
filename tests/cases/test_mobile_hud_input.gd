@@ -284,6 +284,20 @@ func run(t: Object) -> void:
 		toolbar.activate_button_at_screen_position(Vector2(12, 12)),
 		"mobile toolbar fallback hit-testing uses visible minimum button sizes after relayout"
 	)
+	var edge_tap_count: Array[int] = [0]
+	toolbar.inventory_pressed.connect(func() -> void:
+		edge_tap_count[0] += 1
+	)
+	toolbar._btn_inventory.position = Vector2(10.0, 8.0)
+	toolbar._btn_inventory.size = Vector2(40.0, 56.0)
+	t.check(
+		toolbar.activate_button_at_screen_position(Vector2(4.0, 24.0)),
+		"mobile toolbar accepts near-edge taps inside the expanded touch target"
+	)
+	t.check(
+		edge_tap_count[0] == 1,
+		"expanded mobile toolbar hit target emits the intended button action once"
+	)
 	toolbar.free()
 
 	t.check(
