@@ -154,10 +154,6 @@ func _add_action_buttons(container: HFlowContainer) -> void:
 	# Quickslot assignment
 	_add_button(container, "Quickslot", _action_quickslot)
 
-	# Explicit close action keeps mobile item inspection usable when the title-bar
-	# X is hard to hit.
-	_add_button(container, "Close", close_window)
-
 
 func _add_button(container: HFlowContainer, text: String, callback: Callable) -> void:
 	var btn: Button = Button.new()

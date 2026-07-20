@@ -107,10 +107,6 @@ func _build_content() -> Control:
 
 	_refresh_grid()
 
-	var close_btn: Button = WndBase.create_spd_button("Close")
-	close_btn.pressed.connect(close_window)
-	main.add_child(close_btn)
-
 	return main
 
 

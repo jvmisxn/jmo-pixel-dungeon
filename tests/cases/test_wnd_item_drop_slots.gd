@@ -49,11 +49,16 @@ func run(t: Object) -> void:
 		"equippable item detail exposes the Equip action"
 	)
 	t.check(
-		_find_button_with_text(action_flow, "Close") != null,
-		"item detail exposes an explicit Close action for touch users"
+		_find_button_with_text(action_flow, "Close") == null,
+		"item detail relies on the title-bar X instead of adding a duplicate Close action"
 	)
 
 	var inv_wnd := WndInventory.new()
+	var inv_content: Control = inv_wnd._build_content()
+	t.check(
+		_find_button_with_text(inv_content, "Close") == null,
+		"inventory relies on the title-bar X instead of adding a duplicate Close action"
+	)
 	t.check(
 		inv_wnd._inventory_grid_columns_for_width(393.0) == 4,
 		"mobile inventory grid uses fewer columns to avoid right-edge clipping"
@@ -80,6 +85,7 @@ func run(t: Object) -> void:
 	EventBus.request_hero_action.disconnect(_on_request_hero_action)
 	item_content.free()
 	item_wnd.free()
+	inv_content.free()
 	inv_wnd.free()
 	touch_slot.free()
 	left_wnd.free()

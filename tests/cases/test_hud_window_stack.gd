@@ -13,10 +13,16 @@ class FakeOverlayWindow:
 	extends Control
 	var _background_overlay: Control = null
 
+class TouchableWindow:
+	extends WndBase
+	func _play_close_animation() -> void:
+		pass
+
 func run(t: Object) -> void:
 	_test_sub_window_close_releases_tracking(t)
 	_test_hud_close_frees_sibling_overlay(t)
 	_test_active_close_frees_open_sub_overlay(t)
+	_test_title_bar_close_handles_screen_touch(t)
 
 func _make_hud() -> HUD:
 	var hud := HUD.new()
@@ -62,6 +68,38 @@ func _test_sub_window_close_releases_tracking(t: Object) -> void:
 	)
 
 	hud.free()
+
+func _test_title_bar_close_handles_screen_touch(t: Object) -> void:
+	var wnd := TouchableWindow.new()
+	var closed: Array[bool] = []
+	wnd.window_closed.connect(func() -> void:
+		closed.append(true)
+	)
+	wnd._setup_window()
+	wnd._close_button.size = Vector2(28, 28)
+
+	var touch_down := InputEventScreenTouch.new()
+	touch_down.index = 0
+	touch_down.pressed = true
+	touch_down.position = Vector2(14, 14)
+	wnd._on_close_button_gui_input(touch_down)
+
+	var touch_up := InputEventScreenTouch.new()
+	touch_up.index = 0
+	touch_up.pressed = false
+	touch_up.position = Vector2(14, 14)
+	wnd._on_close_button_gui_input(touch_up)
+
+	t.check(
+		closed.size() == 1,
+		"title-bar X closes from the first mobile touch release"
+	)
+	t.check(
+		wnd._is_closing,
+		"title-bar X does not wait for a second synthesized click to begin closing"
+	)
+
+	wnd.free()
 
 func _test_hud_close_frees_sibling_overlay(t: Object) -> void:
 	var hud := _make_hud()

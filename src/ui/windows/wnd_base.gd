@@ -25,6 +25,7 @@ var _background_overlay: ColorRect = null
 var _dragging: bool = false
 var _drag_offset: Vector2 = Vector2.ZERO
 var _is_closing: bool = false
+var _close_touch_index: int = -1
 
 # --- Animation ---
 const ANIM_DURATION: float = 0.2
@@ -118,6 +119,7 @@ func _setup_window() -> void:
 	close_hover.set_corner_radius_all(2)
 	_close_button.add_theme_stylebox_override("hover", close_hover)
 	_close_button.pressed.connect(_on_close_pressed)
+	_close_button.gui_input.connect(_on_close_button_gui_input)
 	_title_bar.add_child(_close_button)
 
 	# Separator with warm stone color
@@ -198,6 +200,21 @@ static func create_spd_button(text: String) -> Button:
 
 func _on_close_pressed() -> void:
 	close_window()
+
+
+func _on_close_button_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		var touch: InputEventScreenTouch = event as InputEventScreenTouch
+		if touch.pressed:
+			_close_touch_index = touch.index
+			_close_button.button_pressed = true
+			_close_button.accept_event()
+		elif _close_touch_index == touch.index:
+			_close_touch_index = -1
+			_close_button.button_pressed = false
+			_close_button.accept_event()
+			if Rect2(Vector2.ZERO, _close_button.size).has_point(touch.position):
+				close_window()
 
 
 ## Close this window with animation. Removes overlay and frees self.
