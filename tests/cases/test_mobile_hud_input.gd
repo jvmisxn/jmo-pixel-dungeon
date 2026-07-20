@@ -545,6 +545,13 @@ func run(t: Object) -> void:
 		"mobile landscape status pane stays compact instead of covering the full viewport width"
 	)
 	t.check(
+		landscape_status != null
+				and is_equal_approx(landscape_status.size.y, 84.0)
+				and landscape_hud._status_overlay != null
+				and landscape_hud._status_overlay.size.y >= 64.0,
+		"mobile landscape status pane leaves enough height for readable HP and XP bars"
+	)
+	t.check(
 		landscape_party_row != null
 				and is_equal_approx(landscape_party_row.position.x, 50.0)
 				and is_equal_approx(landscape_party_row.position.y, landscape_status.position.y + landscape_status.size.y + HUD.HUD_MARGIN)

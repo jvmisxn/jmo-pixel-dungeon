@@ -2,6 +2,9 @@
 
 ## 2026-07-20
 
+- Tags: mobile, hud, landscape, readability, tests
+- Gave the mobile landscape status strip enough vertical room for its HP/XP readout. The compact landscape pane stayed width-capped for safe-area breathing room, but its 76px height left only a 60px overlay budget for controls whose bar stack wants about 64px, making status information feel cramped or uncovered on landscape phones. `HUD` now uses an 84px landscape status height and slightly tighter mobile overlay spacing, preserving portrait and toolbar behavior. Extended `test_mobile_hud_input.gd` with an 852x393 safe-area regression that asserts the status pane stays compact while leaving readable height for HP/XP bars. Local `git diff --check`, Godot import, and full headless suite passed (1406 checks, 0 failures, Godot 4.7.1).
+
 - Tags: hero, xp, level-cap, bless, source-fidelity, tests
 - Restored SPD-style max-level XP cap behavior. `Hero.earn_xp()` now keeps normal partial XP below the cap threshold, but when a level-30 hero crosses the next XP requirement it resets `xp` to 0 and applies `Bless` as the original "surge of power" cap reward instead of serializing unbounded overflow XP. Added `test_hero_xp_cap.gd` for exact-threshold and large-overflow grants. Local full headless suite passed (1405 checks, 0 failures, Godot 4.7.1).
 

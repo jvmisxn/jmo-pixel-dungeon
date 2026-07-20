@@ -18,7 +18,7 @@ const MOBILE_BREAKPOINT: float = 720.0
 const MOBILE_WEB_MAX_VIEWPORT: float = 960.0
 const HUD_MARGIN: float = 6.0
 const MOBILE_STATUS_HEIGHT: float = 88.0
-const MOBILE_STATUS_LANDSCAPE_HEIGHT: float = 76.0
+const MOBILE_STATUS_LANDSCAPE_HEIGHT: float = 84.0
 const MOBILE_STATUS_LANDSCAPE_MAX_WIDTH: float = 360.0
 const MOBILE_BUFFS_ROW_MIN_HEIGHT: float = 24.0
 const MOBILE_SAFE_TOP_INSET: float = 18.0
@@ -1176,6 +1176,7 @@ func _layout_status_overlay(status_container: Control) -> void:
 	_status_overlay.size = _status_overlay.custom_minimum_size
 	var is_mobile_layout: bool = _is_mobile_layout()
 	var is_portrait_mobile: bool = _is_mobile_portrait_layout()
+	_status_overlay.add_theme_constant_override("separation", 6 if is_mobile_layout else 8)
 	if _status_level_label:
 		_status_level_label.custom_minimum_size = Vector2(50.0 if is_mobile_layout else 62.0, 0.0)
 		_status_level_label.add_theme_font_size_override("font_size", 17 if is_mobile_layout else 17)
