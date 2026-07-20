@@ -273,7 +273,7 @@ func _input(event: InputEvent) -> void:
 		_suppress_synthesized_touch_mouse()
 		if touch.pressed:
 			if _should_route_touch_to_hud(touch.position):
-				_ui_touch_points[touch.index] = true
+				_ui_touch_points[touch.index] = touch.position
 				_mark_input_as_handled()
 				return
 			var was_empty: bool = _active_touch_points.is_empty()
@@ -287,9 +287,10 @@ func _input(event: InputEvent) -> void:
 			_mark_input_as_handled()
 		else:
 			if _ui_touch_points.has(touch.index):
+				var hud_touch_start: Variant = _ui_touch_points[touch.index]
 				_ui_touch_points.erase(touch.index)
 				_touch_start_points.erase(touch.index)
-				_handle_hud_touch_release(touch.position)
+				_handle_hud_touch_release(touch.position, hud_touch_start)
 				_mark_input_as_handled()
 				return
 			var was_active_touch: bool = _active_touch_points.has(touch.index)
@@ -496,11 +497,13 @@ func _mark_input_as_handled() -> void:
 		viewport.set_input_as_handled()
 
 
-func _handle_hud_touch_release(screen_pos: Vector2) -> void:
+func _handle_hud_touch_release(screen_pos: Vector2, fallback_screen_pos: Variant = null) -> void:
 	if _hud == null or not is_instance_valid(_hud):
 		return
 	if _hud.has_method("handle_screen_tap"):
-		_hud.handle_screen_tap(screen_pos)
+		var handled: bool = bool(_hud.handle_screen_tap(screen_pos))
+		if not handled and fallback_screen_pos is Vector2 and fallback_screen_pos != screen_pos:
+			_hud.handle_screen_tap(fallback_screen_pos)
 
 func _movement_dir_for_key(keycode: int) -> int:
 	match keycode:

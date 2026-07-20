@@ -4,12 +4,17 @@ class FakeHud:
 	extends Node
 
 	var active_window: bool = false
+	var tapped_positions: Array[Vector2] = []
 
 	func contains_screen_position(_screen_pos: Vector2) -> bool:
 		return true
 
 	func has_active_window() -> bool:
 		return active_window
+
+	func handle_screen_tap(screen_pos: Vector2) -> bool:
+		tapped_positions.append(screen_pos)
+		return false
 
 class FakeCamera:
 	extends RefCounted
@@ -87,6 +92,31 @@ func run(t: Object) -> void:
 
 	hud.free()
 	scene.free()
+
+	var drift_scene := GameScene.new()
+	var drift_hud := FakeHud.new()
+	drift_scene._hud = drift_hud
+	var hud_down := InputEventScreenTouch.new()
+	hud_down.index = 0
+	hud_down.pressed = true
+	hud_down.position = Vector2(24, 760)
+	drift_scene._input(hud_down)
+	var hud_drag := InputEventScreenDrag.new()
+	hud_drag.index = 0
+	hud_drag.position = Vector2(24, 690)
+	hud_drag.relative = Vector2(0, -70)
+	drift_scene._input(hud_drag)
+	var hud_up := InputEventScreenTouch.new()
+	hud_up.index = 0
+	hud_up.pressed = false
+	hud_up.position = Vector2(24, 690)
+	drift_scene._input(hud_up)
+	t.check(
+		drift_hud.tapped_positions == [Vector2(24, 690), Vector2(24, 760)],
+		"HUD touch release falls back to the press position when a finger drifts off the control"
+	)
+	drift_hud.free()
+	drift_scene.free()
 
 	var click_scene := ClickSpyScene.new()
 	click_scene._awaiting_hero_input = true
