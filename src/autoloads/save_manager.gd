@@ -47,6 +47,9 @@ func save_full_game() -> bool:
 	# --- Level cache (all visited levels) ---
 	data["level_cache"] = _serialize_level_cache()
 
+	# --- Turn scheduler state (actor cooldowns, turn/round counters) ---
+	data["turn_manager"] = _serialize_turn_manager()
+
 	# --- Quest state ---
 	var _qh: GDScript = load("res://src/actors/npcs/quest_handler.gd")
 	data["quest_state"] = _qh.serialize() if _qh.has_method("serialize") else {}
@@ -101,6 +104,12 @@ func load_full_game() -> bool:
 	if GameManager != null and GameManager.has_method("_cleanup_previous_run"):
 		GameManager._cleanup_previous_run()
 	QuestHandler.reset()
+
+	# Stash the saved scheduler timeline. Actors re-register during deserialize
+	# (and again when the loading scene transitions to gameplay); the load path
+	# applies this once all actors exist so cooldowns/turn counters do not reset.
+	if TurnManager != null and TurnManager.has_method("stage_schedule"):
+		TurnManager.stage_schedule(save.get("turn_manager", {}))
 
 	# --- Restore GameManager state ---
 	_deserialize_game_manager(save.get("game_manager", {}))
@@ -308,6 +317,16 @@ func _invert_ht_multiplier(saved_ht: int, multiplier: float) -> int:
 		if int(float(candidate) * multiplier) == saved_ht:
 			return candidate
 	return saved_ht
+
+
+# ---------------------------------------------------------------------------
+# Turn Scheduler Serialization
+# ---------------------------------------------------------------------------
+
+func _serialize_turn_manager() -> Dictionary:
+	if TurnManager != null and TurnManager.has_method("serialize_schedule"):
+		return TurnManager.serialize_schedule()
+	return {}
 
 
 # ---------------------------------------------------------------------------

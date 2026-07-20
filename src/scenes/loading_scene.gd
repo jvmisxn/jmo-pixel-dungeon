@@ -438,6 +438,11 @@ func _transition_to_game() -> void:
 			if level.has_method("activate_respawner"):
 				level.activate_respawner()
 
+		# All actors for the restored level are registered again — re-link the
+		# saved scheduler timeline so cooldowns/turn counters survive the reload.
+		if TurnManager.has_method("apply_pending_schedule"):
+			TurnManager.apply_pending_schedule()
+
 	# --- Create and show the GameScene ---
 	var game_script: GDScript = load("res://src/scenes/game_scene.gd") as GDScript
 	if game_script:

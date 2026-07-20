@@ -32,6 +32,11 @@ var _round_hero_ids_pending: Array[int] = []
 ## Whether the system is currently processing (prevents re-entrant calls).
 var _processing: bool = false
 
+## Schedule state captured from a save, held until actors re-register on load.
+## Kept separate from live actor state so clear_actors() never wipes it; applied
+## explicitly (and consumed) by the load path once actors exist again.
+var _pending_schedule: Dictionary = {}
+
 ## If true, the turn loop pauses and waits (e.g., for player input).
 var waiting_for_input: bool = false
 
@@ -369,6 +374,109 @@ func clear_actors() -> void:
 	input_actor_changed.emit(null)
 	waiting_for_input = false
 	processing_mobs = false
+
+# ---------------------------------------------------------------------------
+# Schedule Persistence
+# ---------------------------------------------------------------------------
+# Shattered PD persists each Actor's position on the shared timeline (Actor.time)
+# plus the global clock (Actor.now) so a just-acted, slowed, or hasted actor keeps
+# its place after a reload instead of resetting to act immediately. This port uses
+# a relative cooldown per actor (time-until-next-action) rather than absolute time,
+# so we persist each actor's cooldown keyed by its stable actor_id, alongside the
+# turn/round counters, and re-link by id after actors re-register on load.
+
+## Capture the current scheduler timeline as a plain, save-friendly dictionary.
+func serialize_schedule() -> Dictionary:
+	var cooldowns: Array[Dictionary] = []
+	for entry: Dictionary in _actors:
+		var actor_ref: Variant = entry.get("node")
+		if actor_ref == null or not is_instance_valid(actor_ref):
+			continue
+		var actor_node: Node = actor_ref as Node
+		if actor_node.get("actor_id") == null:
+			continue
+		cooldowns.append({
+			"actor_id": int(actor_node.get("actor_id")),
+			"cooldown": float(entry.get("cooldown", 0.0)),
+			"speed": float(entry.get("speed", 1.0)),
+		})
+	var input_id: int = -1
+	if current_input_actor != null and is_instance_valid(current_input_actor) and current_input_actor.get("actor_id") != null:
+		input_id = int(current_input_actor.get("actor_id"))
+	return {
+		"turn_count": _turn_count,
+		"round_count": _round_count,
+		"round_hero_ids_pending": _round_hero_ids_pending.duplicate(),
+		"current_input_actor_id": input_id,
+		"cooldowns": cooldowns,
+	}
+
+## Stash a saved schedule to be applied once actors have re-registered. Kept out
+## of live actor state so an intervening clear_actors() (the load path clears and
+## re-activates every actor) does not discard it.
+func stage_schedule(data: Variant) -> void:
+	if data is Dictionary and not (data as Dictionary).is_empty():
+		_pending_schedule = (data as Dictionary).duplicate(true)
+	else:
+		_pending_schedule = {}
+
+## Apply and consume a staged schedule against the currently registered actors,
+## matching by actor_id. No-op when nothing is staged. Call this after the load
+## path has finished (re-)activating all actors for the restored level.
+func apply_pending_schedule() -> void:
+	if _pending_schedule.is_empty():
+		return
+	var data: Dictionary = _pending_schedule
+	_pending_schedule = {}
+	restore_schedule(data)
+
+## Discard any staged schedule without applying it (e.g. on aborted loads).
+func clear_pending_schedule() -> void:
+	_pending_schedule = {}
+
+## Restore scheduler state from a serialized schedule, re-linking cooldowns to the
+## live actors by actor_id. Counters are restored so message/round grouping and
+## turn totals continue from where the save left off.
+func restore_schedule(data: Dictionary) -> void:
+	if data == null or data.is_empty():
+		return
+
+	var by_id: Dictionary = {}
+	var cooldowns: Variant = data.get("cooldowns", [])
+	if cooldowns is Array:
+		for saved: Variant in cooldowns:
+			if saved is Dictionary:
+				by_id[int((saved as Dictionary).get("actor_id", -1))] = saved
+
+	for entry: Dictionary in _actors:
+		var actor_ref: Variant = entry.get("node")
+		if actor_ref == null or not is_instance_valid(actor_ref):
+			continue
+		var actor_node: Node = actor_ref as Node
+		if actor_node.get("actor_id") == null:
+			continue
+		var record: Variant = by_id.get(int(actor_node.get("actor_id")), null)
+		if record is Dictionary:
+			entry["cooldown"] = float((record as Dictionary).get("cooldown", entry.get("cooldown", 0.0)))
+			entry["speed"] = float((record as Dictionary).get("speed", entry.get("speed", 1.0)))
+
+	_turn_count = int(data.get("turn_count", _turn_count))
+	_round_count = int(data.get("round_count", _round_count))
+
+	var pending: Variant = data.get("round_hero_ids_pending", null)
+	if pending is Array:
+		var typed_pending: Array[int] = []
+		for value: Variant in pending:
+			typed_pending.append(int(value))
+		_round_hero_ids_pending = typed_pending
+
+	var input_id: int = int(data.get("current_input_actor_id", -1))
+	if input_id >= 0:
+		for entry2: Dictionary in _actors:
+			var ref2: Variant = entry2.get("node")
+			if ref2 != null and is_instance_valid(ref2) and (ref2 as Node).get("actor_id") == input_id:
+				current_input_actor = ref2 as Node
+				break
 
 ## Process turns until it's the hero's turn (used on level load).
 func process_until_hero() -> void:
