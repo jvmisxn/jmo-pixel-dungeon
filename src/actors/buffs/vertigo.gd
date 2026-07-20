@@ -21,15 +21,22 @@ func on_attach() -> void:
 func randomize_direction(intended_pos: int, current_pos: int) -> int:
 	if target == null or target.level == null:
 		return intended_pos
-	# Pick a random adjacent cell instead of the intended one
-	var width: int = target.level.width if target.level.get("width") else 32
-	var offsets: Array[int] = [-1, 1, -width, width, -width - 1, -width + 1, width - 1, width + 1]
+	if not target.level.has_method("is_passable"):
+		return intended_pos
+	# Pick a random true 8-neighbour instead of the intended cell. Guard against
+	# grid edge-wrap: the E/W/diagonal offsets at a column edge land on the
+	# opposite edge of an adjacent row, so require the candidate to stay within
+	# one column of the current cell (see audit S19 / plant edge-wrap fix).
+	var col: int = current_pos % Level.W
 	var valid_positions: Array[int] = []
-	for offset in offsets:
+	for offset: int in ConstantsData.DIRS_8:
 		var pos: int = current_pos + offset
-		if pos >= 0 and target.level.has_method("is_passable"):
-			if target.level.is_passable(pos):
-				valid_positions.append(pos)
+		if pos < 0 or pos >= Level.LEN:
+			continue
+		if absi(pos % Level.W - col) > 1:
+			continue
+		if target.level.is_passable(pos):
+			valid_positions.append(pos)
 	if valid_positions.is_empty():
 		return intended_pos
 	return valid_positions[randi() % valid_positions.size()]

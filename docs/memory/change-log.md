@@ -2,6 +2,9 @@
 
 ## 2026-07-19
 
+- Tags: vertigo, movement, grid, source-fidelity, tests
+- Fixed Vertigo's random movement edge-wrap. `Vertigo.randomize_direction()` was adding flat `DIRS_8` offsets without guarding map columns, so a dizzy character at the left or right edge could be shoved to a wrapped cell on the opposite edge of an adjacent row. The buff now samples only true in-bounds 8-neighbours and falls back to the intended destination if none are passable. Added `test_vertigo_edge_wrap.gd`. Local full headless suite passed (1358 checks, 0 failures, Godot 4.7.1).
+
 - Tags: turn-manager, speed, buffs, source-fidelity, tests
 - Restored live speed re-querying in the turn scheduler. `TurnManager` still cached actor speed at registration, so buffs or ring passives that changed `get_speed()` after registration only affected cooldown math if some caller remembered to call `refresh_speed()`. `spend_energy()` now re-queries the actor's current speed before charging cooldown, matching SPD's live per-action timing model while preserving the existing safety floor for zero-speed actors. Extended `test_speed_modifiers.gd` with a scheduler regression for speed-up and slow-down changes after registration. Local full headless suite passed (1354 checks, 0 failures, Godot 4.7.1).
 
