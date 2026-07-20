@@ -977,6 +977,8 @@ func add_blob(blob: Variant, cell: int, amount: float = 1.0) -> void:
 				continue
 			if str(existing.get("blob_id")) == new_id:
 				existing.level = self
+				if existing.has_method("merge_from_blob"):
+					existing.merge_from_blob(blob)
 				if existing.has_method("seed"):
 					existing.seed(cell, amount)
 				return

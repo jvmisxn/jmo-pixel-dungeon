@@ -636,27 +636,15 @@ class WandOfCorrosion extends Wand:
 		var lvl: Variant = hero.get("level") if hero != null else null
 		if lvl == null:
 			return
-		# Apply corrosion (Poison buff) to target and adjacent cells
-		var affected: Array[int] = [target_pos]
-		for dir: int in ConstantsData.DIRS_4:
-			var adj: int = target_pos + dir
-			if ConstantsData.is_valid_pos(adj):
-				affected.append(adj)
-		for cell_pos: int in affected:
-			if not lvl.has_method("find_char_at"):
-				continue
-			var target_char: Variant = lvl.find_char_at(cell_pos)
-			if target_char != null and target_char.has_method("add_buff"):
-				var acid: Poison = Poison.new()
-				acid.set_duration(4.0 + float(level) * 2.0)
-				target_char.add_buff(acid)
-				if MessageLog and cell_pos == target_pos:
-					MessageLog.add("Caustic acid splashes on the target!")
-		# Also warn caster if they are in the cloud
-		if hero != null and hero.get("pos") != null:
-			if hero.pos in affected:
-				if MessageLog:
-					MessageLog.add_warning("Careful! You're in the corrosion cloud!")
+		var gas: CorrosiveGas = CorrosiveGas.new()
+		gas.set_strength(2 + level, "WandOfCorrosion")
+		if lvl.has_method("add_blob"):
+			lvl.add_blob(gas, target_pos, 50.0 + 10.0 * float(level))
+		if lvl.has_method("find_char_at") and lvl.find_char_at(target_pos) == null:
+			if lvl.has_method("press_cell"):
+				lvl.press_cell(target_pos)
+		if MessageLog:
+			MessageLog.add("Corrosive gas spreads from the impact!")
 
 # ---------------------------------------------------------------------------
 # Wand of Living Earth — summon rock guardian / grant shielding
