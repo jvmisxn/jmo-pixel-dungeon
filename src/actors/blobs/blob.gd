@@ -28,16 +28,18 @@ func seed(cell: int, amount: float) -> void:
 	if cell not in active_cells:
 		active_cells.append(cell)
 
-## Run one simulation step (spread -> apply effects -> decay -> prune) WITHOUT
+## Run one simulation step (apply effects -> volume-conserving diffusion) WITHOUT
 ## touching the turn scheduler. Blobs are not registered as TurnManager actors;
 ## instead `Level.advance_blobs()` runs one step per TICK of shared game-time
 ## (TurnManager.now()), so blobs advance on the timeline rather than per hero
 ## round and stay rate-correct under Haste/Slow and multi-hero co-op.
+##
+## Effects are applied to the CURRENT (pre-diffusion) field so a character
+## standing in freshly-seeded dense gas is affected at full strength; the
+## diffusion pass then averages density outward and applies decay.
 func tick() -> void:
-	_spread()
 	_apply_effects()
-	_decay()
-	_prune_inactive()
+	_evolve()
 	if active_cells.is_empty():
 		deactivate()
 
@@ -47,49 +49,77 @@ func act() -> void:
 	tick()
 	spend_turn()
 
-func _spread() -> void:
+## Volume-conserving diffusion, mirroring Shattered Pixel Dungeon's
+## `Blob.evolve()`. Each open cell becomes the AVERAGE of itself and its open
+## cardinal neighbours, then loses `decay_rate` (SPD's constant `-1` drain).
+##
+## Why this cannot explode: averaging can never push a cell above the maximum of
+## its neighbourhood, so the field's peak is non-increasing and total volume is
+## approximately conserved each step (the old copy-outward model used `max()`,
+## which minted fresh density at every frontier cell and let the total grow
+## without bound). The decay term then makes the total strictly trend downward
+## until cells fall below `min_density` and prune out.
+##
+## Only the frontier -- active cells plus the open cells they can flow into -- is
+## scanned, since every other cell has an all-zero neighbourhood and stays zero.
+func _evolve() -> void:
 	if level == null:
 		return
-	# Build the next density field separately so we never read cells we have
-	# already written this pass, and collect newly-touched cells to append AFTER
-	# iteration (mutating active_cells mid-loop caused single-turn cascades).
-	var new_density: PackedFloat32Array = density.duplicate()
-	var touched: Array[int] = []
-	for cell: int in active_cells:
-		var here: float = density[cell]
-		if here <= min_density:
-			continue
-		var spread_amount: float = here * spread_rate * 0.25
-		if spread_amount <= 0.0:
-			continue
-		for neighbor: int in _cardinal_neighbors(cell):
-			if _blocks_spread(neighbor):
-				continue
-			new_density[neighbor] = maxf(new_density[neighbor], spread_amount)
-			if new_density[neighbor] > min_density \
-					and neighbor not in active_cells and neighbor not in touched:
-				touched.append(neighbor)
-	density = new_density
-	for cell: int in touched:
-		active_cells.append(cell)
-
-func _decay() -> void:
-	if decay_rate <= 0.0:
+	# Non-spreading blobs (webs, wells) hold their shape and only decay in place.
+	if spread_rate <= 0.0:
+		_decay_in_place()
 		return
+	var cur: PackedFloat32Array = density
+	var candidates: Array[int] = []
+	var seen: Dictionary = {}
 	for cell: int in active_cells:
-		density[cell] -= decay_rate
-		if density[cell] < 0.0:
-			density[cell] = 0.0
+		if not seen.has(cell):
+			seen[cell] = true
+			candidates.append(cell)
+		for n: int in _cardinal_neighbors(cell):
+			if _blocks_spread(n):
+				continue
+			if not seen.has(n):
+				seen[n] = true
+				candidates.append(n)
+	# Compute every new value from the read-only `cur` snapshot first, then write
+	# them back, so no cell is averaged against a value already updated this pass.
+	var new_values: Array[float] = []
+	var new_active: Array[int] = []
+	for cell: int in candidates:
+		if _blocks_spread(cell):
+			new_values.append(0.0)
+			continue
+		var sum: float = cur[cell]
+		var count: int = 1
+		for n: int in _cardinal_neighbors(cell):
+			if _blocks_spread(n):
+				continue
+			sum += cur[n]
+			count += 1
+		var value: float = (sum / float(count)) - decay_rate
+		if value <= min_density:
+			value = 0.0
+		new_values.append(value)
+		if value > min_density:
+			new_active.append(cell)
+	for i: int in range(candidates.size()):
+		density[candidates[i]] = new_values[i]
+	active_cells = new_active
 
-## Drop cells that have fallen to/below the active threshold, zeroing their
-## density so stale values never leak into later spread passes.
-func _prune_inactive() -> void:
+## Decay path for blobs that do not diffuse (spread_rate == 0). Subtracts
+## `decay_rate` from each active cell in place and prunes cells that fall to/below
+## the active threshold, zeroing them so stale density never leaks into a later
+## pass. With decay_rate == 0 the blob persists unchanged (webs, counters).
+func _decay_in_place() -> void:
 	var kept: Array[int] = []
 	for cell: int in active_cells:
-		if density[cell] > min_density:
-			kept.append(cell)
-		else:
+		var value: float = density[cell] - decay_rate
+		if value <= min_density:
 			density[cell] = 0.0
+		else:
+			density[cell] = value
+			kept.append(cell)
 	active_cells = kept
 
 ## Cardinal (N/E/S/W) in-bounds neighbors of a cell, guarding against the

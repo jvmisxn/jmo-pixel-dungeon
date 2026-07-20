@@ -20,7 +20,11 @@ func run(t: Object) -> void:
 	_test_spread(t)
 	_test_no_row_wrap(t)
 	_test_decay_and_prune(t)
+	_test_volume_does_not_explode(t)
+	_test_decay_reduces_volume(t)
+	_test_spread_shape_is_sane(t)
 	_test_toxic_gas_poisons(t)
+	_test_paralytic_gas_paralyzes(t)
 	_test_freezing_blob_freezes(t)
 	_test_freezing_blob_freezes_water(t)
 	_test_serialize_round_trip(t)
@@ -28,6 +32,15 @@ func run(t: Object) -> void:
 	_test_advance_blobs_uses_game_time(t)
 	_test_advance_blobs_reports_final_decay(t)
 	_test_blob_time_serializes(t)
+
+## Total blob volume = sum of density across every currently-active cell.
+## Pruned cells are zeroed and dropped from active_cells, so this equals the
+## whole-field volume.
+func _total_volume(blob: Blob) -> float:
+	var total: float = 0.0
+	for cell: int in blob.active_cells:
+		total += blob.get_density(cell)
+	return total
 
 func _test_spread(t: Object) -> void:
 	var blob: Blob = Blob.new()
@@ -39,13 +52,17 @@ func _test_spread(t: Object) -> void:
 	t.check(blob.active_cells.size() == 1, "seed marks a single active cell")
 
 	blob.tick()
-	# 4.0 * 0.5 * 0.25 = 0.5 pushed into each cardinal neighbor (> min_density).
+	# Volume-conserving diffusion: the seed averages across itself + 4 open
+	# neighbors -> 4.0/5 = 0.8 in each of the 5 cells (> min_density), and the
+	# total (5 * 0.8 = 4.0) matches what was seeded rather than growing.
 	var north: int = center - ConstantsData.WIDTH
 	var east: int = center + 1
 	t.check(blob.get_density(north) > blob.min_density, "blob spreads north")
 	t.check(blob.get_density(east) > blob.min_density, "blob spreads east")
 	t.check(center in blob.active_cells, "origin stays active after spread")
 	t.check(blob.active_cells.size() == 5, "spread adds four cardinal neighbors")
+	t.check(is_equal_approx(_total_volume(blob), 4.0),
+			"diffusion conserves the seeded volume on the first step")
 
 func _test_no_row_wrap(t: Object) -> void:
 	var blob: Blob = Blob.new()
@@ -73,6 +90,78 @@ func _test_decay_and_prune(t: Object) -> void:
 	blob.tick()
 	t.check(blob.active_cells.is_empty(), "blob burns out once density decays below min")
 	t.check(blob.get_density(center) == 0.0, "pruned cell density is zeroed")
+
+## The whole point of the SPD-style diffusion port: spreading must never mint
+## new volume. With decay off, total volume must stay at (or just below, from
+## sub-threshold tail cells pruning) the seeded amount across many steps -- the
+## old copy-outward model grew the total every frontier step.
+func _test_volume_does_not_explode(t: Object) -> void:
+	var blob: Blob = Blob.new()
+	blob.spread_rate = 0.5
+	blob.decay_rate = 0.0  # isolate spread; only pruning can remove volume
+	blob.level = StubLevel.new()
+	var seeded: float = 10.0
+	blob.seed(_center(), seeded)
+	var peak: float = _total_volume(blob)
+	for _i: int in range(12):
+		blob.tick()
+		var vol: float = _total_volume(blob)
+		peak = maxf(peak, vol)
+		t.check(vol <= seeded + 0.001,
+				"spread never grows total volume beyond the seeded amount")
+	t.check(peak <= seeded + 0.001, "peak volume across all steps stays bounded")
+	t.check(_total_volume(blob) > 0.0, "blob is still present after diffusing")
+
+## Decay must monotonically shrink total volume for a spreading blob.
+func _test_decay_reduces_volume(t: Object) -> void:
+	var blob: Blob = Blob.new()
+	blob.spread_rate = 0.5
+	blob.decay_rate = 0.15
+	blob.level = StubLevel.new()
+	blob.seed(_center(), 40.0)  # large seed so it never empties within the loop
+	var prev: float = _total_volume(blob)
+	for _i: int in range(5):
+		blob.tick()
+		if blob.active_cells.is_empty():
+			break
+		var vol: float = _total_volume(blob)
+		t.check(vol < prev, "each decaying step reduces total volume")
+		prev = vol
+
+## Diffusion produces a sane, symmetric, outward-decreasing plume rather than a
+## lopsided or edge-biased shape.
+func _test_spread_shape_is_sane(t: Object) -> void:
+	var blob: Blob = Blob.new()
+	blob.spread_rate = 0.5
+	blob.decay_rate = 0.0
+	blob.level = StubLevel.new()
+	var center: int = _center()
+	blob.seed(center, 16.0)
+	blob.tick()
+	blob.tick()
+	var n: float = blob.get_density(center - ConstantsData.WIDTH)
+	var s: float = blob.get_density(center + ConstantsData.WIDTH)
+	var e: float = blob.get_density(center + 1)
+	var w: float = blob.get_density(center - 1)
+	t.check(is_equal_approx(n, s) and is_equal_approx(e, w) and is_equal_approx(n, e),
+			"diffusion stays radially symmetric on an open field")
+	t.check(blob.get_density(center) >= n, "center density is >= its neighbors")
+	var far: float = blob.get_density(center - 2 * ConstantsData.WIDTH)
+	t.check(n >= far, "density decreases monotonically outward from the center")
+
+func _test_paralytic_gas_paralyzes(t: Object) -> void:
+	var victim: Char = Char.new()
+	var cell: int = _center()
+	victim.pos = cell
+	var stub: StubLevel = StubLevel.new()
+	stub._char = victim
+	stub._char_cell = cell
+	var gas: ParalyticGas = ParalyticGas.new()
+	gas.level = stub
+	gas.seed(cell, 5.0)
+	gas.tick()
+	t.check(victim.has_buff("Paralysis"), "paralytic gas paralyzes a character standing in it")
+	victim.free()
 
 func _test_toxic_gas_poisons(t: Object) -> void:
 	var victim: Char = Char.new()
