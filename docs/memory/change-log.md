@@ -2,6 +2,9 @@
 
 ## 2026-07-20
 
+- Tags: rings, speed, combat-pacing, source-fidelity, tests
+- Split Ring of Furor and Ring of Haste into their SPD action domains. Upstream Shattered Pixel Dungeon exposes Furor as an attack-speed multiplier (`1.09051^bonus`) and Haste as a movement-speed multiplier (`1.175^bonus`); the port had both flowing through `Char.get_speed()`, so Furor sped movement and Haste also sped attacks/non-movement actions because `TurnManager.spend_energy()` divides all hero action costs by speed. `FurorBuff` now uses a `modify_attack_delay()` hook, `HasteBuff` uses the current SPD movement multiplier only, and `Hero` pre-scales non-movement action costs so movement-only speed no longer leaks into melee, zaps, search, wait, or item actions. Extended `test_speed_modifiers.gd` to cover Haste movement-only behavior, Furor attack-only behavior, and combined scheduler cooldowns.
+
 - Tags: buffs, weakness, source-fidelity, tests
 - Corrected the Weakness audit item instead of landing a non-source STR penalty. Upstream current Shattered Pixel Dungeon keeps `Weakness` as a flavour debuff, applies its combat effect in `Char.attack()` as `dmg *= 0.67f`, and does not subtract Weakness inside `Hero.STR()`; the port already had the outgoing-damage multiplier, so the proposed `STR_PENALTY`/equipment-encumbrance change would have stacked a divergence. Updated `Weakness` to use SPD's 20-turn duration and removed the stale strength-penalty comments. Extended `test_combat_buffs.gd` to lock the 20-turn duration and 67% outgoing-damage behavior.
 

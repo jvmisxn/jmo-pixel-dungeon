@@ -292,9 +292,9 @@ func execute_action() -> void:
 
 	hero_acted.emit(action)
 
-	# Spend time based on action type. spend_turn() passes the value
-	# to TurnManager.spend_energy() which already divides by cached speed,
-	# so we pass the RAW action cost here (not pre-divided by speed).
+	# Spend time based on action type. TurnManager divides by get_speed(), so
+	# non-movement actions are pre-scaled back up to keep movement-only speed
+	# effects (Ring of Haste, armor speed, Cripple) out of attack/zap/search costs.
 	match action_type:
 		"move":
 			spend_turn(1.0)
@@ -305,9 +305,9 @@ func execute_action() -> void:
 			var throw_delay: float = _get_throw_delay(action.get("item"))
 			spend_turn(throw_delay)
 		"zap_wand":
-			spend_turn(1.0)
+			spend_turn(_get_non_movement_action_delay())
 		_:
-			spend_turn(1.0)
+			spend_turn(_get_non_movement_action_delay())
 
 	# Tell TurnManager we're done
 	if TurnManager:
@@ -554,9 +554,12 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 	return true
 
 func _get_throw_delay(item: Variant) -> float:
+	var delay: float = 1.0
 	if item != null and item.has_method("speed_factor"):
-		return item.speed_factor(self)
-	return 1.0
+		delay = item.speed_factor(self)
+	if item is MissileWeapon or item is SpiritBow:
+		delay = _apply_attack_delay_modifiers(delay)
+	return _neutralize_movement_speed_for_action(delay)
 
 func _should_consume_thrown_item(item: Variant) -> bool:
 	if item is MissileWeapon and (item as MissileWeapon).does_return():
@@ -1169,11 +1172,25 @@ func is_sighted() -> bool:
 ## Original: Hero.attackDelay() = weapon.speedFactor(hero), default 1.0.
 ## Fast weapons like dagger have < 1.0, slow weapons like glaive > 1.0.
 func _get_attack_delay() -> float:
+	var delay: float = 1.0
 	if belongings:
 		var equipped_weapon: Variant = belongings.get_equipped_weapon()
 		if equipped_weapon and equipped_weapon.has_method("speed_factor"):
-			return equipped_weapon.speed_factor(self)
-	return 1.0
+			delay = equipped_weapon.speed_factor(self)
+	delay = _apply_attack_delay_modifiers(delay)
+	return _neutralize_movement_speed_for_action(delay)
+
+func _apply_attack_delay_modifiers(delay: float) -> float:
+	for b: Node in _buffs:
+		if b.has_method("modify_attack_delay"):
+			delay = b.modify_attack_delay(delay)
+	return delay
+
+func _neutralize_movement_speed_for_action(delay: float) -> float:
+	return delay * get_speed()
+
+func _get_non_movement_action_delay() -> float:
+	return _neutralize_movement_speed_for_action(1.0)
 
 # ---------------------------------------------------------------------------
 # Damage / Heal Overrides (emit HUD update signals)

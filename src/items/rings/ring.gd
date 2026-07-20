@@ -394,6 +394,7 @@ class ForceBuff extends Buff:
 
 class FurorBuff extends Buff:
 	var ring: Ring = null
+	const ATTACK_SPEED_BASE: float = 1.09051
 
 	func _init() -> void:
 		buff_id = "RingOfFuror"
@@ -401,14 +402,13 @@ class FurorBuff extends Buff:
 		duration = -1.0
 		icon_color = Color(1.0, 1.0, 0.2)
 
-	func modify_speed(speed: float) -> float:
+	func attack_speed_multiplier() -> float:
 		if ring == null:
-			return speed
-		var b: int = ring.bonus()
-		# Attack speed bonus: ~10.5% per level multiplicatively
-		# Only affects attack speed, approximated as general speed boost
-		var multi: float = pow(1.105, b)
-		return speed * multi
+			return 1.0
+		return pow(ATTACK_SPEED_BASE, ring.bonus())
+
+	func modify_attack_delay(delay: float) -> float:
+		return delay / attack_speed_multiplier()
 
 # ---------------------------------------------------------------------------
 # Haste Buff
@@ -416,6 +416,7 @@ class FurorBuff extends Buff:
 
 class HasteBuff extends Buff:
 	var ring: Ring = null
+	const MOVEMENT_SPEED_BASE: float = 1.175
 
 	func _init() -> void:
 		buff_id = "RingOfHaste"
@@ -426,10 +427,7 @@ class HasteBuff extends Buff:
 	func modify_speed(speed: float) -> float:
 		if ring == null:
 			return speed
-		var b: int = ring.bonus()
-		# Move speed bonus: ~20% per level
-		var multi: float = pow(1.2, b)
-		return speed * multi
+		return speed * pow(MOVEMENT_SPEED_BASE, ring.bonus())
 
 # ---------------------------------------------------------------------------
 # Energy Buff
