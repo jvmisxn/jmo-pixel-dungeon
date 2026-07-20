@@ -1114,10 +1114,11 @@ func _apply_responsive_layout() -> void:
 			_minimap.position = Vector2(_vp_size.x - _minimap.size.x - 10.0, 28.0)
 
 	if _toolbar_bar:
+		# Update compact state here, but let _layout_toolbar() be the single source
+		# of the toolbar's available width: it uses the safe-area-adjusted width
+		# (_vp_size.x minus left/right insets), whereas the raw toolbar.size.x read
+		# here is stale from the previous layout and ignores horizontal safe areas.
 		_toolbar_bar.set_compact_mode(is_mobile_layout)
-		if _toolbar_bar.has_method("set_available_width"):
-			var toolbar_outer_width: float = toolbar.size.x if toolbar != null else _vp_size.x
-			_toolbar_bar.set_available_width(maxf(1.0, toolbar_outer_width - TOOLBAR_PANEL_H_MARGIN))
 
 	_layout_toolbar()
 
