@@ -1,6 +1,7 @@
 extends RefCounted
 ## Blob/gas simulation coverage: spread lifecycle, row-wrap guard, decay/prune,
-## character effects, serialize round-trip, and Level.add_blob merge + tick_blobs.
+## character effects, serialize round-trip, Level.add_blob merge + tick_blobs,
+## and shared-timeline advance_blobs cadence.
 
 ## Minimal Level stand-in: every cell passable, optionally one char at a cell.
 class StubLevel:
@@ -24,6 +25,9 @@ func run(t: Object) -> void:
 	_test_freezing_blob_freezes_water(t)
 	_test_serialize_round_trip(t)
 	_test_level_merge_and_tick(t)
+	_test_advance_blobs_uses_game_time(t)
+	_test_advance_blobs_reports_final_decay(t)
+	_test_blob_time_serializes(t)
 
 func _test_spread(t: Object) -> void:
 	var blob: Blob = Blob.new()
@@ -155,3 +159,57 @@ func _test_level_merge_and_tick(t: Object) -> void:
 	for _i: int in range(200):
 		level.tick_blobs()
 	t.check(level.blobs.is_empty(), "fully decayed blobs are dropped from the level")
+
+func _test_advance_blobs_uses_game_time(t: Object) -> void:
+	var level: Level = Level.new()
+	var center: int = _center()
+	for dy: int in range(-1, 2):
+		for dx: int in range(-1, 2):
+			level.set_terrain(ConstantsData.xy_to_pos(16 + dx, 16 + dy),
+					ConstantsData.Terrain.EMPTY)
+
+	level.add_blob(FireBlob.new(), center, 5.0)
+	var fire: Variant = level.blobs[0].get("blob")
+	var before: float = fire.get_density(center)
+
+	t.check(not level.advance_blobs(TurnManagerNode.TICK * 0.5),
+			"advance_blobs waits for a full game-time tick")
+	t.check(is_equal_approx(fire.get_density(center), before),
+			"partial game-time ticks do not advance blob density")
+
+	t.check(level.advance_blobs(TurnManagerNode.TICK),
+			"advance_blobs ticks once at one full game-time tick")
+	t.check(fire.get_density(center) < before,
+			"full game-time tick advances blob decay")
+
+	var after_one: float = fire.get_density(center)
+	level.advance_blobs(TurnManagerNode.TICK * 3.0)
+	t.check(fire.get_density(center) < after_one,
+			"advance_blobs catches up multiple elapsed game-time ticks")
+
+func _test_advance_blobs_reports_final_decay(t: Object) -> void:
+	var level: Level = Level.new()
+	var center: int = _center()
+	level.set_terrain(center, ConstantsData.Terrain.EMPTY)
+	var fire := FireBlob.new()
+	fire.spread_rate = 0.0
+	fire.decay_rate = 1.0
+	level.add_blob(fire, center, 0.2)
+
+	t.check(level.advance_blobs(TurnManagerNode.TICK),
+			"advance_blobs reports a visual change when the final blob decays")
+	t.check(level.blobs.is_empty(), "advance_blobs drops the fully decayed blob")
+
+func _test_blob_time_serializes(t: Object) -> void:
+	var level: Level = Level.new()
+	var center: int = _center()
+	level.set_terrain(center, ConstantsData.Terrain.EMPTY)
+	var fire := FireBlob.new()
+	fire.spread_rate = 0.0
+	level.add_blob(fire, center, 5.0)
+	level.advance_blobs(TurnManagerNode.TICK * 2.0)
+
+	var restored := Level.new()
+	restored.deserialize(level.serialize())
+	t.check(is_equal_approx(restored.serialize().get("blob_time", -1.0), TurnManagerNode.TICK * 2.0),
+			"blob timeline cursor survives level serialization")

@@ -1127,6 +1127,9 @@ func _connect_signals() -> void:
 
 	if TurnManager and not TurnManager.round_completed.is_connected(_on_round_completed):
 		TurnManager.round_completed.connect(_on_round_completed)
+	if TurnManager and TurnManager.has_signal("turn_processed"):
+		if not TurnManager.turn_processed.is_connected(_on_turn_processed):
+			TurnManager.turn_processed.connect(_on_turn_processed)
 	if TurnManager and TurnManager.has_signal("input_actor_changed"):
 		if not TurnManager.input_actor_changed.is_connected(_on_input_actor_changed):
 			TurnManager.input_actor_changed.connect(_on_input_actor_changed)
@@ -1593,7 +1596,7 @@ func _apply_action_for_hero(hero: Variant, action: Dictionary) -> void:
 
 	# Submit action to hero via command pattern.
 	# hero.submit_action() calls execute_action() which handles:
-	#   - process_buffs(), the action itself, spend_turn(), and hero_action_complete()
+	#   - act_buffs(), the action itself, spend_turn(), and hero_action_complete()
 	# Do NOT call spend_energy or hero_action_complete again here.
 	if hero.has_method("submit_action"):
 		hero.submit_action(resolved_action)
@@ -2411,13 +2414,8 @@ func _on_round_completed(_round_number: int) -> void:
 	SceneFeedbackCoordinator.on_round_completed(self, _round_number)
 	return
 
-	if _current_level == null:
-		return
-	if _current_level.has_method("tick_pending_bombs"):
-		var detonated: bool = _current_level.tick_pending_bombs()
-		if detonated:
-			refresh_after_turn()
-	_queue_online_snapshot_sync()
+func _on_turn_processed(actor: Node, turn_number: int) -> void:
+	SceneFeedbackCoordinator.on_turn_processed(self, actor, turn_number)
 
 func _on_trap_triggered(_pos: int, _trap_name: String) -> void:
 	SceneFeedbackCoordinator.on_trap_triggered(self, _pos, _trap_name)

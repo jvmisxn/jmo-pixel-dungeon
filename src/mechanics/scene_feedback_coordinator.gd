@@ -137,11 +137,25 @@ static func on_round_completed(scene: Variant, round_number: int) -> void:
 		var detonated: bool = scene._current_level.tick_pending_bombs()
 		if detonated:
 			refresh_after_turn(scene)
-	if scene._current_level.has_method("tick_blobs"):
+	scene._queue_online_snapshot_sync()
+
+static func on_turn_processed(scene: Variant, _actor: Node, _turn_number: int) -> void:
+	if scene == null or scene._current_level == null:
+		return
+	# Advance gas/liquid blobs after every processed actor turn. The level self-
+	# limits by the shared TurnManager clock, so this produces one blob step per
+	# game-time tick without batching behind party rounds.
+	if scene._current_level.has_method("advance_blobs"):
+		var now_time: float = TurnManager.now() if (TurnManager != null and TurnManager.has_method("now")) else 0.0
+		var blobs_changed: bool = scene._current_level.advance_blobs(now_time)
+		if blobs_changed:
+			refresh_after_turn(scene)
+			scene._queue_online_snapshot_sync()
+	elif scene._current_level.has_method("tick_blobs"):
 		var blobs_active: bool = scene._current_level.tick_blobs()
 		if blobs_active:
 			refresh_after_turn(scene)
-	scene._queue_online_snapshot_sync()
+			scene._queue_online_snapshot_sync()
 
 static func on_trap_triggered(scene: Variant, pos: int, trap_name: String) -> void:
 	if scene == null:

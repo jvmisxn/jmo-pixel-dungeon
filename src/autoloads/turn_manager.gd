@@ -307,6 +307,7 @@ func hero_action_complete(actor_node: Node = null) -> void:
 			if MessageLog:
 				MessageLog.current_turn = _round_count
 			round_completed.emit(_round_count)
+		turn_processed.emit(actor_node, _turn_count)
 
 	# Start async mob processing
 	processing_mobs = true

@@ -29,8 +29,10 @@ func seed(cell: int, amount: float) -> void:
 		active_cells.append(cell)
 
 ## Run one simulation step (spread -> apply effects -> decay -> prune) WITHOUT
-## touching the turn scheduler. Levels drive this directly each hero round via
-## `Level.tick_blobs()`; blobs are not registered as TurnManager actors.
+## touching the turn scheduler. Blobs are not registered as TurnManager actors;
+## instead `Level.advance_blobs()` runs one step per TICK of shared game-time
+## (TurnManager.now()), so blobs advance on the timeline rather than per hero
+## round and stay rate-correct under Haste/Slow and multi-hero co-op.
 func tick() -> void:
 	_spread()
 	_apply_effects()

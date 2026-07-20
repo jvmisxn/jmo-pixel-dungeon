@@ -47,6 +47,12 @@ var heaps: Array[Dictionary] = []
 var mobs: Array[Node] = []
 ## Active blobs (gas clouds, fire, etc.). Each: { "pos": int, "blob": Variant }
 var blobs: Array[Dictionary] = []
+## Game-timeline position (TurnManager.now()) that blobs have already been
+## advanced up to. Blobs spread/decay once per TICK of shared game-time rather
+## than once per hero round, so Haste/Slow and multi-hero co-op cadence never
+## make a gas cloud tick faster or slower than real game-time. Mirrors Shattered
+## PD, where each Blob is an Actor advancing on Actor.now.
+var _blob_time: float = 0.0
 ## Armed bombs waiting to detonate. Each entry:
 ## { "pos": int, "bomb": Variant, "turns_left": int }
 var pending_bombs: Array[Dictionary] = []
@@ -760,6 +766,10 @@ func serialize() -> Dictionary:
 	for blob_entry: Dictionary in blobs:
 		blobs_data.append(blob_entry.duplicate(true))
 	data["blobs"] = blobs_data
+	# Persist the blob timeline cursor so a reload does not replay a catch-up
+	# burst; it is restored alongside TurnManager.now() (kept within <1 TICK of
+	# each other because advance_blobs() catches up fully every round).
+	data["blob_time"] = _blob_time
 
 	var bombs_data: Array[Dictionary] = []
 	for bomb_entry: Dictionary in pending_bombs:
@@ -866,6 +876,7 @@ func deserialize(data: Dictionary) -> void:
 		for blob_entry: Variant in blobs_data:
 			if blob_entry is Dictionary:
 				blobs.append((blob_entry as Dictionary).duplicate(true))
+	_blob_time = float(data.get("blob_time", 0.0))
 
 	pending_bombs.clear()
 	var bombs_data: Variant = data.get("pending_bombs", [])
@@ -943,12 +954,48 @@ func add_blob(blob: Variant, cell: int, amount: float = 1.0) -> void:
 		blob.seed(cell, amount)
 	blobs.append({"blob": blob, "pos": cell})
 
-## Advance all active blobs by one hero round: each blob spreads, applies its
-## effect to characters standing in it, and decays. Burned-out blobs are
-## dropped. Returns true if any blob is still active so the caller can refresh
-## visuals. Mirrors `tick_pending_bombs()`; blobs are driven here rather than
-## registered as TurnManager actors.
-func tick_blobs() -> bool:
+## Safety cap on catch-up steps in a single advance_blobs() call. Blobs decay
+## away within a few dozen ticks, so this only guards against a pathological
+## timeline jump (e.g. a corrupt save) exploding the loop.
+const MAX_BLOB_CATCHUP_STEPS: int = 200
+
+## Advance blobs along the shared game timeline up to `now_time`
+## (`TurnManager.now()`). Each whole TICK of game-time elapsed since the last
+## advance runs exactly one blob step, so a gas cloud spreads/decays at a fixed
+## real-time rate regardless of how fast or slow -- or how many -- heroes are
+## acting. Returns true if any step ran, so the caller can refresh visuals even
+## when the final step burns the last blob out. Replaces the old per-hero-round
+## `tick_blobs()` cadence.
+func advance_blobs(now_time: float) -> bool:
+	# Timeline reset beneath us (new level / re-entered level resets
+	# TurnManager.now() to 0). Snap the cursor forward without ticking so blobs
+	# resume on the current clock instead of catching up a stale delta.
+	if now_time < _blob_time:
+		_blob_time = now_time
+		return false
+	if blobs.is_empty():
+		# Keep the cursor current so a later seed does not trigger a burst.
+		_blob_time = now_time
+		return false
+	var stepped: bool = false
+	var steps: int = 0
+	while _blob_time + TurnManagerNode.TICK <= now_time and steps < MAX_BLOB_CATCHUP_STEPS:
+		_blob_time += TurnManagerNode.TICK
+		steps += 1
+		stepped = true
+		_tick_blobs_once()
+		if blobs.is_empty():
+			break
+	# If the loop bailed on the safety cap, do not leave the cursor behind the
+	# clock forever — snap it so we stop re-catching-up every call.
+	if steps >= MAX_BLOB_CATCHUP_STEPS and _blob_time < now_time:
+		_blob_time = now_time
+	return stepped
+
+## Run a single blob simulation step: each blob spreads, applies its effect to
+## characters standing in it, and decays. Burned-out blobs are dropped. Returns
+## true if any blob is still active afterward.
+func _tick_blobs_once() -> bool:
 	if blobs.is_empty():
 		return false
 	var remaining: Array[Dictionary] = []
@@ -969,6 +1016,11 @@ func tick_blobs() -> bool:
 			any_active = true
 	blobs = remaining
 	return any_active
+
+## Backward-compatible single-step tick (advances blobs by exactly one step,
+## ignoring the timeline). Retained for callers/tests that drive blobs manually.
+func tick_blobs() -> bool:
+	return _tick_blobs_once()
 
 ## Arm a bomb on the floor so it detonates after a fixed number of hero rounds.
 func arm_bomb(cell: int, bomb: Variant, turns_left: int) -> void:
