@@ -15,6 +15,13 @@ const SMOKE_SEED_VOLUME: float = 40.0
 ## Regrowth volume seeded per cell by a Regrowth Bomb, mirroring SPD's
 ## `Blob.seed(i, 10, Regrowth.class)` over the radius-3 blast footprint.
 const REGROWTH_SEED_VOLUME: float = 10.0
+## Freezing volume seeded per cell by a Frost Bomb, mirroring SPD FrostBomb:
+## radius-2 normal explosion, then `Blob.seed(i, 10, Freezing.class)` across
+## every reachable non-solid cell in the blast.
+const FROST_SEED_VOLUME: float = 10.0
+## SPD FrostBomb also applies a short direct Frost buff to characters in the
+## blast footprint in addition to the lingering Freezing blob.
+const FROST_DIRECT_DURATION: float = 2.0
 const HEALING_CURE_IDS: Array[String] = [
 	"Poison", "Cripple", "Weakness", "Bleeding", "Blindness", "Burning",
 	"Ooze", "Paralysis", "Slow", "Vertigo", "Chill", "Charm",
@@ -126,13 +133,19 @@ func _apply_area_effect(bomb_pos: int, cells: Array[int], dungeon_level: Variant
 				MessageLog.add_warning("Flames engulf the area!")
 
 		BombType.FROST:
-			# Freeze characters in the area
+			# SPD FrostBomb keeps normal blast damage, then seeds Freezing across
+			# the radius-2 footprint and applies a short direct Frost/Frozen buff.
+			var frost_cells: Array[int] = cells
+			if dungeon_level != null and dungeon_level.has_method("add_blob"):
+				frost_cells = Blob.blast_cells(dungeon_level, bomb_pos, radius)
+				for cell: int in frost_cells:
+					dungeon_level.add_blob(FreezingBlob.new(), cell, FROST_SEED_VOLUME)
 			if dungeon_level != null and dungeon_level.has_method("get_chars_at_positions"):
-				var chars: Array = dungeon_level.get_chars_at_positions(cells)
+				var chars: Array = dungeon_level.get_chars_at_positions(frost_cells)
 				for ch: Variant in chars:
 					if ch != null and ch.has_method("add_buff"):
-						var frost: Paralysis = Paralysis.new()
-						frost.set_duration(5.0)
+						var frost: Frozen = Frozen.new()
+						frost.set_duration(FROST_DIRECT_DURATION)
 						ch.add_buff(frost)
 			if MessageLog:
 				MessageLog.add_info("Ice crystals spread across the area!")
@@ -272,6 +285,9 @@ func value() -> int:
 	match item_id:
 		"bomb":
 			return 20 * quantity
+		"frost_bomb":
+			# SPD FrostBomb value is the base bomb plus ingredient price: 20 + 30.
+			return 50 * quantity
 		"holy_bomb", "arcane_bomb":
 			return 40 * quantity
 		_:
@@ -327,9 +343,10 @@ static func create(bomb_id: String) -> Bomb:
 
 		"frost_bomb":
 			bomb.item_name = "Frost Bomb"
-			bomb.description = "Explodes in a burst of cold, freezing everything nearby."
-			bomb.damage_min = 5
-			bomb.damage_max = 15
+			bomb.description = "Explodes in a wide burst of cold, freezing everything nearby."
+			bomb.radius = 2
+			bomb.damage_min = 10
+			bomb.damage_max = 30
 			bomb.bomb_type = BombType.FROST
 			bomb.icon_color = Color(0.4, 0.7, 1.0)
 
