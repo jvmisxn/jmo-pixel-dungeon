@@ -45,14 +45,30 @@ func run(t: Object) -> void:
 		"test level marks the fall cell as a chasm"
 	)
 	var fall_roll: int = Chasm.fall_damage(hero)
-	t.check(fall_roll >= 10 and fall_roll <= 20, "chasm fall damage stays in SPD's HT/6..HT/3 range")
+	t.check(fall_roll == 30, "full-health chasm fall damage uses SPD's current-HP floor")
 	t.check(not Chasm.can_cross(hero), "grounded hero cannot cross chasms safely")
 
 	seed(0xC4A5)
 	var damage: int = Chasm.apply_landing_damage(hero, level)
-	t.check(damage >= 10 and damage <= 20, "landing damage reports the SPD fall amount")
+	t.check(damage == 30, "landing damage reports the SPD current-HP-scaled fall amount")
 	t.check(hero.hp == 60 - damage, "landing damage reduces HP without instant-killing the hero")
 	t.check(hero.has_buff("Cripple"), "landing damage applies cripple")
+	var bleed: Bleeding = hero.get_buff("Bleeding") as Bleeding
+	t.check(bleed != null, "landing damage applies bleeding")
+	t.check(roundi(bleed.bleed_level) == 5, "full-health fall applies SPD's low bleed amount")
+
+	var wounded_hero: Hero = _make_hero(chasm_pos, level)
+	wounded_hero.hp = 15
+	seed(0xC4A5)
+	var wounded_damage: int = Chasm.fall_damage(wounded_hero)
+	t.check(
+		wounded_damage >= 7 and wounded_damage <= 15,
+		"low-health chasm fall damage uses HP/2..HT/4 range"
+	)
+	t.check(
+		roundi(Chasm.fall_bleed_level(wounded_hero)) == 8,
+		"low-health chasm fall applies stronger SPD bleed"
+	)
 
 	var levitating_hero: Hero = _make_hero(chasm_pos, level)
 	var levitation := Levitation.new()
@@ -92,11 +108,13 @@ func run(t: Object) -> void:
 	t.check(bottom_scene.refreshed, "bottom-depth chasm fall refreshes without transitioning")
 	t.check(bottom_hero.pos != chasm_pos, "bottom-depth chasm fall moves hero off the chasm")
 	t.check(bottom_level.is_passable(bottom_hero.pos), "bottom-depth chasm fall lands on a passable cell")
-	t.check(bottom_hero.hp >= 40 and bottom_hero.hp <= 50, "bottom-depth chasm fall applies landing damage once")
+	t.check(bottom_hero.hp == 30, "bottom-depth chasm fall applies current-HP landing damage once")
+	t.check(bottom_hero.has_buff("Bleeding"), "bottom-depth chasm fall applies landing bleed")
 	GameManager.depth = original_depth
 
 	hero.free()
 	levitating_hero.free()
+	wounded_hero.free()
 	safe_hero.free()
 	bottom_hero.free()
 
