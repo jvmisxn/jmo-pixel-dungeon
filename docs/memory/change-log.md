@@ -2,6 +2,9 @@
 
 ## 2026-07-20
 
+- Tags: traps, blobs, electricity, source-fidelity, tests
+- Routed `ShockingTrap` and `StormTrap` through a real `Electricity` blob instead of invented immediate direct-damage/chain/storm/Blindness logic (SPD parity plan Phase 2, blob seeders/routing; backlog audit:S20). Source check against current upstream `ShockingTrap.java`, `StormTrap.java`, and `Electricity.java`: Shocking seeds `Electricity` at charge 10 over passable `NEIGHBOURS9`, Storm seeds charge 20 over the passable radius-2 distance map, and the blob handles water conduction, Paralysis, odd-charge chip damage, and one-charge-per-tick decay. Added `src/actors/blobs/electricity.gd`, rewrote both traps to seed it, and added `test_electricity_traps.gd` coverage for seeding volume/footprints, deferred paralysis, no immediate direct damage, no invented Blindness, and connected-water conduction.
+
 - Tags: mobs, invisibility, ai, source-fidelity, tests
 - Fixed a chase-parity bug where drinking a Potion of Invisibility applied the `Invisibility` buff and incremented `hero.invisible`, but hostile mob detection ignored that counter and continued treating the hero as visible. `_find_visible_heroes()` now filters out invisible heroes, and `_act_hunting()` only attacks or refreshes `target_pos` when the target is actually detectable; an invisible target is pursued only to the last-known cell and then cleared. Added `test_mob_invisibility_targeting.gd` to lock visible-vs-invisible hero detection and the adjacent invisible target regression.
 
