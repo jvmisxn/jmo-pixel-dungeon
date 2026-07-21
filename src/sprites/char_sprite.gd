@@ -60,7 +60,7 @@ var render_shadow: bool = false
 var shadow_width: float = 1.2
 var shadow_height: float = 0.25
 var shadow_overlap: float = 1.0
-var perspective_raise: float = 6.0 / 16.0
+var perspective_raise: float = 2.0 / 16.0
 
 # --- Sleeping state (driven by Mob/Hero update, like original) ---
 var sleeping: bool = false

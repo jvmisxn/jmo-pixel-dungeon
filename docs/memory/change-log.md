@@ -2,6 +2,9 @@
 
 ## 2026-07-21
 
+- Tags: visuals, sprites, shadow, alignment, tests
+- Lowered the shared character sprite perspective raise from 6px to 2px so the hero/body feet and shadow sit near the bottom baseline of the occupied 16px tile instead of floating high above door/floor alignment. Added regression coverage in `test_char_sprite_animations.gd` for feet near the tile bottom and the shadow landing on the occupied tile baseline. Local `git diff --check` clean; `godot --headless --path . --import` clean; full headless suite passed (1955 checks, 0 failures, Godot 4.7.1).
+
 - Tags: chasms, pitfall, landing-damage, source-fidelity, tests
 - Tightened chasm/Pitfall landing effects against current upstream `Chasm.java` (SPD parity plan Phase 2, chasm/pitfall landing). Source check: `Chasm.heroLand()` applies Cripple, applies Bleeding at `round(HT / (6 + 6 * HP/HT))`, then deals `max(HP/2, NormalIntRange(HP/2, HT/4))` damage, so healthier heroes take a larger upfront hit while badly wounded heroes take less immediate damage but stronger bleed. The port's `Chasm.fall_damage()` now uses current HP instead of the stale `HT/6..HT/3` range, `apply_landing_damage()` adds the matching Bleeding before damage, and `test_chasm_fall.gd` now covers full-health and low-health damage/bleed plus bottom-depth fall recovery. Remaining documented divergence: no FeatherFall-specific landing immunity/process hook yet, and PitRoom landing generation/platform semantics are still separate follow-up work.
 
