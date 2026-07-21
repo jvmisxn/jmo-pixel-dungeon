@@ -51,9 +51,9 @@ func _create_random_trap() -> Trap:
 func _trap_for_weighted_roll(roll: float) -> Trap:
 	# Upstream HallsLevel weights: Frost/Storm/Corrosion/Blazing/Disintegration x4,
 	# Rockfall/Flashing/Guardian/Weakening x2, then rare utility/lethal traps
-	# (Disarming/Summoning/Warping/Cursing/Grim/Pitfall x1). Omit only trap classes
-	# not present in this port (Distortion) and preserve source order.
-	var slot: int = clampi(int(floor(roll * 36.0)), 0, 35)
+	# (Disarming/Summoning/Warping/Cursing/Grim/Pitfall/Distortion/Gateway/Geyser x1).
+	# Preserve source order.
+	var slot: int = clampi(int(floor(roll * 37.0)), 0, 36)
 	if slot < 4:
 		return FrostTrap.new()
 	elif slot < 8:
@@ -85,6 +85,8 @@ func _trap_for_weighted_roll(roll: float) -> Trap:
 	elif slot < 34:
 		return PitfallTrap.new()
 	elif slot < 35:
+		return DistortionTrap.new()
+	elif slot < 36:
 		return GatewayTrap.new()
 	else:
 		return GeyserTrap.new()
