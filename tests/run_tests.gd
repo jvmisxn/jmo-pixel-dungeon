@@ -23,6 +23,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_scene_transition_current_scene.gd",
 	"res://tests/cases/test_audio_manager_assets.gd",
 	"res://tests/cases/test_mobile_hud_input.gd",
+	"res://tests/cases/test_hud_desktop_buffs.gd",
 	"res://tests/cases/test_game_menu_access.gd",
 	"res://tests/cases/test_touch_gesture_routing.gd",
 	"res://tests/cases/test_hud_window_stack.gd",

@@ -2,6 +2,9 @@
 
 ## 2026-07-20
 
+- Tags: hud, buffs, desktop, source-fidelity, tests
+- Restored active buff/debuff visibility on desktop HUD without reviving `StatusPane`: the existing `MobileBuffsRow` now shows whenever it has `BuffIcon` children, while keeping the mobile placement/height behavior intact. Added `test_hud_desktop_buffs.gd` coverage for a desktop viewport, live `Poison` add/remove signals, and the row hiding again when no local-hero buffs remain.
+
 - Tags: traps, blobs, electricity, source-fidelity, tests
 - Routed `ShockingTrap` and `StormTrap` through a real `Electricity` blob instead of invented immediate direct-damage/chain/storm/Blindness logic (SPD parity plan Phase 2, blob seeders/routing; backlog audit:S20). Source check against current upstream `ShockingTrap.java`, `StormTrap.java`, and `Electricity.java`: Shocking seeds `Electricity` at charge 10 over passable `NEIGHBOURS9`, Storm seeds charge 20 over the passable radius-2 distance map, and the blob handles water conduction, Paralysis, odd-charge chip damage, and one-charge-per-tick decay. Added `src/actors/blobs/electricity.gd`, rewrote both traps to seed it, and added `test_electricity_traps.gd` coverage for seeding volume/footprints, deferred paralysis, no immediate direct damage, no invented Blindness, and connected-water conduction.
 

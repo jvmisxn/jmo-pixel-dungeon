@@ -1198,7 +1198,7 @@ func _layout_status_overlay(status_container: Control) -> void:
 func _layout_mobile_buffs_row(status_container: Control) -> void:
 	if _mobile_buffs_row == null or status_container == null:
 		return
-	_mobile_buffs_row.visible = _is_mobile_layout() and _mobile_buffs_row.get_child_count() > 0
+	_mobile_buffs_row.visible = _mobile_buffs_row.get_child_count() > 0
 	if not _mobile_buffs_row.visible:
 		_mobile_buffs_row.size = Vector2.ZERO
 		return

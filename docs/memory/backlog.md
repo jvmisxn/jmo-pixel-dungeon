@@ -2,6 +2,7 @@
 
 ## High Priority
 
+- [DONE][hud][source-fidelity] Desktop HUD now exposes active local-hero buffs/debuffs through the existing `MobileBuffsRow`/`BuffIcon` strip whenever it has children, matching mobile live add/remove refresh behavior without reviving `StatusPane`. Covered by `test_hud_desktop_buffs.gd`.
 - [DONE][timeline][source-fidelity] SPD parity plan Phase 1 slice 4: SPD-style volume-conserving blob diffusion landed. `Blob._evolve()` now averages each open cell with its open cardinal neighbours and subtracts `decay_rate` (mirroring upstream `Blob.evolve()`'s `sum/count - 1`), replacing the copy-outward `max()` model that grew total volume every step; `spread_rate == 0` blobs route through `_decay_in_place()`. Covered by `test_blobs.gd` (volume non-explosion, decay-reduces-volume, radial shape, first-step conservation). Slices 1–3 (scheduler persistence, timed buffs on shared game-time, blobs on `Level.advance_blobs()`) were the prerequisites. Remaining blob gaps are content/routing (see S19/S20 items below: plant/trap routing, missing blob classes, serialize-through-contract), not diffusion math.
 - Harden save/load contracts for `Hero`, `Level`, `Mob`, and related runtime state.
 - Identify which systems should be moved toward cleaner core-vs-presentation boundaries.
