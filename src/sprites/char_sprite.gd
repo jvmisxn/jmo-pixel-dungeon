@@ -97,7 +97,7 @@ var eye_color: Color = Color(0.9, 0.1, 0.1)
 func _ready() -> void:
 	_shadow = Sprite2D.new()
 	_shadow.centered = true
-	_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(_shadow)
 	_sprite = Sprite2D.new()
 	_sprite.centered = true
@@ -246,7 +246,23 @@ func play_zap(target: int, duration: float = 0.2) -> void:
 	_anim_state = AnimState.ZAP
 	is_animating = true
 	_play_sheet_animation(AnimState.ZAP)
-	play_attack(target, duration)
+	var target_world: Vector2 = _cell_to_world(target)
+	var dx: float = target_world.x - position.x
+	if dx > 0.1:
+		_sprite.flip_h = false
+	elif dx < -0.1:
+		_sprite.flip_h = true
+	var dir: Vector2 = (target_world - position).normalized()
+	var lunge_pos: Vector2 = position + dir * (SPRITE_SIZE * 0.5)
+
+	if _move_tween != null:
+		_move_tween.kill()
+	_move_tween = create_tween()
+	_move_tween.tween_property(self, "position", lunge_pos, duration * 0.4)\
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_move_tween.tween_property(self, "position", _cell_to_world(cell_pos), duration * 0.6)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_move_tween.tween_callback(_on_attack_complete)
 
 ## Jump to a target cell with a parabolic arc. Matches original CharSprite.jump().
 ## Used for Pitfall landing, Heroic Leap, and various teleport effects.
@@ -390,6 +406,7 @@ func setup_from_sheet(sheet: Texture2D, region: Rect2) -> void:
 	_base_frame_rect = region
 	if _sprite:
 		_set_sheet_frame_region(region)
+		_apply_perspective_raise()
 	_update_shadow_visual()
 
 
@@ -491,6 +508,7 @@ func _generate_sprite() -> void:
 	if _sprite:
 		_sprite.texture = tex
 		_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_apply_perspective_raise()
 	_update_shadow_visual()
 
 
@@ -503,6 +521,7 @@ func _set_sheet_frame_region(region: Rect2) -> void:
 	atlas.filter_clip = true
 	_sprite.texture = atlas
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_apply_perspective_raise()
 
 
 func _play_sheet_animation(state: AnimState) -> void:
@@ -557,15 +576,30 @@ func _update_shadow_visual() -> void:
 	if ResourceLoader.exists(SHADOW_PATH):
 		shadow_texture = load(SHADOW_PATH) as Texture2D
 	_shadow.texture = shadow_texture
+	_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_shadow.visible = render_shadow and shadow_texture != null
-	_shadow.position = Vector2(0.0, TILE_SIZE * 0.34 + shadow_offset * TILE_SIZE)
+	var frame_size: Vector2 = _current_frame_size()
+	var sprite_raise: float = TILE_SIZE * perspective_raise
+	_shadow.position = Vector2(0.0, frame_size.y * 0.5 - sprite_raise + shadow_offset * frame_size.y)
 	if shadow_texture != null:
 		var width: float = maxf(1.0, float(shadow_texture.get_width()))
 		var height: float = maxf(1.0, float(shadow_texture.get_height()))
 		_shadow.scale = Vector2(
-			(SPRITE_SIZE * shadow_width) / width,
-			(SPRITE_SIZE * shadow_height) / height
+			(frame_size.x * shadow_width) / width,
+			(frame_size.y * shadow_height) / height
 		)
+
+
+func _apply_perspective_raise() -> void:
+	if _sprite == null:
+		return
+	_sprite.position = Vector2(0.0, -TILE_SIZE * perspective_raise)
+
+
+func _current_frame_size() -> Vector2:
+	if _base_frame_rect.size.x > 0.0 and _base_frame_rect.size.y > 0.0:
+		return _base_frame_rect.size
+	return Vector2(SPRITE_SIZE, SPRITE_SIZE)
 
 ## Override in subclasses for class-specific drawing.
 func _draw_character(img: Image) -> void:

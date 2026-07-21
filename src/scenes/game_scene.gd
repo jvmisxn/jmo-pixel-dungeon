@@ -1002,7 +1002,9 @@ func _apply_snapshot_action_feedback(sprite_node: Variant, current_pos: int, pre
 					effect_manager.shoot_projectile(current_pos, target_pos, Color(0.9, 0.85, 0.65), 260.0)
 		"zap_wand":
 			if target_pos >= 0:
-				if sprite_node.has_method("play_attack"):
+				if sprite_node.has_method("play_zap"):
+					sprite_node.play_zap(target_pos)
+				elif sprite_node.has_method("play_attack"):
 					sprite_node.play_attack(target_pos)
 				if effect_manager != null:
 					effect_manager.lightning(current_pos, target_pos, Color(0.6, 0.8, 1.0))
@@ -1621,10 +1623,17 @@ func _preview_online_local_action(hero: Variant, action: Dictionary) -> void:
 				hero_sprite.move_to(target_pos)
 				if game_camera and tile_map:
 					game_camera.set_target(tile_map.cell_to_world(target_pos))
-		"attack", "throw_item", "zap_wand":
+		"attack", "throw_item":
 			var target_pos: int = int(action.get("target_pos", -1))
 			if target_pos >= 0 and hero_sprite.has_method("play_attack"):
 				hero_sprite.play_attack(target_pos)
+		"zap_wand":
+			var target_pos: int = int(action.get("target_pos", -1))
+			if target_pos >= 0:
+				if hero_sprite.has_method("play_zap"):
+					hero_sprite.play_zap(target_pos)
+				elif hero_sprite.has_method("play_attack"):
+					hero_sprite.play_attack(target_pos)
 		"search":
 			if effect_manager:
 				effect_manager.show_status(hero.pos, "Search", Color(0.85, 0.9, 0.65))
@@ -2036,7 +2045,10 @@ func _animate_action_for_hero(hero: Variant, action: Dictionary) -> void:
 		"zap_wand":
 			var target: int = action.get("target_pos", -1)
 			if target >= 0:
-				hero_sprite.play_attack(target)
+				if hero_sprite.has_method("play_zap"):
+					hero_sprite.play_zap(target)
+				else:
+					hero_sprite.play_attack(target)
 
 func _on_online_action_requested(peer_id: int, slot_index: int, action: Dictionary) -> void:
 	var input_hero: Variant = _get_input_hero()
@@ -2664,7 +2676,10 @@ func _resolve_targeting(cell: int) -> void:
 		var acting_hero: Variant = _get_input_hero()
 		var hero_sprite: Variant = _hero_sprites.get(acting_hero.actor_id) if acting_hero != null else null
 		if hero_sprite != null:
-			hero_sprite.play_attack(cell)
+			if item != null and item.has_method("zap") and hero_sprite.has_method("play_zap"):
+				hero_sprite.play_zap(cell)
+			else:
+				hero_sprite.play_attack(cell)
 	if callback.is_valid():
 		callback.call(cell)
 	call_deferred("refresh_after_turn")

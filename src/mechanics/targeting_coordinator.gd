@@ -61,7 +61,10 @@ static func resolve(scene: Variant, cell: int) -> void:
 		var acting_hero: Variant = scene._get_input_hero()
 		var hero_sprite: Variant = scene._hero_sprites.get(acting_hero.actor_id) if acting_hero != null else null
 		if hero_sprite != null:
-			hero_sprite.play_attack(cell)
+			if item.has_method("zap") and hero_sprite.has_method("play_zap"):
+				hero_sprite.play_zap(cell)
+			else:
+				hero_sprite.play_attack(cell)
 	if callback.is_valid():
 		callback.call(cell)
 	scene.call_deferred("refresh_after_turn")
