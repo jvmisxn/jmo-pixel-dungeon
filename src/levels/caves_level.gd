@@ -48,14 +48,32 @@ func _create_secret_room() -> Room:
 		return SecretGardenRoom.new()
 
 func _create_random_trap() -> Trap:
-	var roll: float = randf()
-	if roll < 0.25:
-		return RockfallTrap.new()
-	elif roll < 0.45:
+	return _trap_for_weighted_roll(randf())
+
+func _trap_for_weighted_roll(roll: float) -> Trap:
+	# Upstream CavesLevel weights: Burning/PoisonDart/Frost/Storm/Corrosion x4,
+	# Gripping/Rockfall/Guardian x2, then rare utility/depth traps. Omit only
+	# classes not present in this port and preserve source order.
+	var slot: int = clampi(int(floor(roll * 29.0)), 0, 28)
+	if slot < 4:
+		return FireTrap.new()
+	elif slot < 8:
 		return PoisonTrap.new()
-	elif roll < 0.65:
-		return ExplosiveTrap.new()
-	elif roll < 0.85:
-		return CorrosionTrap.new()
-	else:
+	elif slot < 12:
+		return FrostTrap.new()
+	elif slot < 16:
 		return StormTrap.new()
+	elif slot < 20:
+		return CorrosionTrap.new()
+	elif slot < 22:
+		return GrippingTrap.new()
+	elif slot < 24:
+		return RockfallTrap.new()
+	elif slot < 26:
+		return GuardianTrap.new()
+	elif slot < 27:
+		return SummoningTrap.new()
+	elif slot < 28:
+		return WarpingTrap.new()
+	else:
+		return PitfallTrap.new()
