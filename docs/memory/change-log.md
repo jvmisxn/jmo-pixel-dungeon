@@ -2,6 +2,9 @@
 
 ## 2026-07-21
 
+- Tags: traps, prison, trap-table, source-fidelity, tests
+- Replaced `PrisonLevel`'s legacy old-Pixel-Dungeon trap table with the upstream Shattered `PrisonLevel.trapClasses()`/`trapChances()` weighting (total 32): Chilling/Shocking/Toxic/Burning/PoisonDart x4, Alarm/Ooze/Gripping x2, then Confusion/Flock/Summoning/Teleportation/Gateway/Geyser x1, preserving source order via a `_trap_for_weighted_roll()` slot helper like the other regions. This drops the non-upstream ParalyticTrap from Prison and adds the previously-missing Toxic/Ooze/Confusion/Flock/Summoning/Teleport/Gateway/Geyser rolls. Depth-1 special-casing was Sewer-only, so no floor-1 guard is needed here. Added `_test_prison_uses_source_weighted_trap_table` / `_test_prison_no_longer_uses_paralytic_trap` in `test_region_trap_tables.gd`, and removed the now-stale `_check_prison_pool_can_roll_paralytic_trap` assertion from `test_paralytic_trap.gd` (the paralytic-gas seeding coverage stays). `git diff --check` clean; `godot --headless --path . --import` clean; full headless suite passed (2000 checks, 0 failures, Godot 4.7.1).
+
 - Tags: visuals, sprites, shadow, alignment, tests
 - Lowered the shared character sprite perspective raise from 6px to 2px so the hero/body feet and shadow sit near the bottom baseline of the occupied 16px tile instead of floating high above door/floor alignment. Added regression coverage in `test_char_sprite_animations.gd` for feet near the tile bottom and the shadow landing on the occupied tile baseline. Local `git diff --check` clean; `godot --headless --path . --import` clean; full headless suite passed (1955 checks, 0 failures, Godot 4.7.1).
 

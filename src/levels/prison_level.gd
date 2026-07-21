@@ -41,21 +41,39 @@ func _create_secret_room() -> Room:
 		return SecretWellRoom.new()
 
 func _create_random_trap() -> Trap:
-	# Original PrisonLevel trapClasses with weights:
-	# ChillingTrap(4), ShockingTrap(4), ToxicTrap/PoisonTrap(4), BurningTrap/FireTrap(4),
-	# ParalyticTrap(2), AlarmTrap(2), GrippingTrap(2)
-	var roll: float = randf()
-	if roll < 0.1818:
+	return _trap_for_weighted_roll(randf())
+
+func _trap_for_weighted_roll(roll: float) -> Trap:
+	# Upstream PrisonLevel weights (total 32): Chilling/Shocking/Toxic/Burning/
+	# PoisonDart x4, Alarm/Ooze/Gripping x2, then Confusion/Flock/Summoning/
+	# Teleportation/Gateway/Geyser x1. Port maps BurningTrap->FireTrap and
+	# PoisonDartTrap->PoisonTrap. Preserve source order.
+	var slot: int = clampi(int(floor(roll * 32.0)), 0, 31)
+	if slot < 4:
 		return ChillingTrap.new()
-	elif roll < 0.3636:
+	elif slot < 8:
 		return ShockingTrap.new()
-	elif roll < 0.5455:
-		return PoisonTrap.new()
-	elif roll < 0.7273:
+	elif slot < 12:
+		return ToxicTrap.new()
+	elif slot < 16:
 		return FireTrap.new()
-	elif roll < 0.8182:
-		return ParalyticTrap.new()
-	elif roll < 0.9091:
+	elif slot < 20:
+		return PoisonTrap.new()
+	elif slot < 22:
 		return AlarmTrap.new()
-	else:
+	elif slot < 24:
+		return OozeTrap.new()
+	elif slot < 26:
 		return GrippingTrap.new()
+	elif slot < 27:
+		return ConfusionTrap.new()
+	elif slot < 28:
+		return FlockTrap.new()
+	elif slot < 29:
+		return SummoningTrap.new()
+	elif slot < 30:
+		return TeleportTrap.new()
+	elif slot < 31:
+		return GatewayTrap.new()
+	else:
+		return GeyserTrap.new()

@@ -5,6 +5,8 @@ const ToxicTrapScript := preload("res://src/levels/traps/toxic_trap.gd")
 
 func run(t: Object) -> void:
 	_test_sewer_uses_source_weighted_trap_table(t)
+	_test_prison_uses_source_weighted_trap_table(t)
+	_test_prison_no_longer_uses_paralytic_trap(t)
 	_test_caves_uses_source_weighted_trap_table(t)
 	_test_city_uses_source_weighted_trap_table(t)
 	_test_city_no_longer_uses_halls_only_grim_trap(t)
@@ -40,6 +42,36 @@ func _test_sewer_uses_source_weighted_trap_table(t: Object) -> void:
 		var trap: Trap = level._trap_for_weighted_roll(float(expectation[0]))
 		t.check(trap.trap_name == String(expectation[1]),
 			"Sewer trap roll %.3f creates %s" % [float(expectation[0]), String(expectation[1])])
+
+func _test_prison_uses_source_weighted_trap_table(t: Object) -> void:
+	var level := PrisonLevel.new()
+	var expectations: Array[Array] = [
+		[0.00, "chilling trap"],
+		[4.0 / 32.0, "shocking trap"],
+		[8.0 / 32.0, "toxic gas trap"],
+		[12.0 / 32.0, "fire trap"],
+		[16.0 / 32.0, "poison dart trap"],
+		[20.0 / 32.0, "alarm trap"],
+		[22.0 / 32.0, "ooze trap"],
+		[24.0 / 32.0, "gripping trap"],
+		[26.0 / 32.0, "confusion gas trap"],
+		[27.0 / 32.0, "flock trap"],
+		[28.0 / 32.0, "summoning trap"],
+		[29.0 / 32.0, "teleportation trap"],
+		[30.0 / 32.0, "gateway trap"],
+		[31.0 / 32.0, "geyser trap"],
+	]
+	for expectation: Array in expectations:
+		var trap: Trap = level._trap_for_weighted_roll(float(expectation[0]))
+		t.check(trap.trap_name == String(expectation[1]),
+			"Prison trap roll %.3f creates %s" % [float(expectation[0]), String(expectation[1])])
+
+func _test_prison_no_longer_uses_paralytic_trap(t: Object) -> void:
+	var level := PrisonLevel.new()
+	for i: int in range(32):
+		var trap: Trap = level._trap_for_weighted_roll((float(i) + 0.5) / 32.0)
+		t.check(trap.trap_name != "paralytic gas trap",
+			"Prison weighted slot %d no longer uses the legacy paralytic trap" % i)
 
 func _test_caves_uses_source_weighted_trap_table(t: Object) -> void:
 	var level := CavesLevel.new()

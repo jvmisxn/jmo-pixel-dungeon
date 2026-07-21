@@ -20,7 +20,6 @@ func _make_hero(pos: int, level: Level) -> Hero:
 
 func run(t: Object) -> void:
 	_check_trap_seeds_paralytic_gas(t)
-	_check_prison_pool_can_roll_paralytic_trap(t)
 
 func _check_trap_seeds_paralytic_gas(t: Object) -> void:
 	var original_hero: Node = GameManager.hero
@@ -49,15 +48,6 @@ func _check_trap_seeds_paralytic_gas(t: Object) -> void:
 	GameManager.hero = original_hero
 	GameManager.current_level = original_level
 	hero.free()
-
-func _check_prison_pool_can_roll_paralytic_trap(t: Object) -> void:
-	var prison := PrisonLevel.new()
-	var found: bool = false
-	for _i: int in range(200):
-		if prison._create_random_trap() is ParalyticTrap:
-			found = true
-			break
-	t.check(found, "Prison trap pool can roll ParalyticTrap")
 
 func _has_blob(level: Level, blob_id: String) -> bool:
 	for entry: Dictionary in level.blobs:
