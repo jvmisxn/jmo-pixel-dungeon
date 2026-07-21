@@ -2,6 +2,15 @@
 
 ## 2026-07-20
 
+- Tags: hud, ui, toolbar, buff-icons, source-fidelity, tests
+- Moved another HUD chrome slice onto real SPD atlas assets (SPD parity plan Phase 4, learnability/UX parity). The HUD status overlay now uses the `status_pane.png` hero portrait socket and the 24x32 `avatars.png` class portrait frame instead of the generic placeholder, toolbar action buttons now use icon-only SPD atlas regions with tooltips while preserving mobile quickslot paging, and `BuffIcon` uses known regions from `buffs.png` for common buff/debuff ids before falling back to the old procedural marker. Added/updated HUD tests for atlas-backed status portraits, non-empty toolbar icon regions, icon-only compact behavior, and existing mobile safe-area fit.
+
+- Tags: sprites, animation, sewer-mobs, source-fidelity, tests
+- Extended the SPD mob frame-animation slice to the remaining sewer common mobs. `MobSprite` now maps Crab/Great Crab, Snake, Slime, and Swarm frame dimensions plus idle/move/attack/zap/death sequences from their upstream sprite classes, leaving only unmapped mobs on the static fallback. Expanded `test_char_sprite_animations.gd` with attack-frame checks for those four sheets.
+
+- Tags: traps, blobs, caves, confusion-gas, source-fidelity, tests
+- Restored the upstream Caves `ConfusionTrap` slot and routed it through the shared `ConfusionGas` blob (SPD parity plan Phase 2, blob seeders/trap weighting). Source check against current upstream `ConfusionTrap.java`, `ConfusionGas.java`, and `CavesLevel.java`: Caves includes Confusion as the first rare trap after Guardian; the trap seeds `ConfusionGas` at `300 + 20 * scalingDepth`, and the gas prolongs `Vertigo` on its evolve tick. Added `src/levels/traps/confusion_trap.gd`, inserted it into `CavesLevel._trap_for_weighted_roll()` in source order, and added `test_confusion_trap.gd` plus updated weighted-table coverage. Remaining minor divergence: upstream also marks adjacent mobs with `HazardAssistTracker`, which this port does not implement yet.
+
 - Tags: sprites, animation, shadows, source-fidelity, tests
 - Added a first reusable SPD frame-animation path for character sprites. `CharSprite` now keeps atlas-backed animation maps, advances frame regions over time, returns to idle after movement/attack/operate/jump tweens, and renders the local SPD `interfaces/shadow.png` under linked character sprites. `HeroSprite` now uses the upstream `HeroSprite.updateArmor()` frame sequences for idle, run, attack/zap, operate, and death instead of showing only frame 0 from the class sheet. `MobSprite` now source-maps the common rat/fetid-rat and gnoll/gnoll-trickster sheets to their upstream idle/run/attack/death frame sequences; other mob sheets intentionally remain static until their individual sprite classes are ported. Added `test_char_sprite_animations.gd` coverage proving hero movement and rat attacks advance atlas regions and that shadows use the SPD asset. Local `godot --headless --path . --import`, `git diff --check`, and full headless suite passed (1790 checks, 0 failures, Godot 4.7.1).
 

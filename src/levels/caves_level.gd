@@ -54,7 +54,7 @@ func _trap_for_weighted_roll(roll: float) -> Trap:
 	# Upstream CavesLevel weights: Burning/PoisonDart/Frost/Storm/Corrosion x4,
 	# Gripping/Rockfall/Guardian x2, then rare utility/depth traps. Omit only
 	# classes not present in this port and preserve source order.
-	var slot: int = clampi(int(floor(roll * 29.0)), 0, 28)
+	var slot: int = clampi(int(floor(roll * 30.0)), 0, 29)
 	if slot < 4:
 		return FireTrap.new()
 	elif slot < 8:
@@ -72,8 +72,10 @@ func _trap_for_weighted_roll(roll: float) -> Trap:
 	elif slot < 26:
 		return GuardianTrap.new()
 	elif slot < 27:
-		return SummoningTrap.new()
+		return ConfusionTrap.new()
 	elif slot < 28:
+		return SummoningTrap.new()
+	elif slot < 29:
 		return WarpingTrap.new()
 	else:
 		return PitfallTrap.new()

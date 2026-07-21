@@ -9,16 +9,17 @@ func _test_caves_uses_source_weighted_trap_table(t: Object) -> void:
 	var level := CavesLevel.new()
 	var expectations: Array[Array] = [
 		[0.00, "fire trap"],
-		[4.0 / 29.0, "poison dart trap"],
-		[8.0 / 29.0, "frost trap"],
-		[12.0 / 29.0, "storm trap"],
-		[16.0 / 29.0, "corrosion trap"],
-		[20.0 / 29.0, "gripping trap"],
-		[22.0 / 29.0, "rockfall trap"],
-		[24.0 / 29.0, "guardian trap"],
-		[26.0 / 29.0, "summoning trap"],
-		[27.0 / 29.0, "warping trap"],
-		[28.0 / 29.0, "pitfall trap"],
+		[4.0 / 30.0, "poison dart trap"],
+		[8.0 / 30.0, "frost trap"],
+		[12.0 / 30.0, "storm trap"],
+		[16.0 / 30.0, "corrosion trap"],
+		[20.0 / 30.0, "gripping trap"],
+		[22.0 / 30.0, "rockfall trap"],
+		[24.0 / 30.0, "guardian trap"],
+		[26.0 / 30.0, "confusion gas trap"],
+		[27.0 / 30.0, "summoning trap"],
+		[28.0 / 30.0, "warping trap"],
+		[29.0 / 30.0, "pitfall trap"],
 	]
 	for expectation: Array in expectations:
 		var trap: Trap = level._trap_for_weighted_roll(float(expectation[0]))
