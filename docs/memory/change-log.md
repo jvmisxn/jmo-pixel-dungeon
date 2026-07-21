@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-21
+
+- Tags: traps, pitfall, chasm, boss-levels, source-fidelity, tests
+- Gave `PitfallTrap` the upstream "nowhere to drop" guard (SPD parity plan Phase 2, chasm/pitfall parity; backlog audit:S10 follow-up). Source check against current upstream `PitfallTrap.activate()`: it aborts with the `no_pit` warning when `Dungeon.bossLevel() || Dungeon.depth > 25 || Dungeon.branch != 0`, so a pitfall never functions on a boss floor or past the last droppable depth. The port previously always dropped the triggerer: on a boss level a hero would fall straight past the encounter (cheese), and at `MAX_DEPTH` the fall path relocated + applied landing damage instead of doing nothing. `pitfall_trap.gd._do_effect()` now checks a new `_pit_is_sealed()` helper (`GameManager.is_boss_depth()` or `depth >= ConstantsData.MAX_DEPTH`; branch checks omitted — this port has no level side-branches) and, when sealed, prints the upstream string ("the ground is too solid for a pitfall trap to work here.") and drops nothing while the trap is still consumed as a one-shot. Droppable-floor behavior (hero emits `hero_fell` → `"fall"` transition; non-levitating mob dies) is unchanged. Added `test_pitfall_trap_seal.gd`: proves a boss-depth pitfall neither kills a mob nor falls a hero (but is still consumed), a final-depth pitfall is likewise inert, and a normal floor still drops mobs (attributed to the pitfall) and falls heroes. Local `godot --headless --path . --import` clean; full headless suite passed (1822 checks, 0 failures, Godot 4.7.1). Remaining pitfall divergences (documented, not addressed here): SPD's delayed 3x3 collapse, heap-drop, and PitRoom landing semantics.
+
 ## 2026-07-20
 
 - Tags: hud, ui, toolbar, buff-icons, source-fidelity, tests
