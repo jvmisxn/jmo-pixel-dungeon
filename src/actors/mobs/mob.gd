@@ -208,14 +208,17 @@ func _act_hunting() -> void:
 		if nearest:
 			target = nearest
 
-	# If adjacent, attack — costs attack_delay()
-	if is_adjacent(target.pos):
+	var can_detect_target: bool = _can_detect_char(target)
+
+	# If adjacent, attack — costs attack_delay(). Invisible targets are not
+	# directly attackable; the mob can only chase their last known position.
+	if can_detect_target and is_adjacent(target.pos):
 		attack(target)
 		spend_attack()
 		return
 
 	# Check if can still see target
-	if can_see(target.pos):
+	if can_detect_target:
 		target_pos = target.pos
 	elif pos == target_pos:
 		# Reached last known position, lost the target
@@ -343,15 +346,18 @@ func _find_visible_heroes() -> Array[Char]:
 		# Fallback: check GameManager
 		if GameManager and GameManager.hero and GameManager.hero is Char:
 			var h: Char = GameManager.hero as Char
-			if h.is_alive and can_see(h.pos):
+			if h.is_alive and _can_detect_char(h):
 				heroes.append(h)
 		return heroes
 	# Multiplayer-ready: check all heroes
 	var all_heroes: Array[Char] = level.get_heroes()
 	for h: Char in all_heroes:
-		if h.is_alive and can_see(h.pos):
+		if h.is_alive and _can_detect_char(h):
 			heroes.append(h)
 	return heroes
+
+func _can_detect_char(ch: Char) -> bool:
+	return ch != null and ch.is_alive and ch.invisible <= 0 and can_see(ch.pos)
 
 func _find_nearest_char() -> Char:
 	if level == null:
