@@ -1,8 +1,8 @@
 class_name Stormvine
 extends Plant
-## Applies Rooted and Vertigo to the target, preventing reliable movement.
+## Disorients the target, or grants Warden a short levitation boon.
 
-const ROOT_DURATION: float = 5.0
+const WARDEN_LEVITATION_DURATION: float = Levitation.BASE_DURATION / 2.0
 
 func _init() -> void:
 	plant_id = "Stormvine"
@@ -12,17 +12,21 @@ func _do_effect(char: Variant, _level: Variant) -> void:
 	if char == null:
 		return
 
+	var is_warden: bool = char is Hero and char.hero_subclass == ConstantsData.HeroSubclass.WARDEN
 	if char.has_method("add_buff"):
-		var root: Rooted = Rooted.new()
-		root.set_duration(ROOT_DURATION)
-		char.add_buff(root)
-		var vertigo: Vertigo = Vertigo.new()
-		vertigo.set_duration(ROOT_DURATION)
-		char.add_buff(vertigo)
+		if is_warden:
+			var levitation: Levitation = Levitation.new()
+			levitation.set_duration(WARDEN_LEVITATION_DURATION)
+			char.add_buff(levitation)
+		else:
+			var vertigo: Vertigo = Vertigo.new()
+			vertigo.set_duration(Vertigo.BASE_DURATION)
+			char.add_buff(vertigo)
 
 	if MessageLog:
-		if char.get("is_hero"):
-			MessageLog.add_negative("Thick vines grip your " +
-				"legs and the world spins!")
+		if is_warden:
+			MessageLog.add("The stormvine lifts you into the air!")
+		elif char.get("is_hero"):
+			MessageLog.add_negative("The stormvine makes the world spin!")
 		else:
-			MessageLog.add("Vines grip the %s!" % str(char.get("name")))
+			MessageLog.add("The stormvine disorients the %s!" % str(char.get("name")))
