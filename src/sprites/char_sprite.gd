@@ -9,6 +9,7 @@ const SPRITE_SIZE: int = 16
 const TILE_SIZE: int = 16
 const HP_BAR_WIDTH: float = 14.0
 const HP_BAR_HEIGHT: float = 2.0
+const SHADOW_PATH: String = "res://assets/spd/interfaces/shadow.png"
 
 # --- Floating text color constants (matches original CharSprite.java) ---
 const COLOR_DEFAULT: int = 0xFFFFFF
@@ -42,11 +43,14 @@ var is_animating: bool = false
 
 # --- Visual Components ---
 var _sprite: Sprite2D = null
+var _shadow: Sprite2D = null
 var _hp_bar_bg: ColorRect = null
 var _hp_bar_fill: ColorRect = null
 var _flash_tween: Tween = null
 var _anim_state: AnimState = AnimState.IDLE
 var _move_tween: Tween = null
+var _frame_timer: float = 0.0
+var _frame_cursor: int = 0
 
 # --- Visual state tracking (mirrors original's HashSet<State>) ---
 var _active_states: Dictionary[int, bool] = {}
@@ -75,6 +79,8 @@ var _ground_ring_outline: Color = Color(1.0, 1.0, 1.0, 0.75)
 var sprite_sheet: Texture2D = null
 ## Region within sprite_sheet for the idle frame.
 var sprite_frame_rect: Rect2 = Rect2()
+var _base_frame_rect: Rect2 = Rect2()
+var _sheet_animations: Dictionary[int, Dictionary] = {}
 
 # --- Config (fallback procedural colors) ---
 ## Base body color for this character.
@@ -89,13 +95,20 @@ var eye_color: Color = Color(0.9, 0.1, 0.1)
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
+	_shadow = Sprite2D.new()
+	_shadow.centered = true
+	_shadow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(_shadow)
 	_sprite = Sprite2D.new()
 	_sprite.centered = true
 	add_child(_sprite)
 	_generate_sprite()
+	_update_shadow_visual()
 	_create_hp_bar()
 
 func _process(delta: float) -> void:
+	_update_frame_animation(delta)
+
 	# Update sleeping state for emote icon
 	if sleeping:
 		show_sleep()
@@ -140,6 +153,7 @@ func move_to(pos: int, duration: float = 0.15) -> void:
 	cell_pos = pos
 	is_animating = true
 	_anim_state = AnimState.MOVE
+	_play_sheet_animation(AnimState.MOVE)
 
 	var target_world: Vector2 = new_world
 
@@ -154,6 +168,7 @@ func move_to(pos: int, duration: float = 0.15) -> void:
 func play_attack(target: int, duration: float = 0.2) -> void:
 	_anim_state = AnimState.ATTACK
 	is_animating = true
+	_play_sheet_animation(AnimState.ATTACK)
 	var target_world: Vector2 = _cell_to_world(target)
 	var dx: float = target_world.x - position.x
 	if dx > 0.1:
@@ -184,8 +199,11 @@ func flash(color: Color = Color.RED, duration: float = 0.2) -> void:
 func play_death(duration: float = 0.5) -> void:
 	_anim_state = AnimState.DIE
 	is_animating = true
+	_play_sheet_animation(AnimState.DIE)
 	if _hp_bar_bg:
 		_hp_bar_bg.visible = false
+	if _shadow:
+		_shadow.visible = false
 	hide_emo()
 	if _move_tween != null:
 		_move_tween.kill()
@@ -203,6 +221,7 @@ func play_death(duration: float = 0.5) -> void:
 func play_operate(target: int, duration: float = 0.3) -> void:
 	_anim_state = AnimState.OPERATE
 	is_animating = true
+	_play_sheet_animation(AnimState.OPERATE)
 	var target_world: Vector2 = _cell_to_world(target)
 	var dx: float = target_world.x - position.x
 	if dx > 0.1:
@@ -226,6 +245,7 @@ func play_operate(target: int, duration: float = 0.3) -> void:
 func play_zap(target: int, duration: float = 0.2) -> void:
 	_anim_state = AnimState.ZAP
 	is_animating = true
+	_play_sheet_animation(AnimState.ZAP)
 	play_attack(target, duration)
 
 ## Jump to a target cell with a parabolic arc. Matches original CharSprite.jump().
@@ -237,6 +257,7 @@ func jump(from: int, to: int, height: float = -1.0, duration: float = -1.0) -> v
 	if duration < 0.0:
 		duration = dist * 0.1
 	is_animating = true
+	_play_sheet_animation(AnimState.MOVE)
 	var start_world: Vector2 = _cell_to_world(from)
 	var end_world: Vector2 = _cell_to_world(to)
 	cell_pos = to
@@ -366,12 +387,27 @@ func update_hp_bar(hp: int, ht: int) -> void:
 func setup_from_sheet(sheet: Texture2D, region: Rect2) -> void:
 	sprite_sheet = sheet
 	sprite_frame_rect = region
+	_base_frame_rect = region
 	if _sprite:
-		var atlas: AtlasTexture = AtlasTexture.new()
-		atlas.atlas = sheet
-		atlas.region = region
-		_sprite.texture = atlas
-		_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_set_sheet_frame_region(region)
+	_update_shadow_visual()
+
+
+## Register an atlas-backed animation. Frame ids are horizontal offsets from
+## the base frame region, matching SPD's TextureFilm frame numbering.
+func set_sheet_animation(state: AnimState, frames: Array[int], fps: float, loop: bool) -> void:
+	if frames.is_empty():
+		return
+	_sheet_animations[state] = {
+		"frames": frames.duplicate(),
+		"fps": maxf(0.1, fps),
+		"loop": loop,
+	}
+
+
+func play_idle_animation() -> void:
+	_anim_state = AnimState.IDLE
+	_play_sheet_animation(AnimState.IDLE)
 
 ## Regenerate the procedural texture from current colors.
 func refresh_texture() -> void:
@@ -455,6 +491,81 @@ func _generate_sprite() -> void:
 	if _sprite:
 		_sprite.texture = tex
 		_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_update_shadow_visual()
+
+
+func _set_sheet_frame_region(region: Rect2) -> void:
+	if sprite_sheet == null or _sprite == null:
+		return
+	var atlas: AtlasTexture = AtlasTexture.new()
+	atlas.atlas = sprite_sheet
+	atlas.region = region
+	atlas.filter_clip = true
+	_sprite.texture = atlas
+	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+
+func _play_sheet_animation(state: AnimState) -> void:
+	if sprite_sheet == null or not _sheet_animations.has(state):
+		return
+	_anim_state = state
+	_frame_timer = 0.0
+	_frame_cursor = 0
+	_apply_sheet_animation_frame()
+
+
+func _update_frame_animation(delta: float) -> void:
+	if sprite_sheet == null or not _sheet_animations.has(_anim_state):
+		return
+	var anim: Dictionary = _sheet_animations[_anim_state]
+	var frames: Array = anim.get("frames", [])
+	if frames.size() <= 1:
+		return
+	var fps: float = float(anim.get("fps", 1.0))
+	_frame_timer += delta
+	var frame_interval: float = 1.0 / maxf(0.1, fps)
+	while _frame_timer >= frame_interval:
+		_frame_timer -= frame_interval
+		_frame_cursor += 1
+		if _frame_cursor >= frames.size():
+			if bool(anim.get("loop", false)):
+				_frame_cursor = 0
+			else:
+				_frame_cursor = frames.size() - 1
+				break
+		_apply_sheet_animation_frame()
+
+
+func _apply_sheet_animation_frame() -> void:
+	if sprite_sheet == null or not _sheet_animations.has(_anim_state):
+		return
+	var anim: Dictionary = _sheet_animations[_anim_state]
+	var frames: Array = anim.get("frames", [])
+	if frames.is_empty():
+		return
+	_frame_cursor = clampi(_frame_cursor, 0, frames.size() - 1)
+	var frame_index: int = int(frames[_frame_cursor])
+	var region: Rect2 = _base_frame_rect
+	region.position.x = _base_frame_rect.position.x + float(frame_index) * _base_frame_rect.size.x
+	_set_sheet_frame_region(region)
+
+
+func _update_shadow_visual() -> void:
+	if _shadow == null:
+		return
+	var shadow_texture: Texture2D = null
+	if ResourceLoader.exists(SHADOW_PATH):
+		shadow_texture = load(SHADOW_PATH) as Texture2D
+	_shadow.texture = shadow_texture
+	_shadow.visible = render_shadow and shadow_texture != null
+	_shadow.position = Vector2(0.0, TILE_SIZE * 0.34 + shadow_offset * TILE_SIZE)
+	if shadow_texture != null:
+		var width: float = maxf(1.0, float(shadow_texture.get_width()))
+		var height: float = maxf(1.0, float(shadow_texture.get_height()))
+		_shadow.scale = Vector2(
+			(SPRITE_SIZE * shadow_width) / width,
+			(SPRITE_SIZE * shadow_height) / height
+		)
 
 ## Override in subclasses for class-specific drawing.
 func _draw_character(img: Image) -> void:
@@ -499,10 +610,12 @@ func _create_hp_bar() -> void:
 func _on_move_complete() -> void:
 	_anim_state = AnimState.IDLE
 	is_animating = false
+	_play_sheet_animation(AnimState.IDLE)
 
 func _on_attack_complete() -> void:
 	_anim_state = AnimState.IDLE
 	is_animating = false
+	_play_sheet_animation(AnimState.IDLE)
 
 func _on_death_complete() -> void:
 	_anim_state = AnimState.IDLE
@@ -512,10 +625,12 @@ func _on_death_complete() -> void:
 func _on_operate_complete() -> void:
 	_anim_state = AnimState.IDLE
 	is_animating = false
+	_play_sheet_animation(AnimState.IDLE)
 
 func _on_jump_complete() -> void:
 	_anim_state = AnimState.IDLE
 	is_animating = false
+	_play_sheet_animation(AnimState.IDLE)
 
 # ---------------------------------------------------------------------------
 # Utility

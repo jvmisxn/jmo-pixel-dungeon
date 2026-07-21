@@ -79,6 +79,7 @@ func setup_for_class(p_class: int) -> void:
 ## Matches original HeroSprite.updateArmor().
 func update_armor(tier: int = 0) -> void:
 	armor_tier = tier
+	render_shadow = true
 
 	# Try loading real SPD sprite sheet
 	var sheet_path: String = _CLASS_SHEETS.get(hero_class, "")
@@ -86,9 +87,10 @@ func update_armor(tier: int = 0) -> void:
 		var sheet: Texture2D = load(sheet_path) as Texture2D
 		if sheet != null:
 			# Each armor tier is a row of FRAME_HEIGHT pixels.
-			# First frame (idle) is at column 0 of that row.
 			var row_y: int = armor_tier * FRAME_HEIGHT
 			setup_from_sheet(sheet, Rect2(0, row_y, FRAME_WIDTH, FRAME_HEIGHT))
+			_configure_hero_sheet_animations()
+			play_idle_animation()
 			return
 
 	# Fallback: procedural generation
@@ -108,6 +110,7 @@ func sprint(_speed: float) -> void:
 func read() -> void:
 	_anim_state = AnimState.OPERATE
 	is_animating = true
+	_play_sheet_animation(AnimState.OPERATE)
 	play_operate(cell_pos, 0.5)
 
 
@@ -115,8 +118,11 @@ func read() -> void:
 func play_hero_death(duration: float = 0.9) -> void:
 	_anim_state = AnimState.DIE
 	is_animating = true
+	_play_sheet_animation(AnimState.DIE)
 	if _hp_bar_bg:
 		_hp_bar_bg.visible = false
+	if _shadow:
+		_shadow.visible = false
 	hide_emo()
 	if _flash_tween != null:
 		_flash_tween.kill()
@@ -131,6 +137,16 @@ func play_hero_death(duration: float = 0.9) -> void:
 	_move_tween.tween_property(_sprite, "scale", Vector2(0.9, 0.7), duration)
 	_move_tween.tween_property(self, "position:y", position.y + 5.0, duration)\
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+
+
+func _configure_hero_sheet_animations() -> void:
+	# Matches upstream HeroSprite.updateArmor() frame sequences.
+	set_sheet_animation(AnimState.IDLE, [0, 0, 0, 1, 0, 0, 1, 1], 1.0, true)
+	set_sheet_animation(AnimState.MOVE, [2, 3, 4, 5, 6, 7], float(RUN_FRAMERATE), true)
+	set_sheet_animation(AnimState.DIE, [8, 9, 10, 11, 12, 11], 20.0, false)
+	set_sheet_animation(AnimState.ATTACK, [13, 14, 15, 0], 15.0, false)
+	set_sheet_animation(AnimState.ZAP, [13, 14, 15, 0], 15.0, false)
+	set_sheet_animation(AnimState.OPERATE, [16, 17, 16, 17], 8.0, false)
 
 ## Override: Hero characters do NOT show blood bursts.
 ## Original HeroSprite.bloodBurstA() is intentionally empty for content rating.

@@ -188,6 +188,7 @@ var _death_fading: bool = false
 ## Set up the sprite for a specific mob type.
 func setup_for_mob(p_mob_id: String) -> void:
 	mob_id = p_mob_id
+	render_shadow = true
 	var visuals: Dictionary = MOB_VISUALS.get(mob_id, MOB_VISUALS["rat"])
 	body_color = visuals.get("body", Color(0.5, 0.4, 0.3))
 	accent_color = visuals.get("accent", Color(0.4, 0.35, 0.25))
@@ -203,6 +204,8 @@ func setup_for_mob(p_mob_id: String) -> void:
 			var fh: int = sheet_data.get("fh", 16)
 			var row: int = sheet_data.get("row", 0)
 			setup_from_sheet(sheet, Rect2(0, row * fh, fw, fh))
+			_configure_mob_sheet_animations()
+			play_idle_animation()
 			return
 
 	# Fallback: procedural generation
@@ -239,6 +242,27 @@ func _draw_character(img: Image) -> void:
 func die() -> void:
 	_death_fading = true
 	play_death(FADE_TIME)
+
+
+func _configure_mob_sheet_animations() -> void:
+	match mob_id:
+		"rat", "fetid_rat":
+			# Matches upstream RatSprite.
+			set_sheet_animation(AnimState.IDLE, [0, 0, 0, 1], 2.0, true)
+			set_sheet_animation(AnimState.MOVE, [6, 7, 8, 9, 10], 10.0, true)
+			set_sheet_animation(AnimState.ATTACK, [2, 3, 4, 5, 0], 15.0, false)
+			set_sheet_animation(AnimState.ZAP, [2, 3, 4, 5, 0], 15.0, false)
+			set_sheet_animation(AnimState.DIE, [11, 12, 13, 14], 10.0, false)
+		"gnoll", "gnoll_trickster":
+			# Matches upstream GnollSprite.
+			set_sheet_animation(AnimState.IDLE, [0, 0, 0, 1, 0, 0, 1, 1], 2.0, true)
+			set_sheet_animation(AnimState.MOVE, [4, 5, 6, 7], 12.0, true)
+			set_sheet_animation(AnimState.ATTACK, [2, 3, 0], 12.0, false)
+			set_sheet_animation(AnimState.ZAP, [2, 3, 0], 12.0, false)
+			set_sheet_animation(AnimState.DIE, [8, 9, 10], 12.0, false)
+		_:
+			# Keep unmapped sheets static until their individual SPD frame maps are ported.
+			set_sheet_animation(AnimState.IDLE, [0], 1.0, true)
 
 func fall() -> void:
 	_death_fading = true
