@@ -104,10 +104,10 @@ static var _MOB_SHEETS: Dictionary = {
 	"gnoll":           { "path": "gnoll.png",          "fw": 12, "fh": 15 },
 	"gnoll_trickster": { "path": "gnoll.png",          "fw": 12, "fh": 15, "row": 1 },
 	"crab":            { "path": "crab.png",           "fw": 16, "fh": 16 },
-	"great_crab":      { "path": "crab.png",           "fw": 16, "fh": 16, "row": 1 },
-	"snake":           { "path": "snake.png",          "fw": 12, "fh": 15 },
-	"slime":           { "path": "slime.png",          "fw": 12, "fh": 14 },
-	"swarm":           { "path": "swarm.png",          "fw": 16, "fh": 15 },
+	"great_crab":      { "path": "crab.png",           "fw": 16, "fh": 16, "row": 2 },
+	"snake":           { "path": "snake.png",          "fw": 12, "fh": 11 },
+	"slime":           { "path": "slime.png",          "fw": 14, "fh": 12 },
+	"swarm":           { "path": "swarm.png",          "fw": 16, "fh": 16 },
 	# --- Prison ---
 	"skeleton":        { "path": "skeleton.png",       "fw": 12, "fh": 15 },
 	"thief":           { "path": "thief.png",          "fw": 12, "fh": 13 },
@@ -260,6 +260,44 @@ func _configure_mob_sheet_animations() -> void:
 			set_sheet_animation(AnimState.ATTACK, [2, 3, 0], 12.0, false)
 			set_sheet_animation(AnimState.ZAP, [2, 3, 0], 12.0, false)
 			set_sheet_animation(AnimState.DIE, [8, 9, 10], 12.0, false)
+		"crab":
+			# Matches upstream CrabSprite.
+			set_sheet_animation(AnimState.IDLE, [0, 1, 0, 2], 5.0, true)
+			set_sheet_animation(AnimState.MOVE, [3, 4, 5, 6], 15.0, true)
+			set_sheet_animation(AnimState.ATTACK, [7, 8, 9], 12.0, false)
+			set_sheet_animation(AnimState.ZAP, [7, 8, 9], 12.0, false)
+			set_sheet_animation(AnimState.DIE, [10, 11, 12, 13], 12.0, false)
+		"great_crab":
+			# Matches upstream GreatCrabSprite.
+			set_sheet_animation(AnimState.IDLE, [0, 1, 0, 2], 5.0, true)
+			set_sheet_animation(AnimState.MOVE, [3, 4, 5, 6], 10.0, true)
+			set_sheet_animation(AnimState.ATTACK, [7, 8, 9], 12.0, false)
+			set_sheet_animation(AnimState.ZAP, [7, 8, 9], 12.0, false)
+			set_sheet_animation(AnimState.DIE, [10, 11, 12, 13], 12.0, false)
+		"snake":
+			# Matches upstream SnakeSprite.
+			set_sheet_animation(AnimState.IDLE, [
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 2, 1, 1
+			], 10.0, true)
+			set_sheet_animation(AnimState.MOVE, [4, 5, 6, 7], 8.0, true)
+			set_sheet_animation(AnimState.ATTACK, [8, 9, 10, 9, 0], 15.0, false)
+			set_sheet_animation(AnimState.ZAP, [8, 9, 10, 9, 0], 15.0, false)
+			set_sheet_animation(AnimState.DIE, [11, 12, 13], 10.0, false)
+		"slime":
+			# Matches upstream SlimeSprite.
+			set_sheet_animation(AnimState.IDLE, [0, 1, 1, 0], 3.0, true)
+			set_sheet_animation(AnimState.MOVE, [0, 2, 3, 3, 2, 0], 10.0, true)
+			set_sheet_animation(AnimState.ATTACK, [2, 3, 4, 6, 5], 15.0, false)
+			set_sheet_animation(AnimState.ZAP, [2, 3, 4, 6, 5], 15.0, false)
+			set_sheet_animation(AnimState.DIE, [0, 5, 6, 7], 10.0, false)
+		"swarm":
+			# Matches upstream SwarmSprite.
+			set_sheet_animation(AnimState.IDLE, [0, 1, 2, 3, 4, 5], 15.0, true)
+			set_sheet_animation(AnimState.MOVE, [0, 1, 2, 3, 4, 5], 15.0, true)
+			set_sheet_animation(AnimState.ATTACK, [6, 7, 8, 9], 20.0, false)
+			set_sheet_animation(AnimState.ZAP, [6, 7, 8, 9], 20.0, false)
+			set_sheet_animation(AnimState.DIE, [10, 11, 12, 13, 14], 15.0, false)
 		_:
 			# Keep unmapped sheets static until their individual SPD frame maps are ported.
 			set_sheet_animation(AnimState.IDLE, [0], 1.0, true)

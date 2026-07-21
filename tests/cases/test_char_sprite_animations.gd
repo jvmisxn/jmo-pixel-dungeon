@@ -3,6 +3,7 @@ extends RefCounted
 func run(t: Object) -> void:
 	_test_hero_sheet_animation_frames_advance(t)
 	_test_rat_sheet_animation_frames_advance(t)
+	_test_sewer_mob_sheet_animation_frames_advance(t)
 	_test_sprite_shadow_uses_spd_asset(t)
 	_test_zap_animation_keeps_zap_state(t)
 
@@ -39,6 +40,38 @@ func _test_rat_sheet_animation_frames_advance(t: Object) -> void:
 	t.check(texture != null and int(texture.region.position.x) == 16 * 3,
 		"Rat MobSprite attack advances through SPD attack frames")
 
+	sprite.free()
+
+
+func _test_sewer_mob_sheet_animation_frames_advance(t: Object) -> void:
+	_check_mob_attack_frame(t, "crab", 16, 8, 0.09, "Crab MobSprite attack advances through SPD attack frames")
+	_check_mob_attack_frame(t, "great_crab", 16, 8, 0.09, "Great Crab MobSprite attack advances through SPD attack frames")
+	_check_mob_sheet_row(t, "great_crab", 32, "Great Crab MobSprite uses the upstream blue crab sheet row")
+	_check_mob_attack_frame(t, "snake", 12, 9, 0.07, "Snake MobSprite attack advances through SPD attack frames")
+	_check_mob_attack_frame(t, "slime", 14, 3, 0.07, "Slime MobSprite attack advances through SPD attack frames")
+	_check_mob_attack_frame(t, "swarm", 16, 7, 0.07, "Swarm MobSprite attack advances through SPD attack frames")
+
+
+func _check_mob_attack_frame(t: Object, mob_id: String, frame_width: int, expected_frame: int, delta: float, message: String) -> void:
+	var sprite := MobSprite.new()
+	t.root.add_child(sprite)
+	sprite._ready()
+	sprite.setup_for_mob(mob_id)
+	sprite.place_at(ConstantsData.xy_to_pos(1, 1))
+	sprite.play_attack(ConstantsData.xy_to_pos(2, 1), 0.2)
+	sprite._process(delta)
+	var texture: AtlasTexture = sprite.get("_sprite").texture as AtlasTexture
+	t.check(texture != null and int(texture.region.position.x) == frame_width * expected_frame, message)
+	sprite.free()
+
+
+func _check_mob_sheet_row(t: Object, mob_id: String, expected_y: int, message: String) -> void:
+	var sprite := MobSprite.new()
+	t.root.add_child(sprite)
+	sprite._ready()
+	sprite.setup_for_mob(mob_id)
+	var texture: AtlasTexture = sprite.get("_sprite").texture as AtlasTexture
+	t.check(texture != null and int(texture.region.position.y) == expected_y, message)
 	sprite.free()
 
 
