@@ -113,6 +113,22 @@ func _row_min_width(row: HBoxContainer) -> float:
 		width += float(visible_controls - 1) * float(row.get_theme_constant("separation"))
 	return width
 
+func _button_icon_region_has_pixels(button: Button) -> bool:
+	if button == null:
+		return false
+	var icon := button.icon as AtlasTexture
+	if icon == null or icon.atlas == null:
+		return false
+	var image: Image = icon.atlas.get_image()
+	if image == null:
+		return false
+	var region: Rect2i = Rect2i(icon.region)
+	for y: int in range(region.position.y, region.position.y + region.size.y):
+		for x: int in range(region.position.x, region.position.x + region.size.x):
+			if image.get_pixel(x, y).a > 0.0:
+				return true
+	return false
+
 func run(t: Object) -> void:
 	var scene := GameScene.new()
 	var hud := FakeHud.new()
@@ -209,6 +225,15 @@ func run(t: Object) -> void:
 		toolbar._btn_inventory.visible and toolbar._btn_settings.visible,
 		"very narrow mobile toolbar keeps Bag and Menu visible"
 	)
+	t.check(
+		toolbar._btn_inventory.icon != null
+				and _button_icon_region_has_pixels(toolbar._btn_inventory)
+				and toolbar._btn_settings.icon != null
+				and _button_icon_region_has_pixels(toolbar._btn_settings)
+				and toolbar._btn_quickslot_page.icon != null
+				and _button_icon_region_has_pixels(toolbar._btn_quickslot_page),
+		"core mobile toolbar actions use non-empty SPD atlas icons"
+	)
 	toolbar.set_available_width(375.0)
 	toolbar._on_quickslot_page()
 	t.check(
@@ -239,20 +264,27 @@ func run(t: Object) -> void:
 		"ultra-narrow mobile toolbar keeps Map reachable (no minimap/keyboard on mobile)"
 	)
 	t.check(
-		toolbar._btn_map.text == "Map",
-		"compact mobile Map button drops the keyboard-shortcut label"
+		toolbar._btn_map.text == ""
+				and toolbar._btn_map.icon != null
+				and _button_icon_region_has_pixels(toolbar._btn_map)
+				and toolbar._btn_map.tooltip_text == "Map [M]",
+		"compact mobile Map button uses an SPD icon with a clear tooltip"
 	)
 	t.check(
-		toolbar._btn_wait.text == "W"
-				and toolbar._btn_wait.tooltip_text == "Wait"
-				and toolbar._btn_search.text == "S"
-				and toolbar._btn_search.tooltip_text == "Search",
-		"narrow mobile toolbar uses compact readable action labels with full tooltips"
+		toolbar._btn_wait.text == ""
+				and toolbar._btn_wait.icon != null
+				and _button_icon_region_has_pixels(toolbar._btn_wait)
+				and toolbar._btn_wait.tooltip_text == "Wait [Space]"
+				and toolbar._btn_search.text == ""
+				and toolbar._btn_search.icon != null
+				and _button_icon_region_has_pixels(toolbar._btn_search)
+				and toolbar._btn_search.tooltip_text == "Search [S]",
+		"narrow mobile toolbar uses SPD icon buttons with full tooltips"
 	)
 	toolbar.set_available_width(480.0)
 	t.check(
-		toolbar._btn_wait.text == "Wait" and toolbar._btn_search.text == "Find",
-		"roomier compact toolbar restores full mobile action labels"
+		toolbar._btn_wait.text == "" and toolbar._btn_search.text == "",
+		"roomier compact toolbar stays icon-only like SPD"
 	)
 	t.check(
 		not toolbar._btn_rest.visible,
@@ -267,10 +299,12 @@ func run(t: Object) -> void:
 	toolbar.set_available_width(748.0)
 	t.check(
 		toolbar._btn_rest.visible
-				and toolbar._btn_rest.text == "Rest"
-				and toolbar._btn_rest.tooltip_text == "Rest until interrupted"
+				and toolbar._btn_rest.text == ""
+				and toolbar._btn_rest.icon != null
+				and _button_icon_region_has_pixels(toolbar._btn_rest)
+				and toolbar._btn_rest.tooltip_text == "Rest until interrupted [R]"
 				and _visible_toolbar_min_width(toolbar) <= 748.0,
-		"landscape-width compact toolbar exposes Rest while keeping the controls inside the safe-area width"
+		"landscape-width compact toolbar exposes icon-only Rest while keeping the controls inside the safe-area width"
 	)
 	toolbar.set_available_width(480.0)
 	t.check(

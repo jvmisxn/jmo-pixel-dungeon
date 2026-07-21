@@ -56,6 +56,20 @@ class DesktopHud:
 	func _get_canvas_viewport_size() -> Vector2:
 		return fake_canvas_size
 
+func _atlas_region_has_pixels(path: String, region: Rect2) -> bool:
+	var texture: Texture2D = load(path) as Texture2D
+	if texture == null:
+		return false
+	var image: Image = texture.get_image()
+	if image == null:
+		return false
+	var rect: Rect2i = Rect2i(region)
+	for y: int in range(rect.position.y, rect.position.y + rect.size.y):
+		for x: int in range(rect.position.x, rect.position.x + rect.size.x):
+			if image.get_pixel(x, y).a > 0.0:
+				return true
+	return false
+
 func run(t: Object) -> void:
 	var previous_hero: Node = GameManager.hero
 	var previous_heroes: Array[Node] = GameManager.heroes.duplicate()
@@ -87,6 +101,31 @@ func run(t: Object) -> void:
 		GameManager.local_hero_index = previous_local_hero_index
 		return
 	var desktop_buffs_row: HFlowContainer = layout_root.get_node_or_null("MobileBuffsRow") as HFlowContainer
+	var socket_texture: AtlasTexture = null
+	if hud._status_avatar_socket != null:
+		socket_texture = hud._status_avatar_socket.texture as AtlasTexture
+	var socket_atlas: Texture2D = null
+	if socket_texture != null:
+		socket_atlas = socket_texture.atlas as Texture2D
+	var avatar_texture: AtlasTexture = null
+	if hud._status_avatar != null:
+		avatar_texture = hud._status_avatar.texture as AtlasTexture
+	var avatar_atlas: Texture2D = null
+	if avatar_texture != null:
+		avatar_atlas = avatar_texture.atlas as Texture2D
+	t.check(
+		socket_atlas != null
+				and socket_atlas.resource_path == "res://assets/spd/interfaces/status_pane.png"
+				and socket_texture.region == Rect2(0, 0, 30, 36),
+		"desktop HUD status pane uses the unscaled SPD avatar socket"
+	)
+	t.check(
+		hud._status_avatar != null
+				and avatar_atlas != null
+				and avatar_atlas.resource_path == "res://assets/spd/sprites/avatars.png"
+				and avatar_texture.region == Rect2(0, 0, 24, 32),
+		"desktop HUD status pane uses the SPD 24x32 hero avatar atlas frame"
+	)
 	t.check(
 		desktop_buffs_row != null and not desktop_buffs_row.visible,
 		"desktop buff row starts hidden when the local hero has no active buffs"
@@ -95,6 +134,22 @@ func run(t: Object) -> void:
 	var poison := Poison.create(5.0)
 	hero.buffs.append(poison)
 	hero.buff_added.emit(poison)
+	var poison_region: Rect2 = BuffIcon.icon_region_for_buff_id("Poison")
+	var invisible_region: Rect2 = BuffIcon.icon_region_for_buff_id("Invisibility")
+	t.check(
+		poison_region == Rect2(48, 0, 16, 16)
+				and _atlas_region_has_pixels("res://assets/spd/interfaces/large_buffs.png", poison_region),
+		"Poison uses the SPD large buff atlas icon"
+	)
+	t.check(
+		invisible_region == Rect2(192, 0, 16, 16)
+				and _atlas_region_has_pixels("res://assets/spd/interfaces/large_buffs.png", invisible_region),
+		"Invisibility uses the SPD large buff atlas icon"
+	)
+	t.check(
+		BuffIcon.BUFFS_PATH == "res://assets/spd/interfaces/large_buffs.png",
+		"BuffIcon uses SPD's 16x16 large buff sheet"
+	)
 	t.check(
 		desktop_buffs_row != null
 				and desktop_buffs_row.visible

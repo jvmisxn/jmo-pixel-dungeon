@@ -58,7 +58,8 @@ const STATUS_PANE_PATH: String = "res://assets/spd/interfaces/status_pane.png"
 const HERO_ICONS_PATH: String = "res://assets/spd/interfaces/hero_icons.png"
 const BUFFS_PATH: String = "res://assets/spd/interfaces/buffs.png"
 const HERO_AVATARS_PATH: String = "res://assets/spd/sprites/avatars.png"
-const HERO_AVATAR_SIZE: int = 32
+const HERO_AVATAR_WIDTH: int = 24
+const HERO_AVATAR_HEIGHT: int = 32
 
 ## Low HP warning flash state — matches original StatusPane.java warning colors.
 ## Original uses warningColors = [0x660000, 0xCC0000, 0x660000] and cycles
@@ -766,13 +767,13 @@ func _update_portrait() -> void:
 			_class_label.text = HeroClassData.get_class_name_str(class_idx).left(3)
 		return
 	var sheet: Texture2D = load(HERO_AVATARS_PATH) as Texture2D
-	if sheet == null or sheet.get_width() < HERO_AVATAR_SIZE * (class_idx + 1):
+	if sheet == null or sheet.get_width() < HERO_AVATAR_WIDTH * (class_idx + 1):
 		if _class_label:
 			_class_label.text = HeroClassData.get_class_name_str(class_idx).left(3)
 		return
 	var atlas: AtlasTexture = AtlasTexture.new()
 	atlas.atlas = sheet
-	atlas.region = Rect2(class_idx * HERO_AVATAR_SIZE, 0, HERO_AVATAR_SIZE, HERO_AVATAR_SIZE)
+	atlas.region = Rect2(class_idx * HERO_AVATAR_WIDTH, 0, HERO_AVATAR_WIDTH, HERO_AVATAR_HEIGHT)
 	_portrait_rect.texture = atlas
 	# Hide fallback text since we have a real sprite
 	if _class_label:

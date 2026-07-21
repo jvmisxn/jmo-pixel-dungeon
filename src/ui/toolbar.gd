@@ -58,9 +58,19 @@ const MOBILE_TOUCH_HIT_SLOP: float = 8.0
 const BUTTON_MIN_SIZE: Vector2 = Vector2(80, 36)
 const MOBILE_BUTTON_MIN_SIZE: Vector2 = Vector2(58, 56)
 const TOOLBAR_PATH: String = "res://assets/spd/interfaces/toolbar.png"
+const ICONS_PATH: String = "res://assets/spd/interfaces/icons.png"
 const ITEM_SHEET_PATH: String = "res://assets/spd/sprites/items.png"
 const ITEM_SPRITE_SIZE: int = 16
 const ITEM_SHEET_COLUMNS: int = 16
+const ICON_REGION_INVENTORY: Rect2 = Rect2(161, 0, 14, 15)
+const ICON_REGION_MAP: Rect2 = Rect2(136, 0, 17, 15)
+const ICON_REGION_WAIT: Rect2 = Rect2(178, 2, 12, 12)
+const ICON_REGION_REST: Rect2 = Rect2(178, 2, 12, 12)
+const ICON_REGION_SEARCH: Rect2 = Rect2(194, 2, 12, 12)
+const ICON_REGION_SETTINGS: Rect2 = Rect2(102, 0, 14, 14)
+const ICON_REGION_MORE: Rect2 = Rect2(128, 0, 21, 23)
+const TOOLBAR_BUTTON_REGION: Rect2 = Rect2(0, 0, 22, 22)
+const TOOLBAR_QUICKSLOT_REGION: Rect2 = Rect2(64, 0, 20, 22)
 
 ## Tracks last known enabled state to avoid re-applying every frame.
 var _last_enabled: bool = true
@@ -78,11 +88,11 @@ func _ready() -> void:
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	add_theme_constant_override("separation", 6)
 
-	_btn_inventory = _create_spd_button("Inventory", "I")
-	_btn_map = _create_spd_button("Map", "M")
-	_btn_wait = _create_spd_button("Wait", "Space")
-	_btn_rest = _create_spd_button("Rest", "R")
-	_btn_search = _create_spd_button("Search", "S")
+	_btn_inventory = _create_spd_button("Inventory", "I", TOOLBAR_PATH, ICON_REGION_INVENTORY)
+	_btn_map = _create_spd_button("Map", "M", ICONS_PATH, ICON_REGION_MAP)
+	_btn_wait = _create_spd_button("Wait", "Space", TOOLBAR_PATH, ICON_REGION_WAIT)
+	_btn_rest = _create_spd_button("Rest until interrupted", "R", TOOLBAR_PATH, ICON_REGION_REST)
+	_btn_search = _create_spd_button("Search", "S", TOOLBAR_PATH, ICON_REGION_SEARCH)
 
 	add_child(_btn_inventory)
 	add_child(_btn_map)
@@ -102,7 +112,7 @@ func _ready() -> void:
 		_quickslots.append(qs_btn)
 		add_child(qs_btn)
 
-	_btn_quickslot_page = _create_spd_button("More", "Tab")
+	_btn_quickslot_page = _create_spd_button("More quickslots", "Tab", TOOLBAR_PATH, ICON_REGION_MORE)
 	add_child(_btn_quickslot_page)
 
 	# --- Another separator before settings ---
@@ -111,7 +121,7 @@ func _ready() -> void:
 	_settings_sep.modulate = Color(0.5, 0.45, 0.35)
 	add_child(_settings_sep)
 
-	_btn_settings = _create_spd_button("Settings", "Esc")
+	_btn_settings = _create_spd_button("Menu", "Esc", ICONS_PATH, ICON_REGION_SETTINGS)
 	add_child(_btn_settings)
 
 	_btn_inventory.pressed.connect(_on_inventory)
@@ -124,54 +134,36 @@ func _ready() -> void:
 	_apply_button_labels()
 
 
-## Create an SPD-styled button matching the stone/chrome aesthetic.
-func _create_spd_button(label: String, shortcut_key: String) -> Button:
+## Create an SPD atlas-backed button matching the stone/chrome toolbar aesthetic.
+func _create_spd_button(label: String, shortcut_key: String, icon_path: String, icon_region: Rect2) -> Button:
 	var btn := Button.new()
-	btn.text = "%s [%s]" % [label, shortcut_key]
+	btn.text = ""
+	btn.tooltip_text = "%s [%s]" % [label, shortcut_key]
 	btn.custom_minimum_size = BUTTON_MIN_SIZE
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	btn.add_theme_font_size_override("font_size", 13)
+	btn.icon = UIUtils.atlas_texture(icon_path, icon_region)
+	btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	btn.expand_icon = true
+	btn.add_theme_constant_override("icon_max_width", 24)
+	btn.add_theme_font_size_override("font_size", 1)
 	btn.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
 	btn.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.8))
 	btn.add_theme_color_override("font_pressed_color", Color(0.7, 0.65, 0.5))
 
-	# Normal style — dark stone toolbar look
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.18, 0.16, 0.14)
-	normal.border_color = Color(0.45, 0.4, 0.35)
-	normal.set_border_width_all(1)
-	normal.border_width_top = 2
-	normal.set_corner_radius_all(2)
-	normal.content_margin_left = 8.0
-	normal.content_margin_right = 8.0
-	normal.content_margin_top = 6.0
-	normal.content_margin_bottom = 6.0
+	var normal: StyleBoxTexture = UIUtils.toolbar_stylebox(
+		TOOLBAR_BUTTON_REGION,
+		Vector4(5, 5, 5, 5),
+		Vector4(6, 6, 6, 6),
+		Color(1, 1, 1, 0.96)
+	)
 	btn.add_theme_stylebox_override("normal", normal)
 
-	# Hover — slightly lighter stone
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(0.24, 0.21, 0.17)
-	hover.border_color = Color(0.6, 0.55, 0.45)
-	hover.set_border_width_all(1)
-	hover.border_width_top = 2
-	hover.set_corner_radius_all(2)
-	hover.content_margin_left = 8.0
-	hover.content_margin_right = 8.0
-	hover.content_margin_top = 6.0
-	hover.content_margin_bottom = 6.0
+	var hover: StyleBoxTexture = normal.duplicate() as StyleBoxTexture
+	hover.modulate_color = Color(1.18, 1.15, 0.98, 1.0)
 	btn.add_theme_stylebox_override("hover", hover)
 
-	# Pressed — darker inset
-	var pressed := StyleBoxFlat.new()
-	pressed.bg_color = Color(0.12, 0.1, 0.08)
-	pressed.border_color = Color(0.35, 0.3, 0.25)
-	pressed.set_border_width_all(1)
-	pressed.border_width_top = 2
-	pressed.set_corner_radius_all(2)
-	pressed.content_margin_left = 8.0
-	pressed.content_margin_right = 8.0
-	pressed.content_margin_top = 6.0
-	pressed.content_margin_bottom = 6.0
+	var pressed: StyleBoxTexture = normal.duplicate() as StyleBoxTexture
+	pressed.modulate_color = Color(0.78, 0.78, 0.7, 1.0)
 	btn.add_theme_stylebox_override("pressed", pressed)
 
 	return btn
@@ -183,21 +175,18 @@ func _create_quickslot_button(index: int) -> Button:
 	btn.name = "Quickslot%d" % index
 	btn.custom_minimum_size = QUICKSLOT_SIZE
 	btn.clip_text = false
+	btn.text = ""
 
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.14, 0.12, 0.1)
-	normal.border_color = Color(0.4, 0.35, 0.3)
-	normal.set_border_width_all(1)
-	normal.set_corner_radius_all(2)
-	normal.set_content_margin_all(4)
+	var normal: StyleBoxTexture = UIUtils.toolbar_stylebox(
+		TOOLBAR_QUICKSLOT_REGION,
+		Vector4(5, 5, 5, 5),
+		Vector4(4, 4, 4, 4),
+		Color(1, 1, 1, 0.96)
+	)
 	btn.add_theme_stylebox_override("normal", normal)
 
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(0.2, 0.18, 0.14)
-	hover.border_color = Color(0.55, 0.5, 0.4)
-	hover.set_border_width_all(1)
-	hover.set_corner_radius_all(2)
-	hover.set_content_margin_all(4)
+	var hover: StyleBoxTexture = normal.duplicate() as StyleBoxTexture
+	hover.modulate_color = Color(1.18, 1.15, 0.98, 1.0)
 	btn.add_theme_stylebox_override("hover", hover)
 
 	var icon := TextureRect.new()
@@ -328,7 +317,8 @@ func _apply_button_labels() -> void:
 	add_theme_constant_override("separation", 3 if is_narrow_compact else (4 if _compact_mode else 6))
 
 	if _btn_inventory:
-		_btn_inventory.text = "Bag" if _compact_mode else "Inventory [I]"
+		_btn_inventory.text = ""
+		_btn_inventory.tooltip_text = "Inventory [I]"
 		_btn_inventory.custom_minimum_size = button_size
 		_btn_inventory.size = button_size
 		_btn_inventory.add_theme_font_size_override("font_size", action_font_size)
@@ -336,34 +326,35 @@ func _apply_button_labels() -> void:
 		# Map access is essential on mobile: the minimap widget and the M
 		# keyboard shortcut are both unavailable there, so keep the toolbar
 		# Map button visible in compact mode instead of desktop-only.
-		_btn_map.text = "Map" if _compact_mode else "Map [M]"
+		_btn_map.text = ""
+		_btn_map.tooltip_text = "Map [M]"
 		_btn_map.visible = true
 		_btn_map.custom_minimum_size = button_size
 		_btn_map.size = button_size
 		_btn_map.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_wait:
-		_btn_wait.text = "W" if is_narrow_compact else ("Wait" if _compact_mode else "Wait [Space]")
-		_btn_wait.tooltip_text = "Wait"
+		_btn_wait.text = ""
+		_btn_wait.tooltip_text = "Wait [Space]"
 		_btn_wait.custom_minimum_size = button_size
 		_btn_wait.size = button_size
 		_btn_wait.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_rest:
-		_btn_rest.text = "Rest" if _compact_mode else "Rest [R]"
-		_btn_rest.tooltip_text = "Rest until interrupted"
+		_btn_rest.text = ""
+		_btn_rest.tooltip_text = "Rest until interrupted [R]"
 		_btn_rest.visible = not _compact_mode or _can_show_compact_rest_button()
 		_btn_rest.custom_minimum_size = button_size
 		_btn_rest.size = button_size
 		_btn_rest.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_search:
-		_btn_search.text = "S" if is_narrow_compact else ("Find" if _compact_mode else "Search [S]")
-		_btn_search.tooltip_text = "Search"
+		_btn_search.text = ""
+		_btn_search.tooltip_text = "Search [S]"
 		_btn_search.visible = not _is_ultra_narrow_compact_mode()
 		_btn_search.custom_minimum_size = button_size
 		_btn_search.size = button_size
 		_btn_search.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_settings:
-		_btn_settings.text = "Menu" if _compact_mode else "Menu [Esc]"
-		_btn_settings.tooltip_text = "Menu"
+		_btn_settings.text = ""
+		_btn_settings.tooltip_text = "Menu [Esc]"
 		_btn_settings.custom_minimum_size = button_size
 		_btn_settings.size = button_size
 		_btn_settings.add_theme_font_size_override("font_size", action_font_size)
@@ -382,7 +373,7 @@ func _apply_button_labels() -> void:
 		var next_page: int = (_quickslot_page + 1) % _quickslot_page_count()
 		var next_start: int = next_page * visible_quickslots_per_page
 		var next_end: int = mini(QUICKSLOT_COUNT, next_start + visible_quickslots_per_page)
-		_btn_quickslot_page.text = "%d-%d" % [next_start + 1, next_end]
+		_btn_quickslot_page.text = ""
 		_btn_quickslot_page.tooltip_text = (
 			"Show quickslots %d-%d" % [next_start + 1, next_end]
 		)

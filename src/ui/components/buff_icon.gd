@@ -1,7 +1,7 @@
 class_name BuffIcon
 extends Control
 ## A small 20x20 icon representing an active buff or debuff.
-## Shows a colored circle with the first letter of the buff name.
+## Uses SPD's large_buffs.png atlas when a source icon is known.
 ## Flashes when the buff is about to expire (duration < 3 turns).
 
 ## Reference to the buff object (expects buff_name, icon_color, duration/time_left).
@@ -17,6 +17,9 @@ var _flash_tween: Tween = null
 var _is_flashing: bool = false
 
 const ICON_SIZE: float = 20.0
+const BUFFS_PATH: String = "res://assets/spd/interfaces/large_buffs.png"
+const ATLAS_ICON_SIZE: int = 16
+const ATLAS_COLUMNS: int = 16
 const FLASH_THRESHOLD: float = 3.0
 ## Flash cycle: 0.15s visible, 0.10s hidden = 0.25s total cycle (~FLASH_SPEED=4 equivalent)
 const FLASH_ON_TIME: float = 0.15
@@ -88,6 +91,12 @@ func _draw() -> void:
 	if not _flash_visible:
 		return
 
+	var atlas_icon: AtlasTexture = _get_atlas_icon()
+	if atlas_icon != null and atlas_icon.atlas != null:
+		var dest := Rect2(Vector2.ZERO, size)
+		draw_texture_rect_region(atlas_icon.atlas, dest, atlas_icon.region)
+		return
+
 	var center: Vector2 = size / 2.0
 	var color: Color = _get_color()
 
@@ -150,3 +159,91 @@ func _get_time_left() -> float:
 			return -1.0
 		return d
 	return -1.0
+
+
+func _get_atlas_icon() -> AtlasTexture:
+	var region: Rect2 = icon_region_for_buff_id(_get_buff_id())
+	if region.size == Vector2.ZERO:
+		return null
+	return UIUtils.atlas_texture(BUFFS_PATH, region)
+
+
+func _get_buff_id() -> String:
+	if buff_ref and "buff_id" in buff_ref:
+		return buff_ref.buff_id
+	return _get_buff_name().replace(" ", "")
+
+
+static func icon_region_for_buff_id(buff_id: String) -> Rect2:
+	match buff_id:
+		"MindVision":
+			return _grid_region(0)
+		"Levitation":
+			return _grid_region(1)
+		"Burning", "FireImbue":
+			return _grid_region(2)
+		"Poison":
+			return _grid_region(3)
+		"Paralysis":
+			return _grid_region(4)
+		"Hunger":
+			return _grid_region(5)
+		"Slow":
+			return _grid_region(7)
+		"Ooze", "Corrosion":
+			return _grid_region(8)
+		"Amok":
+			return _grid_region(9)
+		"Terror", "Dread":
+			return _grid_region(10)
+		"Rooted":
+			return _grid_region(11)
+		"Invisibility":
+			return _grid_region(12)
+		"Weakness":
+			return _grid_region(14)
+		"Frozen", "Chill", "FrostImbue":
+			return _grid_region(15)
+		"Blindness":
+			return _grid_region(16)
+		"Combo":
+			return _grid_region(17)
+		"Fury":
+			return _grid_region(18)
+		"SungrassHeal":
+			return _grid_region(19)
+		"ArcaneArmor", "Barrier":
+			return _grid_region(20)
+		"Light":
+			return _grid_region(22)
+		"Cripple":
+			return _grid_region(23)
+		"Barkskin":
+			return _grid_region(24)
+		"Bleeding":
+			return _grid_region(26)
+		"Drowsy":
+			return _grid_region(29)
+		"Vertigo":
+			return _grid_region(33)
+		"Recharging":
+			return _grid_region(34)
+		"Bless":
+			return _grid_region(37)
+		"Adrenaline", "Haste":
+			return _grid_region(41)
+		"WellFed":
+			return _grid_region(43)
+		"Vulnerable":
+			return _grid_region(46)
+		"Hex":
+			return _grid_region(47)
+		_:
+			return Rect2()
+
+
+static func _grid_region(index: int) -> Rect2:
+	@warning_ignore("integer_division")
+	var row: int = index / ATLAS_COLUMNS
+	var column: int = index % ATLAS_COLUMNS
+	return Rect2(column * ATLAS_ICON_SIZE, row * ATLAS_ICON_SIZE, ATLAS_ICON_SIZE, ATLAS_ICON_SIZE)

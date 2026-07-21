@@ -3,7 +3,8 @@ extends WndBase
 ## Hero information window showing stats, buffs, and run statistics.
 
 const HERO_AVATARS_PATH: String = "res://assets/spd/sprites/avatars.png"
-const HERO_AVATAR_SIZE: int = 32
+const HERO_AVATAR_WIDTH: int = 24
+const HERO_AVATAR_HEIGHT: int = 32
 
 var _hero: Hero = null
 
@@ -235,10 +236,10 @@ func _build_hero_portrait(hero_class: int) -> Control:
 
 	if ResourceLoader.exists(HERO_AVATARS_PATH):
 		var sheet: Texture2D = load(HERO_AVATARS_PATH) as Texture2D
-		if sheet != null and sheet.get_width() >= HERO_AVATAR_SIZE * (hero_class + 1):
+		if sheet != null and sheet.get_width() >= HERO_AVATAR_WIDTH * (hero_class + 1):
 			var atlas: AtlasTexture = AtlasTexture.new()
 			atlas.atlas = sheet
-			atlas.region = Rect2(hero_class * HERO_AVATAR_SIZE, 0, HERO_AVATAR_SIZE, HERO_AVATAR_SIZE)
+			atlas.region = Rect2(hero_class * HERO_AVATAR_WIDTH, 0, HERO_AVATAR_WIDTH, HERO_AVATAR_HEIGHT)
 
 			var portrait_rect: TextureRect = TextureRect.new()
 			portrait_rect.texture = atlas

@@ -24,6 +24,10 @@ const MOBILE_BUFFS_ROW_MIN_HEIGHT: float = 24.0
 const MOBILE_SAFE_TOP_INSET: float = 18.0
 const MOBILE_SAFE_LANDSCAPE_TOP_INSET: float = 8.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
+const HERO_AVATARS_PATH: String = "res://assets/spd/sprites/avatars.png"
+const STATUS_PANE_PATH: String = "res://assets/spd/interfaces/status_pane.png"
+const STATUS_AVATAR_SOCKET_REGION: Rect2 = Rect2(0, 0, 30, 36)
+const HERO_AVATAR_FRAME_SIZE: Vector2 = Vector2(24, 32)
 
 # --- Child panels ---
 var toolbar: MarginContainer = null
@@ -39,6 +43,8 @@ var _party_row: HBoxContainer = null
 var _online_state_label: Label = null
 var _online_state_active: bool = false
 var _status_overlay: Control = null
+var _status_avatar_socket: TextureRect = null
+var _status_avatar: TextureRect = null
 var _status_level_label: Label = null
 var _status_hp_bar: ProgressBar = null
 var _status_shield_bar: ProgressBar = null
@@ -142,19 +148,9 @@ func _build_layout() -> void:
 	var status_container: PanelContainer = PanelContainer.new()
 	status_container.name = "StatusContainer"
 	status_container.position = Vector2(HUD_MARGIN, HUD_MARGIN)
-	status_container.custom_minimum_size = Vector2(220, 140)
+	status_container.custom_minimum_size = Vector2(220, 40)
 	status_container.clip_contents = true
-	var status_style: StyleBoxFlat = StyleBoxFlat.new()
-	status_style.bg_color = Color(0.08, 0.07, 0.06, 0.92)
-	status_style.border_color = Color(0.35, 0.30, 0.25)
-	status_style.border_width_right = 1
-	status_style.border_width_bottom = 1
-	status_style.corner_radius_bottom_right = 4
-	status_style.content_margin_left = 6.0
-	status_style.content_margin_right = 6.0
-	status_style.content_margin_top = 4.0
-	status_style.content_margin_bottom = 4.0
-	status_container.add_theme_stylebox_override("panel", status_style)
+	status_container.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	_status_pane = _instantiate_script("res://src/ui/status_pane.gd")
 	_status_pane.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status_pane.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -558,23 +554,52 @@ func _build_status_overlay(root: Control) -> void:
 	_status_overlay.name = "StatusOverlay"
 	_status_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_status_overlay.alignment = BoxContainer.ALIGNMENT_BEGIN
-	_status_overlay.add_theme_constant_override("separation", 8)
+	_status_overlay.add_theme_constant_override("separation", 3)
 	root.add_child(_status_overlay)
 
+	var avatar_slot: Control = Control.new()
+	avatar_slot.name = "HeroAvatarSlot"
+	avatar_slot.custom_minimum_size = Vector2(30, 36)
+	_status_overlay.add_child(avatar_slot)
+
+	_status_avatar_socket = TextureRect.new()
+	_status_avatar_socket.name = "HeroAvatarSocket"
+	_status_avatar_socket.texture = UIUtils.atlas_texture(STATUS_PANE_PATH, STATUS_AVATAR_SOCKET_REGION)
+	_status_avatar_socket.position = Vector2.ZERO
+	_status_avatar_socket.custom_minimum_size = Vector2(30, 36)
+	_status_avatar_socket.size = Vector2(30, 36)
+	_status_avatar_socket.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_status_avatar_socket.stretch_mode = TextureRect.STRETCH_KEEP
+	_status_avatar_socket.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	avatar_slot.add_child(_status_avatar_socket)
+
+	_status_avatar = TextureRect.new()
+	_status_avatar.name = "HeroAvatar"
+	_status_avatar.position = Vector2(3, 2)
+	_status_avatar.custom_minimum_size = HERO_AVATAR_FRAME_SIZE
+	_status_avatar.size = HERO_AVATAR_FRAME_SIZE
+	_status_avatar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_status_avatar.stretch_mode = TextureRect.STRETCH_KEEP
+	_status_avatar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	avatar_slot.add_child(_status_avatar)
+
 	_status_level_label = Label.new()
-	_status_level_label.text = "Lv. 1"
-	_status_level_label.custom_minimum_size = Vector2(58, 0)
+	_status_level_label.text = "1"
+	_status_level_label.custom_minimum_size = Vector2(20, 0)
 	_status_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_status_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status_level_label.add_theme_font_size_override("font_size", 18)
+	_status_level_label.add_theme_font_size_override("font_size", 12)
 	_status_level_label.add_theme_color_override("font_color", Color(0.9, 0.84, 0.62))
+	_status_level_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.95))
+	_status_level_label.add_theme_constant_override("shadow_offset_x", 1)
+	_status_level_label.add_theme_constant_override("shadow_offset_y", 1)
 	_status_overlay.add_child(_status_level_label)
 
 	var bars: VBoxContainer = VBoxContainer.new()
-	bars.custom_minimum_size = Vector2(1, 64)
+	bars.custom_minimum_size = Vector2(1, 30)
 	bars.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bars.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bars.add_theme_constant_override("separation", 6)
+	bars.add_theme_constant_override("separation", 2)
 	_status_overlay.add_child(bars)
 
 	var hp_row: HBoxContainer = HBoxContainer.new()
@@ -583,7 +608,7 @@ func _build_status_overlay(root: Control) -> void:
 	bars.add_child(hp_row)
 
 	var hp_bar_container: Control = Control.new()
-	hp_bar_container.custom_minimum_size = Vector2(1, 22)
+	hp_bar_container.custom_minimum_size = Vector2(1, 14)
 	hp_bar_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hp_row.add_child(hp_bar_container)
 
@@ -596,9 +621,6 @@ func _build_status_overlay(root: Control) -> void:
 	_status_shield_bar.add_theme_stylebox_override("fill", shield_fill)
 	var shield_bg: StyleBoxFlat = StyleBoxFlat.new()
 	shield_bg.bg_color = Color(0.15, 0.05, 0.05)
-	shield_bg.border_color = Color(0.4, 0.2, 0.2)
-	shield_bg.set_border_width_all(1)
-	shield_bg.set_corner_radius_all(2)
 	_status_shield_bar.add_theme_stylebox_override("background", shield_bg)
 	hp_bar_container.add_child(_status_shield_bar)
 
@@ -617,11 +639,14 @@ func _build_status_overlay(root: Control) -> void:
 
 	_status_hp_label = Label.new()
 	_status_hp_label.text = "20/20"
-	_status_hp_label.custom_minimum_size = Vector2(72, 0)
+	_status_hp_label.custom_minimum_size = Vector2(54, 0)
 	_status_hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_status_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_status_hp_label.add_theme_font_size_override("font_size", 16)
+	_status_hp_label.add_theme_font_size_override("font_size", 10)
 	_status_hp_label.add_theme_color_override("font_color", Color(0.95, 0.84, 0.72))
+	_status_hp_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.95))
+	_status_hp_label.add_theme_constant_override("shadow_offset_x", 1)
+	_status_hp_label.add_theme_constant_override("shadow_offset_y", 1)
 	hp_row.add_child(_status_hp_label)
 
 	var xp_row: HBoxContainer = HBoxContainer.new()
@@ -630,7 +655,7 @@ func _build_status_overlay(root: Control) -> void:
 	bars.add_child(xp_row)
 
 	_status_xp_bar = ProgressBar.new()
-	_status_xp_bar.custom_minimum_size = Vector2(1, 18)
+	_status_xp_bar.custom_minimum_size = Vector2(1, 4)
 	_status_xp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status_xp_bar.show_percentage = false
 	var xp_fill: StyleBoxFlat = StyleBoxFlat.new()
@@ -639,37 +664,43 @@ func _build_status_overlay(root: Control) -> void:
 	_status_xp_bar.add_theme_stylebox_override("fill", xp_fill)
 	var xp_bg: StyleBoxFlat = StyleBoxFlat.new()
 	xp_bg.bg_color = Color(0.05, 0.1, 0.18)
-	xp_bg.border_color = Color(0.2, 0.3, 0.45)
-	xp_bg.set_border_width_all(1)
-	xp_bg.set_corner_radius_all(2)
 	_status_xp_bar.add_theme_stylebox_override("background", xp_bg)
 	xp_row.add_child(_status_xp_bar)
 
 	_status_xp_label = Label.new()
 	_status_xp_label.text = "0/10"
-	_status_xp_label.custom_minimum_size = Vector2(72, 0)
+	_status_xp_label.custom_minimum_size = Vector2(48, 0)
 	_status_xp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_status_xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_status_xp_label.add_theme_font_size_override("font_size", 14)
+	_status_xp_label.add_theme_font_size_override("font_size", 9)
 	_status_xp_label.add_theme_color_override("font_color", Color(0.74, 0.84, 0.96))
+	_status_xp_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.95))
+	_status_xp_label.add_theme_constant_override("shadow_offset_x", 1)
+	_status_xp_label.add_theme_constant_override("shadow_offset_y", 1)
 	xp_row.add_child(_status_xp_label)
 
 	_status_depth_label = Label.new()
 	_status_depth_label.text = "D1"
-	_status_depth_label.custom_minimum_size = Vector2(54, 0)
+	_status_depth_label.custom_minimum_size = Vector2(28, 0)
 	_status_depth_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_status_depth_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status_depth_label.add_theme_font_size_override("font_size", 15)
+	_status_depth_label.add_theme_font_size_override("font_size", 10)
 	_status_depth_label.add_theme_color_override("font_color", Color(0.72, 0.72, 0.86))
+	_status_depth_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.95))
+	_status_depth_label.add_theme_constant_override("shadow_offset_x", 1)
+	_status_depth_label.add_theme_constant_override("shadow_offset_y", 1)
 	_status_overlay.add_child(_status_depth_label)
 
 	_status_str_label = Label.new()
 	_status_str_label.text = "STR 10"
-	_status_str_label.custom_minimum_size = Vector2(70, 0)
+	_status_str_label.custom_minimum_size = Vector2(48, 0)
 	_status_str_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_status_str_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status_str_label.add_theme_font_size_override("font_size", 15)
+	_status_str_label.add_theme_font_size_override("font_size", 10)
 	_status_str_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.3))
+	_status_str_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.95))
+	_status_str_label.add_theme_constant_override("shadow_offset_x", 1)
+	_status_str_label.add_theme_constant_override("shadow_offset_y", 1)
 	_status_overlay.add_child(_status_str_label)
 
 
@@ -1036,7 +1067,7 @@ func _apply_responsive_layout() -> void:
 		status_container.custom_minimum_size = (
 			Vector2(mobile_status_width, mobile_status_height)
 			if is_mobile_layout
-			else Vector2(180 if is_mobile_layout else 220, 140)
+			else Vector2(220, 40)
 		)
 		status_container.size = status_container.custom_minimum_size
 		if _status_pane and _status_pane.has_method("set_compact_mode"):
@@ -1166,7 +1197,9 @@ func _mobile_top_controls_bottom(status_container: Control, party_row: Control) 
 func _layout_status_overlay(status_container: Control) -> void:
 	if _status_overlay == null or status_container == null:
 		return
-	var inset: Vector2 = Vector2(10.0, 8.0)
+	var is_mobile_layout: bool = _is_mobile_layout()
+	var is_portrait_mobile: bool = _is_mobile_portrait_layout()
+	var inset: Vector2 = Vector2(5.0 if is_mobile_layout else 4.0, 5.0 if is_mobile_layout else 4.0)
 	_status_overlay.visible = true
 	_status_overlay.position = status_container.position + inset
 	_status_overlay.custom_minimum_size = Vector2(
@@ -1174,25 +1207,26 @@ func _layout_status_overlay(status_container: Control) -> void:
 		maxf(1.0, status_container.size.y - (inset.y * 2.0))
 	)
 	_status_overlay.size = _status_overlay.custom_minimum_size
-	var is_mobile_layout: bool = _is_mobile_layout()
-	var is_portrait_mobile: bool = _is_mobile_portrait_layout()
-	_status_overlay.add_theme_constant_override("separation", 6 if is_mobile_layout else 8)
+	_status_overlay.add_theme_constant_override("separation", 5 if is_mobile_layout else 3)
+	if _status_avatar:
+		_status_avatar.custom_minimum_size = HERO_AVATAR_FRAME_SIZE
+		_status_avatar.size = HERO_AVATAR_FRAME_SIZE
 	if _status_level_label:
-		_status_level_label.custom_minimum_size = Vector2(50.0 if is_mobile_layout else 62.0, 0.0)
-		_status_level_label.add_theme_font_size_override("font_size", 17 if is_mobile_layout else 17)
+		_status_level_label.custom_minimum_size = Vector2(24.0 if is_mobile_layout else 20.0, 0.0)
+		_status_level_label.add_theme_font_size_override("font_size", 12 if is_mobile_layout else 12)
 	if _status_hp_label:
-		_status_hp_label.custom_minimum_size = Vector2(60.0 if is_mobile_layout else 68.0, 0.0)
-		_status_hp_label.add_theme_font_size_override("font_size", 14 if is_mobile_layout else 13)
+		_status_hp_label.custom_minimum_size = Vector2(60.0 if is_mobile_layout else 54.0, 0.0)
+		_status_hp_label.add_theme_font_size_override("font_size", 11 if is_mobile_layout else 10)
 	if _status_xp_label:
-		_status_xp_label.custom_minimum_size = Vector2(60.0 if is_mobile_layout else 68.0, 0.0)
-		_status_xp_label.add_theme_font_size_override("font_size", 13 if is_mobile_layout else 12)
+		_status_xp_label.custom_minimum_size = Vector2(54.0 if is_mobile_layout else 48.0, 0.0)
+		_status_xp_label.add_theme_font_size_override("font_size", 10 if is_mobile_layout else 9)
 	if _status_depth_label:
-		_status_depth_label.custom_minimum_size = Vector2(46.0 if is_mobile_layout else 54.0, 0.0)
-		_status_depth_label.add_theme_font_size_override("font_size", 14 if is_mobile_layout else 13)
+		_status_depth_label.custom_minimum_size = Vector2(32.0 if is_mobile_layout else 28.0, 0.0)
+		_status_depth_label.add_theme_font_size_override("font_size", 11 if is_mobile_layout else 10)
 	if _status_str_label:
 		_status_str_label.visible = not is_portrait_mobile
-		_status_str_label.custom_minimum_size = Vector2(58.0 if is_mobile_layout else 70.0, 0.0)
-		_status_str_label.add_theme_font_size_override("font_size", 13 if is_mobile_layout else 13)
+		_status_str_label.custom_minimum_size = Vector2(52.0 if is_mobile_layout else 48.0, 0.0)
+		_status_str_label.add_theme_font_size_override("font_size", 10 if is_mobile_layout else 10)
 
 
 func _layout_mobile_buffs_row(status_container: Control) -> void:
@@ -1265,8 +1299,10 @@ func _refresh_status_overlay() -> void:
 	var xp_max: int = max(1, int(ConstantsData.get_prop(hero_ref, "xp_to_next", 1)))
 	var hero_level: int = int(ConstantsData.get_prop(hero_ref, "hero_level", 1))
 	var str_val: int = int(ConstantsData.get_prop(hero_ref, "str_val", 10))
+	if _status_avatar:
+		_status_avatar.texture = _hero_avatar_texture(hero_ref)
 	if _status_level_label:
-		_status_level_label.text = "Lv.%d" % hero_level
+		_status_level_label.text = "%d" % hero_level
 	if _status_hp_bar:
 		_status_hp_bar.max_value = hp_max
 		_status_hp_bar.value = clampi(hp, 0, hp_max)
@@ -1286,6 +1322,15 @@ func _refresh_status_overlay() -> void:
 	if _status_str_label:
 		_status_str_label.text = "STR %d" % str_val
 	_refresh_mobile_buffs(hero_ref)
+
+
+func _hero_avatar_texture(hero_ref: Variant) -> Texture2D:
+	var hero_class: int = int(ConstantsData.get_prop(hero_ref, "hero_class", ConstantsData.HeroClass.WARRIOR))
+	var class_index: int = clampi(hero_class, 0, 5)
+	return UIUtils.atlas_texture(
+		HERO_AVATARS_PATH,
+		Rect2(class_index * int(HERO_AVATAR_FRAME_SIZE.x), 0, HERO_AVATAR_FRAME_SIZE.x, HERO_AVATAR_FRAME_SIZE.y)
+	)
 
 
 func _refresh_mobile_buffs(hero_ref: Variant) -> void:
