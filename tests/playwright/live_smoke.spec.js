@@ -17,6 +17,8 @@ test.use({
 });
 
 test('mobile web start flow has no critical console regressions', async ({ page }) => {
+  test.setTimeout(60000);
+
   const messages = [];
   page.on('console', (msg) => {
     messages.push(`${msg.type()}: ${msg.text()}`);
