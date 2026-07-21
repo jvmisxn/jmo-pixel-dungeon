@@ -6,6 +6,8 @@ extends Control
 # --- UI References ---
 var _btn_new_game: Button = null
 var _btn_continue: Button = null
+var _btn_rankings: Button = null
+var _btn_journal: Button = null
 var _btn_multiplayer: Button = null
 var _btn_profile: Button = null
 var _btn_settings: Button = null
@@ -38,13 +40,18 @@ var _settings_sfx_value_label: Label = null
 var _settings_brightness_value_label: Label = null
 var _jmo_title_label: Label = null
 var _pd_title_label: Label = null
+var _title_logo_sprite: TextureRect = null
+var _title_glow_sprite: TextureRect = null
 var _menu_box: VBoxContainer = null
 var _top_menu_row: HBoxContainer = null
+var _rankings_menu_row: HBoxContainer = null
+var _social_menu_row: HBoxContainer = null
 var _version_label: Label = null
 var _buttons: Array[Button] = []
 var _selected_index: int = 0
 var _layout_viewport_size: Vector2 = Vector2.ZERO
 var _web_layout_poll_elapsed: float = 0.0
+var _title_background_pieces: Array[TextureRect] = []
 
 # --- Background layers (parallax) ---
 var _bg_color_rect: ColorRect = null
@@ -63,17 +70,32 @@ var _rankings_scene: GDScript = preload("res://src/scenes/rankings_scene.gd")
 const BACK_CLUSTERS_PATH: String = "res://assets/spd/splashes/title/back_clusters.png"
 const MID_MIXED_PATH: String = "res://assets/spd/splashes/title/mid_mixed.png"
 const ARCHS_PATH: String = "res://assets/spd/splashes/title/archs.png"
+const FRONT_SMALL_PATH: String = "res://assets/spd/splashes/title/front_small.png"
 const CHROME_PATH: String = "res://assets/spd/interfaces/chrome.png"
+const BANNERS_PATH: String = "res://assets/spd/interfaces/banners.png"
+const ICONS_PATH: String = "res://assets/spd/interfaces/icons.png"
 const SUBMENU_PANEL_SIZE: Vector2 = Vector2(760, 680)
 const SUBMENU_PANEL_TOP: float = 20.0
 const SUBMENU_CONTENT_MARGIN: int = 24
 const SUBMENU_CONTENT_WIDTH: float = 712.0
 const SUBMENU_ACTION_WIDTH: float = 350.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
-const PORTRAIT_MENU_MAX_WIDTH: float = 180.0
-const PORTRAIT_MENU_SIDE_MARGIN: float = 72.0
+const PORTRAIT_MENU_MAX_WIDTH: float = 340.0
+const PORTRAIT_MENU_SIDE_MARGIN: float = 28.0
 const PORTRAIT_WEB_RIGHT_RESERVE: float = 32.0
 const PORTRAIT_TOP_ACTION_GAP: float = 12.0
+const TITLE_PORT_REGION: Rect2i = Rect2i(0, 0, 139, 100)
+const TITLE_PORT_GLOW_REGION: Rect2i = Rect2i(139, 0, 139, 100)
+const TITLE_LAND_REGION: Rect2i = Rect2i(0, 100, 240, 57)
+const TITLE_LAND_GLOW_REGION: Rect2i = Rect2i(240, 100, 240, 57)
+const TITLE_BUTTON_HEIGHT: float = 48.0
+const ICON_ENTER: Rect2i = Rect2i(0, 0, 16, 16)
+const ICON_RANKINGS: Rect2i = Rect2i(34, 0, 17, 16)
+const ICON_JOURNAL: Rect2i = Rect2i(136, 0, 17, 15)
+const ICON_NEWS: Rect2i = Rect2i(68, 0, 16, 15)
+const ICON_CHANGES: Rect2i = Rect2i(85, 0, 15, 15)
+const ICON_PREFS: Rect2i = Rect2i(102, 0, 14, 14)
+const ICON_SHPX: Rect2i = Rect2i(119, 0, 16, 16)
 const PROFILE_ICON_SPRITES: Dictionary = {
 	"warrior": "res://assets/spd/sprites/warrior.png",
 	"mage": "res://assets/spd/sprites/mage.png",
@@ -129,13 +151,9 @@ func _process(_delta: float) -> void:
 			if not current_size.is_equal_approx(_layout_viewport_size):
 				_apply_layout()
 	var time_elapsed: float = float(Time.get_ticks_msec()) * 0.001
-	# Parallax scroll — each layer at different speed for depth effect
-	if _back_clusters_sprite:
-		_back_clusters_sprite.position.x = -fmod(time_elapsed * 2.0, 512.0)
-	if _mid_mixed_sprite:
-		_mid_mixed_sprite.position.x = -fmod(time_elapsed * 5.0, 2048.0)
-	if _archs_sprite:
-		_archs_sprite.position.x = -fmod(time_elapsed * 10.0, 1024.0)
+	_update_title_background_scroll(time_elapsed)
+	if _title_glow_sprite:
+		_title_glow_sprite.modulate.a = maxf(0.0, sin(time_elapsed * 1.6)) * 0.78
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _profile_prompt_panel and _profile_prompt_panel.visible:
@@ -185,42 +203,7 @@ func _build_background() -> void:
 	_bg_color_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_bg_color_rect)
 
-	# Layer 1 (furthest back): back_clusters — tiled across full screen
-	var clusters_tex: Texture2D = _load_texture(BACK_CLUSTERS_PATH)
-	if clusters_tex:
-		_back_clusters_sprite = TextureRect.new()
-		_back_clusters_sprite.texture = clusters_tex
-		_back_clusters_sprite.stretch_mode = TextureRect.STRETCH_TILE
-		_back_clusters_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		_back_clusters_sprite.modulate = Color(0.25, 0.22, 0.2, 0.5)
-		_back_clusters_sprite.position = Vector2(0, 0)
-		# Wider than screen for scroll, tall enough to fill viewport
-		_back_clusters_sprite.size = Vector2(1280 + 512, 720)
-		add_child(_back_clusters_sprite)
-
-	# Layer 2 (middle): mid_mixed — tiled, positioned in middle-to-lower area
-	var mid_tex: Texture2D = _load_texture(MID_MIXED_PATH)
-	if mid_tex:
-		_mid_mixed_sprite = TextureRect.new()
-		_mid_mixed_sprite.texture = mid_tex
-		_mid_mixed_sprite.stretch_mode = TextureRect.STRETCH_TILE
-		_mid_mixed_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		_mid_mixed_sprite.modulate = Color(0.35, 0.3, 0.28, 0.55)
-		_mid_mixed_sprite.position = Vector2(0, 100)
-		_mid_mixed_sprite.size = Vector2(1280 + 2048, 620)
-		add_child(_mid_mixed_sprite)
-
-	# Layer 3 (foreground): archs — tiled across the lower portion
-	var archs_tex: Texture2D = _load_texture(ARCHS_PATH)
-	if archs_tex:
-		_archs_sprite = TextureRect.new()
-		_archs_sprite.texture = archs_tex
-		_archs_sprite.stretch_mode = TextureRect.STRETCH_TILE
-		_archs_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		_archs_sprite.modulate = Color(0.45, 0.4, 0.35, 0.7)
-		_archs_sprite.position = Vector2(0, 720 - 256)
-		_archs_sprite.size = Vector2(1280 + 1024, 256)
-		add_child(_archs_sprite)
+	_build_title_background_pieces()
 
 	# Dark gradient overlay at the top for title text readability
 	var top_overlay: ColorRect = ColorRect.new()
@@ -244,10 +227,23 @@ void fragment() {
 # ---------------------------------------------------------------------------
 
 func _build_ui() -> void:
-	# --- Title Text ---
-	# "JMO" in large gold text
+	# --- Title Banner ---
+	_title_logo_sprite = TextureRect.new()
+	_title_logo_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_title_logo_sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_title_logo_sprite.stretch_mode = TextureRect.STRETCH_SCALE
+	add_child(_title_logo_sprite)
+
+	_title_glow_sprite = TextureRect.new()
+	_title_glow_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_title_glow_sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_title_glow_sprite.stretch_mode = TextureRect.STRETCH_SCALE
+	_title_glow_sprite.modulate = Color(0.55, 1.0, 0.55, 0.0)
+	add_child(_title_glow_sprite)
+
 	_jmo_title_label = Label.new()
 	_jmo_title_label.text = "JMO"
+	_jmo_title_label.visible = false
 	_jmo_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_jmo_title_label.add_theme_font_size_override("font_size", 72)
 	_jmo_title_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
@@ -261,6 +257,7 @@ func _build_ui() -> void:
 	# "Pixel Dungeon" below
 	_pd_title_label = Label.new()
 	_pd_title_label.text = "Pixel Dungeon"
+	_pd_title_label.visible = false
 	_pd_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_pd_title_label.add_theme_font_size_override("font_size", 40)
 	_pd_title_label.add_theme_color_override("font_color", Color(0.78, 0.72, 0.6))
@@ -286,34 +283,54 @@ func _build_ui() -> void:
 	_top_menu_row.add_theme_constant_override("separation", 12)
 	_menu_box.add_child(_top_menu_row)
 
-	_btn_new_game = _create_spd_button("New Game", Vector2(400 if not has_save else 258, 44))
+	_btn_new_game = _create_spd_button("Enter the Dungeon", Vector2(400 if not has_save else 258, TITLE_BUTTON_HEIGHT), ICON_ENTER)
 	_btn_new_game.pressed.connect(_on_new_game_pressed)
 	_top_menu_row.add_child(_btn_new_game)
 
 	if has_save:
-		_btn_continue = _create_spd_button("Continue", Vector2(130, 44))
+		_btn_continue = _create_spd_button("Continue", Vector2(130, TITLE_BUTTON_HEIGHT), ICON_ENTER)
 		_btn_continue.pressed.connect(_on_continue_pressed)
 		_btn_continue.disabled = false
 		_top_menu_row.add_child(_btn_continue)
 	else:
 		_btn_continue = null
 
-	_btn_multiplayer = _create_spd_button("Multiplayer")
+	_rankings_menu_row = HBoxContainer.new()
+	_rankings_menu_row.custom_minimum_size = Vector2(400, TITLE_BUTTON_HEIGHT)
+	_rankings_menu_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rankings_menu_row.add_theme_constant_override("separation", 12)
+	_menu_box.add_child(_rankings_menu_row)
+
+	_btn_rankings = _create_spd_button("Rankings", Vector2(194, TITLE_BUTTON_HEIGHT), ICON_RANKINGS)
+	_btn_rankings.pressed.connect(_on_rankings_pressed)
+	_rankings_menu_row.add_child(_btn_rankings)
+
+	_btn_journal = _create_spd_button("Journal", Vector2(194, TITLE_BUTTON_HEIGHT), ICON_JOURNAL)
+	_btn_journal.pressed.connect(_on_journal_pressed)
+	_rankings_menu_row.add_child(_btn_journal)
+
+	_social_menu_row = HBoxContainer.new()
+	_social_menu_row.custom_minimum_size = Vector2(400, TITLE_BUTTON_HEIGHT)
+	_social_menu_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_social_menu_row.add_theme_constant_override("separation", 12)
+	_menu_box.add_child(_social_menu_row)
+
+	_btn_multiplayer = _create_spd_button("Multiplayer", Vector2(194, TITLE_BUTTON_HEIGHT), ICON_CHANGES)
 	_btn_multiplayer.pressed.connect(_on_multiplayer_pressed)
-	_menu_box.add_child(_btn_multiplayer)
+	_social_menu_row.add_child(_btn_multiplayer)
 
-	_btn_profile = _create_spd_button("Player Profile")
+	_btn_profile = _create_spd_button("Profile", Vector2(194, TITLE_BUTTON_HEIGHT), ICON_SHPX)
 	_btn_profile.pressed.connect(_on_profile_pressed)
-	_menu_box.add_child(_btn_profile)
+	_social_menu_row.add_child(_btn_profile)
 
-	_btn_settings = _create_spd_button("Settings")
+	_btn_settings = _create_spd_button("Settings", Vector2(400, TITLE_BUTTON_HEIGHT), ICON_PREFS)
 	_btn_settings.pressed.connect(_on_settings_pressed)
 	_menu_box.add_child(_btn_settings)
 
 	_buttons = [_btn_new_game]
 	if _btn_continue != null:
 		_buttons.append(_btn_continue)
-	_buttons.append_array([_btn_multiplayer, _btn_profile, _btn_settings])
+	_buttons.append_array([_btn_rankings, _btn_journal, _btn_multiplayer, _btn_profile, _btn_settings])
 
 	# --- Version label ---
 	_version_label = Label.new()
@@ -672,6 +689,108 @@ func _load_texture(path: String) -> Texture2D:
 	return null
 
 
+func _atlas_texture(path: String, region: Rect2i) -> Texture2D:
+	var source: Texture2D = _load_texture(path)
+	if source == null:
+		return null
+	var atlas: AtlasTexture = AtlasTexture.new()
+	atlas.atlas = source
+	atlas.region = Rect2(region)
+	return atlas
+
+
+func _build_title_background_pieces() -> void:
+	_title_background_pieces.clear()
+	var arch_regions: Array[Rect2i] = [
+		Rect2i(0, 0, 333, 100), Rect2i(333, 0, 333, 100), Rect2i(666, 0, 333, 100),
+		Rect2i(0, 100, 333, 100), Rect2i(333, 100, 333, 100), Rect2i(666, 100, 333, 100),
+	]
+	var cluster_regions: Array[Rect2i] = [
+		Rect2i(0, 0, 450, 250), Rect2i(0, 250, 450, 250),
+	]
+	var mid_regions: Array[Rect2i] = []
+	for y: int in [0, 242, 484]:
+		for x: int in [0, 273, 546, 819, 1092, 1365, 1638]:
+			if x + 273 <= 2048 and y + 242 <= 1024:
+				mid_regions.append(Rect2i(x, y, 273, 242))
+	var small_regions: Array[Rect2i] = []
+	for y: int in [0, 116, 232, 348]:
+		for x: int in [0, 112, 224, 336, 448, 560, 672, 784, 896]:
+			if x + 112 <= 1024 and y + 116 <= 512:
+				small_regions.append(Rect2i(x, y, 112, 116))
+
+	for i: int in range(18):
+		_add_title_background_piece(ARCHS_PATH, arch_regions[i % arch_regions.size()], i, 0.0, 0.70, 0.0)
+	for i: int in range(8):
+		_add_title_background_piece(BACK_CLUSTERS_PATH, cluster_regions[i % cluster_regions.size()], i, 1.0, 0.45, float((i % 5) - 2) * 4.5)
+	for i: int in range(12):
+		_add_title_background_piece(MID_MIXED_PATH, mid_regions[(i * 5) % mid_regions.size()], i, 2.0, 0.62, float((i % 7) - 3) * 3.0)
+	for i: int in range(14):
+		_add_title_background_piece(FRONT_SMALL_PATH, small_regions[(i * 7) % small_regions.size()], i, 3.0, 0.78, float((i % 5) - 2) * 5.0)
+
+
+func _add_title_background_piece(path: String, region: Rect2i, index: int, depth: float, alpha: float, angle: float) -> void:
+	var piece := TextureRect.new()
+	piece.texture = _atlas_texture(path, region)
+	if piece.texture == null:
+		return
+	piece.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	piece.stretch_mode = TextureRect.STRETCH_SCALE
+	piece.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	piece.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	piece.modulate = Color(0.72, 0.68, 0.56, alpha)
+	piece.rotation_degrees = angle
+	piece.set_meta("source_region_size", Vector2(region.size))
+	piece.set_meta("depth", depth)
+	piece.set_meta("spawn_index", index)
+	_title_background_pieces.append(piece)
+	add_child(piece)
+
+
+func _layout_title_background(viewport_size: Vector2) -> void:
+	if _title_background_pieces.is_empty():
+		return
+	var landscape: bool = viewport_size.x >= viewport_size.y
+	var base_scale: float = viewport_size.y / 450.0
+	var floating_scale: float = base_scale if landscape else base_scale / 1.5
+	for piece: TextureRect in _title_background_pieces:
+		var depth: float = float(piece.get_meta("depth", 0.0))
+		var index: int = int(piece.get_meta("spawn_index", 0))
+		var source_size: Vector2 = piece.get_meta("source_region_size", Vector2(1, 1)) as Vector2
+		var scale_factor: float = base_scale
+		if depth == 1.0:
+			scale_factor = floating_scale * (0.65 if index % 2 == 0 else 1.0)
+		elif depth == 2.0:
+			scale_factor = floating_scale * (1.1 + float(index % 4) * 0.18)
+		elif depth == 3.0:
+			scale_factor = floating_scale * (2.0 + float(index % 3) * 0.22)
+		var piece_size: Vector2 = source_size * scale_factor
+		piece.size = piece_size
+		var x_span: float = maxf(1.0, viewport_size.x + piece_size.x * 0.7)
+		var x_offset: float = fmod(float(index * 137 + int(depth * 53)), x_span) - piece_size.x * 0.35
+		var y_step: float = maxf(96.0, viewport_size.y / 4.0)
+		var y_offset: float = fmod(float(index * 181 + int(depth * 79)), viewport_size.y + y_step) - y_step
+		if depth == 0.0:
+			x_offset = fmod(float(index * 271), viewport_size.x + piece_size.x) - piece_size.x * 0.5
+			y_offset = fmod(float(index * 94), viewport_size.y + piece_size.y) - piece_size.y * 0.4
+		piece.position = Vector2(x_offset, y_offset)
+		piece.set_meta("base_y", y_offset)
+
+
+func _update_title_background_scroll(time_elapsed: float) -> void:
+	if _layout_viewport_size == Vector2.ZERO:
+		return
+	for piece: TextureRect in _title_background_pieces:
+		var depth: float = float(piece.get_meta("depth", 0.0))
+		var speed: float = 10.0 + depth * 8.0
+		var offset: float = fmod(time_elapsed * speed, maxf(1.0, _layout_viewport_size.y + piece.size.y))
+		var original_y: float = float(piece.get_meta("base_y", piece.position.y))
+		if not piece.has_meta("base_y"):
+			piece.set_meta("base_y", piece.position.y)
+			original_y = piece.position.y
+		piece.position.y = fmod(original_y - offset + piece.size.y, _layout_viewport_size.y + piece.size.y) - piece.size.y
+
+
 func _check_has_save() -> bool:
 	return SaveManager != null and SaveManager.has_method("has_save") and SaveManager.has_save()
 
@@ -681,10 +800,25 @@ func _apply_layout() -> void:
 	_layout_viewport_size = viewport_size
 	var is_portrait: bool = viewport_size.y > viewport_size.x
 	var stack_top_actions: bool = _should_stack_title_actions(viewport_size)
-	var margin: float = 56.0 if is_portrait else 24.0
+	var margin: float = 12.0 if is_portrait else 24.0
 	var menu_width: float = _title_menu_width(viewport_size)
-	var title_width: float = maxf(1.0, viewport_size.x - (margin * 2.0))
-	var title_top: float = 64.0 if is_portrait else 20.0
+	var title_region: Rect2i = TITLE_PORT_REGION if is_portrait else TITLE_LAND_REGION
+	var title_width: float = minf(viewport_size.x - (margin * 2.0), float(title_region.size.x) * (2.7 if is_portrait else 3.0))
+	var title_scale: float = title_width / float(title_region.size.x)
+	var title_height: float = float(title_region.size.y) * title_scale
+	var top_region: float = maxf(title_height - 6.0, viewport_size.y * (0.46 if is_portrait else 0.34))
+	var title_top: float = 2.0 + ((top_region - title_height) * 0.5)
+
+	_layout_title_background(viewport_size)
+
+	if _title_logo_sprite:
+		_title_logo_sprite.texture = _atlas_texture(BANNERS_PATH, title_region)
+		_title_logo_sprite.position = Vector2(floor((viewport_size.x - title_width) * 0.5), floor(title_top))
+		_title_logo_sprite.size = Vector2(title_width, title_height)
+	if _title_glow_sprite:
+		_title_glow_sprite.texture = _atlas_texture(BANNERS_PATH, TITLE_PORT_GLOW_REGION if is_portrait else TITLE_LAND_GLOW_REGION)
+		_title_glow_sprite.position = _title_logo_sprite.position if _title_logo_sprite else Vector2.ZERO
+		_title_glow_sprite.size = _title_logo_sprite.size if _title_logo_sprite else Vector2(title_width, title_height)
 
 	if _jmo_title_label:
 		_jmo_title_label.add_theme_font_size_override("font_size", 58 if is_portrait else 72)
@@ -699,28 +833,38 @@ func _apply_layout() -> void:
 	if _menu_box:
 		var menu_box_width: float = viewport_size.x if is_portrait else menu_width
 		var menu_box_x: float = 0.0 if is_portrait else _title_menu_x(viewport_size, menu_width)
-		_menu_box.position = Vector2(menu_box_x, title_top + (150.0 if is_portrait else 170.0))
+		_menu_box.position = Vector2(menu_box_x, top_region + _title_button_gap(viewport_size))
 		_menu_box.custom_minimum_size = Vector2(menu_box_width, 300)
 		_menu_box.size = Vector2(menu_box_width, 300)
 		_menu_box.add_theme_constant_override("separation", PORTRAIT_TOP_ACTION_GAP if stack_top_actions else 12.0)
 		_arrange_top_actions(stack_top_actions)
 	if _top_menu_row:
 		var top_row_width: float = viewport_size.x if is_portrait else menu_width
-		_top_menu_row.custom_minimum_size = Vector2(top_row_width, 44)
-		_top_menu_row.size = Vector2(top_row_width, 44)
+		_top_menu_row.custom_minimum_size = Vector2(top_row_width, TITLE_BUTTON_HEIGHT)
+		_top_menu_row.size = Vector2(top_row_width, TITLE_BUTTON_HEIGHT)
 		_top_menu_row.alignment = BoxContainer.ALIGNMENT_CENTER if is_portrait else BoxContainer.ALIGNMENT_BEGIN
+	for row: HBoxContainer in [_rankings_menu_row, _social_menu_row]:
+		if row:
+			var row_width: float = viewport_size.x if is_portrait else menu_width
+			row.custom_minimum_size = Vector2(row_width, TITLE_BUTTON_HEIGHT)
+			row.size = Vector2(row_width, TITLE_BUTTON_HEIGHT)
+			row.alignment = BoxContainer.ALIGNMENT_CENTER if is_portrait else BoxContainer.ALIGNMENT_BEGIN
 	if _btn_continue and not stack_top_actions:
 		var split_gap: float = 12.0
 		_top_menu_row.add_theme_constant_override("separation", split_gap)
-		_set_button_width(_btn_new_game, floor((menu_width - split_gap) * 0.62), 44)
-		_set_button_width(_btn_continue, ceil((menu_width - split_gap) * 0.38), 44)
+		_set_button_width(_btn_new_game, floor((menu_width - split_gap) * 0.62), TITLE_BUTTON_HEIGHT)
+		_set_button_width(_btn_continue, ceil((menu_width - split_gap) * 0.38), TITLE_BUTTON_HEIGHT)
 	elif _btn_new_game:
-		_set_button_width(_btn_new_game, menu_width, 44)
+		_set_button_width(_btn_new_game, menu_width, TITLE_BUTTON_HEIGHT)
 		if _btn_continue:
-			_set_button_width(_btn_continue, menu_width, 44)
-	for btn: Button in [_btn_multiplayer, _btn_profile, _btn_settings]:
+			_set_button_width(_btn_continue, menu_width, TITLE_BUTTON_HEIGHT)
+	var half_button_width: float = floor((menu_width - 12.0) * 0.5)
+	for btn: Button in [_btn_rankings, _btn_journal, _btn_multiplayer, _btn_profile]:
 		if btn:
-			_set_button_width(btn, menu_width, 44)
+			_set_button_width(btn, half_button_width, TITLE_BUTTON_HEIGHT)
+	for btn: Button in [_btn_settings]:
+		if btn:
+			_set_button_width(btn, menu_width, TITLE_BUTTON_HEIGHT)
 	if _version_label:
 		var version_width: float = 64.0
 		_version_label.custom_minimum_size = Vector2(version_width, 20.0)
@@ -799,6 +943,20 @@ func _title_menu_width(viewport_size: Vector2) -> float:
 	return maxf(1.0, minf(max_width, viewport_size.x - (margin * 2.0)))
 
 
+func _title_button_gap(viewport_size: Vector2) -> float:
+	if viewport_size.y <= viewport_size.x:
+		var title_region: Rect2i = TITLE_LAND_REGION
+		var title_width: float = minf(viewport_size.x - 48.0, float(title_region.size.x) * 3.0)
+		var title_height: float = float(title_region.size.y) * (title_width / float(title_region.size.x))
+		var top_region: float = maxf(title_height - 6.0, viewport_size.y * 0.34)
+		var buttons_height: float = (3.0 * TITLE_BUTTON_HEIGHT)
+		return maxf(8.0, floor((viewport_size.y - top_region - buttons_height) / 5.0))
+	var buttons_height: float = 4.0 * TITLE_BUTTON_HEIGHT
+	if _btn_continue:
+		buttons_height += TITLE_BUTTON_HEIGHT + PORTRAIT_TOP_ACTION_GAP
+	return maxf(6.0, floor((viewport_size.y - (viewport_size.y * 0.46) - buttons_height) / 5.0))
+
+
 func _get_layout_viewport_size() -> Vector2:
 	var engine_size: Vector2 = get_viewport_rect().size
 	return _apply_mobile_safe_layout_reserve(_choose_layout_viewport_size(engine_size, _get_browser_viewport_size()))
@@ -857,42 +1015,57 @@ func _get_centered_submenu_position(panel_size: Vector2) -> Vector2:
 	)
 
 
-func _create_spd_button(text: String, min_size: Vector2 = Vector2(400, 44)) -> Button:
+func _create_spd_button(text: String, min_size: Vector2 = Vector2(400, TITLE_BUTTON_HEIGHT), icon_region: Rect2i = Rect2i()) -> Button:
 	var btn: Button = Button.new()
 	btn.text = text
 	btn.clip_text = true
 	btn.custom_minimum_size = min_size
-	btn.add_theme_font_size_override("font_size", 18)
-	btn.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
-	btn.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.8))
-	btn.add_theme_color_override("font_pressed_color", Color(0.7, 0.65, 0.5))
+	btn.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	btn.expand_icon = false
+	btn.add_theme_font_size_override("font_size", 19)
+	btn.add_theme_constant_override("icon_max_width", 28)
+	btn.add_theme_constant_override("h_separation", 10)
+	btn.add_theme_constant_override("outline_size", 4)
+	btn.add_theme_color_override("font_color", Color.WHITE)
+	btn.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 0.88))
+	btn.add_theme_color_override("font_pressed_color", Color(0.78, 0.78, 0.70))
+	btn.add_theme_color_override("font_outline_color", Color.BLACK)
+	if icon_region.size != Vector2i.ZERO:
+		btn.icon = _atlas_texture(ICONS_PATH, icon_region)
 
-	var normal: StyleBoxFlat = StyleBoxFlat.new()
-	normal.bg_color = Color(0.15, 0.14, 0.12, 0.9)
-	normal.border_color = Color(0.4, 0.36, 0.30)
-	normal.set_border_width_all(2)
-	normal.set_corner_radius_all(2)
-	normal.content_margin_left = 16.0
-	normal.content_margin_right = 16.0
-	normal.content_margin_top = 8.0
-	normal.content_margin_bottom = 8.0
+	var normal: StyleBoxTexture = _create_chrome_button_stylebox()
 	btn.add_theme_stylebox_override("normal", normal)
 
-	var hover: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.22, 0.20, 0.16, 0.95)
-	hover.border_color = Color(0.55, 0.50, 0.40)
+	var hover: StyleBoxTexture = normal.duplicate() as StyleBoxTexture
+	hover.modulate_color = Color(1.22, 1.20, 1.08, 1.0)
 	btn.add_theme_stylebox_override("hover", hover)
 
-	var pressed: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color(0.10, 0.09, 0.07)
+	var pressed: StyleBoxTexture = normal.duplicate() as StyleBoxTexture
+	pressed.modulate_color = Color(0.82, 0.82, 0.76, 1.0)
 	btn.add_theme_stylebox_override("pressed", pressed)
 
-	var focus: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
-	focus.border_color = Color(1.0, 0.85, 0.3)
-	focus.set_border_width_all(2)
+	var focus: StyleBoxTexture = normal.duplicate() as StyleBoxTexture
+	focus.modulate_color = Color(1.15, 1.12, 0.85, 1.0)
 	btn.add_theme_stylebox_override("focus", focus)
 
 	return btn
+
+
+func _create_chrome_button_stylebox() -> StyleBoxTexture:
+	var chrome: Texture2D = _load_texture(CHROME_PATH)
+	var style := StyleBoxTexture.new()
+	style.texture = chrome
+	style.region_rect = Rect2(20, 9, 9, 9)
+	style.texture_margin_left = 4.0
+	style.texture_margin_right = 4.0
+	style.texture_margin_top = 4.0
+	style.texture_margin_bottom = 4.0
+	style.content_margin_left = 16.0
+	style.content_margin_right = 16.0
+	style.content_margin_top = 6.0
+	style.content_margin_bottom = 6.0
+	style.modulate_color = Color(1, 1, 1, 0.92)
+	return style
 
 
 func _create_settings_slider_section(title: String) -> Dictionary:
@@ -1027,6 +1200,13 @@ func _on_continue_pressed() -> void:
 
 func _on_rankings_pressed() -> void:
 	SceneManager.go_to(_rankings_scene, "RankingsScene")
+
+func _on_journal_pressed() -> void:
+	var journal_script: GDScript = load("res://src/ui/windows/wnd_journal.gd") as GDScript
+	if journal_script == null:
+		return
+	var wnd: Variant = journal_script.new()
+	add_child(wnd)
 
 func _on_profile_pressed() -> void:
 	_refresh_profile_ui()

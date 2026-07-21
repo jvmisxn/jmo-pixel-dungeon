@@ -9,25 +9,25 @@ func run(t: Object) -> void:
 		"mobile web title layout uses browser viewport with a stronger right-edge safe reserve"
 	)
 	t.check(
-		scene._title_menu_width(chosen_viewport) <= 180.0,
-		"portrait title menu has a hard narrow-phone width cap"
+		scene._title_menu_width(chosen_viewport) >= 300.0,
+		"portrait title menu uses a broad SPD-style button stack"
 	)
 	t.check(
-		scene._title_menu_width(chosen_viewport) <= chosen_viewport.x - 144.0,
+		scene._title_menu_width(chosen_viewport) <= chosen_viewport.x - 56.0,
 		"portrait title menu leaves phone-safe horizontal breathing room"
 	)
 	t.check(
-		scene._title_menu_x(chosen_viewport, scene._title_menu_width(chosen_viewport)) >= 72.0,
+		scene._title_menu_x(chosen_viewport, scene._title_menu_width(chosen_viewport)) >= 28.0,
 		"portrait title menu keeps a wide left inset"
 	)
 	t.check(
-		scene._title_menu_x(chosen_viewport, scene._title_menu_width(chosen_viewport)) + scene._title_menu_width(chosen_viewport) <= chosen_viewport.x - 72.0,
+		scene._title_menu_x(chosen_viewport, scene._title_menu_width(chosen_viewport)) + scene._title_menu_width(chosen_viewport) <= chosen_viewport.x - 28.0,
 		"portrait title menu keeps a wide right inset"
 	)
 	var narrow_viewport := Vector2(288, 640)
 	var narrow_width: float = scene._title_menu_width(narrow_viewport)
 	t.check(
-		scene._title_menu_x(narrow_viewport, narrow_width) + narrow_width <= narrow_viewport.x - 72.0,
+		scene._title_menu_x(narrow_viewport, narrow_width) + narrow_width <= narrow_viewport.x - 28.0,
 		"ultra-narrow portrait title menu clamps away from the right edge"
 	)
 	t.check(
@@ -50,9 +50,9 @@ func run(t: Object) -> void:
 	menu_box.add_child(top_row)
 	top_row.add_child(continue_btn)
 	var menu_width: float = scene._title_menu_width(chosen_viewport)
-	scene._set_button_width(new_game, menu_width, 44.0)
-	scene._set_button_width(continue_btn, menu_width, 44.0)
-	scene._set_button_width(multiplayer, menu_width, 44.0)
+	scene._set_button_width(new_game, menu_width, TitleScene.TITLE_BUTTON_HEIGHT)
+	scene._set_button_width(continue_btn, menu_width, TitleScene.TITLE_BUTTON_HEIGHT)
+	scene._set_button_width(multiplayer, menu_width, TitleScene.TITLE_BUTTON_HEIGHT)
 	t.check(
 		new_game.custom_minimum_size.is_equal_approx(multiplayer.custom_minimum_size),
 		"title menu buttons share the same mobile layout width"
