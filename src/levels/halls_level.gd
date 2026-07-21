@@ -49,9 +49,11 @@ func _create_random_trap() -> Trap:
 	return _trap_for_weighted_roll(randf())
 
 func _trap_for_weighted_roll(roll: float) -> Trap:
-	# Original Halls trap weights are mostly late-game lethal traps. This port
-	# uses the implemented subset and preserves their relative source weights.
-	var slot: int = clampi(int(floor(roll * 28.0)), 0, 27)
+	# Upstream HallsLevel weights: Frost/Storm/Corrosion/Blazing/Disintegration x4,
+	# Rockfall/Flashing/Guardian/Weakening x2, then rare utility/lethal traps
+	# (Disarming/Summoning/Warping/Cursing/Grim/Pitfall x1). Omit only trap classes
+	# not present in this port (Distortion/Gateway/Geyser) and preserve source order.
+	var slot: int = clampi(int(floor(roll * 34.0)), 0, 33)
 	if slot < 4:
 		return FrostTrap.new()
 	elif slot < 8:
@@ -60,21 +62,25 @@ func _trap_for_weighted_roll(roll: float) -> Trap:
 		return CorrosionTrap.new()
 	elif slot < 16:
 		return BlazingTrap.new()
-	elif slot < 18:
-		return RockfallTrap.new()
 	elif slot < 20:
-		return FlashingTrap.new()
+		return DisintegrationTrap.new()
 	elif slot < 22:
-		return GuardianTrap.new()
-	elif slot < 23:
-		return DisarmingTrap.new()
+		return RockfallTrap.new()
 	elif slot < 24:
-		return SummoningTrap.new()
-	elif slot < 25:
-		return WarpingTrap.new()
+		return FlashingTrap.new()
 	elif slot < 26:
+		return GuardianTrap.new()
+	elif slot < 28:
+		return WeakeningTrap.new()
+	elif slot < 29:
+		return DisarmingTrap.new()
+	elif slot < 30:
+		return SummoningTrap.new()
+	elif slot < 31:
+		return WarpingTrap.new()
+	elif slot < 32:
 		return CursingTrap.new()
-	elif slot < 27:
+	elif slot < 33:
 		return GrimTrap.new()
 	else:
 		return PitfallTrap.new()

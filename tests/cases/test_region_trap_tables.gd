@@ -30,18 +30,19 @@ func _test_city_uses_source_weighted_trap_table(t: Object) -> void:
 	var level := CityLevel.new()
 	var expectations: Array[Array] = [
 		[0.00, "frost trap"],
-		[4.0 / 29.0, "storm trap"],
-		[8.0 / 29.0, "corrosion trap"],
-		[12.0 / 29.0, "blazing trap"],
-		[16.0 / 29.0, "rockfall trap"],
-		[18.0 / 29.0, "flashing trap"],
-		[20.0 / 29.0, "guardian trap"],
-		[22.0 / 29.0, "weakening trap"],
-		[24.0 / 29.0, "disarming trap"],
-		[25.0 / 29.0, "summoning trap"],
-		[26.0 / 29.0, "warping trap"],
-		[27.0 / 29.0, "cursing trap"],
-		[28.0 / 29.0, "pitfall trap"],
+		[4.0 / 33.0, "storm trap"],
+		[8.0 / 33.0, "corrosion trap"],
+		[12.0 / 33.0, "blazing trap"],
+		[16.0 / 33.0, "disintegration trap"],
+		[20.0 / 33.0, "rockfall trap"],
+		[22.0 / 33.0, "flashing trap"],
+		[24.0 / 33.0, "guardian trap"],
+		[26.0 / 33.0, "weakening trap"],
+		[28.0 / 33.0, "disarming trap"],
+		[29.0 / 33.0, "summoning trap"],
+		[30.0 / 33.0, "warping trap"],
+		[31.0 / 33.0, "cursing trap"],
+		[32.0 / 33.0, "pitfall trap"],
 	]
 	for expectation: Array in expectations:
 		var trap: Trap = level._trap_for_weighted_roll(float(expectation[0]))
@@ -50,7 +51,7 @@ func _test_city_uses_source_weighted_trap_table(t: Object) -> void:
 
 func _test_city_no_longer_uses_halls_only_grim_trap(t: Object) -> void:
 	var level := CityLevel.new()
-	for i: int in range(29):
-		var trap: Trap = level._trap_for_weighted_roll((float(i) + 0.5) / 29.0)
+	for i: int in range(33):
+		var trap: Trap = level._trap_for_weighted_roll((float(i) + 0.5) / 33.0)
 		t.check(trap.trap_name != "grim trap",
 			"City weighted slot %d does not use Halls-only grim trap" % i)
