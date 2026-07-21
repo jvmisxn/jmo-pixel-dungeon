@@ -1,11 +1,45 @@
 extends RefCounted
 
+const OozeTrapScript := preload("res://src/levels/traps/ooze_trap.gd")
+const ToxicTrapScript := preload("res://src/levels/traps/toxic_trap.gd")
+
 func run(t: Object) -> void:
+	_test_sewer_uses_source_weighted_trap_table(t)
 	_test_caves_uses_source_weighted_trap_table(t)
 	_test_city_uses_source_weighted_trap_table(t)
 	_test_city_no_longer_uses_halls_only_grim_trap(t)
+	_test_toxic_trap_seeds_source_gas_volume(t)
+	_test_ooze_trap_splashes_source_footprint(t)
 	_test_distortion_trap_summons_source_style_mix(t)
 	_test_distortion_trap_rejects_wrapped_neighbours(t)
+
+func _test_sewer_uses_source_weighted_trap_table(t: Object) -> void:
+	var first_floor := SewerLevel.new()
+	first_floor.depth = 1
+	t.check(
+		first_floor._create_random_trap() is WornDartTrap,
+		"Sewer depth 1 only rolls WornDartTrap"
+	)
+
+	var level := SewerLevel.new()
+	level.depth = 2
+	var expectations: Array[Array] = [
+		[0.00, "chilling trap"],
+		[4.0 / 25.0, "shocking trap"],
+		[8.0 / 25.0, "toxic gas trap"],
+		[12.0 / 25.0, "worn dart trap"],
+		[16.0 / 25.0, "alarm trap"],
+		[18.0 / 25.0, "ooze trap"],
+		[20.0 / 25.0, "confusion gas trap"],
+		[21.0 / 25.0, "flock trap"],
+		[22.0 / 25.0, "summoning trap"],
+		[23.0 / 25.0, "teleportation trap"],
+		[24.0 / 25.0, "gateway trap"],
+	]
+	for expectation: Array in expectations:
+		var trap: Trap = level._trap_for_weighted_roll(float(expectation[0]))
+		t.check(trap.trap_name == String(expectation[1]),
+			"Sewer trap roll %.3f creates %s" % [float(expectation[0]), String(expectation[1])])
 
 func _test_caves_uses_source_weighted_trap_table(t: Object) -> void:
 	var level := CavesLevel.new()
@@ -63,6 +97,58 @@ func _test_city_no_longer_uses_halls_only_grim_trap(t: Object) -> void:
 		t.check(trap.trap_name != "grim trap",
 			"City weighted slot %d does not use Halls-only grim trap" % i)
 
+func _test_toxic_trap_seeds_source_gas_volume(t: Object) -> void:
+	var level := Level.new()
+	level.depth = 3
+	var trap: Trap = ToxicTrapScript.new()
+	trap.pos = ConstantsData.xy_to_pos(10, 10)
+	level.set_terrain(trap.pos, ConstantsData.Terrain.TRAP)
+	trap.activate(null, level)
+
+	t.check(level.blobs.size() == 1, "ToxicTrap seeds one ToxicGas blob")
+	var blob: Variant = level.blobs[0]["blob"]
+	t.check(blob is ToxicGas, "ToxicTrap uses ToxicGas, not PoisonTrap's dart path")
+	t.check(
+		is_equal_approx(blob.get_density(trap.pos), 300.0 + 20.0 * float(level.depth)),
+		"ToxicTrap uses upstream 300+20*depth gas volume"
+	)
+	t.check(level.terrain_at(trap.pos) == ConstantsData.Terrain.INACTIVE_TRAP,
+		"ToxicTrap is consumed as a one-shot trap")
+
+func _test_ooze_trap_splashes_source_footprint(t: Object) -> void:
+	var old_heroes: Array[Node] = GameManager.heroes.duplicate() if GameManager != null else []
+	if GameManager != null:
+		GameManager.heroes.clear()
+
+	var level := Level.new()
+	for y: int in range(10, 13):
+		for x: int in range(10, 13):
+			level.set_terrain(y * Level.W + x, ConstantsData.Terrain.EMPTY)
+	level.set_terrain(10 * Level.W + 11, ConstantsData.Terrain.WALL)
+	var center := Rat.new()
+	center.pos = 11 * Level.W + 11
+	level.add_mob(center)
+	var edge := Rat.new()
+	edge.pos = 12 * Level.W + 11
+	level.add_mob(edge)
+	var walled := Rat.new()
+	walled.pos = 10 * Level.W + 11
+	level.add_mob(walled)
+	var trap: Trap = OozeTrapScript.new()
+	trap.pos = 11 * Level.W + 11
+	level.set_terrain(trap.pos, ConstantsData.Terrain.TRAP)
+	trap.activate(null, level)
+
+	t.check(center.has_buff("Ooze"), "OozeTrap affects the character on the trap cell")
+	t.check(edge.has_buff("Ooze"), "OozeTrap affects adjacent non-solid cells")
+	t.check(not walled.has_buff("Ooze"), "OozeTrap skips solid cells in its 3x3 footprint")
+	t.check(level.terrain_at(trap.pos) == ConstantsData.Terrain.INACTIVE_TRAP,
+		"OozeTrap is consumed as a one-shot trap")
+
+	_free_mobs([center, edge, walled])
+	if GameManager != null:
+		GameManager.heroes = old_heroes
+
 func _test_distortion_trap_summons_source_style_mix(t: Object) -> void:
 	seed(12345)
 	var level := Level.new()
@@ -118,3 +204,11 @@ func _test_distortion_trap_rejects_wrapped_neighbours(t: Object) -> void:
 		"DistortionTrap does not treat previous row's last column as a neighbour")
 	t.check(candidates.has(trap.pos + 1),
 		"DistortionTrap still accepts real same-row neighbours")
+
+func _free_mobs(mobs: Array) -> void:
+	for mob: Variant in mobs:
+		if mob != null and is_instance_valid(mob):
+			if TurnManager != null and TurnManager.has_actor(mob):
+				TurnManager.remove_actor(mob)
+			if mob is Node:
+				(mob as Node).free()

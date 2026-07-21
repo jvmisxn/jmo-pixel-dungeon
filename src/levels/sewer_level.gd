@@ -2,6 +2,9 @@ class_name SewerLevel
 extends RegularLevel
 ## Sewer region levels (depths 1-4). Damp and mossy, with water and grass.
 
+const OozeTrapScript := preload("res://src/levels/traps/ooze_trap.gd")
+const ToxicTrapScript := preload("res://src/levels/traps/toxic_trap.gd")
+
 func _init() -> void:
 	num_standard_rooms = 5 + randi_range(0, 2)
 	num_connection_rooms = 2 + randi_range(0, 2)
@@ -45,10 +48,32 @@ func _create_random_trap() -> Trap:
 	# Original: floor 1 only has WornDartTrap
 	if depth <= 1:
 		return WornDartTrap.new()
-	# Original Sewer trap pool: WornDartTrap, PoisonTrap, AlarmTrap
-	var trap_pool: Array[Trap] = [
-		WornDartTrap.new(),
-		PoisonTrap.new(),
-		AlarmTrap.new(),
-	]
-	return trap_pool[randi_range(0, trap_pool.size() - 1)]
+	return _trap_for_weighted_roll(randf())
+
+func _trap_for_weighted_roll(roll: float) -> Trap:
+	# Upstream SewerLevel weights after floor 1: Chilling/Shocking/Toxic/
+	# WornDart x4, Alarm/Ooze x2, then Confusion/Flock/Summoning/
+	# Teleportation/Gateway x1. Preserve source order.
+	var slot: int = clampi(int(floor(roll * 25.0)), 0, 24)
+	if slot < 4:
+		return ChillingTrap.new()
+	elif slot < 8:
+		return ShockingTrap.new()
+	elif slot < 12:
+		return ToxicTrapScript.new()
+	elif slot < 16:
+		return WornDartTrap.new()
+	elif slot < 18:
+		return AlarmTrap.new()
+	elif slot < 20:
+		return OozeTrapScript.new()
+	elif slot < 21:
+		return ConfusionTrap.new()
+	elif slot < 22:
+		return FlockTrap.new()
+	elif slot < 23:
+		return SummoningTrap.new()
+	elif slot < 24:
+		return TeleportTrap.new()
+	else:
+		return GatewayTrap.new()

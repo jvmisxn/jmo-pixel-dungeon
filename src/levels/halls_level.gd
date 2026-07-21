@@ -6,8 +6,8 @@ func _init() -> void:
 	# Original: 8-9 standard rooms (average 8.33), not 5-7
 	num_standard_rooms = 8 + randi_range(0, 1)
 	num_connection_rooms = 2 + randi_range(0, 2)
-	# TODO: Original reduces view_distance = min(26-depth, viewDistance) in Halls.
-	# Needs a per-level view_distance field on Level class to implement.
+	# Halls sight reduction is applied in Hero.get_view_distance(), where the
+	# level depth is available alongside class/buff view modifiers.
 
 func _roll_feeling() -> void:
 	# Original HallsLevel does NOT have a CHASM feeling in random rolls.

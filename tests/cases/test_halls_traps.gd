@@ -3,6 +3,7 @@ extends RefCounted
 func run(t: Object) -> void:
 	_test_halls_uses_late_game_trap_table(t)
 	_test_halls_does_not_fall_back_to_early_traps(t)
+	_test_halls_caps_hero_view_distance(t)
 
 func _test_halls_uses_late_game_trap_table(t: Object) -> void:
 	var level := HallsLevel.new()
@@ -44,3 +45,38 @@ func _test_halls_does_not_fall_back_to_early_traps(t: Object) -> void:
 		var trap: Trap = level._trap_for_weighted_roll((float(i) + 0.5) / 37.0)
 		t.check(not early_traps.has(trap.trap_name),
 			"Halls weighted slot %d does not use early fallback trap %s" % [i, trap.trap_name])
+
+func _test_halls_caps_hero_view_distance(t: Object) -> void:
+	var halls21 := HallsLevel.new()
+	halls21.depth = 21
+	var huntress := Hero.new()
+	huntress.hero_class = ConstantsData.HeroClass.HUNTRESS
+	huntress.level = halls21
+	t.check(
+		huntress.get_view_distance() == 5,
+		"Halls depth 21 caps Huntress sight to upstream 26-depth"
+	)
+
+	var halls24 := HallsLevel.new()
+	halls24.depth = 24
+	var warrior := Hero.new()
+	warrior.hero_class = ConstantsData.HeroClass.WARRIOR
+	warrior.level = halls24
+	t.check(
+		warrior.get_view_distance() == 2,
+		"Halls depth 24 tightens normal sight to upstream 26-depth"
+	)
+
+	var normal := RegularLevel.new()
+	normal.depth = 21
+	var normal_huntress := Hero.new()
+	normal_huntress.hero_class = ConstantsData.HeroClass.HUNTRESS
+	normal_huntress.level = normal
+	t.check(
+		normal_huntress.get_view_distance() == ConstantsData.VIEW_DISTANCE + 2,
+		"Non-Halls levels keep the Huntress sight bonus uncapped"
+	)
+
+	huntress.free()
+	warrior.free()
+	normal_huntress.free()
