@@ -8,21 +8,22 @@ func _test_halls_uses_late_game_trap_table(t: Object) -> void:
 	var level := HallsLevel.new()
 	var expectations: Array[Array] = [
 		[0.00, "frost trap"],
-		[4.0 / 35.0, "storm trap"],
-		[8.0 / 35.0, "corrosion trap"],
-		[12.0 / 35.0, "blazing trap"],
-		[16.0 / 35.0, "disintegration trap"],
-		[20.0 / 35.0, "rockfall trap"],
-		[22.0 / 35.0, "flashing trap"],
-		[24.0 / 35.0, "guardian trap"],
-		[26.0 / 35.0, "weakening trap"],
-		[28.0 / 35.0, "disarming trap"],
-		[29.0 / 35.0, "summoning trap"],
-		[30.0 / 35.0, "warping trap"],
-		[31.0 / 35.0, "cursing trap"],
-		[32.0 / 35.0, "grim trap"],
-		[33.0 / 35.0, "pitfall trap"],
-		[34.0 / 35.0, "gateway trap"],
+		[4.0 / 36.0, "storm trap"],
+		[8.0 / 36.0, "corrosion trap"],
+		[12.0 / 36.0, "blazing trap"],
+		[16.0 / 36.0, "disintegration trap"],
+		[20.0 / 36.0, "rockfall trap"],
+		[22.0 / 36.0, "flashing trap"],
+		[24.0 / 36.0, "guardian trap"],
+		[26.0 / 36.0, "weakening trap"],
+		[28.0 / 36.0, "disarming trap"],
+		[29.0 / 36.0, "summoning trap"],
+		[30.0 / 36.0, "warping trap"],
+		[31.0 / 36.0, "cursing trap"],
+		[32.0 / 36.0, "grim trap"],
+		[33.0 / 36.0, "pitfall trap"],
+		[34.0 / 36.0, "gateway trap"],
+		[35.0 / 36.0, "geyser trap"],
 	]
 	for expectation: Array in expectations:
 		var trap: Trap = level._trap_for_weighted_roll(float(expectation[0]))
@@ -38,7 +39,7 @@ func _test_halls_does_not_fall_back_to_early_traps(t: Object) -> void:
 		"alarm trap",
 		"teleportation trap",
 	]
-	for i: int in range(35):
-		var trap: Trap = level._trap_for_weighted_roll((float(i) + 0.5) / 35.0)
+	for i: int in range(36):
+		var trap: Trap = level._trap_for_weighted_roll((float(i) + 0.5) / 36.0)
 		t.check(not early_traps.has(trap.trap_name),
 			"Halls weighted slot %d does not use early fallback trap %s" % [i, trap.trap_name])

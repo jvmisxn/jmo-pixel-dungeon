@@ -52,8 +52,8 @@ func _trap_for_weighted_roll(roll: float) -> Trap:
 	# Upstream HallsLevel weights: Frost/Storm/Corrosion/Blazing/Disintegration x4,
 	# Rockfall/Flashing/Guardian/Weakening x2, then rare utility/lethal traps
 	# (Disarming/Summoning/Warping/Cursing/Grim/Pitfall x1). Omit only trap classes
-	# not present in this port (Distortion/Geyser) and preserve source order.
-	var slot: int = clampi(int(floor(roll * 35.0)), 0, 34)
+	# not present in this port (Distortion) and preserve source order.
+	var slot: int = clampi(int(floor(roll * 36.0)), 0, 35)
 	if slot < 4:
 		return FrostTrap.new()
 	elif slot < 8:
@@ -84,5 +84,7 @@ func _trap_for_weighted_roll(roll: float) -> Trap:
 		return GrimTrap.new()
 	elif slot < 34:
 		return PitfallTrap.new()
-	else:
+	elif slot < 35:
 		return GatewayTrap.new()
+	else:
+		return GeyserTrap.new()
