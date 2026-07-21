@@ -34,26 +34,14 @@ func _vent_corrosive_gas() -> void:
 	gas_cooldown = GAS_INTERVAL
 	if MessageLog:
 		MessageLog.add_warning("The DM-201 vents corrosive gas!")
-	# Apply corrosion/poison to all adjacent characters
-	for dir: int in ConstantsData.DIRS_8:
-		var adj_pos: int = pos + dir
-		if level and level.has_method("find_char_at"):
-			var victim: Variant = level.find_char_at(adj_pos)
-			if victim and victim is Char:
-				var c: Char = victim as Char
-				# Corrosive gas: both poison and armor degradation
-				var p: Poison = Poison.create(5.0)
-				c.add_buff(p)
-				# Apply ooze for ongoing acid damage
-				if c.has_method("add_buff"):
-					var ooze: Ooze = Ooze.new()
-					c.add_buff(ooze)
+	var center: int = target.pos if target != null else pos
+	_seed_corrosive_gas_cloud(center)
 
 func _on_death(source: Variant) -> void:
 	# Release a large cloud of corrosive gas on death
 	if MessageLog:
 		MessageLog.add_warning("The DM-201 explodes in a cloud of corrosive gas!")
-	_vent_corrosive_gas()
+	_seed_corrosive_gas_cloud(pos)
 	# Also damage adjacent characters from the explosion
 	if level:
 		for dir: int in ConstantsData.DIRS_8:
@@ -63,6 +51,36 @@ func _on_death(source: Variant) -> void:
 				if victim and victim is Char:
 					(victim as Char).take_damage(randi_range(8, 16), self)
 	super._on_death(source)
+
+func _seed_corrosive_gas_cloud(center: int) -> void:
+	if level == null or not level.has_method("add_blob"):
+		return
+	_seed_corrosive_gas_cell(center, 15.0)
+	for cell: int in _open_neighbor_cells(center):
+		_seed_corrosive_gas_cell(cell, 5.0)
+
+func _seed_corrosive_gas_cell(cell: int, amount: float) -> void:
+	var gas: CorrosiveGas = CorrosiveGas.new()
+	gas.set_strength(8, "DM201")
+	level.add_blob(gas, cell, amount)
+
+func _open_neighbor_cells(center: int) -> Array[int]:
+	var cells: Array[int] = []
+	var cx: int = ConstantsData.pos_to_x(center)
+	var cy: int = ConstantsData.pos_to_y(center)
+	for dy: int in range(-1, 2):
+		for dx: int in range(-1, 2):
+			if dx == 0 and dy == 0:
+				continue
+			var nx: int = cx + dx
+			var ny: int = cy + dy
+			if nx < 0 or nx >= ConstantsData.WIDTH or ny < 0 or ny >= ConstantsData.HEIGHT:
+				continue
+			var cell: int = ConstantsData.xy_to_pos(nx, ny)
+			if level.has_method("is_passable") and not level.is_passable(cell):
+				continue
+			cells.append(cell)
+	return cells
 
 func scale_to_depth(p_depth: int) -> void:
 	var scale: int = maxi(0, p_depth - 12)
