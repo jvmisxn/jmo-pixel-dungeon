@@ -2,6 +2,9 @@
 
 ## 2026-07-20
 
+- Tags: mobs, fetid-rat, blobs, stench-gas, source-fidelity, tests
+- Restored Fetid Rat's upstream quest-miniboss combat hooks (SPD parity plan Phase 2, missing blob classes/seeders). Source check against current upstream `FetidRat.java`, `Rat.java`, and `StenchGas.java`: Fetid Rat has HP 20, attack skill 12, defense skill 5, EXP 4, keeps rat damage (`1..4`) while adding extra defense roll, has a 1-in-3 attack proc that applies `Ooze`, seeds `StenchGas` at volume 20 from `defenseProc`, and is immune to that gas; `StenchGas.evolve()` prolongs `Paralysis` for `Paralysis.DURATION / 5` on characters standing in it. Added `src/actors/blobs/stench_gas.gd`, updated `src/actors/mobs/sewer/fetid_rat.gd`, and added `test_fetid_rat_stench.gd` coverage for stats, stench seeding volume/type, gas paralysis duration, immunity, and Ooze application. Remaining minor divergence: SPD also adjusts Sad Ghost quest score for hero ooze/stench exposure, but this port has no matching quest-score surface yet.
+
 - Tags: hud, buffs, desktop, source-fidelity, tests
 - Restored active buff/debuff visibility on desktop HUD without reviving `StatusPane`: the existing `MobileBuffsRow` now shows whenever it has `BuffIcon` children, while keeping the mobile placement/height behavior intact. Added `test_hud_desktop_buffs.gd` coverage for a desktop viewport, live `Poison` add/remove signals, and the row hiding again when no local-hero buffs remain.
 
