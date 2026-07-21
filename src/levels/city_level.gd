@@ -51,7 +51,7 @@ func _trap_for_weighted_roll(roll: float) -> Trap:
 	# Upstream CityLevel weights: Frost/Storm/Corrosion/Blazing/Disintegration x4,
 	# Rockfall/Flashing/Guardian/Weakening x2, then rare utility/lethal traps.
 	# Omit only trap classes not present in this port and preserve source order.
-	var slot: int = clampi(int(floor(roll * 33.0)), 0, 32)
+	var slot: int = clampi(int(floor(roll * 34.0)), 0, 33)
 	if slot < 4:
 		return FrostTrap.new()
 	elif slot < 8:
@@ -78,5 +78,7 @@ func _trap_for_weighted_roll(roll: float) -> Trap:
 		return WarpingTrap.new()
 	elif slot < 32:
 		return CursingTrap.new()
-	else:
+	elif slot < 33:
 		return PitfallTrap.new()
+	else:
+		return GatewayTrap.new()

@@ -629,8 +629,6 @@ func trigger_trap(pos: int, victim: Variant) -> void:
 		return
 	if trap.has_method("activate"):
 		trap.activate(victim, self)
-	# Mark terrain as inactive
-	set_terrain(pos, ConstantsData.Terrain.INACTIVE_TRAP)
 	if GameManager:
 		GameManager.record_stat("traps_triggered")
 

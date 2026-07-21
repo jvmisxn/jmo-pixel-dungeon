@@ -688,9 +688,6 @@ func _check_terrain_effects() -> void:
 				level.trigger_trap(pos, self)
 			elif MessageLog:
 				MessageLog.add_warning("You triggered a trap!")
-			# After triggering, the trap becomes inactive
-			if level.has_method("set_terrain"):
-				level.set_terrain(pos, ConstantsData.Terrain.INACTIVE_TRAP)
 
 		ConstantsData.Terrain.CHASM:
 			if Chasm.can_cross(self):
