@@ -67,7 +67,9 @@ func run(t: Object) -> void:
 	GameManager.local_hero_index = 0
 
 	var hud := DesktopHud.new()
-	t.root.add_child(hud)
+	hud._vp_size = Vector2(1280, 720)
+	hud._build_layout()
+	hud.update_all()
 	hud._apply_viewport_size(Vector2(1280, 720))
 
 	t.check(
@@ -76,6 +78,14 @@ func run(t: Object) -> void:
 	)
 
 	var layout_root: Control = hud.get_node_or_null("HUDRoot") as Control
+	t.check(layout_root != null, "desktop HUD builds its layout root")
+	if layout_root == null:
+		hud.free()
+		hero.free()
+		GameManager.hero = previous_hero
+		GameManager.heroes = previous_heroes
+		GameManager.local_hero_index = previous_local_hero_index
+		return
 	var desktop_buffs_row: HFlowContainer = layout_root.get_node_or_null("MobileBuffsRow") as HFlowContainer
 	t.check(
 		desktop_buffs_row != null and not desktop_buffs_row.visible,
