@@ -92,6 +92,11 @@ func _test_sprite_shadow_uses_spd_asset(t: Object) -> void:
 	var body: Sprite2D = sprite.get("_sprite") as Sprite2D
 	t.check(body != null and body.position.y < 0.0,
 		"Character sprites are raised above their SPD shadow")
+	if shadow != null and body != null:
+		var sprite_bottom_y: float = body.position.y + HeroSprite.FRAME_HEIGHT * 0.5
+		var shadow_top_y: float = shadow.position.y - (shadow.texture.get_height() * shadow.scale.y) * 0.5
+		t.check(shadow_top_y <= sprite_bottom_y,
+			"Character shadows touch the sprite feet instead of floating below them")
 
 	sprite.free()
 

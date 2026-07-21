@@ -59,7 +59,7 @@ var _active_states: Dictionary[int, bool] = {}
 var render_shadow: bool = false
 var shadow_width: float = 1.2
 var shadow_height: float = 0.25
-var shadow_offset: float = 0.25
+var shadow_overlap: float = 1.0
 var perspective_raise: float = 6.0 / 16.0
 
 # --- Sleeping state (driven by Mob/Hero update, like original) ---
@@ -580,7 +580,9 @@ func _update_shadow_visual() -> void:
 	_shadow.visible = render_shadow and shadow_texture != null
 	var frame_size: Vector2 = _current_frame_size()
 	var sprite_raise: float = TILE_SIZE * perspective_raise
-	_shadow.position = Vector2(0.0, frame_size.y * 0.5 - sprite_raise + shadow_offset * frame_size.y)
+	var sprite_feet_y: float = frame_size.y * 0.5 - sprite_raise
+	var visual_shadow_height: float = frame_size.y * shadow_height
+	_shadow.position = Vector2(0.0, sprite_feet_y + visual_shadow_height * 0.5 - shadow_overlap)
 	if shadow_texture != null:
 		var width: float = maxf(1.0, float(shadow_texture.get_width()))
 		var height: float = maxf(1.0, float(shadow_texture.get_height()))
