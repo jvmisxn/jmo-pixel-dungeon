@@ -1,11 +1,10 @@
 extends RefCounted
 ## Coverage for the Stone of Disarming.
 ##
-## Regression: the stone applied a `Weakness` debuff to an adjacent character,
-## which is not what SPD's Stone of Disarming does. Upstream `StoneOfDisarming`
-## reveals and disarms up to the nine nearest active traps within range
-## (`t.reveal(); t.disarm();`, capped at nine). This port centres the effect on
-## the hero (no thrown-cell target for runestones yet) using a Chebyshev radius.
+## Regression: the stone applied a `Weakness` debuff to an adjacent character.
+## It now disarms nearby traps and, like current upstream runestones generally,
+## centres the effect on the selected target cell instead of the hero. This
+## port/legacy stone still approximates the footprint with a Chebyshev radius.
 
 func _make_level() -> Level:
 	var level := Level.new()
@@ -107,3 +106,27 @@ func run(t: Object) -> void:
 		"exactly nine traps are disarmed when more are in range (cap)")
 
 	hero2.free()
+
+	# Targeted-center regression: the runestone should resolve around the cell
+	# the player picked, not around the hero.
+	var level3: Level = _make_level()
+	var hero3_pos: int = ConstantsData.xy_to_pos(2, 2)
+	var hero3: Hero = _make_hero(hero3_pos, level3)
+	var target_center: int = ConstantsData.xy_to_pos(20, 20)
+	var target_near_pos: int = ConstantsData.xy_to_pos(22, 20)
+	var hero_near_pos: int = ConstantsData.xy_to_pos(4, 2)
+	var target_trap: Trap = _place_trap(level3, target_near_pos, false)
+	var hero_trap: Trap = _place_trap(level3, hero_near_pos, false)
+	t.check(level3.distance(target_center, target_near_pos) <= Stone.DISARM_DIST,
+		"target-side trap is within selected-cell range")
+	t.check(level3.distance(hero3_pos, target_near_pos) > Stone.DISARM_DIST,
+		"target-side trap is outside hero-centred range")
+	t.check(level3.distance(hero3_pos, hero_near_pos) <= Stone.DISARM_DIST,
+		"hero-side trap would have been hit by old hero-centred behavior")
+
+	Stone.create("disarming")._use_disarming(hero3, target_center)
+
+	t.check(not target_trap.active, "target-centred stone disarms traps near the selected cell")
+	t.check(hero_trap.active, "target-centred stone does not disarm traps merely near the hero")
+
+	hero3.free()

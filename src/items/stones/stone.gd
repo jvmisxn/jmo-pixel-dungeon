@@ -37,13 +37,36 @@ func is_upgradeable() -> bool:
 func execute(hero: Char) -> void:
 	if hero == null:
 		return
+	if _requires_target_cell():
+		var callback: Callable = func(cell: int) -> void:
+			_apply_effect(hero, cell)
+			if EventBus:
+				EventBus.item_used.emit(item_name)
+			_consume_one(hero)
+		if EventBus and EventBus.has_signal("enter_targeting"):
+			EventBus.enter_targeting.emit(self, 8, callback)
+			if MessageLog:
+				MessageLog.add("Choose where to throw the %s." % item_name)
+			return
 	_apply_effect(hero)
 	if EventBus:
 		EventBus.item_used.emit(item_name)
 	_consume_one(hero)
 
+func _requires_target_cell() -> bool:
+	return stone_type in [
+		StoneType.BLAST,
+		StoneType.BLINK,
+		StoneType.CLAIRVOYANCE,
+		StoneType.DEEPENED_SLEEP,
+		StoneType.DISARMING,
+		StoneType.FEAR,
+		StoneType.FLOCK,
+		StoneType.SHOCK,
+	]
+
 ## Apply the stone's effect based on type.
-func _apply_effect(hero: Char) -> void:
+func _apply_effect(hero: Char, target_pos: int = -1) -> void:
 	match stone_type:
 		StoneType.ENCHANTMENT:
 			_use_enchantment(hero)
@@ -52,21 +75,21 @@ func _apply_effect(hero: Char) -> void:
 		StoneType.INTUITION:
 			_use_intuition(hero)
 		StoneType.BLAST:
-			_use_blast(hero)
+			_use_blast(hero, target_pos)
 		StoneType.BLINK:
-			_use_blink(hero)
+			_use_blink(hero, target_pos)
 		StoneType.CLAIRVOYANCE:
-			_use_clairvoyance(hero)
+			_use_clairvoyance(hero, target_pos)
 		StoneType.DEEPENED_SLEEP:
-			_use_deepened_sleep(hero)
+			_use_deepened_sleep(hero, target_pos)
 		StoneType.DISARMING:
-			_use_disarming(hero)
+			_use_disarming(hero, target_pos)
 		StoneType.FEAR:
-			_use_fear(hero)
+			_use_fear(hero, target_pos)
 		StoneType.FLOCK:
-			_use_flock(hero)
+			_use_flock(hero, target_pos)
 		StoneType.SHOCK:
-			_use_shock(hero)
+			_use_shock(hero, target_pos)
 
 ## Add a random enchantment to the hero's equipped weapon.
 func _use_enchantment(hero: Char) -> void:
@@ -273,8 +296,9 @@ func _use_intuition(hero: Char) -> void:
 		_notify_hero(hero, "The stone crumbles, but nothing happens.")
 
 ## Create a mini explosion at the hero's position.
-func _use_blast(hero: Char) -> void:
-	var target_pos: int = hero.pos if hero.get("pos") != null else 0
+func _use_blast(hero: Char, target_pos: int = -1) -> void:
+	if target_pos < 0:
+		target_pos = hero.pos if hero.get("pos") != null else 0
 	var dungeon_level: Variant = hero.get("level")
 	if dungeon_level != null and dungeon_level.has_method("get_chars_at_positions"):
 		# Damage adjacent enemies
@@ -290,9 +314,24 @@ func _use_blast(hero: Char) -> void:
 	_notify_hero(hero, "The stone explodes!")
 
 ## Short-range teleport (blink).
-func _use_blink(hero: Char) -> void:
+func _use_blink(hero: Char, target_pos: int = -1) -> void:
 	var dungeon_level: Variant = hero.get("level")
 	if dungeon_level == null:
+		return
+	if target_pos >= 0:
+		if dungeon_level.has_method("is_passable") and dungeon_level.is_passable(target_pos):
+			if dungeon_level.has_method("find_char_at") and dungeon_level.find_char_at(target_pos) != null:
+				_notify_hero(hero, "The stone crumbles, but there was nowhere to blink to.")
+				return
+			hero.pos = target_pos
+			_notify_hero(hero, "You blink to the target location!", "positive")
+			if EventBus:
+				EventBus.hero_moved_detailed.emit(hero, target_pos)
+				var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+				if focused_hero == hero:
+					EventBus.hero_moved.emit(target_pos)
+			return
+		_notify_hero(hero, "The stone crumbles, but there was nowhere to blink to.")
 		return
 	# Teleport to a random passable cell within 8 cells
 	var attempts: int = 100
@@ -322,20 +361,31 @@ func _use_blink(hero: Char) -> void:
 	_notify_hero(hero, "The stone crumbles, but there was nowhere to blink to.")
 
 ## Reveal the area around a target position.
-func _use_clairvoyance(hero: Char) -> void:
+func _use_clairvoyance(hero: Char, target_pos: int = -1) -> void:
 	var dungeon_level: Variant = hero.get("level")
 	if dungeon_level == null:
 		return
+	if target_pos < 0:
+		target_pos = hero.pos
 	# Reveal cells in a large radius around hero
 	if dungeon_level.has_method("reveal_area"):
-		dungeon_level.reveal_area(hero.pos, 8)
+		dungeon_level.reveal_area(target_pos, 8)
 	_notify_hero(hero, "The dungeon layout becomes clear!", "positive")
 
 ## Put a target enemy into deep sleep.
-func _use_deepened_sleep(hero: Char) -> void:
-	# Would target an adjacent or nearby mob
+func _use_deepened_sleep(hero: Char, target_pos: int = -1) -> void:
 	var dungeon_level: Variant = hero.get("level")
 	if dungeon_level == null:
+		return
+	if target_pos >= 0 and dungeon_level.has_method("find_char_at"):
+		var target: Variant = dungeon_level.find_char_at(target_pos)
+		if target != null and target != hero and target.has_method("add_buff"):
+			var target_sleep: SleepBuff = SleepBuff.new()
+			target_sleep.set_duration(20.0)
+			target.add_buff(target_sleep)
+			_notify_hero(hero, "The target falls into a deep sleep!", "positive")
+			return
+		_notify_hero(hero, "There is no target to put to sleep.")
 		return
 	# Find an adjacent mob
 	for dir: int in ConstantsData.DIRS_8:
@@ -352,19 +402,15 @@ func _use_deepened_sleep(hero: Char) -> void:
 				return
 	_notify_hero(hero, "There is no adjacent target to put to sleep.")
 
-## Disarm malicious traps in the area (SPD Stone of Disarming). Reveals and
-## disarms up to the nine nearest active traps within DISARM_DIST, matching
-## upstream `StoneOfDisarming.activate()` (`t.reveal(); t.disarm();`, capped at
-## nine). SOURCE-FIDELITY: SPD centres the effect on the thrown-at cell inside a
-## shadow-cast FOV; this port has no thrown-cell target for runestones yet (see
-## backlog S17 P1), so it centres on the hero and uses a Chebyshev-distance
-## radius instead of FOV. The item was previously a mislabelled Weakness debuff
-## on an adjacent character, which is not what SPD's Stone of Disarming does.
-func _use_disarming(hero: Char) -> void:
+## Disarm malicious traps in the area. This is a port/legacy runestone rather
+## than a current-upstream SPD stone, but it follows the same runestone contract:
+## resolve from the selected/thrown cell, not from the hero's current position.
+## Remaining approximation: Chebyshev-distance radius instead of shadow-cast FOV.
+func _use_disarming(hero: Char, target_pos: int = -1) -> void:
 	var dungeon_level: Variant = hero.get("level")
 	if dungeon_level == null:
 		return
-	var center: int = hero.pos
+	var center: int = target_pos if target_pos >= 0 else hero.pos
 	# Gather active traps in range, so we can disarm the nearest nine.
 	var candidates: Array = []
 	for trap_pos: int in dungeon_level.traps.keys():
@@ -393,13 +439,15 @@ func _use_disarming(hero: Char) -> void:
 	_notify_hero(hero, "The stone disarms %d trap%s!" % [disarmed, plural], "positive")
 
 ## Terrify targets in the area.
-func _use_fear(hero: Char) -> void:
+func _use_fear(hero: Char, target_pos: int = -1) -> void:
 	var dungeon_level: Variant = hero.get("level")
 	if dungeon_level == null:
 		return
+	if target_pos < 0:
+		target_pos = hero.pos
 	var cells: Array[int] = []
 	for dir: int in ConstantsData.DIRS_8:
-		var cell: int = hero.pos + dir
+		var cell: int = target_pos + dir
 		if ConstantsData.is_valid_pos(cell):
 			cells.append(cell)
 	if dungeon_level.has_method("get_chars_at_positions"):
@@ -412,13 +460,15 @@ func _use_fear(hero: Char) -> void:
 	_notify_hero(hero, "A wave of terror washes over nearby enemies!")
 
 ## Summon blocking sheep at adjacent positions.
-func _use_flock(hero: Char) -> void:
+func _use_flock(hero: Char, target_pos: int = -1) -> void:
 	var dungeon_level: Variant = hero.get("level")
 	if dungeon_level == null:
 		return
+	if target_pos < 0:
+		target_pos = hero.pos
 	var spawned: int = 0
 	for dir: int in ConstantsData.DIRS_8:
-		var cell: int = hero.pos + dir
+		var cell: int = target_pos + dir
 		if not ConstantsData.is_valid_pos(cell):
 			continue
 		if dungeon_level.has_method("is_passable") and not dungeon_level.is_passable(cell):
@@ -433,13 +483,15 @@ func _use_flock(hero: Char) -> void:
 		_notify_hero(hero, "There is no space for the flock to appear.")
 
 ## Chain lightning from the thrown position.
-func _use_shock(hero: Char) -> void:
+func _use_shock(hero: Char, target_pos: int = -1) -> void:
 	var dungeon_level: Variant = hero.get("level")
 	if dungeon_level == null:
 		return
+	if target_pos < 0:
+		target_pos = hero.pos
 	# Damage all adjacent enemies with lightning
 	for dir: int in ConstantsData.DIRS_8:
-		var cell: int = hero.pos + dir
+		var cell: int = target_pos + dir
 		if not ConstantsData.is_valid_pos(cell):
 			continue
 		if dungeon_level.has_method("find_char_at"):

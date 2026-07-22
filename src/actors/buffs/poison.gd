@@ -25,6 +25,17 @@ static func create(amount: float) -> Poison:
 	p.time_left = amount
 	return p
 
+## SPD `Poison.act()` deals damage using `left` *before* decrementing it
+## (`target.damage((int)(left/3)+1, this); left -= TICK;`). The base `Buff.act()`
+## decrements `time_left` first and then calls `on_turn()`, which would make every
+## tick read a value one lower than upstream and shave ~1 damage-tier off the whole
+## duration (e.g. a 10-turn poison dealt 22 instead of 25). Mirror SPD by damaging
+## with the current `time_left` first, then applying the base decrement.
+func act() -> void:
+	on_turn()
+	if duration > 0:
+		time_left -= 1.0
+
 func on_turn() -> void:
 	if target == null:
 		return
