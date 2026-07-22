@@ -30,7 +30,7 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 	# Also damage mobs in adjacent cells (rocks scatter)
 	for dir: int in ConstantsData.DIRS_4:
 		var adj: int = pos + dir
-		if adj >= 0 and adj < Level.LEN:
+		if level.adjacent(pos, adj):
 			var mob: Variant = level.mob_at(adj)
 			if mob != null and mob.has_method("take_damage"):
 				@warning_ignore("integer_division")

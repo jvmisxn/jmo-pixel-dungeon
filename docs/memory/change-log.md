@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-22
+
+- Tags: traps, edge-wrap, level-generation, source-fidelity, tests
+- Closed the generic trap-footprint row-wrap gap in several 3x3/adjacent trap effects (SPD parity plan Phase 2, trap routing/level-generation hardening; backlog audit:S10). Source-fidelity rationale: SPD uses `PathFinder.NEIGHBOURS8/9` over true grid neighbours, so a trap at column 0 must never treat `pos - 1` as a west neighbour on the previous row. The port still had raw `pos + dir` loops with only `0 <= cell < LEN` bounds in `FlashingTrap`, `ExplosiveTrap`, `BlazingTrap`, `FlockTrap`, `GuardianTrap`, `SummoningTrap`, `DisarmingTrap`, and `RockfallTrap`, letting blindness, explosion damage, fire spread, spawn/drop candidates, and rockfall splash leak across map edges. Those loops now gate candidates through `Level.adjacent(pos, adj)` before applying effects or collecting candidates. Added `test_trap_edge_wrap.gd` covering FlashingTrap, BlazingTrap, and ExplosiveTrap at a left-edge cell: the true same-row neighbour is affected while the wrapped previous-row cell is not. Local `git diff --check` clean; Godot import clean; full headless suite passed (2046 checks, 0 failures, Godot 4.7.1). Broader remaining trap/level-gen follow-ups are unchanged: full Pitfall delayed-collapse/PitRoom semantics, alternate builders/door graph repair, and any trap-specific upstream effect approximations not touched here.
+
 ## 2026-07-21
 
 - Tags: spells, wild-energy, wands, artifacts, source-fidelity, tests

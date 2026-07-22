@@ -14,7 +14,7 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 	var explosion_cells: Array[int] = [pos]
 	for dir: int in ConstantsData.DIRS_8:
 		var adj: int = pos + dir
-		if adj >= 0 and adj < Level.LEN:
+		if level.adjacent(pos, adj):
 			explosion_cells.append(adj)
 
 	var base_damage: int = 10 + level.depth * 2

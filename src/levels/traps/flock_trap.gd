@@ -14,7 +14,7 @@ func _do_effect(_triggerer: Variant, level: Level) -> void:
 	var spawn_cells: Array[int] = []
 	for dir: int in ConstantsData.DIRS_8:
 		var adj: int = pos + dir
-		if adj >= 0 and adj < Level.LEN and level.is_passable(adj):
+		if level.adjacent(pos, adj) and level.is_passable(adj):
 			if level.mob_at(adj) == null:
 				spawn_cells.append(adj)
 

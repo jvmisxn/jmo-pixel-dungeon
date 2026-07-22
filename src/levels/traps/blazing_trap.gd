@@ -25,7 +25,7 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 	# Spread fire to all 8 adjacent cells
 	for dir: int in ConstantsData.DIRS_8:
 		var adj: int = pos + dir
-		if adj >= 0 and adj < Level.LEN:
+		if level.adjacent(pos, adj):
 			var t: int = level.terrain_at(adj)
 			if t == ConstantsData.Terrain.GRASS or t == ConstantsData.Terrain.HIGH_GRASS:
 				level.set_terrain(adj, ConstantsData.Terrain.EMBERS)

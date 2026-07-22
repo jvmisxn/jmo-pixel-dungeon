@@ -33,7 +33,7 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 	var candidates: Array[int] = []
 	for dir: int in ConstantsData.DIRS_8:
 		var adj: int = pos + dir
-		if adj >= 0 and adj < Level.LEN and level.is_passable(adj):
+		if level.adjacent(pos, adj) and level.is_passable(adj):
 			candidates.append(adj)
 
 	if candidates.is_empty():

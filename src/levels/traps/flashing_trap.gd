@@ -16,7 +16,7 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 	# Blind all characters in adjacent cells
 	for dir: int in ConstantsData.DIRS_8:
 		var adj: int = pos + dir
-		if adj >= 0 and adj < Level.LEN:
+		if level.adjacent(pos, adj):
 			var mob: Variant = level.mob_at(adj)
 			if mob != null:
 				_apply_blindness(mob, level)
