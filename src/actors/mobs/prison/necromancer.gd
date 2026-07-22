@@ -56,9 +56,14 @@ func _act_hunting() -> void:
 				did_visible_action = true
 				if MessageLog:
 					MessageLog.add_warning("The necromancer begins raising a skeleton!")
+				# Original: spend( firstSummon ? TICK : 2*TICK ) when the charge-up
+				# begins — the first skeleton is raised faster than later re-summons.
+				spend_turn(1.0 if first_summon else 2.0)
+			else:
+				spend_turn()
 		else:
 			_complete_summon()
-		spend_turn()
+			spend_turn()
 		return
 
 	if my_skeleton.target == null or not my_skeleton.target.is_alive:
