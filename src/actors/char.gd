@@ -648,7 +648,8 @@ func move_to(new_pos: int) -> bool:
 
 ## Called after a successful move. Notifies all buffs.
 func on_move(old_pos: int, new_pos: int) -> void:
-	for b: Node in _buffs:
+	# Duplicate: a handler may detach itself (e.g. HerbalArmorBuff) mid-iteration.
+	for b: Node in _buffs.duplicate():
 		if b.has_method("on_move"):
 			b.on_move(old_pos, new_pos)
 
