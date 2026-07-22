@@ -36,11 +36,12 @@ func _test_blazing_trap_no_edge_wrap(t: Object) -> void:
 	level.set_terrain(wrapped, ConstantsData.Terrain.GRASS)
 
 	trap.activate(null, level)
+	var fire: FireBlob = _find_fire_blob(level)
 
-	t.check(level.terrain_at(real_neighbour) == ConstantsData.Terrain.EMBERS,
-		"BlazingTrap burns a true same-row neighbouring grass cell")
-	t.check(level.terrain_at(wrapped) == ConstantsData.Terrain.GRASS,
-		"BlazingTrap does not burn wrapped previous-row grass")
+	t.check(fire != null and fire.get_density(real_neighbour) > 0.0,
+		"BlazingTrap seeds fire on a true same-row neighbour")
+	t.check(fire == null or is_zero_approx(fire.get_density(wrapped)),
+		"BlazingTrap does not seed fire on a wrapped previous-row cell")
 
 func _test_explosive_trap_no_edge_wrap(t: Object) -> void:
 	var level := Level.new()
@@ -69,3 +70,10 @@ func _free_mobs(mobs: Array) -> void:
 				TurnManager.remove_actor(mob)
 			if mob is Node:
 				(mob as Node).free()
+
+func _find_fire_blob(level: Level) -> FireBlob:
+	for entry: Dictionary in level.blobs:
+		var blob: Variant = entry.get("blob")
+		if blob is FireBlob:
+			return blob as FireBlob
+	return null

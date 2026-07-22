@@ -62,6 +62,17 @@ static func _max_hp(actor: Variant) -> int:
 		return 0
 	return int(actor.get("ht")) if actor.get("ht") != null else int(actor.get("hp_max"))
 
+## SPD's `Chasm.mobFall`: a non-flying mob caught by a chasm/pitfall does NOT
+## descend to the next floor -- it dies to the fall. Only living mobs are
+## affected (already-dead mobs are left alone).
+static func mob_fall(mob: Variant) -> void:
+	if mob == null or not is_instance_valid(mob):
+		return
+	if mob.get("is_alive") == false:
+		return
+	if mob.has_method("die"):
+		mob.die("chasm")
+
 ## Check if a position is a chasm.
 static func is_chasm(level: Level, pos: int) -> bool:
 	return level.terrain_at(pos) == ConstantsData.Terrain.CHASM

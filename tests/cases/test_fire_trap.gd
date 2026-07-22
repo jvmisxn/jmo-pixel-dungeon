@@ -27,11 +27,14 @@ func _make_hero(pos: int, level: Level) -> Hero:
 	return hero
 
 func _has_blob(level: Level, blob_id: String) -> bool:
+	return _find_blob(level, blob_id) != null
+
+func _find_blob(level: Level, blob_id: String) -> Blob:
 	for entry: Dictionary in level.blobs:
 		var blob: Variant = entry.get("blob")
 		if blob != null and str(blob.get("blob_id")) == blob_id:
-			return true
-	return false
+			return blob as Blob
+	return null
 
 func run(t: Object) -> void:
 	seed(0xF17E)
@@ -74,7 +77,49 @@ func run(t: Object) -> void:
 	hero.process_buffs()
 	t.check(hero.hp < 999, "fire trap Burning deals lingering fire damage")
 
+	var blazing_level: Level = _make_level()
+	var blazing_pos: int = ConstantsData.xy_to_pos(16, 16)
+	var blazing_hero: Hero = _make_hero(blazing_pos, blazing_level)
+	GameManager.hero = null
+	GameManager.heroes.clear()
+	GameManager.current_level = blazing_level
+	GameManager.add_hero(blazing_hero)
+
+	var radius_two_cell: int = blazing_pos + 2
+	var water_cell: int = blazing_pos + Level.W
+	var chasm_cell: int = blazing_pos + Level.W * 2
+	var wall_cell: int = blazing_pos - 2
+	blazing_level.set_terrain(radius_two_cell, ConstantsData.Terrain.HIGH_GRASS)
+	blazing_level.set_terrain(water_cell, ConstantsData.Terrain.WATER)
+	blazing_level.set_terrain(chasm_cell, ConstantsData.Terrain.CHASM)
+	blazing_level.set_terrain(wall_cell, ConstantsData.Terrain.WALL)
+
+	var blazing := BlazingTrap.new()
+	blazing.set_pos(blazing_pos)
+	blazing.activate(blazing_hero, blazing_level)
+	var fire: FireBlob = _find_blob(blazing_level, "fire") as FireBlob
+
+	t.check(fire != null, "blazing trap seeds a lasting Fire blob")
+	t.check(is_equal_approx(fire.get_density(blazing_pos), BlazingTrap.FIRE_AMOUNT),
+			"blazing trap seeds strong fire on normal cells")
+	t.check(is_equal_approx(fire.get_density(water_cell), BlazingTrap.WATER_OR_PIT_FIRE_AMOUNT),
+			"blazing trap seeds weak fire on water cells")
+	t.check(is_equal_approx(fire.get_density(chasm_cell), BlazingTrap.WATER_OR_PIT_FIRE_AMOUNT),
+			"blazing trap seeds weak fire on chasm/pit cells")
+	t.check(is_equal_approx(fire.get_density(radius_two_cell), BlazingTrap.FIRE_AMOUNT),
+			"blazing trap reaches the upstream radius-2 footprint")
+	t.check(is_zero_approx(fire.get_density(wall_cell)),
+			"blazing trap skips solid cells in its radius-2 footprint")
+	t.check(not blazing_hero.has_buff("Burning"), "blazing trap waits for the blob tick before burning")
+	t.check(blazing_hero.hp == 999, "blazing trap deals no one-shot direct damage")
+
+	blazing_level.tick_blobs()
+	t.check(blazing_hero.has_buff("Burning"), "blazing trap's Fire blob burns the triggerer on tick")
+	t.check(blazing_level.terrain_at(radius_two_cell) == ConstantsData.Terrain.EMBERS,
+			"blazing trap's Fire blob ignites flammable radius-2 terrain")
+
 	GameManager.heroes = original_heroes
 	GameManager.hero = original_hero
 	GameManager.current_level = original_level
 	hero.free()
+	blazing_hero.free()

@@ -119,12 +119,20 @@ func run(t: Object) -> void:
 	bottom_hero.free()
 
 func _test_pitfall_trap_uses_fall_handoff(t: Object) -> void:
+	var original_depth: int = GameManager.depth
+	var original_hero: Node = GameManager.hero
+	var original_heroes: Array[Node] = GameManager.heroes.duplicate()
+	var original_level: Level = GameManager.current_level
 	var trap_pos: int = ConstantsData.xy_to_pos(8, 8)
 	var level: Level = _make_level(trap_pos)
 	level.map[trap_pos] = ConstantsData.Terrain.TRAP
 	level.build_flag_maps()
+	GameManager.depth = 6
+	GameManager.current_level = level
 
 	var hero: Hero = _make_hero(trap_pos, level)
+	GameManager.hero = hero
+	GameManager.heroes = [hero]
 	var fell_hero: Array[Variant] = [null]
 	var on_fell: Callable = func(hero_node: Variant) -> void:
 		fell_hero[0] = hero_node
@@ -135,7 +143,8 @@ func _test_pitfall_trap_uses_fall_handoff(t: Object) -> void:
 	trap.set_pos(trap_pos)
 	trap.activate(hero, level)
 
-	t.check(fell_hero[0] == hero, "pitfall trap routes heroes through the chasm fall transition")
+	t.check(fell_hero[0] == null, "pitfall trap waits for the delayed collapse before falling")
+	t.check(hero.has_buff("DelayedPit"), "pitfall trap arms a DelayedPit warning buff")
 	t.check(hero.hp == 60, "pitfall trap does not apply same-level proxy damage before transition")
 	t.check(hero.pos == trap_pos, "pitfall trap no longer teleports the hero on the current level")
 	t.check(not hero.has_buff("Cripple"), "pitfall trap leaves landing cripple to the fall arrival path")
@@ -145,12 +154,17 @@ func _test_pitfall_trap_uses_fall_handoff(t: Object) -> void:
 		"pitfall trap tile becomes inactive after triggering"
 	)
 
+	hero.process_buffs()
+	t.check(fell_hero[0] == hero, "pitfall trap routes heroes through the chasm fall transition")
+
 	if EventBus != null and EventBus.has_signal("hero_fell") and EventBus.hero_fell.is_connected(on_fell):
 		EventBus.hero_fell.disconnect(on_fell)
 	hero.free()
 
 	var levitating_hero: Hero = _make_hero(trap_pos, level)
 	levitating_hero.add_buff(Levitation.new())
+	GameManager.hero = levitating_hero
+	GameManager.heroes = [levitating_hero]
 	var levitating_fell: Array[Variant] = [null]
 	var on_levitating_fell: Callable = func(hero_node: Variant) -> void:
 		levitating_fell[0] = hero_node
@@ -160,6 +174,7 @@ func _test_pitfall_trap_uses_fall_handoff(t: Object) -> void:
 	var levitating_trap := PitfallTrap.new()
 	levitating_trap.set_pos(trap_pos)
 	levitating_trap.activate(levitating_hero, level)
+	levitating_hero.process_buffs()
 
 	t.check(levitating_fell[0] == null, "pitfall trap does not drop levitating heroes")
 	t.check(levitating_hero.hp == 60, "levitating hero takes no pitfall damage")
@@ -168,3 +183,7 @@ func _test_pitfall_trap_uses_fall_handoff(t: Object) -> void:
 	if EventBus != null and EventBus.has_signal("hero_fell") and EventBus.hero_fell.is_connected(on_levitating_fell):
 		EventBus.hero_fell.disconnect(on_levitating_fell)
 	levitating_hero.free()
+	GameManager.depth = original_depth
+	GameManager.hero = original_hero
+	GameManager.heroes = original_heroes
+	GameManager.current_level = original_level
