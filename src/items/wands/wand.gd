@@ -481,13 +481,16 @@ class WandOfLightning extends Wand:
 		super._init()
 		item_id = "wand_of_lightning"
 		item_name = "Wand of Lightning"
-		description = "This wand discharges a powerful bolt of lightning " \
-			+ "that arcs between nearby targets. Each chain deals slightly " \
-			+ "less damage, but a crowd of enemies is in for a shocking time."
+		description = "This wand hurls arcs of lightning that always strike the " \
+			+ "target and leap to nearby enemies. The more foes caught in the " \
+			+ "discharge, the less each one takes -- but water conducts the " \
+			+ "charge, extending its reach and restoring full damage, even back " \
+			+ "to the caster."
 		icon_color = Color(1.0, 1.0, 0.5)
 
 	func get_damage(lvl: int) -> Array[int]:
-		return [3 + lvl, 10 + 3 * lvl] as Array[int]
+		# SPD WandOfLightning: min = 5 + lvl, max = 10 + 5 * lvl.
+		return [5 + lvl, 10 + 5 * lvl] as Array[int]
 
 	func on_zap(hero: Char, path: Array[int]) -> void:
 		if path.is_empty():
@@ -497,66 +500,133 @@ class WandOfLightning extends Wand:
 		if lvl == null or not lvl.has_method("find_char_at"):
 			return
 
-		# Chain lightning: hit primary, then arc to nearby chars
-		var hit_positions: Array[int] = []
-		var current_pos: int = target_pos
-		var max_arcs: int = 3 + level
-		var damage_multi: float = 1.0
+		# Build the affected set by flooding outward from the struck cell, mirroring
+		# SPD WandOfLightning.arc(): each caught character arcs to every character
+		# reachable within 1 tile (2 in water) over non-solid cells, recursively.
+		# The bolt only chains if it actually strikes a character; bare terrain
+		# just fizzles.
+		var affected: Array[Char] = []
+		var start: Char = lvl.find_char_at(target_pos) as Char
+		if start != null and start.is_alive:
+			affected.append(start)
+			_arc(lvl, start, affected)
 
-		for _arc: int in range(max_arcs):
-			if not ConstantsData.is_valid_pos(current_pos):
-				break
-			if current_pos in hit_positions:
-				break
-			hit_positions.append(current_pos)
+		if affected.is_empty():
+			return
 
-			var target_char: Variant = lvl.find_char_at(current_pos)
-			if target_char != null and target_char.has_method("take_damage"):
-				var dmg: int = int(float(roll_zap_damage()) * damage_multi)
-				target_char.take_damage(dmg, hero)
+		# SPD damage model: a SHARED multiplier that shrinks as the crowd grows
+		# (0.4 + 0.6 / N), applied EQUALLY to every affected char -- NOT a per-arc
+		# geometric falloff. A struck cell in water conducts fully, so the whole
+		# chain takes undiminished damage.
+		var targets: Array[Char] = []
+		for ch: Char in affected:
+			if _same_alignment_with_caster(hero, ch) and ch.pos != target_pos:
+				continue
+			targets.append(ch)
+
+		if targets.is_empty():
+			return
+
+		var multiplier: float = 0.4 + 0.6 / float(targets.size())
+		if _cell_is_water(lvl, target_pos):
+			multiplier = 1.0
+
+		for ch: Char in targets:
+			if ch == null or not ch.is_alive:
+				continue
+			# SPD rolls damage fresh for each affected target.
+			var base_roll: float = float(roll_zap_damage())
+			if ch == hero:
+				# The caster is only caught when the chain reaches them (adjacent,
+				# or farther through water) and then takes half damage.
+				var self_dmg: int = int(round(base_roll * multiplier * 0.5))
+				ch.take_damage(self_dmg, self)
+				if MessageLog:
+					MessageLog.add_warning("The lightning shocks you too!")
+			else:
+				var dmg: int = int(round(base_roll * multiplier))
+				ch.take_damage(dmg, self)
 				if MessageLog:
 					MessageLog.add("Lightning arcs for %d damage!" % dmg)
 
-			# Find next closest char to arc to
-			damage_multi *= 0.7  # Each arc deals 30% less
-			var next_pos: int = _find_nearest_char(lvl, current_pos, hit_positions)
-			if next_pos < 0:
-				break
-			current_pos = next_pos
+	## Recursively arc from `ch` to every not-yet-affected character reachable
+	## within 1 tile (2 when `ch` stands in water) over non-solid cells, mirroring
+	## SPD WandOfLightning.arc(). The hero is only caught by an arc when directly
+	## adjacent (BFS step distance 1), matching upstream's hero-safety rule.
+	func _arc(lvl: Variant, ch: Char, affected: Array[Char]) -> void:
+		var ch_pos: int = int(ch.get("pos"))
+		var reach: int = 2 if _cell_is_water(lvl, ch_pos) else 1
+		var dist_map: Dictionary = _cells_within(lvl, ch_pos, reach)
+		var hit_this_arc: Array[Char] = []
+		for cell: int in dist_map.keys():
+			var n: Char = lvl.find_char_at(cell) as Char
+			if n == null or not n.is_alive or n in affected or n in hit_this_arc:
+				continue
+			if n is Hero and int(dist_map[cell]) > 1:
+				# The hero is only zapped by an arc when directly adjacent.
+				continue
+			hit_this_arc.append(n)
+		for n: Char in hit_this_arc:
+			affected.append(n)
+		for n: Char in hit_this_arc:
+			_arc(lvl, n, affected)
 
-		# Lightning also hits the caster if standing in water
-		if hero != null and hero.get("pos") != null:
-			var hero_pos: int = hero.pos
-			if lvl.has_method("get_terrain") and lvl.get_terrain(hero_pos) == ConstantsData.Terrain.WATER:
-				if hero_pos not in hit_positions:
-					var self_dmg: int = int(float(roll_zap_damage()) * 0.5)
-					hero.take_damage(self_dmg, self)
-					if MessageLog:
-						MessageLog.add_warning("The lightning shocks you too!")
+	## BFS step-distance map from `origin` over non-solid cells (8-directional) out
+	## to `max_dist` steps -- the port's stand-in for SPD's
+	## PathFinder.buildDistanceMap(origin, not solid, max_dist). Excludes `origin`.
+	## Wrap-safe via level.adjacent(); falls back to open flooding when the level
+	## exposes no passability so lightweight test levels still chain.
+	func _cells_within(lvl: Variant, origin: int, max_dist: int) -> Dictionary:
+		var dist_map: Dictionary = {origin: 0}
+		var frontier: Array[int] = [origin]
+		var has_pass: bool = lvl != null and lvl.has_method("is_passable")
+		while not frontier.is_empty():
+			var next_frontier: Array[int] = []
+			for cell: int in frontier:
+				var d: int = int(dist_map[cell])
+				if d >= max_dist:
+					continue
+				for dir: int in ConstantsData.DIRS_8:
+					var n: int = cell + dir
+					if not ConstantsData.is_valid_pos(n):
+						continue
+					if not _cells_adjacent(lvl, cell, n):
+						continue
+					if dist_map.has(n):
+						continue
+					if has_pass and not lvl.is_passable(n):
+						continue
+					dist_map[n] = d + 1
+					next_frontier.append(n)
+			frontier = next_frontier
+		dist_map.erase(origin)
+		return dist_map
 
-	func _find_nearest_char(lvl: Variant, from_pos: int, exclude: Array[int]) -> int:
-		# Search in a 4-cell radius for another character
-		var best_pos: int = -1
-		var best_dist: float = 999.0
-		for dy: int in range(-4, 5):
-			for dx: int in range(-4, 5):
-				if dx == 0 and dy == 0:
-					continue
-				var x: int = ConstantsData.pos_to_x(from_pos) + dx
-				var y: int = ConstantsData.pos_to_y(from_pos) + dy
-				if x < 0 or x >= ConstantsData.WIDTH or y < 0 or y >= ConstantsData.HEIGHT:
-					continue
-				var check_pos: int = ConstantsData.xy_to_pos(x, y)
-				if check_pos in exclude:
-					continue
-				if lvl.has_method("find_char_at"):
-					var ch: Variant = lvl.find_char_at(check_pos)
-					if ch != null:
-						var d: float = Ballistica.distance(from_pos, check_pos)
-						if d < best_dist:
-							best_dist = d
-							best_pos = check_pos
-		return best_pos
+	## Wrap-safe 8-neighbour adjacency, delegating to level.adjacent() when present.
+	func _cells_adjacent(lvl: Variant, a: int, b: int) -> bool:
+		if lvl != null and lvl.has_method("adjacent"):
+			return lvl.adjacent(a, b)
+		var ax: int = ConstantsData.pos_to_x(a)
+		var ay: int = ConstantsData.pos_to_y(a)
+		var bx: int = ConstantsData.pos_to_x(b)
+		var by: int = ConstantsData.pos_to_y(b)
+		return absi(ax - bx) <= 1 and absi(ay - by) <= 1 and a != b
+
+	## Whether a cell is water terrain (which conducts lightning).
+	func _cell_is_water(lvl: Variant, cell: int) -> bool:
+		return lvl != null and lvl.has_method("get_terrain") \
+			and lvl.get_terrain(cell) == ConstantsData.Terrain.WATER
+
+	## SPD builds the full arc graph first, then removes same-alignment chained
+	## targets before damage. Allies can still conduct lightning to enemies.
+	func _same_alignment_with_caster(caster: Char, ch: Char) -> bool:
+		if caster == null or ch == null or ch == caster:
+			return false
+		if ch is Hero:
+			return true
+		if ch is Mob:
+			return (ch as Mob).is_ally
+		return false
 
 # ---------------------------------------------------------------------------
 # Wand of Disintegration — beam through walls, ignores armor
