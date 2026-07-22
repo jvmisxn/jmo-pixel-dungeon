@@ -35,6 +35,8 @@ func _make_hero(pos: int, level: Level) -> Hero:
 
 func run(t: Object) -> void:
 	_test_pitfall_trap_uses_fall_handoff(t)
+	_test_fall_from_weak_floor_prefers_pit_room_landing(t)
+	_test_fall_source_room_detection(t)
 
 	var chasm_pos: int = ConstantsData.xy_to_pos(10, 10)
 	var level: Level = _make_level(chasm_pos)
@@ -187,3 +189,51 @@ func _test_pitfall_trap_uses_fall_handoff(t: Object) -> void:
 	GameManager.hero = original_hero
 	GameManager.heroes = original_heroes
 	GameManager.current_level = original_level
+
+func _test_fall_from_weak_floor_prefers_pit_room_landing(t: Object) -> void:
+	var level := Level.new()
+	level.depth = 9
+	level.map.fill(ConstantsData.Terrain.WALL)
+	var pit_room := PitRoom.new()
+	pit_room.left = 8
+	pit_room.top = 8
+	pit_room.right = 16
+	pit_room.bottom = 16
+	level.rooms = [pit_room]
+	pit_room.paint(level)
+	level.entrance = ConstantsData.xy_to_pos(2, 2)
+	level.exit_pos = ConstantsData.xy_to_pos(3, 2)
+	level.map[level.entrance] = ConstantsData.Terrain.ENTRANCE
+	level.map[level.exit_pos] = ConstantsData.Terrain.EXIT
+	level.build_flag_maps()
+
+	var loading := LoadingScene.new()
+	loading._transition_type = "fall"
+	loading._fall_into_pit = true
+	var landing: int = loading._landing_anchor_for_transition(level)
+	t.check(landing == pit_room.center(), "weak-floor falls land on the next floor's PitRoom platform")
+	loading.free()
+
+func _test_fall_source_room_detection(t: Object) -> void:
+	var level := Level.new()
+	level.map.fill(ConstantsData.Terrain.EMPTY)
+	var weak_room := WeakFloorRoom.new()
+	weak_room.left = 5
+	weak_room.top = 5
+	weak_room.right = 11
+	weak_room.bottom = 11
+	var ordinary_room := StandardRoom.new()
+	ordinary_room.left = 15
+	ordinary_room.top = 5
+	ordinary_room.right = 21
+	ordinary_room.bottom = 11
+	level.rooms = [weak_room, ordinary_room]
+
+	t.check(
+		FloorTransitionCoordinator._is_weak_floor_room(level, weak_room.center()),
+		"fall metadata detects source cells inside WeakFloorRoom"
+	)
+	t.check(
+		not FloorTransitionCoordinator._is_weak_floor_room(level, ordinary_room.center()),
+		"fall metadata does not mark ordinary-room falls as pit-room landings"
+	)

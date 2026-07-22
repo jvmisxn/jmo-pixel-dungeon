@@ -19,6 +19,7 @@ var _is_continue: bool = false
 var _transition_type: String = "descend"  # "descend" or "ascend"
 var _autosave_after_generation: bool = false
 var _fall_actor_id: int = -1
+var _fall_into_pit: bool = false
 
 # --- UI References ---
 var _depth_label: Label = null
@@ -77,6 +78,8 @@ func _ready() -> void:
 		_autosave_after_generation = _is_continue
 	if has_meta("fall_actor_id"):
 		_fall_actor_id = int(get_meta("fall_actor_id"))
+	if has_meta("fall_into_pit"):
+		_fall_into_pit = bool(get_meta("fall_into_pit"))
 
 	_build_ui()
 	# Defer generation to next frame so UI is visible
@@ -318,10 +321,39 @@ func _landing_anchor_for_transition(level: Level) -> int:
 	if _transition_type == "ascend" and level.exit_pos >= 0:
 		return level.exit_pos
 	if _transition_type == "fall":
+		if _fall_into_pit:
+			var pit_landing: int = _pit_room_landing_cell(level)
+			if pit_landing >= 0:
+				return pit_landing
 		var landing: int = level.random_passable_cell()
 		if landing >= 0:
 			return landing
 	return level.entrance
+
+func _pit_room_landing_cell(level: Level) -> int:
+	if level == null:
+		return -1
+	for room: Room in level.rooms:
+		if not room is PitRoom:
+			continue
+		var center: int = room.center()
+		if _can_spawn_party_member(level, center, []):
+			return center
+		var candidates: Array[int] = room.interior_cells()
+		candidates.sort_custom(func(a: int, b: int) -> bool:
+			return _cell_distance(a, center) < _cell_distance(b, center)
+		)
+		for cell: int in candidates:
+			if _can_spawn_party_member(level, cell, []):
+				return cell
+	return -1
+
+func _cell_distance(a: int, b: int) -> int:
+	var ax: int = ConstantsData.pos_to_x(a)
+	var ay: int = ConstantsData.pos_to_y(a)
+	var bx: int = ConstantsData.pos_to_x(b)
+	var by: int = ConstantsData.pos_to_y(b)
+	return maxi(absi(ax - bx), absi(ay - by))
 
 func _apply_fall_arrival_effects(level: Level) -> void:
 	var fallen_hero: Variant = _find_hero_by_actor_id(_fall_actor_id)

@@ -89,6 +89,8 @@ static func handle_fall(scene: Variant, hero_node: Variant) -> void:
 		AudioManager.play_sfx("falling")
 	notify_party_floor_change(scene)
 	var fall_actor_id: int = int(hero_node.get("actor_id")) if hero_node.get("actor_id") != null else -1
+	var fall_source_pos: int = int(hero_node.get("pos")) if hero_node.get("pos") != null else -1
+	var fall_into_pit: bool = _is_weak_floor_room(scene._current_level, fall_source_pos)
 	var new_depth: int = GameManager.descend()
 	if new_depth < 0:
 		_relocate_faller_on_current_level(scene, hero_node)
@@ -97,7 +99,10 @@ static func handle_fall(scene: Variant, hero_node: Variant) -> void:
 		return
 	if scene._is_online_host():
 		OnlineEventCodec.broadcast_level_transition(NetworkManager, GameManager.depth, "fall")
-	transition_to_loading(scene, "fall", {"fall_actor_id": fall_actor_id})
+	transition_to_loading(scene, "fall", {
+		"fall_actor_id": fall_actor_id,
+		"fall_into_pit": fall_into_pit,
+	})
 
 static func _consume_skeleton_key_for_boss_exit(scene: Variant, hero: Variant) -> bool:
 	if GameManager == null or not _is_skeleton_key_depth(GameManager.depth):
@@ -217,3 +222,14 @@ static func _relocate_faller_on_current_level(scene: Variant, hero_node: Variant
 		return
 	hero_node.set("pos", landing)
 	hero_node.set("level", level)
+
+static func _is_weak_floor_room(level: Variant, pos: int) -> bool:
+	if level == null or pos < 0:
+		return false
+	var room_list: Variant = level.get("rooms") if level is Object else null
+	if not (room_list is Array):
+		return false
+	for room: Variant in room_list:
+		if room is WeakFloorRoom and room.inside(pos):
+			return true
+	return false
