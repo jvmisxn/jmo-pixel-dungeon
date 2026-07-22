@@ -12,6 +12,15 @@ enum SpellType {
 # --- Properties ---
 var spell_type: SpellType = SpellType.PHASE_SHIFT
 
+# --- Constants ---
+## Wild Energy: immediate charges granted to every wand (upstream hero.belongings.charge(1f)).
+const WILD_ENERGY_WAND_CHARGE: int = 1
+## Wild Energy: accelerated-recharge buff duration (upstream Buff.affect(hero, Recharging.class, 8f)).
+const WILD_ENERGY_RECHARGE_DURATION: float = 8.0
+## Wild Energy: immediate charge granted to the equipped artifact
+## (upstream ArtifactRecharge.chargeArtifacts(hero, 4f)).
+const WILD_ENERGY_ARTIFACT_CHARGE: int = 4
+
 func _init() -> void:
 	category = ConstantsData.ItemCategory.MISC
 	stackable = true
@@ -83,32 +92,38 @@ func _cast_phase_shift(hero: Char) -> void:
 	if MessageLog:
 		MessageLog.add("The spell fizzles... nowhere to go.")
 
-## Recharge wands and apply a random transmutation effect.
+## Recharge the hero's wands and artifact, and briefly accelerate wand recharge.
+## Source-faithful to upstream WildEnergy.affectTarget: it grants an immediate charge to
+## every wand (hero.belongings.charge(1f)), applies an 8-turn Recharging buff, and recharges
+## artifacts. Upstream deals NO damage and never upgrades/transmutes an item (the old 30%
+## free-upgrade roll was an invented exploit and has been removed).
 func _cast_wild_energy(hero: Char) -> void:
 	if hero.get("belongings") == null:
 		return
-	# Recharge all wands in inventory
+	var belongings: Variant = hero.belongings
+	# Immediate charge to every wand carried or equipped (upstream hero.belongings.charge(1f)).
+	var wand_items: Array = belongings.get_items() if belongings.has_method("get_items") else belongings.backpack
 	var recharged: int = 0
-	for item: Variant in hero.belongings.backpack:
-		if item != null and item.get("category") == ConstantsData.ItemCategory.WAND:
-			if item.has_method("recharge"):
-				item.recharge()
-				recharged += 1
-	if recharged > 0:
-		if MessageLog:
-			MessageLog.add_positive("Your wands surge with renewed energy! (%d recharged)" % recharged)
-	else:
-		if MessageLog:
-			MessageLog.add("Wild energy surges through you, but you have no wands to recharge.")
-	# Random transmutation effect on a random inventory item
-	if hero.belongings.backpack.size() > 0:
-		var rand_item: Variant = hero.belongings.backpack[randi_range(0, hero.belongings.backpack.size() - 1)]
-		if rand_item != null and rand_item.has_method("upgrade"):
-			# Small chance to upgrade a random item
-			if randf() < 0.3:
-				rand_item.upgrade()
-				if MessageLog:
-					MessageLog.add_positive("Wild energy upgrades your %s!" % rand_item.get("item_name"))
+	for item: Variant in wand_items:
+		if item != null and item.get("category") == ConstantsData.ItemCategory.WAND and item.has_method("gain_charge"):
+			item.gain_charge(WILD_ENERGY_WAND_CHARGE)
+			recharged += 1
+	# Accelerated recharge buff (upstream Buff.affect(hero, Recharging.class, 8f)).
+	if hero.has_method("add_buff"):
+		var recharging: Recharging = Recharging.new()
+		recharging.set_duration(WILD_ENERGY_RECHARGE_DURATION)
+		hero.add_buff(recharging)
+	# Recharge the equipped artifact (upstream ArtifactRecharge.chargeArtifacts(hero, 4f)).
+	if belongings.has_method("get_equipped_artifact"):
+		var artifact: Variant = belongings.get_equipped_artifact()
+		if artifact != null and ("charge" in artifact):
+			var cap: int = int(artifact.get("charge_max")) if ("charge_max" in artifact) else int(artifact.charge) + WILD_ENERGY_ARTIFACT_CHARGE
+			artifact.charge = mini(int(artifact.charge) + WILD_ENERGY_ARTIFACT_CHARGE, cap)
+	if MessageLog:
+		if recharged > 0:
+			MessageLog.add_positive("Wild energy surges through you, recharging your wands!")
+		else:
+			MessageLog.add_positive("Wild energy surges through you.")
 
 ## Create a water blast at the hero's position with knockback.
 func _cast_aqua_blast(hero: Char) -> void:
@@ -448,7 +463,7 @@ static func create(spell_id: String) -> Spell:
 
 		"wild_energy":
 			spell.item_name = "Wild Energy"
-			spell.description = "Recharges all wands and may randomly transmute an item."
+			spell.description = "Instantly recharges your wands and artifact, and makes your wands recharge rapidly for a short time."
 			spell.spell_type = SpellType.WILD_ENERGY
 			spell.icon_color = Color(0.9, 0.6, 0.2)
 
