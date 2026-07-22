@@ -996,6 +996,26 @@ class WandOfTransfusion extends Wand:
 # ---------------------------------------------------------------------------
 
 class WandOfCorruption extends Wand:
+	# SPD parity (WandOfCorruption.java): corruption uses an accumulating
+	# power-vs-resistance model, NOT a flat HP-ratio threshold. Resistance scales
+	# sharply with the target's current HP fraction and is weakened by existing
+	# debuffs. When power can't overcome it, the wand lands a random major or minor
+	# debuff instead, escalating toward corruption as the target accumulates them.
+	const _MAJOR_DEBUFF_WEAKEN: float = 0.5
+	const _MINOR_DEBUFF_WEAKEN: float = 0.25
+	# Buff ids that count as major/minor debuffs for the resistance reduction.
+	# Any other NEGATIVE buff is treated as a minor debuff (SPD buffType.NEGATIVE).
+	const _MAJOR_DEBUFF_IDS: Array = ["Amok", "Slow", "Hex", "Paralysis", "Daze",
+		"Dread", "Charm", "MagicalSleep", "SoulMark", "Corrosion", "Frost", "Doom"]
+	const _MINOR_DEBUFF_IDS: Array = ["Weakness", "Vulnerable", "Cripple",
+		"Blindness", "Terror", "Chill", "Ooze", "Roots", "Vertigo", "Drowsy",
+		"Bleeding", "Burning", "Poison"]
+	# Debuffs that can actually be applied on a partial hit, with SPD weights.
+	const _MAJOR_APPLY: Array = [["Amok", 3.0], ["Slow", 2.0], ["Hex", 2.0],
+		["Paralysis", 1.0]]
+	const _MINOR_APPLY: Array = [["Weakness", 2.0], ["Vulnerable", 2.0],
+		["Cripple", 1.0], ["Blindness", 1.0], ["Terror", 1.0]]
+
 	func _init() -> void:
 		super._init()
 		item_id = "wand_of_corruption"
@@ -1018,50 +1038,137 @@ class WandOfCorruption extends Wand:
 		if lvl == null or not lvl.has_method("find_char_at"):
 			return
 		var target_char: Variant = lvl.find_char_at(target_pos)
-		if target_char == null or target_char.get("is_hero") == true:
+		if target_char == null or target_char.get("is_hero") == true \
+				or not (target_char is Mob):
 			if MessageLog:
 				MessageLog.add("The corruption bolt has no valid target.")
 			return
-		if not target_char.has_method("take_damage"):
-			return
-		# Bosses and already-corrupted allies cannot be corrupted (SPD parity).
-		if target_char.has_method("is_boss") and target_char.is_boss():
+		if target_char.get("is_ally") == true:
 			if MessageLog:
-				MessageLog.add("The %s is too powerful to corrupt!" \
-					% (target_char.name if target_char.get("name") else "enemy"))
+				MessageLog.add("The %s is already on your side." % _name_of(target_char))
 			return
-		if target_char.get("is_ally") == true or target_char.has_buff("Corruption"):
-			if MessageLog:
-				MessageLog.add("The %s is already on your side." \
-					% (target_char.name if target_char.get("name") else "enemy"))
-			return
-		# Corruption chance based on enemy HP ratio and wand level
-		var hp_ratio: float = float(target_char.hp) / float(maxi(1, target_char.hp_max))
-		var corrupt_power: float = float(level + 1) * 10.0
-		# Debuffed enemies are easier to corrupt
-		var debuff_count: int = 0
+
+		# corruptingPower = 3 + buffedLvl()/3
+		var corrupt_power: float = 3.0 + float(level) / 3.0
+
+		# enemyResist = base * (1 + 4*(HP/HT)^2), weakened by existing debuffs.
+		var hp_max: int = maxi(1, int(target_char.hp_max))
+		var hp_frac: float = clampf(float(target_char.hp) / float(hp_max), 0.0, 1.0)
+		var enemy_resist: float = _base_resist(target_char)
+		enemy_resist *= 1.0 + 4.0 * pow(hp_frac, 2.0)
 		if target_char.has_method("get_buffs"):
 			for b: Node in target_char.get_buffs():
-				if b.get("is_debuff") == true:
-					debuff_count += 1
-		corrupt_power += float(debuff_count) * 15.0
-		var resist: float = float(target_char.hp_max) * hp_ratio
-		if corrupt_power >= resist:
-			# Full corruption — convert to a real ally via CorruptionBuff, which
-			# flips the mob's alignment through the Mob ally mechanism.
-			if target_char.has_method("add_buff"):
-				target_char.add_buff(CorruptionBuff.new())
+				var bid: String = str(b.get("buff_id"))
+				if bid in _MAJOR_DEBUFF_IDS:
+					enemy_resist *= 1.0 - _MAJOR_DEBUFF_WEAKEN
+				elif bid in _MINOR_DEBUFF_IDS:
+					enemy_resist *= 1.0 - _MINOR_DEBUFF_WEAKEN
+				elif b.get("buff_type") == Buff.BuffType.NEGATIVE:
+					enemy_resist *= 1.0 - _MINOR_DEBUFF_WEAKEN
+
+		# Already corrupted/doomed → force the major-debuff branch (SPD).
+		if target_char.has_buff("Corruption") or target_char.has_buff("Doom"):
+			corrupt_power = enemy_resist - 0.001
+
+		if corrupt_power > enemy_resist:
+			_corrupt_enemy(target_char)
 		else:
-			# Partial corruption — apply terror and weakness
-			if target_char.has_method("add_buff"):
-				var terror: Terror = Terror.new()
-				terror.set_duration(5.0 + float(level) * 2.0)
-				target_char.add_buff(terror)
-				var weak: Weakness = Weakness.new()
-				weak.set_duration(5.0 + float(level) * 2.0)
-				target_char.add_buff(weak)
+			var debuff_chance: float = corrupt_power / enemy_resist
+			if randf() < debuff_chance:
+				_debuff_enemy(target_char, _MAJOR_APPLY, true)
+			else:
+				_debuff_enemy(target_char, _MINOR_APPLY, false)
+
+	## Base corruption resistance before the HP-fraction multiplier. Mirrors SPD's
+	## per-type special cases; ordinary mobs resist at 1 (no Ascension challenge).
+	func _base_resist(ch: Variant) -> float:
+		var depth: float = float(GameManager.depth) if GameManager else 0.0
+		match str(ch.get("mob_id")):
+			"mimic", "animated_statue", "golden_statue":
+				return 1.0 + depth
+			"piranha", "bee":
+				return 1.0 + depth / 2.0
+			"wraith":
+				return (1.0 + depth / 4.0) / 5.0
+			"swarm":
+				return 4.0
+		return 1.0
+
+	## Full corruption: flip the mob to an ally via CorruptionBuff, or Doom it if it
+	## is a boss / corruption-immune (SPD applies Doom to immune targets).
+	func _corrupt_enemy(enemy: Variant) -> void:
+		if enemy.has_buff("Corruption") or enemy.has_buff("Doom"):
 			if MessageLog:
-				MessageLog.add("The corruption weakens the enemy's resolve.")
+				MessageLog.add("The %s is already corrupted." % _name_of(enemy))
+			return
+		var immune: bool = enemy.has_method("is_immune") and enemy.is_immune("Corruption")
+		var boss: bool = enemy.has_method("is_boss") and enemy.is_boss()
+		if immune or boss:
+			if enemy.has_method("add_buff"):
+				enemy.add_buff(Doom.new())
+			if MessageLog:
+				MessageLog.add_warning("The %s shrugs off the corruption, but is doomed!" \
+					% _name_of(enemy))
+			return
+		if enemy.has_method("add_buff"):
+			enemy.add_buff(CorruptionBuff.new())
+
+	## Apply one random debuff from [table] (weighted), skipping ones the target
+	## already has or is immune to. If none remain, escalate like SPD: minor rolls
+	## upgrade to major, and an exhausted major table falls through to corruption.
+	func _debuff_enemy(enemy: Variant, table: Array, is_major: bool) -> void:
+		var ids: Array[String] = []
+		var weights: Array[float] = []
+		for entry: Array in table:
+			var bid: String = entry[0]
+			if enemy.has_buff(bid):
+				continue
+			if enemy.has_method("is_immune") and enemy.is_immune(bid):
+				continue
+			ids.append(bid)
+			weights.append(float(entry[1]))
+		var pick: String = _weighted_pick(ids, weights)
+		if pick != "":
+			var buff: Buff = _make_debuff(pick)
+			if buff != null and enemy.has_method("add_buff"):
+				buff.set_duration(6.0 + float(level) * 3.0)
+				enemy.add_buff(buff)
+				if MessageLog:
+					MessageLog.add("The corruption warps the %s's mind." % _name_of(enemy))
+		elif is_major:
+			_corrupt_enemy(enemy)
+		else:
+			_debuff_enemy(enemy, _MAJOR_APPLY, true)
+
+	## Weighted random id pick; returns "" when the pool is empty or all-zero.
+	func _weighted_pick(ids: Array[String], weights: Array[float]) -> String:
+		var total: float = 0.0
+		for w: float in weights:
+			total += w
+		if total <= 0.0:
+			return ""
+		var roll: float = randf() * total
+		for i: int in ids.size():
+			roll -= weights[i]
+			if roll < 0.0:
+				return ids[i]
+		return ids[ids.size() - 1]
+
+	func _make_debuff(bid: String) -> Buff:
+		match bid:
+			"Amok": return Amok.new()
+			"Slow": return Slow.new()
+			"Hex": return Hex.new()
+			"Paralysis": return Paralysis.new()
+			"Weakness": return Weakness.new()
+			"Vulnerable": return Vulnerable.new()
+			"Cripple": return Cripple.new()
+			"Blindness": return Blindness.new()
+			"Terror": return Terror.new()
+		return null
+
+	func _name_of(ch: Variant) -> String:
+		return str(ch.name) if ch != null and ch.get("name") else "enemy"
 
 # ---------------------------------------------------------------------------
 # Wand of Regrowth — grow grass and plants
