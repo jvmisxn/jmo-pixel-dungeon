@@ -33,6 +33,18 @@ func bonus() -> int:
 		return -1
 	return level
 
+## Missile-only Sharpshooting level bonus (SPD RingOfSharpshooting.levelDamageBonus).
+## Returns the equipped Ring of Sharpshooting's bonus level for a character, or 0
+## when none is equipped. Melee/accuracy paths never call this — the ring only
+## affects missile weapon damage (and durability), matching upstream SPD.
+static func sharpshooting_level_bonus(ch: Variant) -> int:
+	if ch == null or not ch.has_method("get_buff"):
+		return 0
+	var b: Variant = ch.get_buff("RingOfSharpshooting")
+	if b != null and b.get("ring") != null:
+		return b.ring.bonus()
+	return 0
+
 # ---------------------------------------------------------------------------
 # Equip / Unequip
 # ---------------------------------------------------------------------------
@@ -521,21 +533,11 @@ class SharpshootingBuff extends Buff:
 		duration = -1.0
 		icon_color = Color(1.0, 0.8, 0.0)
 
-	# Sharpshooting modifies missile weapon damage and accuracy.
-	# Missile weapons check for this buff and scale accordingly.
-	func modify_accuracy(acc: int) -> int:
-		if ring == null:
-			return acc
-		# Only boosts missile accuracy; approximated as general accuracy boost
-		var b: int = ring.bonus()
-		return acc + b * 2
-
-	func modify_damage(dmg: int) -> int:
-		if ring == null:
-			return dmg
-		# Missile weapons deal bonus damage per level
-		var b: int = ring.bonus()
-		return dmg + b
+	# Marker buff only. Upstream Ring of Sharpshooting is missile-only: it boosts
+	# missile weapon damage (MissileWeapon.damage_roll reads this ring via
+	# Ring.sharpshooting_level_bonus) and durability, and does NOT affect accuracy
+	# or melee. Generic modify_accuracy/modify_damage hooks were removed so the
+	# bonus can no longer leak into melee attacks or inflate accuracy.
 
 # ---------------------------------------------------------------------------
 # Tenacity Buff
@@ -734,8 +736,9 @@ class RingOfSharpshooting extends Ring:
 		super._init()
 		item_id = "ring_of_sharpshooting"
 		item_name = "Ring of Sharpshooting"
-		description = "This ring hones the wearer's aim with thrown and missile " \
-			+ "weapons, increasing both accuracy and damage at range."
+		description = "This ring hones the wearer's skill with thrown and missile " \
+			+ "weapons, increasing their damage and making them last longer. It has " \
+			+ "no effect on melee weapons."
 		icon_color = Color(1.0, 0.8, 0.0)
 		gem_color = Color(0.9, 0.7, 0.0)
 

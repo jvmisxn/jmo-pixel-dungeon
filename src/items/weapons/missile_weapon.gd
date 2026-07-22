@@ -99,6 +99,23 @@ func apply_special_effect(target: Variant) -> void:
 					MessageLog.add("The dart leaves its target paralyzed!")
 
 # ---------------------------------------------------------------------------
+# Damage
+# ---------------------------------------------------------------------------
+
+## Missile damage adds the equipped Ring of Sharpshooting's level bonus, matching
+## upstream SPD where MissileWeapon.min()/max() use buffedLvl() +
+## RingOfSharpshooting.levelDamageBonus(hero). The bonus raises the missile's
+## effective level (widening the damage range), NOT a flat post-roll add, and it
+## is missile-only — melee weapons never see this bonus.
+func damage_roll(owner: Variant = null) -> int:
+	var bonus: int = 0
+	if owner != null:
+		bonus = Ring.sharpshooting_level_bonus(owner)
+	if bonus == 0:
+		return super.damage_roll(owner)
+	return _roll_from_range(_damage_range_for_level(buffed_lvl() + bonus), owner)
+
+# ---------------------------------------------------------------------------
 # Speed
 # ---------------------------------------------------------------------------
 

@@ -51,7 +51,12 @@ func is_equippable() -> bool:
 ## Returns [min_damage, max_damage] factoring in tier, buffed level, and augment.
 ## SPD MeleeWeapon formula: min = tier + lvl, max = 5*(tier+1) + lvl*(tier+1)
 func get_damage_range() -> Array[int]:
-	var lvl: int = buffed_lvl()
+	return _damage_range_for_level(buffed_lvl())
+
+## Compute [min, max] damage for an explicit effective level. Factored out so
+## missile weapons can add the Ring of Sharpshooting level bonus (SPD raises the
+## missile's effective level rather than adding flat post-roll damage).
+func _damage_range_for_level(lvl: int) -> Array[int]:
 	var base_min: int = tier + lvl
 	var base_max: int = 5 * (tier + 1) + lvl * (tier + 1)
 
@@ -66,7 +71,11 @@ func get_damage_range() -> Array[int]:
 ## Includes augment scaling and excess STR bonus. Called by Hero.damage_roll().
 ## Matches original MeleeWeapon.damageRoll(owner).
 func damage_roll(owner: Variant = null) -> int:
-	var dmg_range: Array[int] = get_damage_range()
+	return _roll_from_range(get_damage_range(), owner)
+
+## Roll a triangular damage value from a [min, max] range plus the wielder's
+## excess-STR bonus. Shared by melee and missile damage paths.
+func _roll_from_range(dmg_range: Array[int], owner: Variant) -> int:
 	# Triangular distribution approximating NormalIntRange(min, max)
 	var roll_a: int = randi_range(dmg_range[0], dmg_range[1])
 	var roll_b: int = randi_range(dmg_range[0], dmg_range[1])
