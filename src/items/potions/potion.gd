@@ -636,12 +636,13 @@ class PotionExperience extends Potion:
 	func drink(hero: Char) -> void:
 		if hero == null:
 			return
-		# Grant XP equal to the amount needed for the next level
-		var xp_needed: int = hero.xp_to_next - hero.xp
-		if xp_needed <= 0:
-			xp_needed = ConstantsData.xp_for_level(hero.hero_level)
+		# SPD PotionOfExperience grants hero.earnExp(hero.maxExp()): a full
+		# current-level's worth of XP (maxExp(lvl) == 5 + lvl*5), added on top of
+		# any partial progress, rather than only the remainder to the next level.
+		# This preserves existing XP and lets the surplus carry into the next level.
+		var xp_grant: int = ConstantsData.xp_for_level(hero.hero_level)
 		if hero.has_method("earn_xp"):
-			hero.earn_xp(xp_needed)
+			hero.earn_xp(xp_grant)
 		if MessageLog:
 			MessageLog.add_positive("A rush of knowledge floods through you!")
 
