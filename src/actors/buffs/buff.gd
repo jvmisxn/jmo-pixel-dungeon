@@ -29,6 +29,9 @@ var icon_color: Color = Color.WHITE
 var announced: bool = false
 ## Whether this buff persists through revive effects.
 var revive_persists: bool = false
+## Whether this buff shows an icon in buff bars (upstream BuffIndicator.NONE
+## trackers are hidden).
+var show_in_ui: bool = true
 
 # ---------------------------------------------------------------------------
 # Lifecycle

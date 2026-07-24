@@ -721,6 +721,8 @@ func _update_buffs(hero: Variant) -> void:
 	# Add current buffs
 	var buffs: Array = hero.get_buffs() if hero.has_method("get_buffs") else []
 	for buff: Variant in buffs:
+		if buff is Buff and not (buff as Buff).show_in_ui:
+			continue
 		var icon: BuffIcon = BuffIcon.new()
 		icon.buff_ref = buff as Node
 		icon.update_flash_state()

@@ -46,7 +46,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make("rogue_cached_rations", "Cached Rations", "Food satisfies extra hunger.", 2, 1),
 				_make("rogue_thiefs_intuition", "Thief's Intuition", "Rings can be identified on pickup.", 2, 1),
 				_make("rogue_sucker_punch", "Sucker Punch", "Surprise attacks deal increased damage.", 2, 2),
-				_make("rogue_protective_shadows", "Protective Shadows", "Supports safer stealth and disengage play.", 3, 2),
+				_make("rogue_protective_shadows", "Protective Shadows", "While invisible, the Rogue gradually gains a protective barrier.", 2, 2),
 			]
 		ConstantsData.HeroClass.HUNTRESS:
 			return [

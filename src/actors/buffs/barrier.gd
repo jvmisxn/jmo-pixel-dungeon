@@ -5,6 +5,9 @@ extends Buff
 ## Used by Brimstone glyph, BrokenSeal, various talents.
 
 var shield_amount: int = 0
+## Upstream Barrier.partialLostShield: fractional decay accumulator, reset by
+## set_shield/inc_shield so refreshed barriers pause their decay.
+var partial_lost_shield: float = 0.0
 
 func _init() -> void:
 	buff_id = "Barrier"
@@ -18,9 +21,11 @@ func get_shielding() -> int:
 
 func set_shield(amount: int) -> void:
 	shield_amount = maxi(0, amount)
+	partial_lost_shield = 0.0
 
 func inc_shield(amount: int) -> void:
 	shield_amount = maxi(0, shield_amount + amount)
+	partial_lost_shield = 0.0
 
 func absorb_damage(dmg: int) -> int:
 	## Absorb damage from shield. Returns remaining damage after absorption.
@@ -32,8 +37,12 @@ func absorb_damage(dmg: int) -> int:
 	return dmg - absorbed
 
 func on_turn() -> void:
-	# Barrier decays by 1 each turn (original behavior)
-	shield_amount -= 1
+	# Upstream Barrier.act(): decay is fractional, min(1, shielding/20) per turn,
+	# so small barriers persist for several turns instead of losing 1 flat per turn.
+	partial_lost_shield += minf(1.0, float(shield_amount) / 20.0)
+	if partial_lost_shield >= 1.0:
+		partial_lost_shield = 0.0
+		shield_amount -= 1
 	if shield_amount <= 0:
 		if target:
 			target.remove_buff(self)
@@ -51,11 +60,13 @@ func is_expired() -> bool:
 func serialize() -> Dictionary:
 	var data: Dictionary = super.serialize()
 	data["shield_amount"] = shield_amount
+	data["partial_lost_shield"] = partial_lost_shield
 	return data
 
 func deserialize(data: Dictionary) -> void:
 	super.deserialize(data)
 	shield_amount = data.get("shield_amount", 0)
+	partial_lost_shield = float(data.get("partial_lost_shield", 0.0))
 
 func icon_text() -> String:
 	return str(shield_amount) if shield_amount > 0 else ""

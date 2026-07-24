@@ -1341,6 +1341,8 @@ func _refresh_mobile_buffs(hero_ref: Variant) -> void:
 		child.queue_free()
 	var buffs: Array = hero_ref.get_buffs() if hero_ref != null and hero_ref.has_method("get_buffs") else []
 	for buff: Variant in buffs:
+		if buff is Buff and not (buff as Buff).show_in_ui:
+			continue
 		var icon: BuffIcon = BuffIcon.new()
 		icon.buff_ref = buff as Node
 		icon.custom_minimum_size = Vector2(20, 20)
