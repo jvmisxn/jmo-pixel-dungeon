@@ -65,6 +65,13 @@ var stats: Dictionary[String, int] = {}
 ## Maps depth (int) -> saved level data (Dictionary) for backtracking.
 var _level_cache: Dictionary[int, Dictionary] = {}
 
+# --- Fallen Items (upstream Dungeon.droppedItems) ---
+## Items that fell through a chasm/pitfall, waiting to land on a lower depth.
+## Keyed by destination depth (int) -> Array of serialized item Dictionaries.
+## Items are serialized at drop time so they survive the source level being
+## freed/cached; LoadingScene delivers and clears each depth's list on arrival.
+var pending_dropped_items: Dictionary = {}
+
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
@@ -113,6 +120,7 @@ func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: i
 	score = 0
 	run_active = true
 	_level_cache.clear()
+	pending_dropped_items.clear()
 	quest_flags.clear()
 
 	if seed_value < 0:
@@ -568,6 +576,44 @@ func spend_gold(amount: int) -> bool:
 	if EventBus:
 		EventBus.gold_collected.emit(-amount, gold)
 	return true
+
+# ---------------------------------------------------------------------------
+# Fallen Items (upstream Chasm/Dungeon.dropToChasm)
+# ---------------------------------------------------------------------------
+
+## Queue an item to land on the next depth down, mirroring upstream
+## `Dungeon.dropToChasm`. Items dropped past the last depth are lost.
+func drop_to_chasm(item: Variant) -> void:
+	if item == null or not item.has_method("serialize"):
+		return
+	var target_depth: int = depth + 1
+	if target_depth > ConstantsData.MAX_DEPTH:
+		return
+	var list: Array = pending_dropped_items.get(target_depth, [])
+	list.append(item.serialize())
+	pending_dropped_items[target_depth] = list
+
+## Take (and clear) the pending fallen items for a depth, reconstructed as live
+## Item instances. Called by the level-arrival path (upstream switchLevel's
+## droppedItems delivery).
+func take_dropped_items(target_depth: int) -> Array:
+	var list: Variant = pending_dropped_items.get(target_depth, null)
+	if list == null:
+		return []
+	pending_dropped_items.erase(target_depth)
+	var items: Array = []
+	if list is Array:
+		for data: Variant in list:
+			if data is Dictionary:
+				var item_id: String = str((data as Dictionary).get("item_id", ""))
+				if item_id == "":
+					continue
+				var item: Item = Generator.create_item(item_id)
+				if item != null:
+					if item.has_method("deserialize"):
+						item.deserialize(data as Dictionary)
+					items.append(item)
+	return items
 
 # ---------------------------------------------------------------------------
 # Run State Serialization
