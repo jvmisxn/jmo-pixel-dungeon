@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-24
+
+- Tags: chasms, heaps, drop-routing, source-fidelity, tests
+- Routed `Level.drop_item` onto CHASM terrain to the floor below (SPD parity plan immediate-queue item 4). Source check against current upstream `Level.drop()`: when a new heap would be created on a cell with `map[cell] == Terrain.CHASM` (or `pit[cell]` — this port has no separate pit array; CHASM terrain is the equivalent), upstream calls `Dungeon.dropToChasm(item)` and discards the heap instead of placing it. The port previously appended a heap on any cell, so items dropped, thrown, or mob-dropped over a chasm floated on the chasm tile. `Level.drop_item` now routes serializable items on CHASM cells through the existing `GameManager.drop_to_chasm` queue (delivered by `LoadingScene._deliver_fallen_items` on arrival, past-last-depth items lost) and returns a `dropped_to_chasm`-flagged dictionary without appending to `heaps`; heap rendering iterates `level.heaps`, so no sprite appears. All drop sites (hero drop, chasm-fall `drop_random_item`, mob/thief/mimic/statue loot, disarming/gateway traps) share this single routing point. Added `test_chasm_drop_item.gd` (7 checks, registered): chasm drop queues for next depth with no heap, normal floor still heaps, last-depth chasm drop is lost. Local `git diff --check` clean; full headless suite passed (2201 checks, 0 failures, Godot 4.7.1). Documented divergences: upstream's falling-item visual/SFX on discard is omitted, and an existing heap already on a chasm cell (impossible now via drop_item) is not re-routed.
+
 ## 2026-07-22
 
 - Tags: visuals, pacing, sprites, movement, source-fidelity, tests

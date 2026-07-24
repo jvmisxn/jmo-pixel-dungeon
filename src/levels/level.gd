@@ -483,7 +483,14 @@ func random_cell_of_type(terrain: int) -> int:
 # ---------------------------------------------------------------------------
 
 ## Drop an item at a position. Returns the heap dictionary.
+## Upstream Level.drop: an item landing on a CHASM cell falls to the floor
+## below (Dungeon.dropToChasm) and its heap is discarded, not placed.
 func drop_item(pos: int, item: Variant, heap_type: String = "heap") -> Dictionary:
+	if pos >= 0 and pos < LEN and map[pos] == ConstantsData.Terrain.CHASM \
+			and item is Object and item.has_method("serialize") \
+			and GameManager and GameManager.has_method("drop_to_chasm"):
+		GameManager.drop_to_chasm(item)
+		return { "pos": pos, "item": item, "type": heap_type, "dropped_to_chasm": true }
 	var heap: Dictionary = { "pos": pos, "item": item, "type": heap_type }
 	heaps.append(heap)
 	return heap
