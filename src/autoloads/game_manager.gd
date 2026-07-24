@@ -632,6 +632,7 @@ func serialize_run_state() -> Dictionary:
 		"run_active": run_active,
 		"stats": stats.duplicate(true),
 		"quest_flags": quest_flags.duplicate(true),
+		"pending_dropped_items": pending_dropped_items.duplicate(true),
 		"item_appearance": ItemAppearance.serialize() if ItemAppearance else {},
 	}
 
@@ -654,6 +655,14 @@ func apply_run_state(data: Dictionary) -> void:
 	if saved_quest_flags is Dictionary:
 		for key: Variant in saved_quest_flags:
 			quest_flags[str(key)] = saved_quest_flags[key]
+
+	pending_dropped_items.clear()
+	var saved_dropped: Variant = data.get("pending_dropped_items", {})
+	if saved_dropped is Dictionary:
+		for key: Variant in saved_dropped:
+			var items_list: Variant = (saved_dropped as Dictionary)[key]
+			if items_list is Array:
+				pending_dropped_items[int(key)] = (items_list as Array).duplicate(true)
 
 	if ItemAppearance:
 		var appearance_data: Dictionary = data.get("item_appearance", {})

@@ -18,7 +18,10 @@ const SETTINGS_PATH: String = "user://settings.dat"
 # v3: Item dictionaries gain "kept_lost" (SPD Item.KEPT_LOST, the unblessed-ankh
 #     lost-inventory keep flag). Additive with a false default, so migration is
 #     a version stamp only.
-const SAVE_VERSION: int = 3
+# v4: Run state gains "pending_dropped_items" (SPD Dungeon.droppedItems — items
+#     that fell through a chasm/pitfall awaiting delivery on a lower depth).
+#     Additive with an empty default, so migration is a version stamp only.
+const SAVE_VERSION: int = 4
 
 func _notification(what: int) -> void:
 	match what:
@@ -249,6 +252,10 @@ func _migrate_save(save: Dictionary, from_version: int) -> Dictionary:
 				# v2 -> v3: item dicts gain optional "kept_lost" (defaults to
 				# false on read), so no data rewrite is needed.
 				version = 3
+			3:
+				# v3 -> v4: run state gains optional "pending_dropped_items"
+				# (defaults to empty on read), so no data rewrite is needed.
+				version = 4
 			_:
 				push_warning("SaveManager: No migration step registered for save version %d." % version)
 				version += 1
