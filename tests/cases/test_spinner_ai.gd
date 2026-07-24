@@ -32,6 +32,10 @@ func run(t: Object) -> void:
 	_test_spinner_loses_unseen_target_at_last_known_cell(t)
 	_test_spinner_moves_toward_last_known_target_cell(t)
 	_test_spinner_visible_adjacent_attack_still_works(t)
+	_test_spinner_fleeing_returns_to_hunting_when_poison_gone(t)
+	_test_spinner_keeps_fleeing_while_target_poisoned(t)
+	_test_spinner_terror_keeps_fleeing_despite_unpoisoned_target(t)
+	_test_spinner_poison_hit_starts_flee_and_resets_web_cooldown(t)
 
 func _test_spinner_amok_uses_base_hunting_retarget(t: Object) -> void:
 	var level := FakeSpinnerLevel.new()
@@ -132,6 +136,112 @@ func _test_spinner_visible_adjacent_attack_still_works(t: Object) -> void:
 	t.check(spinner.did_visible_action, "Spinner still performs a visible adjacent attack")
 	t.check(spinner.last_visible_action == "attack", "Spinner adjacent target path still records an attack action")
 	t.check(spinner.target == hero, "Spinner keeps the visible adjacent target after attacking")
+
+	spinner.free()
+	hero.free()
+
+func _test_spinner_fleeing_returns_to_hunting_when_poison_gone(t: Object) -> void:
+	var level := FakeSpinnerLevel.new()
+	var spinner := Spinner.new()
+	var hero := Char.new()
+	spinner.pos = ConstantsData.xy_to_pos(10, 10)
+	hero.pos = ConstantsData.xy_to_pos(14, 10)
+	level.heroes = [hero]
+	spinner.level = level
+	hero.level = level
+	spinner.state = Mob.AIState.FLEEING
+	spinner.target = hero
+	spinner.target_pos = hero.pos
+	spinner.web_cooldown = 99
+	level.find_step_result = ConstantsData.xy_to_pos(11, 10)
+
+	spinner._act_fleeing()
+
+	t.check(
+		spinner.state == Mob.AIState.HUNTING,
+		"Fleeing spinner returns to hunting once the visible target is no longer poisoned"
+	)
+
+	spinner.free()
+	hero.free()
+
+func _test_spinner_keeps_fleeing_while_target_poisoned(t: Object) -> void:
+	var level := FakeSpinnerLevel.new()
+	var spinner := Spinner.new()
+	var hero := Char.new()
+	spinner.pos = ConstantsData.xy_to_pos(10, 10)
+	hero.pos = ConstantsData.xy_to_pos(12, 10)
+	level.heroes = [hero]
+	spinner.level = level
+	hero.level = level
+	hero.add_buff(Poison.create(7.0))
+	spinner.state = Mob.AIState.FLEEING
+	spinner.target = hero
+	spinner.target_pos = hero.pos
+	spinner.web_cooldown = 99
+
+	spinner._act_fleeing()
+
+	t.check(
+		spinner.state == Mob.AIState.FLEEING,
+		"Spinner keeps fleeing while the target is still poisoned"
+	)
+
+	spinner.free()
+	hero.free()
+
+func _test_spinner_terror_keeps_fleeing_despite_unpoisoned_target(t: Object) -> void:
+	var level := FakeSpinnerLevel.new()
+	var spinner := Spinner.new()
+	var hero := Char.new()
+	spinner.pos = ConstantsData.xy_to_pos(10, 10)
+	hero.pos = ConstantsData.xy_to_pos(12, 10)
+	level.heroes = [hero]
+	spinner.level = level
+	hero.level = level
+	spinner.add_buff(Terror.new())
+	spinner.state = Mob.AIState.FLEEING
+	spinner.target = hero
+	spinner.target_pos = hero.pos
+	spinner.web_cooldown = 99
+
+	spinner._act_fleeing()
+
+	t.check(
+		spinner.state == Mob.AIState.FLEEING,
+		"Terrorized spinner keeps fleeing even when the target is not poisoned"
+	)
+
+	spinner.free()
+	hero.free()
+
+func _test_spinner_poison_hit_starts_flee_and_resets_web_cooldown(t: Object) -> void:
+	var level := FakeSpinnerLevel.new()
+	var spinner := Spinner.new()
+	var hero := Char.new()
+	spinner.pos = ConstantsData.xy_to_pos(10, 10)
+	hero.pos = ConstantsData.xy_to_pos(11, 10)
+	level.heroes = [hero]
+	spinner.level = level
+	hero.level = level
+	spinner.state = Mob.AIState.HUNTING
+	spinner.target = hero
+	spinner.web_cooldown = 99
+
+	# on_attack_hit poisons with 50% chance per hit; iterate until it lands.
+	var landed := false
+	for _i: int in range(64):
+		spinner.on_attack_hit(hero, 5)
+		if hero.has_buff("Poison"):
+			landed = true
+			break
+
+	t.check(landed, "Spinner poison-on-hit lands within a reasonable number of attempts")
+	t.check(
+		spinner.state == Mob.AIState.FLEEING,
+		"Spinner flees immediately after successfully poisoning its target"
+	)
+	t.check(spinner.web_cooldown == 0, "Successful poison resets the spinner's web cooldown")
 
 	spinner.free()
 	hero.free()

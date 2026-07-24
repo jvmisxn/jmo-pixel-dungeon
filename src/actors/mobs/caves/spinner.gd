@@ -34,52 +34,49 @@ func act() -> void:
 		last_enemy_pos = target.pos
 
 func _act_hunting() -> void:
-	if target == null or not target.is_alive:
-		super._act_hunting()
-		return
-
+	# Original Hunting.act(): the web shot is a pre-step; every shared hunting
+	# guard (flee, Amok retarget, chase/attack, lost-target) runs in the base.
 	if has_buff("Amok"):
 		var nearest: Char = _find_nearest_char()
 		if nearest:
 			target = nearest
-
-	var can_see_target: bool = can_see(target.pos)
-	if can_see_target:
-		target_pos = target.pos
-	elif pos == target_pos:
-		_set_state(AIState.WANDERING)
-		target = null
-		target_pos = -1
-		spend_turn()
+	if _try_shoot_web():
 		return
+	super._act_hunting()
 
-	var dist: int = distance_to(target.pos)
+func _act_fleeing() -> void:
+	# Original Fleeing.act(): return to hunting once the enemy is visible and
+	# no longer poisoned, unless Terror/Dread force the flee to continue.
+	if not has_buff("Terror") and not has_buff("Dread") \
+			and target != null and target.is_alive and can_see(target.pos) \
+			and target.has_method("has_buff") and not target.has_buff("Poison"):
+		_set_state(AIState.HUNTING)
+		_act_hunting()
+		return
+	# A fleeing spinner still shoots webs at a visible enemy.
+	if _try_shoot_web():
+		return
+	super._act_fleeing()
 
-	# Shoot web ahead of enemy if cooldown ready
-	if web_cooldown <= 0 and dist <= 6 and can_see_target:
-		_shoot_web()
-		spend_attack()
-		return
-
-	# If adjacent, attack and possibly flee after poisoning
-	if is_adjacent(target.pos):
-		attack(target)
-		spend_attack()
-		# After poisoning, flee
-		if target and target.has_method("has_buff") and target.has_buff("Poison"):
-			state = AIState.FLEEING
-		return
-	else:
-		_move_toward(target_pos)
-		spend_move()
-		return
+## Web pre-step shared by hunting and fleeing (original Hunting/Fleeing.act).
+func _try_shoot_web() -> bool:
+	if target == null or not target.is_alive:
+		return false
+	if web_cooldown > 0 or not can_see(target.pos) or distance_to(target.pos) > 6:
+		return false
+	_shoot_web()
+	spend_attack()
+	return true
 
 func on_attack_hit(target_char: Char, _damage: int) -> void:
 	super.on_attack_hit(target_char, _damage)
-	# 50% chance to apply poison on hit
+	# Original attackProc: 50% chance to poison for 7-8 turns; on a successful
+	# poison the web cooldown resets and the spinner flees while it lasts.
 	if randf() < 0.5:
-		var p: Poison = Poison.create(5.0)
+		var p: Poison = Poison.create(float(randi_range(7, 8)))
 		target_char.add_buff(p)
+		web_cooldown = 0
+		_set_state(AIState.FLEEING)
 
 func _shoot_web() -> void:
 	web_cooldown = 10
