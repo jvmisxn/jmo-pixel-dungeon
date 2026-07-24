@@ -1,6 +1,10 @@
 class_name DisarmingTrap
 extends Trap
-## Knocks the hero's weapon to a random nearby cell.
+## Throws an uncursed hero weapon away; animated statues are destroyed.
+
+const MIN_WEAPON_THROW_DISTANCE: int = 10
+const MAX_WEAPON_THROW_DISTANCE: int = 20
+const MAX_THROW_CELL_TRIES: int = 50
 
 func _init() -> void:
 	trap_name = "disarming trap"
@@ -10,7 +14,14 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 	if MessageLog:
 		MessageLog.add("A force knocks your weapon away!")
 
-	if triggerer == null:
+	if triggerer == null or level == null:
+		return
+	if triggerer is Mob and (triggerer as Mob).mob_id == "animated_statue":
+		(triggerer as Mob).die(self)
+		return
+	if not (triggerer is Hero):
+		return
+	if triggerer.get("flying") == true:
 		return
 
 	# Try to disarm the equipped melee weapon. Weapons live on Belongings, not
@@ -28,18 +39,12 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 		if MessageLog:
 			MessageLog.add("You have nothing to disarm.")
 		return
-
-	# Find a random nearby passable cell to throw the weapon to
-	var candidates: Array[int] = []
-	for dir: int in ConstantsData.DIRS_8:
-		var adj: int = pos + dir
-		if level.adjacent(pos, adj) and level.is_passable(adj):
-			candidates.append(adj)
-
-	if candidates.is_empty():
+	if weapon.get("cursed") == true:
 		return
 
-	var drop_pos: int = candidates[randi() % candidates.size()]
+	var drop_pos: int = _random_weapon_drop_cell(level)
+	if drop_pos < 0:
+		return
 
 	# Unequip and drop
 	if belongings != null and belongings.has_method("unequip"):
@@ -54,3 +59,13 @@ func _do_effect(triggerer: Variant, level: Level) -> void:
 
 	if MessageLog:
 		MessageLog.add_negative("Your weapon was thrown away!")
+
+func _random_weapon_drop_cell(level: Level) -> int:
+	for _try: int in range(MAX_THROW_CELL_TRIES):
+		var cell: int = level.random_passable_cell()
+		if cell < 0:
+			return -1
+		var distance: int = level.distance(pos, cell)
+		if distance >= MIN_WEAPON_THROW_DISTANCE and distance <= MAX_WEAPON_THROW_DISTANCE:
+			return cell
+	return -1
