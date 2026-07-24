@@ -29,6 +29,8 @@ class _FakeLevel extends RefCounted:
 func run(t: Object) -> void:
 	_test_zap_spawns_sentry(t)
 	_test_sentry_zaps_nearby_enemy(t)
+	_test_damage_range_matches_upstream(t)
+	_test_concurrent_ward_cap(t)
 
 func _make_wand(lvl: int) -> Object:
 	var wand: Object = Wand.WandOfWarding.new()
@@ -107,4 +109,38 @@ func _test_sentry_zaps_nearby_enemy(t: Object) -> void:
 
 	sentry._on_death(null)
 	foe.free()
+	hero.free()
+
+## Upstream Ward.damageRoll() rolls heroDamageIntRange(2 + wandLevel,
+## 8 + 4 * wandLevel). Lock the port's sentry damage range to that formula.
+func _test_damage_range_matches_upstream(t: Object) -> void:
+	for lvl: int in [0, 1, 3, 5]:
+		var wand: Object = _make_wand(lvl)
+		var rng: Array = wand.get_damage(lvl)
+		t.check(rng[0] == 2 + lvl,
+			"Warding sentry min damage == 2 + level (lvl %d)" % lvl)
+		t.check(rng[1] == 8 + 4 * lvl,
+			"Warding sentry max damage == 8 + 4*level (lvl %d)" % lvl)
+
+## Upstream allows a maximum of 2 + wandLevel concurrent wards. Placing beyond
+## the cap must retire the oldest sentry so the live count never exceeds it.
+func _test_concurrent_ward_cap(t: Object) -> void:
+	var floor := _FakeLevel.new()
+	var hero: Char = _make_hero(floor)
+	var lvl: int = 1
+	var wand: Object = _make_wand(lvl)
+	var cap: int = 2 + lvl  # MAX_SENTRIES(2) + level
+
+	# Place cap + 2 wards on distinct cells; only `cap` should remain live.
+	for i: int in range(cap + 2):
+		wand.on_zap(hero, [200 + i * 2] as Array[int])
+
+	var live: Array = _sentries_on(floor)
+	t.check(live.size() == cap,
+		"Concurrent wards capped at 2 + level (%d), got %d" % [cap, live.size()])
+	t.check(wand._sentry_positions.size() == cap,
+		"Tracked sentry positions stay in sync with live count")
+
+	for s: Variant in live:
+		s._on_death(null)
 	hero.free()

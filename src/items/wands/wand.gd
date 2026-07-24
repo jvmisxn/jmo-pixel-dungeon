@@ -917,7 +917,10 @@ class WandOfPrismaticLight extends Wand:
 class WandOfWarding extends Wand:
 	## Track placed sentry positions for this wand.
 	var _sentry_positions: Array[int] = []
-	const MAX_SENTRIES: int = 3
+	## Base concurrent-ward allowance. Upstream WandOfWarding grants
+	## `2 + level` maximum wards per Wand.Charger; the port has a single
+	## charger, so the live cap is MAX_SENTRIES + level == 2 + level.
+	const MAX_SENTRIES: int = 2
 
 	func _init() -> void:
 		super._init()
@@ -929,8 +932,10 @@ class WandOfWarding extends Wand:
 		icon_color = Color(0.4, 0.6, 0.4)
 
 	func get_damage(lvl: int) -> Array[int]:
-		# Sentry damage per zap
-		return [2 + lvl, 5 + 2 * lvl] as Array[int]
+		# Sentry damage per zap. Matches upstream Ward.damageRoll()'s
+		# heroDamageIntRange(2 + wandLevel, 8 + 4 * wandLevel); the port's
+		# sentries scale on wand level only (no per-ward tier system yet).
+		return [2 + lvl, 8 + 4 * lvl] as Array[int]
 
 	func on_zap(hero: Char, path: Array[int]) -> void:
 		if path.is_empty():
