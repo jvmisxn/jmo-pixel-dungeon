@@ -315,6 +315,29 @@ func _generate_current_level() -> void:
 		if _transition_type == "fall":
 			_apply_fall_arrival_effects(level)
 
+	_deliver_fallen_items(level)
+
+## Land items that fell into chasms/pitfalls on a higher floor (upstream
+## switchLevel's droppedItems delivery): each pending item lands at a random
+## passable cell, with potions shattering on impact as upstream. Host-side
+## only; online clients receive the resulting heaps via snapshot sync.
+func _deliver_fallen_items(level: Level) -> void:
+	if level == null or GameManager == null or not GameManager.has_method("take_dropped_items"):
+		return
+	if NetworkManager != null and NetworkManager.has_method("is_client") and NetworkManager.is_client():
+		return
+	var fallen: Array = GameManager.take_dropped_items(GameManager.depth)
+	for item: Variant in fallen:
+		var pos: int = level.random_passable_cell()
+		if pos < 0:
+			pos = level.entrance
+		if pos < 0:
+			continue
+		if item is Potion:
+			(item as Potion).shatter(pos, level)
+		else:
+			level.drop_item(pos, item)
+
 func _landing_anchor_for_transition(level: Level) -> int:
 	if level == null:
 		return -1

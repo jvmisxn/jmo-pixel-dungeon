@@ -10,11 +10,12 @@ extends Buff
 ## the hero drops LAST via the shared `hero_fell` descent path so the level swap
 ## does not cut short the mob drops.
 ##
-## Documented divergences from upstream (kept out of this narrow slice): item
-## heaps in the footprint are not dropped to the floor below (this port has no
-## `Dungeon.dropToChasm` fallen-item pipeline), there is no immovable-neutral or
-## ally-ignore filtering (the port lacks those char properties), and there are no
-## PitfallParticle/collapse audiovisual effects.
+## Item heaps in the footprint fall to the floor below through
+## `GameManager.drop_to_chasm` (upstream `Dungeon.dropToChasm`) and land near
+## the party on arrival. Documented divergences from upstream (kept out of this
+## narrow slice): there is no immovable-neutral or ally-ignore filtering (the
+## port lacks those char properties), and there are no PitfallParticle/collapse
+## audiovisual effects.
 
 ## Footprint cells that collapse when this buff acts.
 var positions: Array[int] = []
@@ -54,6 +55,20 @@ func _collapse() -> void:
 	var footprint: Dictionary = {}
 	for cell: int in positions:
 		footprint[cell] = true
+
+	# Item heaps in the collapsing footprint drop to the floor below (upstream
+	# removes each heap and routes its items through Dungeon.dropToChasm) rather
+	# than being destroyed with the floor.
+	if level.get("heaps") != null and GameManager != null \
+			and GameManager.has_method("drop_to_chasm"):
+		var level_heaps: Array = level.heaps
+		for idx: int in range(level_heaps.size() - 1, -1, -1):
+			var heap: Dictionary = level_heaps[idx]
+			var heap_pos: int = int(heap.get("pos", -1))
+			if not footprint.has(heap_pos) or not _cell_open(level, heap_pos):
+				continue
+			GameManager.drop_to_chasm(heap.get("item"))
+			level_heaps.remove_at(idx)
 
 	# Mobs standing over the collapse die to the fall (upstream Chasm.mobFall).
 	if level.get("mobs") != null:
