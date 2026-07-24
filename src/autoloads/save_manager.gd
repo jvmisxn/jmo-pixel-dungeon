@@ -15,7 +15,10 @@ const SETTINGS_PATH: String = "user://settings.dat"
 # v2: Ring of Might no longer bakes its STR/HP bonus into the hero's persisted
 #     base stats. Older saves un-bake the bonus during migration so the rebuilt
 #     passive buff does not double-count it. See _migrate_might_ring_stats.
-const SAVE_VERSION: int = 2
+# v3: Item dictionaries gain "kept_lost" (SPD Item.KEPT_LOST, the unblessed-ankh
+#     lost-inventory keep flag). Additive with a false default, so migration is
+#     a version stamp only.
+const SAVE_VERSION: int = 3
 
 func _notification(what: int) -> void:
 	match what:
@@ -242,6 +245,10 @@ func _migrate_save(save: Dictionary, from_version: int) -> Dictionary:
 				# passive does not double-apply on load.
 				_migrate_v1_to_v2(migrated)
 				version = 2
+			2:
+				# v2 -> v3: item dicts gain optional "kept_lost" (defaults to
+				# false on read), so no data rewrite is needed.
+				version = 3
 			_:
 				push_warning("SaveManager: No migration step registered for save version %d." % version)
 				version += 1

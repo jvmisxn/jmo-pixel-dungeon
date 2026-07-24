@@ -301,6 +301,8 @@ func serialize() -> Dictionary:
 		"quantity": quantity,
 		"stackable": stackable,
 		"unique": unique,
+		# SPD Item.KEPT_LOST: survives an unblessed-ankh lost inventory.
+		"kept_lost": kept_though_lost_invent,
 	}
 
 ## Deserialize this item from a saved dictionary.
@@ -317,5 +319,6 @@ func deserialize(data: Dictionary) -> void:
 	quantity = data.get("quantity", 1)
 	stackable = data.get("stackable", false)
 	unique = data.get("unique", false)
+	kept_though_lost_invent = data.get("kept_lost", false)
 	if identified and ItemCatalog:
 		ItemCatalog.identify_item(self)
