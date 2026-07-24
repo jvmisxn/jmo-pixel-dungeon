@@ -53,7 +53,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make("huntress_natures_bounty", "Nature's Bounty", "Trampling high grass can yield dewdrops or seeds.", 2, 1),
 				_make("huntress_survivalists_intuition", "Survivalist's Intuition", "Missile weapons can be identified on pickup.", 2, 1),
 				_make("huntress_followup_strike", "Followup Strike", "Landing a ranged hit empowers your next melee attack.", 2, 2),
-				_make("huntress_natures_aid", "Nature's Aid", "Supports defensive benefits from plant interactions.", 2, 2),
+				_make("huntress_natures_aid", "Nature's Aid", "When a plant triggers within her sight, the Huntress gains 2 points of barkskin for 3/5 turns.", 2, 2),
 			]
 		ConstantsData.HeroClass.DUELIST:
 			return [
