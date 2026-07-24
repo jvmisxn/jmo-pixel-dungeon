@@ -24,13 +24,22 @@ func on_detach() -> void:
 	if target and target.paralysed > 0:
 		target.paralysed -= 1
 
-func on_damage_taken(amount: int, _source: Variant) -> void:
-	# Each hit has a chance to break paralysis based on damage vs max HP
-	if amount > 0 and target:
-		if randi_range(0, amount) >= randi_range(0, target.hp):
-			if MessageLog:
-				MessageLog.add_info("%s breaks free from paralysis!" % target.name)
-			target.remove_buff(self)
+## Called from Char.take_damage before shields, matching upstream
+## Paralysis.processDamage: damage accumulates in a ParalysisResist buff
+## so successive hits get progressively better odds of breaking free.
+func process_damage(amount: int) -> void:
+	if amount <= 0 or target == null:
+		return
+	var resist: ParalysisResist = target.get_buff("ParalysisResist") as ParalysisResist
+	if resist == null:
+		resist = target.add_buff(ParalysisResist.new()) as ParalysisResist
+	if resist == null:
+		return
+	resist.damage += amount
+	if randi_range(0, resist.damage) >= randi_range(0, maxi(0, target.hp)):
+		if MessageLog:
+			MessageLog.add_info("%s breaks free from paralysis!" % target.name)
+		target.remove_buff(self)
 
 func description() -> String:
 	return "Paralyzed! Cannot move or act. Taking damage may break the effect."
