@@ -125,7 +125,7 @@ var _camera_look_touch_index: int = -1
 var _suppress_touch_mouse_until_msec: int = 0
 var _last_action_from_touch: bool = false
 const HELD_MOVE_REPEAT_DELAY: float = 0.25
-const TOUCH_MOVE_DURATION: float = 0.28
+const TOUCH_MOVE_DURATION: float = CharSprite.DEFAULT_MOVE_INTERVAL
 const TOUCH_LOOK_DRAG_THRESHOLD: float = 10.0
 
 # --- Auto-Walk State ---
@@ -137,7 +137,7 @@ var _auto_walk_known_mobs: Dictionary[int, bool] = {}
 var _auto_walk_prev_hp: int = -1
 ## Cooldown timer to pace auto-walk steps so movement animation is visible.
 var _auto_walk_cooldown: float = 0.0
-const AUTO_WALK_STEP_DELAY: float = 0.15
+const AUTO_WALK_STEP_DELAY: float = CharSprite.DEFAULT_MOVE_INTERVAL
 
 # --- Targeting Mode State ---
 ## True when in targeting mode (throw, zap, etc.)
@@ -921,7 +921,7 @@ func _sync_hero_sprites_from_state(previous_hero_state: Dictionary = {}) -> void
 		_apply_hero_equipment_visuals(hero_sprite, hero_node)
 		var previous_state: Dictionary = previous_hero_state.get(hero_key, {}) if previous_hero_state.has(hero_key) else {}
 		if hero_sprite.cell_pos != int(hero_node.pos):
-			hero_sprite.move_to(int(hero_node.pos), 0.12)
+			hero_sprite.move_to(int(hero_node.pos), CharSprite.DEFAULT_MOVE_INTERVAL)
 		_apply_snapshot_action_feedback(
 			hero_sprite,
 			int(hero_node.pos),
@@ -962,7 +962,7 @@ func _sync_mob_sprites_from_state(previous_mob_state: Dictionary = {}) -> void:
 			continue
 		var previous_state: Dictionary = previous_mob_state.get(mob_key, {}) if previous_mob_state.has(mob_key) else {}
 		if mob_sprite.cell_pos != int(mob_node.pos):
-			mob_sprite.move_to(int(mob_node.pos), 0.12)
+			mob_sprite.move_to(int(mob_node.pos), CharSprite.DEFAULT_MOVE_INTERVAL)
 		_apply_snapshot_action_feedback(
 			mob_sprite,
 			int(mob_node.pos),
@@ -2028,7 +2028,7 @@ func _animate_action_for_hero(hero: Variant, action: Dictionary) -> void:
 		"move":
 			# Animate to hero's actual position (may differ from clicked cell
 			# due to one-step pathfinding)
-			var move_duration: float = TOUCH_MOVE_DURATION if action_from_touch else 0.15
+			var move_duration: float = TOUCH_MOVE_DURATION if action_from_touch else CharSprite.DEFAULT_MOVE_INTERVAL
 			hero_sprite.move_to(hero.pos, move_duration)
 		"attack":
 			var target: int = action.get("target_pos", -1)

@@ -10,6 +10,8 @@ const TILE_SIZE: int = 16
 const HP_BAR_WIDTH: float = 14.0
 const HP_BAR_HEIGHT: float = 2.0
 const SHADOW_PATH: String = "res://assets/spd/interfaces/shadow.png"
+const DEFAULT_MOVE_INTERVAL: float = 0.1
+const GROUNDING_OFFSET_Y: float = 2.0
 
 # --- Floating text color constants (matches original CharSprite.java) ---
 const COLOR_DEFAULT: int = 0xFFFFFF
@@ -137,7 +139,7 @@ func place_at(pos: int) -> void:
 	position = world_pos
 
 ## Animate movement to a target cell.
-func move_to(pos: int, duration: float = 0.15) -> void:
+func move_to(pos: int, duration: float = DEFAULT_MOVE_INTERVAL) -> void:
 	if pos == cell_pos:
 		return
 	# Flip sprite to face movement direction
@@ -595,7 +597,7 @@ func _update_shadow_visual() -> void:
 func _apply_perspective_raise() -> void:
 	if _sprite == null:
 		return
-	_sprite.position = Vector2(0.0, -TILE_SIZE * perspective_raise)
+	_sprite.position = Vector2(0.0, -TILE_SIZE * perspective_raise + GROUNDING_OFFSET_Y)
 
 
 func _current_frame_size() -> Vector2:

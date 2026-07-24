@@ -533,7 +533,7 @@ static func apply_remote_hero_move(actor_id: int, new_pos: int, hero_sprites: Di
 		return false
 	var hero_sprite: Variant = hero_sprites.get(actor_id)
 	if hero_sprite != null and is_instance_valid(hero_sprite):
-		hero_sprite.move_to(new_pos, 0.12)
+		hero_sprite.move_to(new_pos, CharSprite.DEFAULT_MOVE_INTERVAL)
 	var focused_hero: Variant = get_focused_hero.call()
 	if focused_hero == null or int(ConstantsData.get_prop(focused_hero, "actor_id", -1)) != actor_id:
 		return true
@@ -559,7 +559,7 @@ static func apply_remote_mob_move(actor_id: int, new_pos: int, mob_sprites: Dict
 	var mob_sprite: Variant = mob_sprites.get(actor_id)
 	if mob_sprite == null or not is_instance_valid(mob_sprite):
 		return false
-	mob_sprite.move_to(new_pos, 0.12)
+	mob_sprite.move_to(new_pos, CharSprite.DEFAULT_MOVE_INTERVAL)
 	if mob_sprite.has_method("set_visible_state") and current_level != null and new_pos < current_level.visible.size():
 		mob_sprite.set_visible_state(current_level.visible[new_pos])
 	return true

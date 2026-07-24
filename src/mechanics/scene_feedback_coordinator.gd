@@ -33,7 +33,7 @@ static func on_mob_action(scene: Variant, actor: Node) -> void:
 		var action_name: String = str(actor.get("last_visible_action"))
 		var action_target_pos: int = int(actor.get("last_visible_target_pos")) if actor.get("last_visible_target_pos") != null else -1
 		if mob_pos >= 0 and mob_pos != sprite.cell_pos:
-			sprite.move_to(mob_pos)
+			sprite.move_to(mob_pos, CharSprite.DEFAULT_MOVE_INTERVAL)
 		if action_name == "attack" and action_target_pos >= 0:
 			sprite.play_attack(action_target_pos)
 		if actor.get("hp") != null and actor.get("ht") != null:
