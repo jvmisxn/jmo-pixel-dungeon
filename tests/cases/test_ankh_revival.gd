@@ -31,6 +31,21 @@ func run(t: Object) -> void:
 	_test_unblessed_drops_common_items_as_heaps(t)
 	_test_unblessed_keeps_unique_kept_and_bags(t)
 	_test_blessed_keeps_everything(t)
+	_test_kept_flag_serialization_round_trip(t)
+
+func _test_kept_flag_serialization_round_trip(t: Object) -> void:
+	var item: Item = Generator.create_item("healing")
+	item.kept_though_lost_invent = true
+	var data: Dictionary = item.serialize()
+	t.check(data.get("kept_lost") == true, "serialize writes the kept_lost flag")
+	var restored: Item = Generator.create_item(String(data["item_id"]))
+	restored.deserialize(data)
+	t.check(restored.kept_through_lost_inventory(), "kept_lost flag survives a save round-trip")
+	var legacy: Dictionary = item.serialize()
+	legacy.erase("kept_lost")
+	var legacy_restored: Item = Generator.create_item(String(legacy["item_id"]))
+	legacy_restored.deserialize(legacy)
+	t.check(not legacy_restored.kept_through_lost_inventory(), "pre-v3 saves default the kept flag to false")
 
 func _heap_items(level: Level, pos: int) -> Array:
 	var items: Array = []
