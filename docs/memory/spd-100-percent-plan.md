@@ -123,11 +123,12 @@ Verified shipped (2026-07-24 source check): TurnManager schedule persistence,
 scheduled buff timeline, scheduled conserved blobs, plant/trap/blob routing,
 and pitfall/chasm landing parity including fallen-item heap drops
 (`test_pitfall_heap_drop.gd`) and `Level.drop_item` CHASM routing
-(`test_chasm_drop_item.gd`, 2026-07-24); PitRoom contents/locks remain open.
+(`test_chasm_drop_item.gd`, 2026-07-24), and full upstream PitRoom contents
+(crystal door, empty well, skeleton loot/key, `test_pit_room_contents.gd`,
+2026-07-24).
 
 1. Talent system foundation.
 2. Examine/info windows.
-3. Full upstream PitRoom contents (crystal door, empty well, skeleton loot/key).
 
 ## Done Criteria For Each Slice
 
