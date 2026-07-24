@@ -499,6 +499,10 @@ func _do_zap_wand(item: Variant, target_pos: int) -> void:
 		return
 	last_visible_action = "zap_wand"
 	last_visible_target_pos = target_pos
+	if target_pos == pos and _try_shield_battery(item):
+		_patient_strike_ready = false
+		_followup_strike_ready = false
+		return
 	if item is Wand:
 		(item as Wand).zap(self, target_pos)
 	elif item.has_method("zap"):
@@ -507,6 +511,40 @@ func _do_zap_wand(item: Variant, target_pos: int) -> void:
 		item.zap(self, target_pos)
 	_patient_strike_ready = false
 	_followup_strike_ready = false
+
+## Mage Shield Battery talent (SPD Wand.onSelect self-target branch): zapping
+## a wand at the Mage's own cell converts all of its current charges into a
+## Barrier of HT * 4% per charge, x1.5 at 2 talent points. Returns true when
+## the self-zap was handled here (including the no-charge fizzle), so the
+## normal zap path is skipped.
+func _try_shield_battery(item: Variant) -> bool:
+	if hero_class != ConstantsData.HeroClass.MAGE:
+		return false
+	var battery_level: int = get_talent_level("mage_shield_battery")
+	if battery_level <= 0:
+		return false
+	var wand: Variant = item
+	if not (wand is Wand) and wand != null and wand.has_method("get_imbued_wand"):
+		wand = wand.get_imbued_wand()
+	if not (wand is Wand):
+		return false
+	var wand_charges: int = (wand as Wand).charges
+	if wand_charges <= 0:
+		if MessageLog:
+			MessageLog.add_warning("Your %s fizzles." % (wand as Wand).item_name)
+		return true
+	var shield: float = float(hp_max) * 0.04 * float(wand_charges)
+	if battery_level >= 2:
+		shield *= 1.5
+	var barrier: Barrier = add_buff(Barrier.new()) as Barrier
+	if barrier != null:
+		barrier.set_shield(roundi(shield))
+	(wand as Wand).charges = 0
+	if MessageLog:
+		MessageLog.add_positive("You channel the %s's charge into a shield." % (wand as Wand).item_name)
+	if EventBus:
+		EventBus.hero_stats_changed.emit()
+	return true
 
 func _projectile_collision_pos(target_pos: int) -> int:
 	if level == null:
@@ -1066,6 +1104,12 @@ func deserialize(data: Dictionary) -> void:
 	xp_to_next = data.get("xp_to_next", ConstantsData.xp_for_level(hero_level))
 	talent_points_available = data.get("talent_points_available", 0)
 	talent_levels = data.get("talent_levels", {}).duplicate(true)
+	# Migrate the retired mage_energizing_upgrade slot (removed upstream) to
+	# its replacement Shield Battery, clamped to the new 2-point cap.
+	if talent_levels.has("mage_energizing_upgrade"):
+		var old_points: int = mini(int(talent_levels["mage_energizing_upgrade"]), 2)
+		talent_levels.erase("mage_energizing_upgrade")
+		talent_levels["mage_shield_battery"] = maxi(old_points, int(talent_levels.get("mage_shield_battery", 0)))
 	hero_name = data.get("hero_name", HeroClassData.get_class_name_str(hero_class))
 	owner_peer_id = int(data.get("owner_peer_id", 1))
 	hero_slot_index = int(data.get("hero_slot_index", 0))

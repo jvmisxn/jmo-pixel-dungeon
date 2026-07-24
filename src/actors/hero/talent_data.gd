@@ -39,7 +39,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make("mage_empowering_meal", "Empowering Meal", "Eating grants a short Recharging buff for wands.", 2, 1),
 				_make("mage_backup_barrier", "Backup Barrier", "Crossing below half health triggers an emergency barrier once until you recover.", 2, 1),
 				_make("mage_scholars_intuition", "Scholar's Intuition", "Scrolls and wands can be identified on pickup.", 2, 2),
-				_make("mage_energizing_upgrade", "Energizing Upgrade", "Groundwork slot for recharge and staff synergy mechanics.", 3, 2),
+				_make("mage_shield_battery", "Shield Battery", "The Mage can zap a wand at himself to convert all of its charges into a barrier of 4% max HP per charge, 6% at +2.", 2, 2),
 			]
 		ConstantsData.HeroClass.ROGUE:
 			return [
