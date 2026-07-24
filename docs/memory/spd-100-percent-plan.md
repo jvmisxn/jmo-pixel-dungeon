@@ -119,13 +119,15 @@ The remaining gap is not one missing item category. The high-value work is conce
 
 ## Suggested Immediate Queue
 
-1. `TurnManager` schedule persistence.
-2. Scheduled buff timeline.
-3. Scheduled conserved blobs.
-4. Plant/trap/blob routing.
-5. Pitfall/chasm landing parity.
-6. Talent system foundation.
-7. Examine/info windows.
+Verified shipped (2026-07-24 source check): TurnManager schedule persistence,
+scheduled buff timeline, scheduled conserved blobs, plant/trap/blob routing,
+and pitfall/chasm landing parity including fallen-item heap drops
+(`test_pitfall_heap_drop.gd`); PitRoom contents/locks remain open.
+
+1. Talent system foundation.
+2. Examine/info windows.
+3. Full upstream PitRoom contents (crystal door, empty well, skeleton loot/key).
+4. `Level.drop_item` onto CHASM terrain routing thrown/placed items below.
 
 ## Done Criteria For Each Slice
 
