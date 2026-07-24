@@ -108,6 +108,22 @@ func all_cells() -> Array[int]:
 	return cells
 
 # ---------------------------------------------------------------------------
+# Generation Permissions
+# ---------------------------------------------------------------------------
+
+## Whether a trap may generate at this cell (upstream Room.canPlaceTrap).
+func can_place_trap(_pos: int) -> bool:
+	return true
+
+## Whether feeling grass may generate at this cell (upstream Room.canPlaceGrass).
+func can_place_grass(_pos: int) -> bool:
+	return true
+
+## Whether water patches may generate at this cell (upstream Room.canPlaceWater).
+func can_place_water(_pos: int) -> bool:
+	return true
+
+# ---------------------------------------------------------------------------
 # Overlap / Intersection
 # ---------------------------------------------------------------------------
 

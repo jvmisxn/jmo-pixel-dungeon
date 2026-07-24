@@ -321,12 +321,23 @@ func _place_traps() -> void:
 		# Don't place on doors
 		if ConstantsData.terrain_is_door(terrain_at(pos)):
 			continue
+		# Respect per-room trap bans (upstream Room.canPlaceTrap)
+		if not _room_allows_trap(pos):
+			continue
 
 		var trap: Trap = _create_random_trap() as Trap
 		if trap != null:
 			place_trap(pos, trap)
 			# Original: traps are hidden by default, revealed via detection
 			set_terrain(pos, ConstantsData.Terrain.SECRET_TRAP)
+
+## True unless a room containing this cell forbids trap generation.
+func _room_allows_trap(pos: int) -> bool:
+	for room_ref: Variant in rooms:
+		var room: Room = room_ref as Room
+		if room != null and room.inside(pos) and not room.can_place_trap(pos):
+			return false
+	return true
 
 ## Number of traps based on depth and feeling.
 ## Original: NormalIntRange(2, 3 + depth/5) — bell curve between 2 and 3+depth/5.

@@ -179,6 +179,8 @@ static func _apply_feeling(level: Level) -> void:
 			for i: int in range(Level.LEN):
 				if level.map[i] != ConstantsData.Terrain.EMPTY:
 					continue
+				if not _grass_allowed(level, i):
+					continue
 				var roll: float = randf()
 				if roll < 0.12:
 					level.map[i] = ConstantsData.Terrain.GRASS
@@ -187,6 +189,15 @@ static func _apply_feeling(level: Level) -> void:
 		Level.Feeling.DARK, Level.Feeling.NONE, Level.Feeling.WATER:
 			# Dark doesn't change terrain directly. Water is handled by region-style patch painting.
 			return
+
+
+## True unless a room containing this cell forbids grass (upstream canPlaceGrass).
+static func _grass_allowed(level: Level, pos: int) -> bool:
+	for room_ref: Variant in level.rooms:
+		var room: Room = room_ref as Room
+		if room != null and room.inside(pos) and not room.can_place_grass(pos):
+			return false
+	return true
 
 
 static func _water_params(level: Level) -> Dictionary:
@@ -215,7 +226,8 @@ static func _paint_water_patches(level: Level, fill: float, smoothness: int) -> 
 		if room == null:
 			continue
 		for pos: int in room.interior_cells():
-			if patch[pos] and level.map[pos] == ConstantsData.Terrain.EMPTY:
+			if patch[pos] and level.map[pos] == ConstantsData.Terrain.EMPTY \
+					and room.can_place_water(pos):
 				level.map[pos] = ConstantsData.Terrain.WATER
 
 
