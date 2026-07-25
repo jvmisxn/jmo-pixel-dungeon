@@ -611,6 +611,8 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 		effective_damage = maxi(effective_damage - target.dr_roll(), 0)
 		if target.has_buff("Vulnerable"):
 			effective_damage = int(effective_damage * 1.33)
+		if item is MissileWeapon and not (item is SpiritBow):
+			effective_damage = _shared_enchantment_proc(item, target, effective_damage)
 		if item.has_method("proc_enchantment"):
 			effective_damage = item.proc_enchantment(self, target, effective_damage)
 
@@ -619,6 +621,25 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 	if EventBus and item is MissileWeapon and not (item is SpiritBow):
 		EventBus.game_event.emit("thrown_weapon_hit", {"target_pos": target.pos})
 	return true
+
+## Sniper Shared Enchantment (upstream MissileWeapon.proc): thrown-weapon hits
+## have a points-in-3 chance to also proc the spirit bow's enchantment.
+## forced_roll overrides the random 0-2 roll for deterministic tests.
+func _shared_enchantment_proc(
+	missile: MissileWeapon, target: Char, damage: int, forced_roll: int = -1
+) -> int:
+	var points: int = get_talent_level("sniper_shared_enchantment")
+	if points <= 0:
+		return damage
+	var roll: int = forced_roll if forced_roll >= 0 else randi() % 3
+	if roll >= points:
+		return damage
+	if belongings == null or has_buff("MagicImmune"):
+		return damage
+	var bow: Variant = belongings.find_item_by_id("spirit_bow")
+	if bow == null or bow.get("enchantment") == null:
+		return damage
+	return bow.enchantment.proc(missile, self, target, damage)
 
 func _get_throw_delay(item: Variant) -> float:
 	var delay: float = 1.0
