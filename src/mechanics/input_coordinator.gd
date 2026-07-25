@@ -1,6 +1,10 @@
 class_name InputCoordinator
 extends RefCounted
 
+## Examine mode (upstream toolbar examine / X key): while active, the next
+## cell click inspects the cell via CellExaminer instead of acting on it.
+static var examine_mode: bool = false
+
 static func handle_cell_click(scene: Variant, cell: int) -> void:
 	if scene == null:
 		return
@@ -9,6 +13,10 @@ static func handle_cell_click(scene: Variant, cell: int) -> void:
 		return
 	if scene._targeting_active:
 		scene._resolve_targeting(cell)
+		return
+	if examine_mode:
+		examine_mode = false
+		CellExaminer.examine(scene, cell)
 		return
 	scene._cancel_auto_walk()
 	var hero_pos: int = hero.pos
@@ -78,7 +86,20 @@ static func handle_key_input(scene: Variant, keycode: int) -> bool:
 			if scene._hud:
 				scene._hud._on_rest_pressed()
 				return true
+		KEY_X:
+			examine_mode = not examine_mode
+			if MessageLog:
+				if examine_mode:
+					MessageLog.add_info("Examine: select a cell to inspect. (X to cancel)")
+				else:
+					MessageLog.add_info("Examine cancelled.")
+			return true
 		KEY_ESCAPE:
+			if examine_mode:
+				examine_mode = false
+				if MessageLog:
+					MessageLog.add_info("Examine cancelled.")
+				return true
 			if scene._hud and not scene._hud.has_active_window():
 				scene._hud.open_settings()
 				return true

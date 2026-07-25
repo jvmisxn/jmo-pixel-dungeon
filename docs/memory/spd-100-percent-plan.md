@@ -128,7 +128,9 @@ and pitfall/chasm landing parity including fallen-item heap drops
 2026-07-24).
 
 1. Talent system foundation.
-2. Examine/info windows.
+2. Examine/info windows (foundation shipped 2026-07-24: X-key examine mode,
+   `CellExaminer` + `WndInfoMob`/`WndInfoCell`; remaining: touch/toolbar entry,
+   mob description content, trap/plant windows — see backlog examine item).
 
 ## Done Criteria For Each Slice
 
