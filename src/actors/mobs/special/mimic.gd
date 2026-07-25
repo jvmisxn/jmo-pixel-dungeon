@@ -15,7 +15,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "mimic"
 	mob_name = "Mimic"
-	description = "What appeared to be a treasure chest is actually a toothy predator!"
+	description = "Mimics are magical creatures which can take any shape they wish. In dungeons they almost always choose a shape of a treasure chest, in order to lure in unsuspecting adventurers.\n\nMimics have a nasty bite, but often hold more treasure than a regular chest."
 	setup(25, 15, 10, 5, 12, 6, 1.5)  # Fast and hits hard
 	xp_value = 6
 	max_level = 30

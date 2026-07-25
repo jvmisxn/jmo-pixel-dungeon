@@ -15,7 +15,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "animated_statue"
 	mob_name = "Animated Statue"
-	description = "A stone statue that has been brought to life by powerful magic. It wields an enchanted weapon with deadly skill."
+	description = "You would think that it's just another one of this dungeon's inanimate statues, but its red glowing eyes give it away."
 	# Very tanky, strong attack — mini-boss level
 	setup(50, 18, 12, 6, 15, 12, 0.8)  # Slow but deadly
 	xp_value = 10

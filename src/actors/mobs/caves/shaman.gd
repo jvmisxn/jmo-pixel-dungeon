@@ -11,7 +11,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "shaman"
 	mob_name = "Gnoll Shaman"
-	description = "An elder gnoll that hurls bolts of lightning."
+	description = "Gnoll shamans are intelligent gnolls who use battle spells to compensate for their lack of might. They have a very respected position in gnoll society, despite their weaker strength."
 	setup(35, 14, 8, 3, 10, 6)
 	xp_value = 7
 	max_level = 18

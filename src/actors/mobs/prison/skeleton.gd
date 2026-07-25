@@ -6,7 +6,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "skeleton"
 	mob_name = "Skeleton"
-	description = "An animated skeleton wielding a rusty weapon. Explodes violently on death."
+	description = "Skeletons are composed of the bones of unlucky adventurers and inhabitants of the prison, animated by emanations of evil magic from the depths below. After they have been damaged enough, skeletons will disintegrate in an explosion of bones. The shrapnel from this explosion is harmful to anything nearby, but armor is very effective at mitigating it."
 	setup(25, 14, 7, 2, 10, 5)
 	xp_value = 5
 	max_level = 10  # Original: maxLvl = 10

@@ -8,6 +8,7 @@ var fist_type: FistType = FistType.ROTTING
 func _init() -> void:
 	super._init()
 	mob_id = "yog_fist"
+	description = "This fist is an aspect of Yog-Dzewa's power. Fists are linked to the power of Yog-Dzewa, and will be protected from all damage when they are close to the eye."
 	mob_name = "Fist of Yog"
 	xp_value = 30
 	max_level = 30

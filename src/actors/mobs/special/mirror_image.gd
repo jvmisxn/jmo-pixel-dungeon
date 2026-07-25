@@ -12,7 +12,7 @@ var source_hero_class: int = ConstantsData.HeroClass.WARRIOR
 func _init() -> void:
 	mob_id = "mirror_image"
 	mob_name = "Mirror Image"
-	description = "A " + "" + "shimmering " + "copy of the hero."
+	description = "This illusion bears a close resemblance to you, even seeming to wield your current weapon and armor.\n\nMirror images will seek and attack enemies using their mimicked weapon, which behaves the same as yours, but deals less damage. They start out nearly invisible, but must take on a form that's more easily seen in order to attack.\n\nWhile their offensive power can be potent, mirror images have no durability, and will fade the moment they take damage."
 	hp = 1
 	ht = 1
 	hp_max = 1

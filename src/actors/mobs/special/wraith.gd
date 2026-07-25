@@ -8,7 +8,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "wraith"
 	mob_name = "Wraith"
-	description = "A spectral undead that phases through walls. Only enchanted or upgraded weapons can harm it."
+	description = "A wraith is a vengeful spirit of a sinner, whose grave or tomb was disturbed. Being an ethereal entity, it is very hard to hit with a regular weapon."
 	setup(8, 14, 14, 2, 6, 0, 1.0)  # Low HP, high evasion, no armor
 	xp_value = 5
 	max_level = 20

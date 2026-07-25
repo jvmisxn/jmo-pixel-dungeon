@@ -8,7 +8,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "bandit"
 	mob_name = "Crazy Bandit"
-	description = "A deranged bandit in purple garb. Steals your items and uses them against you."
+	description = "An elite thief, distinguished by their more opulent purple robe. Despite their greater skill, they've become just as mindless as regular thieves.\n\nIn addition to stealing from you, crazed bandits will briefly blind, cripple, and poison you! They're much more likely to be carrying extra loot than a regular thief though."
 	setup(24, 14, 7, 2, 8, 4, 1.2)
 	xp_value = 5
 	max_level = 12

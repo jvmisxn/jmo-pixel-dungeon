@@ -12,7 +12,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "yog"
 	mob_name = "Yog-Dzewa"
-	description = "An ancient evil that lurks at the bottom of the dungeon. The source of all darkness."
+	description = "Yog-Dzewa is an Old God; a great monstrosity which reaches into mortal worlds and devours them to fuel its endless growth. The dwarves must have attracted the attention of this cosmic horror while toying with dark magics, and have been trying to keep it contained ever since.\n\nYog-Dzewa originates from a dimension of raw magical chaos, and cannot bring its true form into this world. Instead it has created avatars and summoned demonic minions to do its bidding here.\n\nThis giant eye is the focal point of Yog-Dzewa's power in this world. While the eye itself is immobile, it is capable of shooting powerful beams of demonic magic and summoning a variety of minions to aid it."
 	setup(500, 10, 20, 0, 0, 20)
 	xp_value = 100
 	max_level = 30

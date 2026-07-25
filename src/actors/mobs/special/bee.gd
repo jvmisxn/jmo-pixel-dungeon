@@ -10,7 +10,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "bee"
 	mob_name = "Golden Bee"
-	description = "A loyal bee that fights alongside you, stinging nearby enemies."
+	description = "Despite their small size, golden bees tend to protect their home fiercely. This one is very mad, better keep your distance."
 	setup(10, 14, 6, 2, 6, 0, 1.5)  # Fast, low HP
 	xp_value = 0  # Ally — no XP
 	max_level = 30

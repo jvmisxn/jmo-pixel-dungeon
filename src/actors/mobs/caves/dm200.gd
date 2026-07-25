@@ -9,7 +9,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "dm200"
 	mob_name = "DM-200"
-	description = "A dwarven war machine that vents toxic fumes."
+	description = "The DM-200 is the second generation of dwarven 'defense machine', which was designed to protect dwarven miners in the caves and city below. They are much larger and bulkier than their predecessors, and attack with devastating hydraulic fists.\n\nTheir increased size is also their primary weakness, as they are unable to fit into the narrow tunnels and doorways of the dungeon. The dwarves were able to compensate for the DM-200's lack of mobility by allowing them to vent their toxic exhaust fumes at distant enemies, or enemies they cannot reach."
 	setup(65, 20, 10, 8, 20, 12)
 	xp_value = 9
 	max_level = 18

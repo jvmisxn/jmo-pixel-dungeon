@@ -23,7 +23,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "necromancer"
 	mob_name = "Necromancer"
-	description = "A dark mage that raises the dead to fight for it. Kill the necromancer to destroy its skeleton."
+	description = "These apprentice dark mages have flocked to the prison, as it is the perfect place to practise their evil craft.\n\nNecromancers will summon and empower skeletons to fight for them. Killing the necromancer will also kill the skeleton it summons."
 	# Original: HP=HT=40, attackSkill (irrelevant, can't attack), defenseSkill=14, DR 0-5
 	setup(40, 0, 14, 0, 0, 5)
 	xp_value = 7

@@ -15,7 +15,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "goo"
 	mob_name = "Goo"
-	description = "A massive blob of dark ooze. The first guardian of the dungeon."
+	description = "Little is known about The Goo. It's quite possible that it is not even a creature, but rather a conglomerate of vile substances from the sewers that somehow gained basic intelligence. Regardless, dark magic is certainly what has allowed Goo to exist.\n\nIts gelatinous nature has let it absorb lots of dark energy, you feel a chill just from being near. If Goo is able to attack with this energy you won't live for long."
 	# Original: HP=HT=100, attackSkill=10 (15 when enraged), defenseSkill=8
 	setup(100, 10, 8, 1, 8, 2)
 	xp_value = 10  # Original: EXP = 10

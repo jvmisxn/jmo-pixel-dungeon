@@ -9,7 +9,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "scorpio"
 	mob_name = "Scorpio"
-	description = "A demonic scorpion that launches venomous stingers."
+	description = "These huge arachnid-like demonic creatures avoid close combat, preferring to fire crippling serrated spikes from long distances."
 	setup(70, 20, 14, 10, 24, 12)
 	xp_value = 13
 	max_level = 27

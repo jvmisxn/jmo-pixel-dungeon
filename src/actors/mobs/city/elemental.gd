@@ -6,7 +6,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "elemental"
 	mob_name = "Fire Elemental"
-	description = "A being of pure flame. Burns everything it touches."
+	description = "Elementals are chaotic creatures that are often created when powerful occult magic isn't properly controlled. Elementals have minimal intelligence, and are usually associated with a particular type of magic.\n\nFire elementals are a common type of elemental which deals damage with fiery magic. They will set their target ablaze with melee attacks, and can occasionally shoot bolts of fire as well."
 	setup(55, 20, 12, 8, 20, 5)
 	xp_value = 10
 	max_level = 22

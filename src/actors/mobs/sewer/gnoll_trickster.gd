@@ -12,7 +12,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "gnoll_trickster"
 	mob_name = "Gnoll Trickster"
-	description = "A cunning gnoll that hurls darts and traps from afar, fleeing when cornered."
+	description = "A strange looking creature, even by gnoll standards. It hunches forward with a wicked grin, almost cradling the satchel hanging over its shoulder. Its eyes are wide with a strange mix of fear and excitement.\n\nThere is a large collection of poorly made darts in its satchel, they all seem to be tipped with various harmful substances."
 	setup(20, 12, 4, 1, 6, 2, 1.2)
 	xp_value = 4
 	max_level = 9

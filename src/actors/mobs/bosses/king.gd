@@ -12,7 +12,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "king"
 	mob_name = "King of Dwarves"
-	description = "The undead king who rules the city with an army of undead servants."
+	description = "Many years ago one of the highest wizards in the dwarven court uncovered secrets which gave him tremendous power over life and death. He soon put this power to use, subjugating and corrupting his peers, his king, and eventually every dwarven citizen. Now he is king, ruler over a legion of undead subjects.\n\nThe King of Dwarves is an aggressive foe, who will attempt to surround and overwhelm his enemies with his horde of undead minions."
 	setup(400, 26, 14, 14, 30, 16)
 	xp_value = 80
 	max_level = 25

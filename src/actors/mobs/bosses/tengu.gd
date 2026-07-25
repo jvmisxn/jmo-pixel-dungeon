@@ -10,7 +10,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "tengu"
 	mob_name = "Tengu"
-	description = "A masked assassin who guards the prison. Master of traps and stealth."
+	description = "A famous and enigmatic assassin, named for the mask grafted to his face.\n\nTengu is held down with large clasps on his wrists and knees, though he seems to have gotten rid of his chains long ago.\n\nHe will try to use traps, deceptive magic, and precise attacks to eliminate the only thing stopping his escape: you."
 	setup(160, 20, 15, 6, 14, 8)
 	xp_value = 40
 	max_level = 15

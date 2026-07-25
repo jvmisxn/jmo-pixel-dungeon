@@ -9,7 +9,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "great_crab"
 	mob_name = "Great Crab"
-	description = "An enormous crustacean with an impenetrable shell. It blocks many attacks."
+	description = "This crab is gigantic, even compared to other sewer crabs. Its blue shell is covered in cracks and barnacles, showing great age. It lumbers around slowly, barely keeping balance with its massive claw.\n\nWhile the crab only has one claw, its size easily compensates. The crab holds the claw in front of any threat, shielding itself behind an impenetrable wall of carapace. However, the crab cannot block attacks it doesn't see coming, or attacks from multiple enemies at once."
 	setup(25, 12, 12, 4, 10, 10, 0.7)  # Very high armor and defense, slow
 	xp_value = 6
 	max_level = 9

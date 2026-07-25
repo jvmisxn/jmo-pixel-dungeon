@@ -8,7 +8,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "monk"
 	mob_name = "Dwarf Monk"
-	description = "A dwarven martial artist with lightning-fast strikes."
+	description = "These monks are fanatics, who have devoted themselves to protecting their king through physical might. So great is their devotion that they have totally surrendered their minds to their king, and now roam the dwarven city like mindless zombies.\n\nMonks rely solely on the art of hand-to-hand combat, and are able to use their unarmed fists both for offense and defense. When they become focused, monks will parry the next physical attack used against them, even if it was otherwise guaranteed to hit. Monks build focus more quickly while on the move, and more slowly when in direct combat."
 	setup(50, 22, 14, 6, 16, 6)
 	xp_value = 10
 	max_level = 22

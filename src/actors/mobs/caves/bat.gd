@@ -6,7 +6,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "bat"
 	mob_name = "Vampire Bat"
-	description = "A large bat that drains life force with each bite."
+	description = "These brisk and tenacious inhabitants of the caves are much more dangerous than they seem. They replenish their health with each successful attack, which allows them to defeat much larger opponents."
 	setup(30, 18, 14, 5, 16, 4)
 	xp_value = 7
 	max_level = 17

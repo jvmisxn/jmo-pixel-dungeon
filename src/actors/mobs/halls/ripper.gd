@@ -9,7 +9,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "ripper"
 	mob_name = "Ripper Demon"
-	description = "A winged demon that swoops down on its prey."
+	description = "These horrific creatures are the result of the many dwarven corpses in this region being put to use by demonic forces. Rippers are emaciated ghoulish creatures that resemble dwarves, but with broken bodies and long sharp claws made of bone.\n\nRipper demons are not particularly durable, but they are agile and dangerous. They are capable of leaping great distances to quickly reach targets before goring them with their claws."
 	setup(55, 22, 12, 10, 24, 8)
 	xp_value = 12
 	max_level = 27

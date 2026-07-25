@@ -8,7 +8,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "sheep"
 	mob_name = "Sheep"
-	description = "A bewildered sheep conjured by magic. It mostly just gets in the way."
+	description = "This is a magic sheep. What's so magical about it? You can't kill it. It will stand there until it magically fades away, all the while chewing cud with a blank stare."
 	setup(1, 0, 0, 0, 0, 0, 1.0)
 	xp_value = 0
 	max_level = 0

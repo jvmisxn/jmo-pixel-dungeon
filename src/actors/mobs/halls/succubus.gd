@@ -6,7 +6,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "succubus"
 	mob_name = "Succubus"
-	description = "A demonic temptress that charms her victims."
+	description = "Succubi are shapeshifting demons that manipulate the minds of their prey. This one has taken the form of a pale gothic humanoid, perhaps to attract dwarven warlocks?\n\nSuccubi may temporarily charm their enemy when they attack, making their enemy unable to directly attack them. When succubi attack a charmed enemy, they will steal some of their life essence."
 	setup(60, 24, 16, 12, 22, 10)
 	xp_value = 12
 	max_level = 27

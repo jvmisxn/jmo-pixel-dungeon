@@ -8,7 +8,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "thief"
 	mob_name = "Crazy Thief"
-	description = "A deranged thief who will steal your belongings and flee."
+	description = "Though these inmates roam free of their cells, this place is still their prison. Over time, this place has taken their minds as well as their freedom. Long ago, these crazy thieves and bandits have forgotten who they are and why they steal.\n\nThese enemies are more likely to steal and run than they are to fight. Make sure to keep them in sight, or you might never see your stolen item again."
 	setup(20, 12, 6, 1, 7, 3)
 	xp_value = 4
 	max_level = 12

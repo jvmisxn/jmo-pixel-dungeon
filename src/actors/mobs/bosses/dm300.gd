@@ -12,7 +12,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "dm300"
 	mob_name = "DM-300"
-	description = "A colossal dwarven war machine. It vents toxic gas and charges its targets."
+	description = "The DM-300 is the largest and most powerful 'defense machine' that the dwarves ever built. Such an awesome machine is difficult to manufacture, so the dwarves only ever made a few to guard the entrances to their underground metropolis.\n\nIt is equipped with vents to jet its toxic exhaust fumes and a high power drill that it can use both to attack and disrupt the earth. DM-300 can also connect to an energy grid, further enhancing its power."
 	setup(300, 24, 12, 15, 35, 18)
 	xp_value = 60
 	max_level = 20

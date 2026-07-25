@@ -14,7 +14,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "spinner"
 	mob_name = "Cave Spinner"
-	description = "A giant spider that spins webs and injects venom."
+	description = "These greenish furry cave spiders try to avoid direct combat. Instead they prefer to wait in the distance while their victim struggles in their excreted cobweb, slowly dying from their venomous bite. They are capable of shooting their webs great distances, and will try to block whatever path their prey is taking."
 	# Original: HP=HT=50, attackSkill=22, defenseSkill=17, damageRoll=10-20, DR=0-6
 	setup(50, 22, 17, 10, 20, 6)
 	xp_value = 9

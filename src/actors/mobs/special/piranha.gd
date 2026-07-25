@@ -8,7 +8,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "piranha"
 	mob_name = "Piranha"
-	description = "A vicious fish with razor-sharp teeth. It lurks in the dark waters of the dungeon."
+	description = "These carnivorous fish are bred specifically to protect flooded areas. Their bite is deadly, so it's best to avoid confronting them directly."
 	# High attack/damage, low HP and armor — glass cannon
 	setup(10, 20, 0, 4, 10, 0, 2.0)  # Very fast in water
 	xp_value = 0  # No XP (they're environmental hazards, not progression enemies)

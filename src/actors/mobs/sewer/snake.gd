@@ -6,7 +6,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "snake"
 	mob_name = "Sewer Snake"
-	description = "A venomous snake that slithers through the sewers."
+	description = "These oversized serpents are capable of quickly slithering around blows, making them quite hard to hit. Magical attacks or surprise attacks are capable of catching them off-guard however.\n\nYou can perform a surprise attack by attacking while out of the snake's vision. One way is to let a snake chase you through a doorway and then strike just after it moves into the door."
 	setup(4, 9, 8, 1, 4, 0)
 	xp_value = 2
 	max_level = 5

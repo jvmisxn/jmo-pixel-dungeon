@@ -6,7 +6,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "crab"
 	mob_name = "Sewer Crab"
-	description = "A large crustacean with powerful pincers and a thick shell."
+	description = "These huge crabs are at the top of the food chain in the sewers. They are extremely fast and their thick carapace can withstand heavy blows."
 	setup(15, 12, 6, 1, 7, 6)
 	xp_value = 3
 	max_level = 7

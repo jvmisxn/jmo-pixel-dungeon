@@ -10,7 +10,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "dm201"
 	mob_name = "DM-201"
-	description = "An upgraded dwarven war machine with reinforced plating and corrosive vents."
+	description = "The dwarves briefly experimented with more heavily emphasizing the DM-200's lack of mobility and created some DM models that are entirely stationary. The DM-201 is a retrofitted DM-200 which acts as a sentry turret that has no movement ability. In exchange for the lack of mobility, DM-201s have significantly more durability and attacking power.\n\nAs DM-201s have no engine to vent exhaust from, the dwarves instead outfitted them with corrosive gas grenades! DM-201s are careful with these grenades however, and will only lob them when attacked from a distance."
 	setup(80, 22, 12, 10, 24, 14, 0.7)  # Tougher than DM-200
 	xp_value = 11
 	max_level = 20

@@ -6,7 +6,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "guard"
 	mob_name = "Prison Guard"
-	description = "An undead guard armed with chains and a heavy weapon."
+	description = "Once keepers of the prison, these guards have long since become no different than the inmates. They shamble like zombies, brainlessly roaming through the halls in search of anything out of place, like you!\n\nThey carry chains around their hip, possibly used to pull in enemies to close range."
 	setup(40, 16, 8, 4, 12, 7)
 	xp_value = 6
 	max_level = 14

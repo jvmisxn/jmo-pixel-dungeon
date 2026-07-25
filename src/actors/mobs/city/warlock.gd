@@ -11,7 +11,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "warlock"
 	mob_name = "Dwarf Warlock"
-	description = "A dwarven sorcerer that drains life with dark magic."
+	description = "As the dwarves' interests shifted from engineering to arcane arts, warlocks came to power in the city. They started with elemental magic, but soon switched to demonology and necromancy. The strongest of these warlocks seized the throne of the dwarven city, and his cohorts were allowed to continue practising their dark magic, so long as they surrendered their free will to him.\n\nThese warlocks possess powerful disruptive magic, and are able to temporarily hinder the upgrade magic applied to your equipment. The more upgraded an item is, the more strongly it will be affected."
 	setup(50, 18, 10, 6, 14, 8)
 	xp_value = 10
 	max_level = 22

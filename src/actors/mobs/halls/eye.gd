@@ -10,7 +10,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "eye"
 	mob_name = "Evil Eye"
-	description = "A floating eye that fires a disintegration beam."
+	description = "Evil Eyes are floating balls of pent up demonic energy. While they are capable of melee combat, their true strength comes from their magic.\n\nAfter building energy for a short time an Evil Eye will unleash a devastating beam of energy called the deathgaze. Anything within the Evil Eye's sights will take tremendous damage, wise adventurers will run for cover."
 	setup(75, 22, 12, 10, 20, 8)
 	xp_value = 13
 	max_level = 27

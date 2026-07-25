@@ -10,7 +10,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "brute"
 	mob_name = "Gnoll Brute"
-	description = "A massive gnoll warrior that refuses to die, entering a berserker rage at the moment of death."
+	description = "Brutes are the largest, strongest, and toughest of all gnolls. When mortally wounded, they go berserk, gaining temporary shielding and a large boost to damage."
 	setup(40, 20, 15, 5, 25, 8)
 	xp_value = 8
 	max_level = 16

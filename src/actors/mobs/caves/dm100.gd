@@ -13,7 +13,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "dm100"
 	mob_name = "DM-100"
-	description = "A small dwarven automaton that fires bolts of electricity."
+	description = "The DM-100 is an early model of dwarven 'defense machine' which was designed to protect dwarven miners in the caves below this prison. Their electrical shocks proved too weak however, and so they were gifted to the human city above. They went unused for years and eventually found their way to the prison, where the warden initially deemed them too cruel to use. However, as the prisoners became more unruly they became a necessity."
 	setup(30, 16, 8, 4, 10, 6, 0.9)
 	xp_value = 7
 	max_level = 18

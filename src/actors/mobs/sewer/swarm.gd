@@ -8,7 +8,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "swarm"
 	mob_name = "Swarm of Flies"
-	description = "A buzzing cloud of biting flies. Damaging it may cause it to split."
+	description = "The deadly swarm of flies buzzes angrily. Every non-magical attack will split it into two smaller but equally dangerous swarms."
 	setup(12, 10, 5, 1, 4, 0, 1.2)
 	xp_value = 3
 	max_level = 7

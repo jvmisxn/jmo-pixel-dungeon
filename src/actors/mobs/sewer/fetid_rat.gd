@@ -5,7 +5,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "fetid_rat"
 	mob_name = "Fetid Rat"
-	description = "A diseased sewer rat that leaks corrosive filth."
+	description = "Something is clearly wrong with this rat. Its greasy black fur and rotting skin are very different from the healthy rats you've seen previously. Its pale green eyes make it seem especially menacing.\n\nThe rat carries a cloud of horrible stench with it, it's overpoweringly strong up close.\n\nDark ooze dribbles from the rat's mouth, it eats through the floor but seems to dissolve in water."
 	setup(20, 12, 5, 1, 4, 1)
 	xp_value = 4
 	max_level = 7

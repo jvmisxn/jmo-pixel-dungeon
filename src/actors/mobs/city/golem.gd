@@ -6,7 +6,7 @@ func _init() -> void:
 	super._init()
 	mob_id = "golem"
 	mob_name = "Stone Golem"
-	description = "A massive stone construct. Slow but incredibly durable."
+	description = "Golems are an attempt to correct the previous flaws in dwarven machinery via the dwarves newfound use of magic. They are much more compact and efficient compared to the DM-300 while still being very deadly.\n\nWhile golems are still too large to fit into passageways, the dwarves have given them new magical abilities to compensate. Golems can teleport themselves between rooms, and teleport enemies to them when they are out of reach."
 	setup(85, 20, 8, 12, 28, 18)
 	xp_value = 12
 	max_level = 22
