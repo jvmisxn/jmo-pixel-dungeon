@@ -475,6 +475,15 @@ func _drop_skeleton_key() -> void:
 # Combat
 # ---------------------------------------------------------------------------
 
+## Warlock soul mark (upstream Mob.defenseProc): physical damage dealt to a
+## marked mob restores the warlock before armor is applied.
+func defense_proc(enemy: Char, damage: int) -> int:
+	if has_buff("SoulMark"):
+		var mark: Node = get_buff("SoulMark")
+		if mark.has_method("process_restoration"):
+			mark.process_restoration(damage, enemy)
+	return super.defense_proc(enemy, damage)
+
 ## Override take_damage to wake sleeping mobs and trigger flee checks.
 func take_damage(dmg: int, source: Variant = null) -> int:
 	# Allies shrug off friendly fire from the hero (e.g. bumping, area zaps).
@@ -530,11 +539,6 @@ func on_attack_miss(target_char: Char) -> void:
 	last_visible_target_pos = target_char.pos if target_char != null else -1
 
 func _on_death(_source: Variant) -> void:
-	# Check Soul Mark (Warlock subclass)
-	if has_buff("SoulMark"):
-		var mark: Node = get_buff("SoulMark")
-		if mark.has_method("on_marked_death"):
-			mark.on_marked_death(self)
 	# Drop loot
 	if is_boss():
 		_drop_skeleton_key()

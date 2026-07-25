@@ -109,11 +109,39 @@ func zap(hero: Char, target_pos: int) -> void:
 		return
 	spend_charge()
 	on_zap(hero, path)
+	_warlock_wand_proc(hero, path)
 	_use_for_identification()
 	if MessageLog:
 		MessageLog.add("You zap the %s." % item_name)
 	if EventBus:
 		EventBus.item_used.emit(get_display_name())
+
+## Warlock subclass wand proc (upstream Wand.wandProc): each zap has a chance
+## to soul mark the character the bolt stops on. Chance mirrors upstream:
+## Random.Float() > 0.92^(wandLevel*chargesUsed + 1) - 0.07 (15% at level 0,
+## +7% flat plus compounding 8% per wand level); mark lasts 10 + wand level
+## turns, prolonging an existing mark. The port zaps one charge at a time, so
+## chargesUsed is 1. Adaptation: only the bolt's stop cell is checked; chained
+## or piercing secondary targets are not marked.
+func _warlock_wand_proc(hero: Char, path: Array[int]) -> void:
+	if hero == null or path.is_empty():
+		return
+	if hero.get("hero_subclass") != ConstantsData.HeroSubclass.WARLOCK:
+		return
+	var lvl: Variant = hero.get("level")
+	if lvl == null or not lvl.has_method("find_char_at"):
+		return
+	var target_char: Variant = lvl.find_char_at(path[path.size() - 1])
+	if target_char == null or target_char == hero or not target_char.is_alive:
+		return
+	if randf() <= pow(0.92, float(level) + 1.0) - 0.07:
+		return
+	var mark: Node = target_char.get_buff("SoulMark") if target_char.has_method("get_buff") else null
+	if mark == null:
+		mark = SoulMark.new()
+		target_char.add_buff(mark)
+	if mark.has_method("prolong"):
+		mark.prolong(SoulMark.DURATION + float(level))
 
 func _use_for_identification() -> void:
 	if identified or is_identified():
