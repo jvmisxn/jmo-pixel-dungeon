@@ -31,7 +31,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 			return [
 				_make("warrior_hearty_meal", "Hearty Meal", "Eating while healthy grants a temporary barrier.", 2, 1),
 				_make("warrior_tested_hypothesis", "Tested Hypothesis", "Potions of Healing and Scrolls of Identify can be recognized on pickup.", 2, 1),
-				_make("warrior_iron_will", "Iron Will", "Improves the Warrior's ability to hold ground under pressure.", 3, 2),
+				_make("warrior_iron_will", "Iron Will", "The Warrior's broken seal grants +1/+2 max shield.", 2, 2),
 				_make("warrior_runic_transference", "Runic Transference", "Groundwork slot for broken seal and glyph transfer behavior.", 2, 2),
 			]
 		ConstantsData.HeroClass.MAGE:

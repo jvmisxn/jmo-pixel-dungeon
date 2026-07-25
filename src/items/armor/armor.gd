@@ -37,6 +37,9 @@ var tier: int = 1
 var augment: Augment = Augment.NONE
 ## Inscribed glyph (or null if none).
 var glyph: ArmorGlyph = null
+## Whether the Warrior's broken seal is affixed to this armor.
+## Original: BrokenSeal rides on one armor and powers the WarriorShield buff.
+var seal_attached: bool = false
 
 # ---------------------------------------------------------------------------
 # Initialization
@@ -195,6 +198,21 @@ func erase_glyph() -> Armor:
 ## Check if this armor has a glyph inscribed.
 func has_glyph() -> bool:
 	return glyph != null
+
+# ---------------------------------------------------------------------------
+# Broken Seal
+# ---------------------------------------------------------------------------
+
+func has_seal() -> bool:
+	return seal_attached
+
+## Original: Armor.affixSeal(). Seal upgrade/glyph transfer is not ported yet.
+func affix_seal() -> void:
+	seal_attached = true
+
+## Original: Armor.detachSeal().
+func detach_seal() -> void:
+	seal_attached = false
 
 # ---------------------------------------------------------------------------
 # Augmentation
@@ -395,6 +413,8 @@ func serialize() -> Dictionary:
 	data["mastery_potion_bonus"] = mastery_potion_bonus
 	data["_uses_left_to_id"] = _uses_left_to_id
 	data["_available_uses_to_id"] = _available_uses_to_id
+	if seal_attached:
+		data["seal_attached"] = true
 	if glyph != null:
 		data["glyph"] = glyph.serialize()
 	return data
@@ -408,6 +428,7 @@ func deserialize(data: Dictionary) -> void:
 	mastery_potion_bonus = data.get("mastery_potion_bonus", false)
 	_uses_left_to_id = data.get("_uses_left_to_id", 0)
 	_available_uses_to_id = data.get("_available_uses_to_id", 0)
+	seal_attached = bool(data.get("seal_attached", false))
 	if data.has("glyph"):
 		var glyph_data: Dictionary = data["glyph"]
 		var glyph_id: String = glyph_data.get("glyph_id", "")

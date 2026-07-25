@@ -110,13 +110,17 @@ func give_starting_items() -> void:
 
 	match hero_class:
 		ConstantsData.HeroClass.WARRIOR:
-			# Worn shortsword + cloth armor + food ration
+			# Worn shortsword + cloth armor with broken seal + food ration
 			var sword: Item = Generator.create_item("worn_shortsword")
 			if sword:
 				belongings.equip_weapon(sword)
 			var cloth: Item = Generator.create_item("cloth_armor")
 			if cloth:
+				if cloth is Armor:
+					(cloth as Armor).affix_seal()
 				belongings.equip_armor(cloth)
+				# Original: Armor.activate() affixes WarriorShield on equip.
+				add_buff(WarriorShield.new())
 			var food: Item = Generator.create_item("ration")
 			if food:
 				belongings.add_item(food)

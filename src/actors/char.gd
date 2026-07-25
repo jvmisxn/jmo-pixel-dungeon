@@ -330,6 +330,20 @@ func take_damage(dmg: int, source: Variant = null) -> int:
 			if _art != null and _art.has_method("on_hero_damaged"):
 				actual = maxi(0, _art.on_hero_damaged(actual, source))
 
+	# Warrior seal shield (original: Char.damage, SPD 3.1): a hit that leaves
+	# the hero at or below half HP triggers the seal's full shield before
+	# shield absorption, unless the seal is cooling down. Hunger never triggers.
+	if actual > 0:
+		var seal_shield: Node = get_buff("WarriorShield")
+		if seal_shield != null and not seal_shield.is_cooling_down():
+			var from_hunger: bool = source is Buff and (source as Buff).buff_id == "Hunger"
+			@warning_ignore("integer_division")
+			var half_hp: int = hp_max / 2
+			if not from_hunger and (hp <= half_hp or hp + total_shielding() - actual <= half_hp):
+				seal_shield.activate()
+				if seal_shield.get_shielding() > 0 and MessageLog:
+					MessageLog.add_positive("The broken seal shields you!")
+
 	# Apply to ShieldBuff instances first (original: ShieldBuff.processDamage)
 	if actual > 0:
 		for b: Node in _buffs.duplicate():

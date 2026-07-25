@@ -165,6 +165,13 @@ func equip_weapon(new_weapon: Item) -> Item:
 ## Equip armor. Returns the previously equipped armor (or null).
 func equip_armor(new_armor: Item) -> Item:
 	var old: Item = armor
+	# Port adaptation: there is no seal AFFIX action UI yet, so the broken
+	# seal follows the newly equipped armor automatically. Upstream requires
+	# a manual transfer via the seal item.
+	if old is Armor and new_armor is Armor and (old as Armor).has_seal() \
+			and not (new_armor as Armor).has_seal():
+		(old as Armor).detach_seal()
+		(new_armor as Armor).affix_seal()
 	armor = new_armor
 	if new_armor and new_armor.has_method("on_equip"):
 		new_armor.on_equip(owner)
