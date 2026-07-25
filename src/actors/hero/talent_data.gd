@@ -71,7 +71,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 	match hero_subclass:
 		ConstantsData.HeroSubclass.BERSERKER:
 			return [
-				_make_inert("berserker_endless_rage", "Endless Rage", "Groundwork slot for deeper low-HP damage scaling.", 3, 3, hero_subclass),
+				_make("berserker_endless_rage", "Endless Rage", "The Berserker's rage cap is raised to 117%/133%/150%. Rage above 100% multiplies his damage.", 3, 3, hero_subclass),
 				_make_inert("berserker_deathless_fury", "Deathless Fury", "Groundwork slot for stronger rage-based death prevention.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.GLADIATOR:
