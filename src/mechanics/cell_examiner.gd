@@ -32,11 +32,12 @@ static func describe_cell(level: Variant, hero: Variant, cell: int) -> Dictionar
 	if trap != null and trap.visible and trap.active:
 		return {"kind": "trap", "trap": trap}
 	var terrain: int = level.terrain_at(cell)
+	var depth: int = int(level.depth)
 	return {
 		"kind": "terrain",
 		"terrain": terrain,
-		"title": terrain_name(terrain),
-		"text": terrain_desc(terrain),
+		"title": terrain_name(terrain, depth),
+		"text": terrain_desc(terrain, depth),
 	}
 
 ## Examine a cell from the game scene: resolve what is there and present it.
@@ -77,9 +78,83 @@ static func examine(scene: Variant, cell: int) -> void:
 		"terrain":
 			_show_text(str(info.get("title", "")).capitalize(), str(info.get("text", "")))
 
+## Region-specific tile name overrides, mirroring upstream SewerLevel/
+## PrisonLevel/CavesLevel/CityLevel/HallsLevel tileName(). The port has no
+## EMPTY_DECO/REGION_DECO/ENTRANCE_SP terrains, so those upstream entries
+## are intentionally absent.
+const REGION_TILE_NAMES: Dictionary = {
+	ConstantsData.Region.SEWERS: {
+		ConstantsData.Terrain.WATER: "murky water",
+	},
+	ConstantsData.Region.PRISON: {
+		ConstantsData.Terrain.WATER: "dark cold water",
+	},
+	ConstantsData.Region.CAVES: {
+		ConstantsData.Terrain.GRASS: "fluorescent moss",
+		ConstantsData.Terrain.HIGH_GRASS: "fluorescent mushrooms",
+		ConstantsData.Terrain.WATER: "freezing cold water",
+	},
+	ConstantsData.Region.CITY: {
+		ConstantsData.Terrain.WATER: "suspiciously colored water",
+		ConstantsData.Terrain.HIGH_GRASS: "high blooming flowers",
+	},
+	ConstantsData.Region.HALLS: {
+		ConstantsData.Terrain.WATER: "cold lava",
+		ConstantsData.Terrain.GRASS: "embermoss",
+		ConstantsData.Terrain.HIGH_GRASS: "emberfungi",
+		ConstantsData.Terrain.STATUE: "pillar",
+		ConstantsData.Terrain.STATUE_SP: "pillar",
+	},
+}
+
+## Region-specific tile description overrides, mirroring the same upstream
+## per-region tileDesc() switches (levels.properties strings).
+const REGION_TILE_DESCS: Dictionary = {
+	ConstantsData.Region.SEWERS: {
+		ConstantsData.Terrain.BOOKSHELF:
+			"The bookshelf is packed with cheap useless books. Might it burn?",
+	},
+	ConstantsData.Region.PRISON: {
+		ConstantsData.Terrain.BOOKSHELF:
+			"This is probably a vestige of a prison library. Might it burn?",
+	},
+	ConstantsData.Region.CAVES: {
+		ConstantsData.Terrain.ENTRANCE: "The ladder leads up to the upper depth.",
+		ConstantsData.Terrain.EXIT: "The ladder leads down to the lower depth.",
+		ConstantsData.Terrain.HIGH_GRASS: "Huge mushrooms block the view.",
+		ConstantsData.Terrain.WALL_DECO: "A vein of some ore is visible on the wall. Gold?",
+		ConstantsData.Terrain.BOOKSHELF: "Who would need a bookshelf in a cave?",
+	},
+	ConstantsData.Region.CITY: {
+		ConstantsData.Terrain.ENTRANCE: "A ramp leads up to the upper depth.",
+		ConstantsData.Terrain.EXIT: "A ramp leads down to the lower depth.",
+		ConstantsData.Terrain.WALL_DECO: "Several tiles are missing here.",
+		ConstantsData.Terrain.EMPTY_SP: "Thick carpet covers the floor.",
+		ConstantsData.Terrain.STATUE:
+			"The statue depicts some dwarf standing in a heroic stance.",
+		ConstantsData.Terrain.STATUE_SP:
+			"The statue depicts some dwarf standing in a heroic stance.",
+		ConstantsData.Terrain.BOOKSHELF:
+			"The rows of books on different disciplines fill the bookshelf.",
+	},
+	ConstantsData.Region.HALLS: {
+		ConstantsData.Terrain.WATER:
+			"It looks like lava, but it's cold and probably safe to touch.",
+		ConstantsData.Terrain.STATUE: "The pillar is made of real humanoid skulls. Awesome.",
+		ConstantsData.Terrain.STATUE_SP: "The pillar is made of real humanoid skulls. Awesome.",
+		ConstantsData.Terrain.BOOKSHELF:
+			"Books in ancient languages smoulder in the bookshelf.",
+	},
+}
+
 ## Base-region tile names, following upstream Level.tileName(). Secret doors
-## and secret traps deliberately masquerade as wall/floor.
-static func terrain_name(terrain: int) -> String:
+## and secret traps deliberately masquerade as wall/floor. Depth selects the
+## per-region overrides above, matching upstream level subclasses.
+static func terrain_name(terrain: int, depth: int = 1) -> String:
+	var region_names: Dictionary = REGION_TILE_NAMES.get(
+		ConstantsData.region_for_depth(depth), {})
+	if region_names.has(terrain):
+		return String(region_names[terrain])
 	match terrain:
 		ConstantsData.Terrain.CHASM: return "chasm"
 		ConstantsData.Terrain.EMPTY, ConstantsData.Terrain.EMPTY_SP, \
@@ -110,8 +185,13 @@ static func terrain_name(terrain: int) -> String:
 		ConstantsData.Terrain.WEB: return "web"
 	return "unknown terrain"
 
-## Base-region tile descriptions, following upstream Level.tileDesc().
-static func terrain_desc(terrain: int) -> String:
+## Base-region tile descriptions, following upstream Level.tileDesc(), with
+## depth-driven per-region overrides matching upstream level subclasses.
+static func terrain_desc(terrain: int, depth: int = 1) -> String:
+	var region_descs: Dictionary = REGION_TILE_DESCS.get(
+		ConstantsData.region_for_depth(depth), {})
+	if region_descs.has(terrain):
+		return String(region_descs[terrain])
 	match terrain:
 		ConstantsData.Terrain.CHASM:
 			return "You can't see the bottom."

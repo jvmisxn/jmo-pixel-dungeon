@@ -92,8 +92,8 @@ func run(t: Object) -> void:
 	level.mapped[mapped_pos] = true
 	level.map[mapped_pos] = ConstantsData.Terrain.WATER
 	info = CellExaminer.describe_cell(level, null, mapped_pos)
-	t.check(str(info["kind"]) == "terrain" and str(info["title"]) == "water",
-		"a mapped-only cell reports its terrain")
+	t.check(str(info["kind"]) == "terrain" and str(info["title"]) == "murky water",
+		"a mapped-only cell reports its region terrain name (sewers water)")
 
 	t.check(not CellExaminer.terrain_name(ConstantsData.Terrain.BOOKSHELF).is_empty()
 		and not CellExaminer.terrain_desc(ConstantsData.Terrain.BOOKSHELF).is_empty(),
