@@ -1225,6 +1225,11 @@ func get_view_distance() -> int:
 	if current_level_ref is HallsLevel:
 		var halls_cap: int = maxi(1, 26 - int(current_level_ref.get("depth")))
 		dist = mini(dist, halls_cap)
+	# Sniper Farsight multiplies the final radius, after level caps (upstream
+	# Level.updateFieldOfView applies it to the already-capped viewDistance).
+	var farsight: int = get_talent_level("sniper_farsight")
+	if farsight > 0:
+		dist = int(roundf(dist * (1.0 + 0.25 * farsight)))
 	return dist
 
 ## Return true if the hero is considered "sighted" (can use shadowcasting).
