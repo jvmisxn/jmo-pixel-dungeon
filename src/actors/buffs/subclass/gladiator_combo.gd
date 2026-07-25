@@ -13,6 +13,10 @@ var turns_since_attack: int = 0
 const BASE_WINDOW: int = 1
 const KILL_WINDOW: int = 3
 var combo_window: int = BASE_WINDOW
+## Set when modify_damage consumes the combo as a finisher, so the
+## on_damage_dealt call for the same hit can tell finisher kills apart
+## (Lethal Defense only triggers on finisher kills, upstream Combo.doAttack).
+var _finisher_this_hit: bool = false
 
 func _init() -> void:
 	buff_id = "GladiatorCombo"
@@ -22,18 +26,38 @@ func _init() -> void:
 
 func on_damage_dealt(_amount: int, hit_target: Node) -> void:
 	combo_count = mini(combo_count + 1, MAX_COMBO)
-	if hit_target != null and hit_target.get("is_alive") == false:
+	var killed: bool = hit_target != null and hit_target.get("is_alive") == false
+	if killed:
 		combo_window = KILL_WINDOW + KILL_WINDOW * _cleave_points()
 	else:
 		# A normal hit does not refresh an extended kill window; it keeps
 		# ticking down, like upstream comboTime = max(comboTime, 5f).
 		combo_window = maxi(combo_window - turns_since_attack, BASE_WINDOW)
 	turns_since_attack = 0
+	if killed and _finisher_this_hit:
+		_apply_lethal_defense()
+	_finisher_this_hit = false
 
 func _cleave_points() -> int:
+	return _talent_points("gladiator_cleave")
+
+func _talent_points(talent_id: String) -> int:
 	if target != null and target.has_method("get_talent_level"):
-		return target.get_talent_level("gladiator_cleave")
+		return target.get_talent_level(talent_id)
 	return 0
+
+## Lethal Defense (upstream Talent.LETHAL_DEFENSE): a finisher kill reduces the
+## broken seal shield's cooldown by 50/100/150 turns, down to -150 at most —
+## upstream Combo.doAttack: Buff.affect(hero, WarriorShield).reduceCooldown(points/3).
+func _apply_lethal_defense() -> void:
+	var points: int = _talent_points("gladiator_lethal_defense")
+	if points <= 0 or target == null:
+		return
+	var shield: Node = target.get_buff("WarriorShield")
+	if shield == null:
+		shield = target.add_buff(WarriorShield.new())
+	if shield != null and shield.has_method("reduce_cooldown"):
+		shield.reduce_cooldown(50 * points)
 
 func on_turn() -> void:
 	turns_since_attack += 1
@@ -59,6 +83,7 @@ func modify_damage(dmg: int) -> int:
 			if MessageLog:
 				MessageLog.add_positive("Combo finisher! (x%.1f)" % mult)
 			combo_count = 0
+			_finisher_this_hit = true
 		return boosted
 	return dmg
 

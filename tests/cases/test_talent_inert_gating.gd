@@ -26,8 +26,10 @@ func _test_registry_flags(t: Object) -> void:
 		"berserker_endless_rage",
 		"berserker_deathless_fury",
 		"berserker_enraged_catalyst",
+		"gladiator_cleave",
+		"gladiator_lethal_defense",
 	]
-	for subclass: int in [ConstantsData.HeroSubclass.BERSERKER, ConstantsData.HeroSubclass.MONK]:
+	for subclass: int in [ConstantsData.HeroSubclass.BERSERKER, ConstantsData.HeroSubclass.GLADIATOR, ConstantsData.HeroSubclass.MONK]:
 		for talent: TalentData.TalentInfo in TalentData._subclass_talents(subclass):
 			if talent.id in implemented_subclass_talents:
 				t.check(talent.implemented, "Subclass talent %s is flagged implemented" % talent.id)
@@ -55,12 +57,12 @@ func _test_subclass_inert_talents_blocked(t: Object) -> void:
 	var hero := _make_warrior()
 	hero.hero_subclass = ConstantsData.HeroSubclass.GLADIATOR
 	t.check(
-		not hero.can_upgrade_talent("gladiator_combo_mastery"),
+		not hero.can_upgrade_talent("gladiator_enhanced_combo"),
 		"Inert subclass talent cannot be upgraded"
 	)
 	t.check(
-		hero.can_upgrade_talent("gladiator_cleave"),
-		"Cleave is now upgradable"
+		hero.can_upgrade_talent("gladiator_lethal_defense"),
+		"Lethal Defense is now upgradable"
 	)
 	hero.hero_subclass = ConstantsData.HeroSubclass.BERSERKER
 	t.check(

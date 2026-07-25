@@ -32,6 +32,13 @@ func absorb_damage(dmg: int) -> int:
 	shield_amount -= absorbed
 	return dmg - absorbed
 
+## Original: BrokenSeal.WarriorShield.reduceCooldown(percentage) — subtracts
+## round(COOLDOWN_START*percentage), floored at -COOLDOWN_START. Used by the
+## Gladiator's Lethal Defense talent; a negative cooldown means the shield is
+## instantly ready again after it next activates.
+func reduce_cooldown(turns: int) -> void:
+	cooldown = maxi(cooldown - turns, -COOLDOWN_START)
+
 ## Original: BrokenSeal.maxShield(armTier, armLvl) = 3 + 2*tier + Iron Will.
 ## The armor reference is resolved dynamically instead of via setArmor(), so
 ## equip/unequip needs no relink bookkeeping (equivalent for a single hero).
@@ -79,7 +86,7 @@ func on_turn() -> void:
 		else:
 			turns_since_enemies = 0.0
 
-	if shield_amount <= 0 and max_shield() <= 0 and cooldown == 0 and target != null:
+	if shield_amount <= 0 and max_shield() <= 0 and cooldown <= 0 and target != null:
 		target.remove_buff(self)
 
 ## Original gates the cooldown tick on Regeneration.regenOn(); mirror the
