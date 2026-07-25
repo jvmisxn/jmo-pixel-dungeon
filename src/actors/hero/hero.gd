@@ -904,6 +904,8 @@ func can_upgrade_talent(talent_id: String) -> bool:
 	var talent: TalentData.TalentInfo = TalentData.get_talent(hero_class, talent_id, hero_subclass)
 	if talent == null:
 		return false
+	if not talent.implemented:
+		return false
 	return get_talent_level(talent_id) < talent.max_points
 
 func upgrade_talent(talent_id: String) -> bool:

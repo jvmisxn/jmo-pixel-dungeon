@@ -96,23 +96,30 @@ func _build_talent_row(talent: TalentData.TalentInfo) -> Control:
 
 	var title_label: Label = Label.new()
 	var current_points: int = _hero.get_talent_level(talent.id)
-	title_label.text = "%s  %d/%d" % [talent.name, current_points, talent.max_points]
+	if talent.implemented:
+		title_label.text = "%s  %d/%d" % [talent.name, current_points, talent.max_points]
+		title_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.65))
+	else:
+		title_label.text = "%s  (coming soon)" % talent.name
+		title_label.add_theme_color_override("font_color", Color(0.6, 0.58, 0.5))
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.65))
 	header.add_child(title_label)
 
 	var upgrade_button: Button = WndBase.create_spd_button("+1")
 	upgrade_button.custom_minimum_size = Vector2(56, 32)
 	upgrade_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	upgrade_button.disabled = not _hero.can_upgrade_talent(talent.id)
-	upgrade_button.tooltip_text = "Spend 1 point on %s" % talent.name
+	if talent.implemented:
+		upgrade_button.tooltip_text = "Spend 1 point on %s" % talent.name
+	else:
+		upgrade_button.tooltip_text = "%s is not implemented yet; points cannot be spent on it." % talent.name
 	upgrade_button.pressed.connect(_on_upgrade_pressed.bind(talent.id))
 	header.add_child(upgrade_button)
 
 	var desc_label: Label = Label.new()
-	desc_label.text = talent.description
+	desc_label.text = talent.description if talent.implemented else "%s (Not implemented yet — no effect.)" % talent.description
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_label.add_theme_color_override("font_color", Color(0.76, 0.76, 0.76))
+	desc_label.add_theme_color_override("font_color", Color(0.76, 0.76, 0.76) if talent.implemented else Color(0.55, 0.55, 0.55))
 	body.add_child(desc_label)
 
 	return panel

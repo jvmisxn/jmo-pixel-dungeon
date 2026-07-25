@@ -11,6 +11,9 @@ class TalentInfo:
 	var max_points: int = 2
 	var tier: int = 1
 	var required_subclass: int = ConstantsData.HeroSubclass.NONE
+	## False for groundwork slots whose effect is not wired into gameplay yet.
+	## Unimplemented talents cannot be upgraded and are flagged in the picker.
+	var implemented: bool = true
 
 static func get_talents_for(hero_class: int, hero_subclass: int = ConstantsData.HeroSubclass.NONE) -> Array[TalentInfo]:
 	var talents: Array[TalentInfo] = []
@@ -32,7 +35,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make("warrior_hearty_meal", "Hearty Meal", "Eating while healthy grants a temporary barrier.", 2, 1),
 				_make("warrior_tested_hypothesis", "Tested Hypothesis", "Potions of Healing and Scrolls of Identify can be recognized on pickup.", 2, 1),
 				_make("warrior_iron_will", "Iron Will", "The Warrior's broken seal grants +1/+2 max shield.", 2, 2),
-				_make("warrior_runic_transference", "Runic Transference", "Groundwork slot for broken seal and glyph transfer behavior.", 2, 2),
+				_make_inert("warrior_runic_transference", "Runic Transference", "Groundwork slot for broken seal and glyph transfer behavior.", 2, 2),
 			]
 		ConstantsData.HeroClass.MAGE:
 			return [
@@ -59,8 +62,8 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 			return [
 				_make("duelist_adventurers_intuition", "Adventurer's Intuition", "Weapons and armor can be identified on pickup.", 2, 1),
 				_make("duelist_patient_strike", "Patient Strike", "Waiting primes your next melee attack to deal increased damage.", 2, 1),
-				_make("duelist_aggressive_barrier", "Aggressive Barrier", "Supports offensive pressure with defensive conversion.", 2, 2),
-				_make("duelist_weapon_recharging", "Weapon Recharging", "Groundwork slot for weapon ability cadence.", 3, 2),
+				_make_inert("duelist_aggressive_barrier", "Aggressive Barrier", "Supports offensive pressure with defensive conversion.", 2, 2),
+				_make_inert("duelist_weapon_recharging", "Weapon Recharging", "Groundwork slot for weapon ability cadence.", 3, 2),
 			]
 	return []
 
@@ -68,53 +71,53 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 	match hero_subclass:
 		ConstantsData.HeroSubclass.BERSERKER:
 			return [
-				_make("berserker_endless_rage", "Endless Rage", "Groundwork slot for deeper low-HP damage scaling.", 3, 3, hero_subclass),
-				_make("berserker_deathless_fury", "Deathless Fury", "Groundwork slot for stronger rage-based death prevention.", 3, 3, hero_subclass),
+				_make_inert("berserker_endless_rage", "Endless Rage", "Groundwork slot for deeper low-HP damage scaling.", 3, 3, hero_subclass),
+				_make_inert("berserker_deathless_fury", "Deathless Fury", "Groundwork slot for stronger rage-based death prevention.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.GLADIATOR:
 			return [
-				_make("gladiator_cleave", "Cleave", "Groundwork slot for combo finishers affecting multiple enemies.", 3, 3, hero_subclass),
-				_make("gladiator_combo_mastery", "Combo Mastery", "Supports longer and more reliable combo chains.", 3, 3, hero_subclass),
+				_make_inert("gladiator_cleave", "Cleave", "Groundwork slot for combo finishers affecting multiple enemies.", 3, 3, hero_subclass),
+				_make_inert("gladiator_combo_mastery", "Combo Mastery", "Supports longer and more reliable combo chains.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.BATTLEMAGE:
 			return [
-				_make("battlemage_empowered_strikes", "Empowered Strikes", "Supports stronger staff-triggered magic effects.", 3, 3, hero_subclass),
-				_make("battlemage_arcane_renewal", "Arcane Renewal", "Groundwork slot for charge recovery synergies.", 3, 3, hero_subclass),
+				_make_inert("battlemage_empowered_strikes", "Empowered Strikes", "Supports stronger staff-triggered magic effects.", 3, 3, hero_subclass),
+				_make_inert("battlemage_arcane_renewal", "Arcane Renewal", "Groundwork slot for charge recovery synergies.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.WARLOCK:
 			return [
-				_make("warlock_soul_siphon", "Soul Siphon", "Supports more rewarding Soul Mark conversions.", 3, 3, hero_subclass),
-				_make("warlock_hungry_hex", "Hungry Hex", "Groundwork slot for hunger and sustain interactions.", 3, 3, hero_subclass),
+				_make_inert("warlock_soul_siphon", "Soul Siphon", "Supports more rewarding Soul Mark conversions.", 3, 3, hero_subclass),
+				_make_inert("warlock_hungry_hex", "Hungry Hex", "Groundwork slot for hunger and sustain interactions.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.ASSASSIN:
 			return [
-				_make("assassin_deep_preparation", "Deep Preparation", "Supports longer stealth setup and harder ambushes.", 3, 3, hero_subclass),
-				_make("assassin_shadow_step", "Shadow Step", "Groundwork slot for post-ambush mobility.", 3, 3, hero_subclass),
+				_make_inert("assassin_deep_preparation", "Deep Preparation", "Supports longer stealth setup and harder ambushes.", 3, 3, hero_subclass),
+				_make_inert("assassin_shadow_step", "Shadow Step", "Groundwork slot for post-ambush mobility.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.FREERUNNER:
 			return [
-				_make("freerunner_momentum_mastery", "Momentum Mastery", "Supports more reliable movement chains.", 3, 3, hero_subclass),
-				_make("freerunner_kinetic_flow", "Kinetic Flow", "Groundwork slot for stronger speed and evasion payoff.", 3, 3, hero_subclass),
+				_make_inert("freerunner_momentum_mastery", "Momentum Mastery", "Supports more reliable movement chains.", 3, 3, hero_subclass),
+				_make_inert("freerunner_kinetic_flow", "Kinetic Flow", "Groundwork slot for stronger speed and evasion payoff.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.SNIPER:
 			return [
-				_make("sniper_deadeye", "Deadeye", "Supports more punishing long-range shots.", 3, 3, hero_subclass),
-				_make("sniper_snapshot_mastery", "Snapshot Mastery", "Groundwork slot for more flexible snapshot use.", 3, 3, hero_subclass),
+				_make_inert("sniper_deadeye", "Deadeye", "Supports more punishing long-range shots.", 3, 3, hero_subclass),
+				_make_inert("sniper_snapshot_mastery", "Snapshot Mastery", "Groundwork slot for more flexible snapshot use.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.WARDEN:
 			return [
-				_make("warden_barkskin_mastery", "Barkskin Mastery", "Supports stronger nature-derived protection.", 3, 3, hero_subclass),
-				_make("warden_overgrowth", "Overgrowth", "Groundwork slot for stronger plant and grass interactions.", 3, 3, hero_subclass),
+				_make_inert("warden_barkskin_mastery", "Barkskin Mastery", "Supports stronger nature-derived protection.", 3, 3, hero_subclass),
+				_make_inert("warden_overgrowth", "Overgrowth", "Groundwork slot for stronger plant and grass interactions.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.CHAMPION:
 			return [
-				_make("champion_dual_mastery", "Dual Mastery", "Supports more efficient dual-weapon pressure.", 3, 3, hero_subclass),
-				_make("champion_guarded_offense", "Guarded Offense", "Groundwork slot for weapon-based defensive synergy.", 3, 3, hero_subclass),
+				_make_inert("champion_dual_mastery", "Dual Mastery", "Supports more efficient dual-weapon pressure.", 3, 3, hero_subclass),
+				_make_inert("champion_guarded_offense", "Guarded Offense", "Groundwork slot for weapon-based defensive synergy.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.MONK:
 			return [
-				_make("monk_flurry_mastery", "Flurry Mastery", "Supports faster and more damaging unarmed chains.", 3, 3, hero_subclass),
-				_make("monk_centered_breath", "Centered Breath", "Groundwork slot for focus and recovery synergy.", 3, 3, hero_subclass),
+				_make_inert("monk_flurry_mastery", "Flurry Mastery", "Supports faster and more damaging unarmed chains.", 3, 3, hero_subclass),
+				_make_inert("monk_centered_breath", "Centered Breath", "Groundwork slot for focus and recovery synergy.", 3, 3, hero_subclass),
 			]
 	return []
 
@@ -126,4 +129,10 @@ static func _make(id: String, name: String, description: String, max_points: int
 	info.max_points = max_points
 	info.tier = tier
 	info.required_subclass = required_subclass
+	return info
+
+
+static func _make_inert(id: String, name: String, description: String, max_points: int, tier: int, required_subclass: int = ConstantsData.HeroSubclass.NONE) -> TalentInfo:
+	var info: TalentInfo = _make(id, name, description, max_points, tier, required_subclass)
+	info.implemented = false
 	return info
