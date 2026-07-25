@@ -509,23 +509,23 @@ class ScrollLullaby extends Scroll:
 		if dungeon_level == null:
 			return
 		var affected: int = 0
-		# Get all mobs in view distance
+		# Upstream ScrollOfLullaby.doRead(): every mob in the hero's FOV gains
+		# Drowsy (5 turns, then sleep), and the reader gains Drowsy as well.
 		if dungeon_level.has_method("get_mobs"):
 			var mobs: Array = dungeon_level.get_mobs()
 			for mob: Variant in mobs:
 				if mob == null or not mob.is_alive:
 					continue
 				if hero.has_method("can_see") and hero.can_see(mob.pos):
-					# Put to sleep with wake-on-damage semantics.
 					if mob.has_method("add_buff"):
-						var sleep_buff: SleepBuff = SleepBuff.new()
-						sleep_buff.set_duration(10.0)
-						mob.add_buff(sleep_buff)
+						mob.add_buff(Drowsy.new())
 						affected += 1
+		hero.add_buff(Drowsy.new())
 		if affected > 0:
-			_notify_hero(hero, "A soothing melody lulls %d enemies to sleep!" % affected, "positive")
+			var msg: String = "The scroll utters a soothing melody. %d enemies grow drowsy..."
+			_notify_hero(hero, msg % affected, "positive")
 		else:
-			_notify_hero(hero, "The lullaby echoes through empty corridors.")
+			_notify_hero(hero, "The scroll utters a soothing melody. You feel very sleepy.")
 
 
 # ---------------------------------------------------------------------------

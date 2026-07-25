@@ -44,7 +44,17 @@ func _test_lullaby_uses_sleep_buff(t: Object) -> void:
 	var scroll: Scroll = Scroll.create("lullaby")
 	scroll.read_scroll(hero)
 
-	_assert_sleep_contract(t, mob, "Scroll of Lullaby")
+	# Upstream contract: Drowsy on visible mobs AND the reader, not instant sleep.
+	t.check(mob.has_buff("Drowsy"), "Scroll of Lullaby applies Drowsy to visible mobs")
+	t.check(not mob.has_buff("Sleep"), "Scroll of Lullaby does not sleep mobs instantly")
+	t.check(not mob.has_buff("Paralysis"), "Scroll of Lullaby does not apply Paralysis")
+	t.check(hero.has_buff("Drowsy"), "Scroll of Lullaby applies Drowsy to the reader")
+
+	# Drowsy expiry rolls into the real sleep contract.
+	var drowsy: Drowsy = mob.get_buff("Drowsy") as Drowsy
+	drowsy.time_left = 1.0
+	drowsy.on_turn()
+	_assert_sleep_contract(t, mob, "Scroll of Lullaby (via Drowsy)")
 	hero.free()
 	mob.free()
 
