@@ -85,7 +85,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 			]
 		ConstantsData.HeroSubclass.GLADIATOR:
 			return [
-				_make_inert("gladiator_cleave", "Cleave", "Groundwork slot for combo finishers affecting multiple enemies.", 3, 3, hero_subclass),
+				_make("gladiator_cleave", "Cleave", "When the Gladiator kills an enemy with a combo hit, his combo lasts much longer: 6/9/12 turns instead of 3.", 3, 3, hero_subclass),
 				_make_inert("gladiator_combo_mastery", "Combo Mastery", "Supports longer and more reliable combo chains.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.BATTLEMAGE:
