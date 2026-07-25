@@ -74,16 +74,23 @@ func get_combo_multiplier() -> float:
 	var t: float = float(combo_count - 3) / float(MAX_COMBO - 3)
 	return 1.5 + t * 1.5
 
+## Enhanced Combo (upstream Talent.ENHANCED_COMBO): upstream empowers manual
+## combo moves used at higher counts (Clobber knockback+vertigo at 7+, Parry at
+## 9+, leap range and AoE at +3). The port's combo has no manual moves — it is
+## an auto-finisher — so each point instead raises the finisher threshold by 2
+## (3 -> 5/7/9 hits), letting the combo build toward the x3.0 multiplier cap.
+func finisher_threshold() -> int:
+	return 3 + 2 * _talent_points("gladiator_enhanced_combo")
+
 func modify_damage(dmg: int) -> int:
-	if combo_count >= 3:
+	if combo_count >= finisher_threshold():
 		var mult: float = get_combo_multiplier()
 		var boosted: int = int(dmg * mult)
 		# Consume combo on finisher
-		if combo_count >= 3:
-			if MessageLog:
-				MessageLog.add_positive("Combo finisher! (x%.1f)" % mult)
-			combo_count = 0
-			_finisher_this_hit = true
+		if MessageLog:
+			MessageLog.add_positive("Combo finisher! (x%.1f)" % mult)
+		combo_count = 0
+		_finisher_this_hit = true
 		return boosted
 	return dmg
 

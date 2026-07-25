@@ -87,7 +87,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 			return [
 				_make("gladiator_cleave", "Cleave", "When the Gladiator kills an enemy with a combo hit, his combo lasts much longer: 6/9/12 turns instead of 3.", 3, 3, hero_subclass),
 				_make("gladiator_lethal_defense", "Lethal Defense", "When the Gladiator kills an enemy with a combo finisher, the cooldown on his broken seal shielding is reduced by 50/100/150 turns. The cooldown can drop as low as -150 turns, making the shield immediately available again once it activates.", 3, 3, hero_subclass),
-				_make_inert("gladiator_enhanced_combo", "Enhanced Combo", "Groundwork slot for high-combo finisher upgrades.", 3, 3, hero_subclass),
+				_make("gladiator_enhanced_combo", "Enhanced Combo", "The Gladiator's combo builds further before unleashing: his finisher triggers at 5/7/9 hits instead of 3, hitting far harder — up to x3 damage at a 10-hit combo.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.BATTLEMAGE:
 			return [
