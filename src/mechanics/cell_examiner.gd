@@ -1,36 +1,79 @@
 class_name CellExaminer
 extends RefCounted
 ## Examine-mode cell inspection, mirroring Shattered PD's
-## GameScene.examineCell(): unknown cells report nothing, then priority is
-## visible char > heap > plant > visible trap > terrain knowledge.
-## Entry point is InputCoordinator (X key toggles examine mode); windows are
-## delivered through EventBus.show_window so the HUD owns presentation.
+## GameScene.examineCell()/getObjectsAtCell(): unknown cells report nothing;
+## everything of interest on a known cell (visible char, heap items, plant,
+## visible trap) is collected, a lone object is shown directly, and multiple
+## objects open a chooser (upstream WndOptions); an empty cell falls back to
+## terrain knowledge. Entry point is InputCoordinator (X key toggles examine
+## mode); windows are delivered through EventBus.show_window so the HUD owns
+## presentation.
+
+const MULTIPLE_EXAMINE_TEXT: String = \
+	"There are multiple things of interest here, which one do you want to examine?"
+
+## True when the hero has any knowledge of the cell (seen, visited, or mapped).
+static func cell_known(level: Variant, cell: int) -> bool:
+	if level == null or not ConstantsData.is_valid_pos(cell):
+		return false
+	return _flag(level.visible, cell) \
+		or _flag(level.visited, cell) or _flag(level.mapped, cell)
+
+## Collect every examinable object on a known cell, mirroring upstream
+## getObjectsAtCell() order: char first, then heap, plant, visible trap.
+## Each entry carries "kind" (hero|mob|heap|plant|trap), a display "name",
+## and its payload. Adaptation: the port stores one heap entry per item
+## instead of upstream's single item stack, so every item on the cell gets
+## its own entry — this is the heap multi-item listing.
+static func list_cell_objects(level: Variant, hero: Variant, cell: int) -> Array[Dictionary]:
+	var objects: Array[Dictionary] = []
+	if not cell_known(level, cell):
+		return objects
+	# Characters are only examinable while actually in view.
+	if _flag(level.visible, cell):
+		var ch: Variant = level.find_char_at(cell)
+		if ch != null:
+			if hero != null and ch == hero:
+				objects.append({"kind": "hero", "char": ch, "name": _hero_name(ch)})
+			else:
+				objects.append({
+					"kind": "mob", "char": ch,
+					"name": str(ch.mob_name).capitalize(),
+				})
+	for h: Dictionary in level.heaps_at(cell):
+		var item: Variant = h.get("item")
+		var item_name: String = "discarded pile"
+		if item != null and item.has_method("get_display_name"):
+			item_name = str(item.get_display_name())
+		elif item != null:
+			item_name = str(item.item_name)
+		objects.append({"kind": "heap", "item": item, "name": item_name.capitalize()})
+	if level.plants.has(cell):
+		var plant: Variant = level.plants[cell]
+		objects.append({
+			"kind": "plant", "plant": plant,
+			"name": str(plant.plant_name).capitalize(),
+		})
+	var trap: Variant = level.trap_at(cell)
+	if trap != null and trap.visible and trap.active:
+		objects.append({
+			"kind": "trap", "trap": trap,
+			"name": str(trap.trap_name).capitalize(),
+		})
+	return objects
 
 ## Classify what the hero knows about a cell. Pure logic, headless-testable.
-## Returns a Dictionary with a "kind" key:
+## Returns the first examinable object (upstream examine priority), falling
+## back to terrain knowledge. Dictionary "kind" key:
 ##   none | unknown | hero | mob | heap | plant | trap | terrain
 static func describe_cell(level: Variant, hero: Variant, cell: int) -> Dictionary:
 	if level == null or not ConstantsData.is_valid_pos(cell):
 		return {"kind": "none"}
-	var seen: bool = _flag(level.visible, cell)
-	var known: bool = seen or _flag(level.visited, cell) or _flag(level.mapped, cell)
-	if not known:
+	if not cell_known(level, cell):
 		return {"kind": "unknown"}
-	# Characters are only examinable while actually in view.
-	if seen:
-		var ch: Variant = level.find_char_at(cell)
-		if ch != null:
-			if hero != null and ch == hero:
-				return {"kind": "hero", "char": ch}
-			return {"kind": "mob", "char": ch}
-	var heaps: Array[Dictionary] = level.heaps_at(cell)
-	if not heaps.is_empty():
-		return {"kind": "heap", "item": heaps[0].get("item"), "count": heaps.size()}
-	if level.plants.has(cell):
-		return {"kind": "plant", "plant": level.plants[cell]}
-	var trap: Variant = level.trap_at(cell)
-	if trap != null and trap.visible and trap.active:
-		return {"kind": "trap", "trap": trap}
+	var objects: Array[Dictionary] = list_cell_objects(level, hero, cell)
+	if not objects.is_empty():
+		return objects[0]
 	var terrain: int = level.terrain_at(cell)
 	var depth: int = int(level.depth)
 	return {
@@ -41,15 +84,40 @@ static func describe_cell(level: Variant, hero: Variant, cell: int) -> Dictionar
 	}
 
 ## Examine a cell from the game scene: resolve what is there and present it.
+## Mirrors upstream examineCell(): 0 objects -> terrain info window,
+## 1 object -> its info window, several -> chooser listing each by name.
 static func examine(scene: Variant, cell: int) -> void:
 	if scene == null:
 		return
+	var level: Variant = scene._current_level
+	if level == null or not ConstantsData.is_valid_pos(cell):
+		return
+	if not cell_known(level, cell):
+		if MessageLog:
+			MessageLog.add("You don't know what is there.")
+		return
 	var hero: Variant = scene._get_input_hero()
-	var info: Dictionary = describe_cell(scene._current_level, hero, cell)
+	var objects: Array[Dictionary] = list_cell_objects(level, hero, cell)
+	if objects.is_empty():
+		var terrain: int = level.terrain_at(cell)
+		var depth: int = int(level.depth)
+		_show_text(terrain_name(terrain, depth).capitalize(), terrain_desc(terrain, depth))
+	elif objects.size() == 1:
+		examine_object(objects[0])
+	else:
+		var names: PackedStringArray = []
+		for obj: Dictionary in objects:
+			names.append(str(obj.get("name", "?")))
+		var chooser: WndExamineChoice = WndExamineChoice.new()
+		chooser.setup(MULTIPLE_EXAMINE_TEXT, names)
+		chooser.option_selected.connect(func(idx: int) -> void:
+			if idx >= 0 and idx < objects.size():
+				examine_object(objects[idx]))
+		_show(chooser)
+
+## Present the info window for one collected object (upstream examineObject).
+static func examine_object(info: Dictionary) -> void:
 	match String(info.get("kind", "none")):
-		"unknown":
-			if MessageLog:
-				MessageLog.add("You don't know what is there.")
 		"hero":
 			_show(WndHeroInfo.new())
 		"mob":
@@ -64,8 +132,6 @@ static func examine(scene: Variant, cell: int) -> void:
 				text = str(item.description)
 			if text.is_empty():
 				text = "You see %s lying here." % title.to_lower()
-			if int(info.get("count", 1)) > 1:
-				text += "\n\nThere is more than one item on this spot."
 			_show_text(title, text)
 		"plant":
 			var plant: Variant = info.get("plant")
@@ -75,8 +141,11 @@ static func examine(scene: Variant, cell: int) -> void:
 			var trap: Variant = info.get("trap")
 			var trap_title: String = str(trap.trap_name) if trap != null else "trap"
 			_show_text(trap_title.capitalize(), trap_desc(trap))
-		"terrain":
-			_show_text(str(info.get("title", "")).capitalize(), str(info.get("text", "")))
+
+static func _hero_name(hero: Variant) -> String:
+	if hero != null and "hero_class" in hero:
+		return HeroClassData.get_class_name_str(int(hero.hero_class)).to_upper()
+	return "HERO"
 
 ## Region-specific tile name overrides, mirroring upstream SewerLevel/
 ## PrisonLevel/CavesLevel/CityLevel/HallsLevel tileName(). The port has no
