@@ -170,7 +170,15 @@ func speed_factor(hero: Char) -> float:
 	# Swiftness glyph always grants a small speed bonus
 	if glyph != null and glyph.glyph_id == "swiftness":
 		speed += 0.1
-	return maxf(MIN_SPEED_FACTOR, speed)
+	speed = maxf(MIN_SPEED_FACTOR, speed)
+	# Bulk curse slows movement to 1/3 while standing in a doorway; applied
+	# after the encumbrance clamp so it always bites, as upstream.
+	if glyph != null and glyph.glyph_id == "bulk":
+		if hero != null and hero.get("pos") != null:
+			var curse_script: GDScript = load("res://src/items/armor/curse_glyph.gd")
+			if curse_script != null:
+				speed *= curse_script.BulkCurse.speed_multiplier(hero.get("level"), hero.pos)
+	return speed
 
 # ---------------------------------------------------------------------------
 # Glyph Processing
@@ -288,7 +296,8 @@ func buffed_lvl() -> int:
 
 func get_display_name() -> String:
 	var base_name: String = super.get_display_name()
-	if glyph != null and identified:
+	# Upstream shows curse glyph names only once the curse is known.
+	if glyph != null and identified and (cursed_known or not has_curse_glyph()):
 		base_name += " {%s}" % glyph.glyph_name
 	return base_name
 
@@ -385,10 +394,11 @@ func random() -> Armor:
 			n += 1
 	level = n
 
-	# 30% chance to be cursed
+	# 30% chance to be cursed (always with a curse glyph, as upstream)
 	# 15% chance to get a good glyph (only if not cursed)
 	var effect_roll: float = randf()
 	if effect_roll < 0.3:
+		inscribe(ArmorGlyph.random_curse())
 		cursed = true
 	elif effect_roll >= 0.85:
 		inscribe(ArmorGlyph.random())

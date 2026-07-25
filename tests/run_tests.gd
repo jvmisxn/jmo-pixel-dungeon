@@ -118,6 +118,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_herbal_armor.gd",
 	"res://tests/cases/test_interval_armor_buffs.gd",
 	"res://tests/cases/test_armor_random_glyphs.gd",
+	"res://tests/cases/test_curse_glyphs.gd",
 	"res://tests/cases/test_flow_entanglement_glyphs.gd",
 	"res://tests/cases/test_curse_weapon_enchantments.gd",
 	"res://tests/cases/test_ring_of_might_state.gd",

@@ -10,6 +10,8 @@ var glyph_id: String = ""
 var glyph_name: String = ""
 ## Tint applied to the armor icon when this glyph is inscribed.
 var color: Color = Color.WHITE
+## True for curse glyphs (upstream Glyph.curse()); they weakly curse the armor.
+var is_curse: bool = false
 
 # ---------------------------------------------------------------------------
 # Visual Effect Emission
@@ -51,11 +53,13 @@ func serialize() -> Dictionary:
 		"glyph_id": glyph_id,
 		"glyph_name": glyph_name,
 		"color": [color.r, color.g, color.b, color.a],
+		"is_curse": is_curse,
 	}
 
 func deserialize(data: Dictionary) -> void:
 	glyph_id = data.get("glyph_id", "")
 	glyph_name = data.get("glyph_name", "")
+	is_curse = data.get("is_curse", false) == true
 	var c: Variant = data.get("color", [1.0, 1.0, 1.0, 1.0])
 	if c is Array and c.size() >= 4:
 		color = Color(c[0], c[1], c[2], c[3])
@@ -91,6 +95,12 @@ static func create(glyph_id_str: String) -> ArmorGlyph:
 			return _create_flow()
 		"entanglement":
 			return _create_entanglement()
+	# load() instead of the class name to avoid a cyclic reference: curse
+	# glyph classes extend ArmorGlyph.
+	var curse_script: GDScript = load("res://src/items/armor/curse_glyph.gd")
+	var curse: ArmorGlyph = curse_script.create(glyph_id_str) if curse_script != null else null
+	if curse != null:
+		return curse
 	push_warning("ArmorGlyph.create: unknown glyph_id '%s'" % glyph_id_str)
 	return null
 
@@ -103,6 +113,11 @@ static func random() -> ArmorGlyph:
 		"potential", "brimstone", "flow", "entanglement",
 	]
 	return create(ids[randi() % ids.size()])
+
+## Return a random curse glyph (upstream Glyph.randomCurse()).
+static func random_curse() -> ArmorGlyph:
+	var curse_script: GDScript = load("res://src/items/armor/curse_glyph.gd")
+	return curse_script.random_curse() if curse_script != null else null
 
 # ===========================================================================
 # Glyph Implementations
