@@ -447,12 +447,14 @@ func _can_move_to(target_position: int) -> bool:
 func should_flee() -> bool:
 	return false
 
-## Drop loot on death based on the loot table.
-func _drop_loot() -> void:
+## Drop loot on death based on the loot table. The killer can boost drop
+## chances (upstream Mob.lootChance drop bonus).
+func _drop_loot(killer: Variant = null) -> void:
 	if level == null:
 		return
+	var mult: float = _loot_chance_multiplier(killer)
 	for entry: Dictionary in loot_table:
-		var chance: float = entry.get("chance", 0.0)
+		var chance: float = entry.get("chance", 0.0) * mult
 		if randf() < chance:
 			var item_id: String = entry.get("item_id", "")
 			if item_id.is_empty():
@@ -460,6 +462,18 @@ func _drop_loot() -> void:
 			var item: Variant = Generator.create_item(item_id) if Generator else null
 			if item != null and level.has_method("drop_item"):
 				level.drop_item(pos, item)
+
+## Loot drop-chance multiplier (upstream Mob.lootChance): an Assassin killing
+## from Preparation with Bounty Hunter adds 2/4/8/16% per preparation level,
+## multiplied by talent points. Preparation is still attached at loot time
+## because the hero dispels Invisibility only after attack() returns.
+func _loot_chance_multiplier(killer: Variant) -> float:
+	var mult: float = 1.0
+	if killer is Char and (killer as Char).is_hero:
+		var prep: Node = (killer as Char).get_buff("AssassinPreparation")
+		if prep != null and prep.has_method("bounty_hunter_bonus"):
+			mult += prep.bounty_hunter_bonus()
+	return mult
 
 func _drop_skeleton_key() -> void:
 	if level == null or not level.has_method("drop_item"):
@@ -567,7 +581,7 @@ func _on_death(_source: Variant) -> void:
 	# Drop loot
 	if is_boss():
 		_drop_skeleton_key()
-	_drop_loot()
+	_drop_loot(_source)
 	# Grant XP to the hero (with over-level cap matching original)
 	if GameManager and GameManager.hero and GameManager.hero.is_alive:
 		var hero_ref: Node = GameManager.hero

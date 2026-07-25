@@ -77,6 +77,16 @@ func can_ko(defender: Node) -> bool:
 		threshold /= 5.0
 	return float(defender.hp) / float(defender.hp_max) < threshold
 
+## Bounty Hunter loot-chance bonus (upstream Mob.lootChance): 2/4/8/16% per
+## preparation level, multiplied by talent points. 0 without the talent.
+func bounty_hunter_bonus() -> float:
+	var points: int = 0
+	if target != null and target.has_method("get_talent_level"):
+		points = clampi(target.get_talent_level("assassin_bounty_hunter"), 0, 3)
+	if points <= 0:
+		return 0.0
+	return 0.02 * pow(2.0, level_ordinal()) * points
+
 func description() -> String:
 	var lvl: int = level_ordinal()
 	var desc: String = "You are preparing an attack from the shadows.\n\n" \

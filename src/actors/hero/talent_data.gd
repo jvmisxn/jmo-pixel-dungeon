@@ -104,7 +104,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 			return [
 				_make("assassin_enhanced_lethality", "Enhanced Lethality", "The Assassin's prepared attacks can instantly kill enemies at higher percentages of their max health, up to 67%/83%/100% at full preparation.", 3, 3, hero_subclass),
 				_make_inert("assassin_assassins_reach", "Assassin's Reach", "Groundwork slot: prepared blink strikes reach further (blink attack UI not implemented yet).", 3, 3, hero_subclass),
-				_make_inert("assassin_bounty_hunter", "Bounty Hunter", "Groundwork slot: prepared attacks boost enemy loot drop chance.", 3, 3, hero_subclass),
+				_make("assassin_bounty_hunter", "Bounty Hunter", "Killing an enemy with a prepared attack boosts its chance to drop loot by 2%/4%/8%/16% per preparation level, multiplied by talent points.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.FREERUNNER:
 			return [
