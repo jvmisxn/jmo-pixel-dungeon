@@ -42,6 +42,36 @@ func _notification(what: int) -> void:
 			_tooltip_visible = false
 
 
+## Tap/click opens the buff info window (upstream BuffIndicator.BuffButton
+## onClick -> WndInfoBuff).
+func _gui_input(event: InputEvent) -> void:
+	var tapped: bool = false
+	if event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event
+		tapped = mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
+	elif event is InputEventScreenTouch:
+		var touch: InputEventScreenTouch = event
+		tapped = touch.pressed
+	if tapped:
+		accept_event()
+		_open_info_window()
+
+
+func _open_info_window() -> void:
+	var wnd: WndBase = make_info_window()
+	if wnd != null and EventBus:
+		EventBus.show_window.emit(wnd)
+
+
+## Builds the info window for the attached buff (null if no buff).
+func make_info_window() -> WndBase:
+	if buff_ref == null:
+		return null
+	var wnd: WndInfoBuff = WndInfoBuff.new()
+	wnd.setup(buff_ref)
+	return wnd
+
+
 ## Called externally (e.g. by status_pane) when buff state may have changed.
 func update_flash_state() -> void:
 	if buff_ref == null:
