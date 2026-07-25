@@ -315,9 +315,26 @@ func execute_action() -> void:
 		_:
 			spend_turn(_get_non_movement_action_delay())
 
+	# Warden Barkskin talent (upstream Hero.act() tail): ending a turn while
+	# standing in furrowed grass refreshes decaying barkskin armor.
+	_apply_barkskin_talent()
+
 	# Tell TurnManager we're done
 	if TurnManager:
 		TurnManager.hero_action_complete(self)
+
+## Warden Barkskin talent (upstream Hero.act() tail): standing in furrowed
+## grass at end of turn calls Barkskin.conditionallyAppend(lvl*points/2, 1),
+## so the barkskin refreshes each turn spent in the furrow and decays by 1
+## per turn once the hero leaves it.
+func _apply_barkskin_talent() -> void:
+	var points: int = get_talent_level("warden_barkskin")
+	if points <= 0 or level == null or not is_alive:
+		return
+	if level.get_terrain(pos) != ConstantsData.Terrain.FURROWED_GRASS:
+		return
+	@warning_ignore("integer_division")
+	Barkskin.conditionally_append(self, (hero_level * points) / 2, 1)
 
 # ---------------------------------------------------------------------------
 # Action Implementations
