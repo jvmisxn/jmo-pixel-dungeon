@@ -62,9 +62,14 @@ func _build_content() -> Control:
 			if main.get_child_count() > 2:
 				main.add_child(HSeparator.new())
 			var tier_label: Label = Label.new()
-			tier_label.text = "Tier %d" % current_tier
+			var unlock_level: int = TalentData.tier_unlock_level(current_tier)
+			if _hero.hero_level < unlock_level:
+				tier_label.text = "Tier %d  (unlocks at level %d)" % [current_tier, unlock_level]
+				tier_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
+			else:
+				tier_label.text = "Tier %d" % current_tier
+				tier_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.95))
 			tier_label.add_theme_font_size_override("font_size", 15)
-			tier_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.95))
 			main.add_child(tier_label)
 
 		main.add_child(_build_talent_row(talent))
@@ -109,10 +114,13 @@ func _build_talent_row(talent: TalentData.TalentInfo) -> Control:
 	upgrade_button.custom_minimum_size = Vector2(56, 32)
 	upgrade_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	upgrade_button.disabled = not _hero.can_upgrade_talent(talent.id)
-	if talent.implemented:
-		upgrade_button.tooltip_text = "Spend 1 point on %s" % talent.name
-	else:
+	if not talent.implemented:
 		upgrade_button.tooltip_text = "%s is not implemented yet; points cannot be spent on it." % talent.name
+	elif _hero.hero_level < TalentData.tier_unlock_level(talent.tier):
+		var tier_level: int = TalentData.tier_unlock_level(talent.tier)
+		upgrade_button.tooltip_text = "Tier %d talents unlock at level %d." % [talent.tier, tier_level]
+	else:
+		upgrade_button.tooltip_text = "Spend 1 point on %s" % talent.name
 	upgrade_button.pressed.connect(_on_upgrade_pressed.bind(talent.id))
 	header.add_child(upgrade_button)
 

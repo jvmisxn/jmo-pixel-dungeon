@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-25
+
+- Tags: talents, progression, source-fidelity, tests
+- Talent tier hero-level gating (gap flagged in the Endless Rage slice). Source: upstream `Talent.tierLevelThresholds = {0, 2, 7, 13, 21, 31}` — tiers 1/2/3/4 start at hero levels 2/7/13/21 (verified against `00-Evan/shattered-pixel-dungeon` master 2026-07-25). Port: `TalentData.TIER_LEVEL_THRESHOLDS` + `tier_unlock_level(tier)` (out-of-range tiers clamp to the top threshold), `Hero.can_upgrade_talent` now refuses talents whose tier is above the hero's level, and `WndTalents` shows locked tier headers as "Tier N (unlocks at level M)" in grey plus a lock-explaining tooltip on the +1 button. Adaptation note: the port keeps its single shared talent-point pool (1 point per level-up), so unlike upstream's per-tier point buckets, points earned early can still be banked and dumped into a higher tier once it unlocks — only the unlock levels are enforced. Added `test_talent_tier_gating.gd` (14 checks, registered): threshold table, T1 locked at level 1/open at 2, T2 locked at 6/open at 7, T3 locked at 12/open at 13 with subclass, refused locked upgrade consumes no point; `test_talent_inert_gating.gd` heroes bumped to level 13 so its existing T2/T3 checks stay valid. `git diff --check` clean; parser (`python3 -m gdtoolkit.parser`, incl. fragile `hero.gd`) and gdlint clean on touched files; full headless suite 2529 checks, 0 failures.
+
 ## 2026-07-24
 
 - Tags: buffs, examine, ux-parity, tests

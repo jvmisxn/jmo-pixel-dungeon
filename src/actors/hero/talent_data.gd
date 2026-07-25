@@ -15,6 +15,14 @@ class TalentInfo:
 	## Unimplemented talents cannot be upgraded and are flagged in the picker.
 	var implemented: bool = true
 
+## Upstream Talent.tierLevelThresholds: tiers 1/2/3/4 start at levels 2/7/13/21.
+const TIER_LEVEL_THRESHOLDS: Array[int] = [0, 2, 7, 13, 21]
+
+static func tier_unlock_level(tier: int) -> int:
+	if tier < 1 or tier >= TIER_LEVEL_THRESHOLDS.size():
+		return TIER_LEVEL_THRESHOLDS[TIER_LEVEL_THRESHOLDS.size() - 1]
+	return TIER_LEVEL_THRESHOLDS[tier]
+
 static func get_talents_for(hero_class: int, hero_subclass: int = ConstantsData.HeroSubclass.NONE) -> Array[TalentInfo]:
 	var talents: Array[TalentInfo] = []
 	talents.append_array(_class_talents(hero_class))

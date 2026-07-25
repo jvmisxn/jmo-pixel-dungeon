@@ -11,6 +11,7 @@ func run(t: Object) -> void:
 func _make_warrior() -> Hero:
 	var hero := Hero.new()
 	hero.init_class(ConstantsData.HeroClass.WARRIOR)
+	hero.hero_level = 13
 	hero.talent_points_available = 2
 	return hero
 
