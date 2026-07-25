@@ -278,7 +278,7 @@ func run(t: Object) -> void:
 				and toolbar._btn_search.text == ""
 				and toolbar._btn_search.icon != null
 				and _button_icon_region_has_pixels(toolbar._btn_search)
-				and toolbar._btn_search.tooltip_text == "Search [S]",
+				and toolbar._btn_search.tooltip_text == "Examine (press again to search) [X]",
 		"narrow mobile toolbar uses SPD icon buttons with full tooltips"
 	)
 	toolbar.set_available_width(480.0)

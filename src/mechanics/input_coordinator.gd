@@ -5,6 +5,25 @@ extends RefCounted
 ## cell click inspects the cell via CellExaminer instead of acting on it.
 static var examine_mode: bool = false
 
+## Upstream Toolbar btnSearch onClick: the first press enters examine
+## cell-select mode; pressing again while examining cancels it and performs
+## an active search instead (this is how touch players search). The X key
+## routes here too, matching upstream's EXAMINE key action.
+static func handle_toolbar_examine(scene: Variant) -> void:
+	if scene == null:
+		return
+	if scene._targeting_active:
+		scene._cancel_targeting_mode()
+		return
+	if examine_mode:
+		examine_mode = false
+		scene._submit_hero_action({"type": "search"})
+		return
+	examine_mode = true
+	if MessageLog:
+		MessageLog.add_info("Examine: select a cell to inspect. (press again to search, Esc to cancel)")
+
+
 static func handle_cell_click(scene: Variant, cell: int) -> void:
 	if scene == null:
 		return
@@ -87,12 +106,7 @@ static func handle_key_input(scene: Variant, keycode: int) -> bool:
 				scene._hud._on_rest_pressed()
 				return true
 		KEY_X:
-			examine_mode = not examine_mode
-			if MessageLog:
-				if examine_mode:
-					MessageLog.add_info("Examine: select a cell to inspect. (X to cancel)")
-				else:
-					MessageLog.add_info("Examine cancelled.")
+			handle_toolbar_examine(scene)
 			return true
 		KEY_ESCAPE:
 			if examine_mode:

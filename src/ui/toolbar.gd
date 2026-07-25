@@ -92,7 +92,7 @@ func _ready() -> void:
 	_btn_map = _create_spd_button("Map", "M", ICONS_PATH, ICON_REGION_MAP)
 	_btn_wait = _create_spd_button("Wait", "Space", TOOLBAR_PATH, ICON_REGION_WAIT)
 	_btn_rest = _create_spd_button("Rest until interrupted", "R", TOOLBAR_PATH, ICON_REGION_REST)
-	_btn_search = _create_spd_button("Search", "S", TOOLBAR_PATH, ICON_REGION_SEARCH)
+	_btn_search = _create_spd_button("Examine (press again to search)", "X", TOOLBAR_PATH, ICON_REGION_SEARCH)
 
 	add_child(_btn_inventory)
 	add_child(_btn_map)
@@ -347,7 +347,7 @@ func _apply_button_labels() -> void:
 		_btn_rest.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_search:
 		_btn_search.text = ""
-		_btn_search.tooltip_text = "Search [S]"
+		_btn_search.tooltip_text = "Examine (press again to search) [X]"
 		_btn_search.visible = not _is_ultra_narrow_compact_mode()
 		_btn_search.custom_minimum_size = button_size
 		_btn_search.size = button_size

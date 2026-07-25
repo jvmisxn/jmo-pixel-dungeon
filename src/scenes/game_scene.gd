@@ -2414,8 +2414,9 @@ func _on_toolbar_wait() -> void:
 		_submit_hero_action({"type": "wait"})
 
 func _on_toolbar_search() -> void:
+	# Upstream toolbar magnifier: tap = examine mode, tap again = search.
 	if _awaiting_hero_input:
-		_submit_hero_action({"type": "search"})
+		InputCoordinator.handle_toolbar_examine(self)
 
 func _on_request_hero_action(action: Dictionary) -> void:
 	if action.is_empty():
