@@ -522,6 +522,71 @@ func _soul_eater_on_kill(forced_roll: int = -1) -> bool:
 		hero.on_food_eaten(null, 0.0, hero.hp, hero.hp_max)
 	return true
 
+## Warlock Necromancer's Minions (upstream Mob.die): killing a soul marked mob
+## has a 0.4*points/3 chance to raise a corrupted wraith at the corpse cell.
+## [forced_roll] in [0,1) substitutes for the randf() roll so tests stay
+## deterministic. Returns the spawned wraith, or null.
+func _necromancers_minions_on_kill(forced_roll: float = -1.0) -> Variant:
+	if mob_id == "wraith":
+		return null
+	if not has_buff("SoulMark"):
+		return null
+	var hero: Node = GameManager.hero if GameManager else null
+	if hero == null or not hero.is_alive:
+		return null
+	if hero.get("hero_subclass") != ConstantsData.HeroSubclass.WARLOCK:
+		return null
+	var points: int = 0
+	if hero.has_method("get_talent_level"):
+		points = hero.get_talent_level("warlock_necromancers_minions")
+	if points <= 0:
+		return null
+	var roll: float = forced_roll if forced_roll >= 0.0 else randf()
+	if roll >= 0.4 * float(points) / 3.0:
+		return null
+	if level == null:
+		return null
+	var cell: int = _find_minion_spawn_cell()
+	if cell < 0:
+		return null
+	var wraith: Variant = MobFactory.create_mob("wraith") if MobFactory else null
+	if wraith == null:
+		return null
+	wraith.pos = cell
+	level.add_mob(wraith)
+	if TurnManager:
+		TurnManager.add_actor(wraith)
+	wraith.add_buff(CorruptionBuff.new())
+	if MessageLog:
+		MessageLog.add("A corrupted wraith rises from the %s's remains!" % mob_name)
+	return wraith
+
+## Pick the corpse cell for a raised wraith, or an adjacent free passable cell.
+## The dying mob still occupies [pos], so it does not block its own corpse cell.
+func _find_minion_spawn_cell() -> int:
+	if level == null:
+		return -1
+	if not _minion_cell_blocked(pos) and level.is_passable(pos):
+		return pos
+	for dir: int in ConstantsData.DIRS_8:
+		var next_pos: int = pos + dir
+		if not ConstantsData.is_valid_pos(next_pos):
+			continue
+		if level.is_passable(next_pos) and not _minion_cell_blocked(next_pos):
+			return next_pos
+	return -1
+
+## True when any character other than this (dying) mob occupies [cell].
+func _minion_cell_blocked(cell: int) -> bool:
+	if level.has_method("get_heroes"):
+		for h: Variant in level.get_heroes():
+			if h is Object and h.get("pos") == cell:
+				return true
+	for m: Variant in level.mobs:
+		if m != self and m is Object and m.get("pos") == cell:
+			return true
+	return false
+
 ## Override take_damage to wake sleeping mobs and trigger flee checks.
 func take_damage(dmg: int, source: Variant = null) -> int:
 	# Allies shrug off friendly fire from the hero (e.g. bumping, area zaps).
@@ -578,6 +643,7 @@ func on_attack_miss(target_char: Char) -> void:
 
 func _on_death(_source: Variant) -> void:
 	_soul_eater_on_kill()
+	_necromancers_minions_on_kill()
 	# Drop loot
 	if is_boss():
 		_drop_skeleton_key()

@@ -160,6 +160,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_farsight.gd",
 	"res://tests/cases/test_warden_barkskin_talent.gd",
 	"res://tests/cases/test_shielding_dew.gd",
+	"res://tests/cases/test_necromancers_minions.gd",
 ]
 
 var _checks: int = 0
