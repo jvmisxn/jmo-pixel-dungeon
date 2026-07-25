@@ -572,6 +572,10 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 	var acc_multi: float = 1.0
 	if item.has_method("accuracy_factor"):
 		acc_multi = item.accuracy_factor(self)
+	if item is MissileWeapon or item is SpiritBow:
+		var momentum: Buff = get_buff("FreerunnerMomentum")
+		if momentum != null and momentum.has_method("ranged_accuracy_multiplier"):
+			acc_multi *= momentum.ranged_accuracy_multiplier()
 	if not Char.hit(self, target, acc_multi):
 		on_attack_miss(target)
 		return false

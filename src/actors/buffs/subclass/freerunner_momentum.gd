@@ -29,6 +29,23 @@ func on_damage_dealt(_amount: int, _target: Node) -> void:
 	last_was_move = false
 	momentum = 0
 
+## The port's freerunning state: momentum held at the cap. Upstream freerun
+## is a manually activated timer, so max momentum stands in for it here.
+func is_freerunning() -> bool:
+	return momentum >= MAX_MOMENTUM
+
+func _projectile_momentum_points() -> int:
+	if target != null and target.has_method("get_talent_level"):
+		return target.get_talent_level("freerunner_projectile_momentum")
+	return 0
+
+## Upstream Talent.PROJECTILE_MOMENTUM (Hero.attackSkill ranged branch):
+## while freerunning, ranged accuracy *= 1 + points/2 (+50%/100%/150%).
+func ranged_accuracy_multiplier() -> float:
+	if is_freerunning():
+		return 1.0 + 0.5 * float(_projectile_momentum_points())
+	return 1.0
+
 func modify_evasion(eva: int) -> int:
 	if momentum >= MAX_MOMENTUM:
 		return int(eva * 1.5)  # +50% evasion at max

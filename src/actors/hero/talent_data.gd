@@ -108,7 +108,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 			]
 		ConstantsData.HeroSubclass.FREERUNNER:
 			return [
-				_make_inert("freerunner_momentum_mastery", "Momentum Mastery", "Supports more reliable movement chains.", 3, 3, hero_subclass),
+				_make("freerunner_projectile_momentum", "Projectile Momentum", "While at full momentum, the Freerunner's thrown weapon attacks are 50%/100%/150% more accurate.", 3, 3, hero_subclass),
 				_make_inert("freerunner_kinetic_flow", "Kinetic Flow", "Groundwork slot for stronger speed and evasion payoff.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.SNIPER:

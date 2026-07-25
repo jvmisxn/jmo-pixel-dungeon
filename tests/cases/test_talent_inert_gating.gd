@@ -79,4 +79,13 @@ func _test_subclass_inert_talents_blocked(t: Object) -> void:
 		hero.can_upgrade_talent("berserker_enraged_catalyst"),
 		"Enraged Catalyst is now upgradable"
 	)
+	hero.hero_subclass = ConstantsData.HeroSubclass.FREERUNNER
+	t.check(
+		hero.can_upgrade_talent("freerunner_projectile_momentum"),
+		"Projectile Momentum is now upgradable"
+	)
+	t.check(
+		not hero.can_upgrade_talent("freerunner_kinetic_flow"),
+		"Kinetic Flow stays inert"
+	)
 	hero.free()
