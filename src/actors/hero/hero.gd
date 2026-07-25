@@ -502,7 +502,8 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 			missile.apply_special_effect(hit_target)
 
 	if item is MissileWeapon and _should_consume_thrown_item(item):
-		_consume_thrown_stack_item(item)
+		if not _durable_tips_preserves(item as MissileWeapon):
+			_consume_thrown_stack_item(item)
 
 	if item is SpiritBow and hit_landed:
 		var followup_level: int = get_talent_level("huntress_followup_strike")
@@ -653,6 +654,21 @@ func _should_consume_thrown_item(item: Variant) -> bool:
 	if item is MissileWeapon and (item as MissileWeapon).does_return():
 		return false
 	return item is MissileWeapon or item is Bomb
+
+## Warden Durable Tips (upstream TippedDart.durabilityPerUse: use /= 1 + points):
+## port adaptation — each tipped dart deterministically survives (1 + points)
+## throws before the stack loses a dart, matching upstream expected durability.
+func _durable_tips_preserves(missile: MissileWeapon) -> bool:
+	if missile == null or not missile.is_tipped_dart():
+		return false
+	var points: int = get_talent_level("warden_durable_tips")
+	if points <= 0:
+		return false
+	missile.durable_tips_uses += 1
+	if missile.durable_tips_uses > points:
+		missile.durable_tips_uses = 0
+		return false
+	return true
 
 func _consume_thrown_stack_item(item: Variant) -> void:
 	if item == null:

@@ -161,6 +161,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_shared_enchantment.gd",
 	"res://tests/cases/test_warden_barkskin_talent.gd",
 	"res://tests/cases/test_shielding_dew.gd",
+	"res://tests/cases/test_durable_tips.gd",
 	"res://tests/cases/test_necromancers_minions.gd",
 	"res://tests/cases/test_empowered_strike.gd",
 	"res://tests/cases/test_excess_charge.gd",

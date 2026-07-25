@@ -121,7 +121,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 			]
 		ConstantsData.HeroSubclass.WARDEN:
 			return [
-				_make_inert("warden_durable_tips", "Durable Tips", "Groundwork slot: the Warden's tipped darts last for multiple uses (tipped-dart durability not ported yet).", 3, 3, hero_subclass),
+				_make("warden_durable_tips", "Durable Tips", "The Warden's tipped darts last longer: each dart survives 2/3/4 throws before being used up.", 3, 3, hero_subclass),
 				_make("warden_barkskin", "Barkskin", "When stepping in grass, the Warden gains 0-50%/100%/150% of her level in barkskin armor which fades every turn.", 3, 3, hero_subclass),
 				_make("warden_shielding_dew", "Shielding Dew", "Dew healing the Warden doesn't need is converted into shielding, up to a max of 20%/40%/60% of her max HP.", 3, 3, hero_subclass),
 			]

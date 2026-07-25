@@ -9,6 +9,9 @@ var uses_left: int = 10
 var sticky: bool = false  # embeds in enemy on hit
 var returns: bool = false  # boomerang-type weapons return to thrower
 var special_effect: String = ""  # e.g. "slow" for bolas
+# Warden Durable Tips: throws survived by the current tipped dart since it was
+# last consumed (upstream TippedDart durability /= 1 + talent points).
+var durable_tips_uses: int = 0
 
 func _init() -> void:
 	super._init()
@@ -67,6 +70,11 @@ func duplicate_item() -> Item:
 ## Whether this weapon returns to the thrower after hitting.
 func does_return() -> bool:
 	return returns
+
+## Whether this is a tipped dart (the port's analogue of upstream TippedDart,
+## which Warden Durable Tips extends the durability of).
+func is_tipped_dart() -> bool:
+	return item_id == "curare_dart" or item_id == "paralytic_dart"
 
 ## Whether this weapon has a special on-hit effect.
 func has_special_effect() -> bool:
@@ -297,6 +305,7 @@ func serialize() -> Dictionary:
 	data["sticky"] = sticky
 	data["returns"] = returns
 	data["special_effect"] = special_effect
+	data["durable_tips_uses"] = durable_tips_uses
 	return data
 
 func deserialize(data: Dictionary) -> void:
@@ -306,3 +315,4 @@ func deserialize(data: Dictionary) -> void:
 	sticky = data.get("sticky", false)
 	returns = data.get("returns", false)
 	special_effect = data.get("special_effect", "")
+	durable_tips_uses = data.get("durable_tips_uses", 0)
