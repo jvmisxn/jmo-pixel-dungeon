@@ -89,7 +89,7 @@ func _test_subclass_inert_talents_blocked(t: Object) -> void:
 		"Speedy Stealth is now upgradable"
 	)
 	t.check(
-		not hero.can_upgrade_talent("freerunner_evasive_armor"),
-		"Evasive Armor stays inert"
+		hero.can_upgrade_talent("freerunner_evasive_armor"),
+		"Evasive Armor is now upgradable"
 	)
 	hero.free()

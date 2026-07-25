@@ -55,6 +55,21 @@ func _speedy_stealth_points() -> int:
 		return target.get_talent_level("freerunner_speedy_stealth")
 	return 0
 
+func _evasive_armor_points() -> int:
+	if target != null and target.has_method("get_talent_level"):
+		return target.get_talent_level("freerunner_evasive_armor")
+	return 0
+
+## Upstream Momentum.evasionBonus(heroLvl, excessArmorStr): while freerunning,
+## heroLvl/2 + excessArmorStr * points(EVASIVE_ARMOR). The port's freerun
+## evasion base is the modify_evasion multiplier below, so only the Evasive
+## Armor talent term applies here. Called from Armor.evasion_factor with
+## excess = max(0, hero STR - armor STR requirement).
+func evasion_bonus(excess_armor_str: int) -> int:
+	if is_freerunning():
+		return excess_armor_str * _evasive_armor_points()
+	return 0
+
 func _is_invisible() -> bool:
 	if target == null:
 		return false

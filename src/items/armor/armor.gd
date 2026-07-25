@@ -142,6 +142,11 @@ func evasion_factor(hero: Char, evasion: float = 1.0) -> float:
 		var encumbrance: int = str_requirement - hero.str_val
 		if encumbrance > 0:
 			evasion /= pow(1.5, encumbrance)
+		# SPD Armor.evasionFactor: momentum.evasionBonus(lvl, max(0, -aEnc))
+		if hero.has_method("get_buff"):
+			var momentum: Variant = hero.get_buff("FreerunnerMomentum")
+			if momentum != null and momentum.has_method("evasion_bonus"):
+				evasion += float(momentum.evasion_bonus(maxi(0, -encumbrance)))
 	return evasion + float(_augment_evasion_factor(buffed_lvl()))
 
 # ---------------------------------------------------------------------------
