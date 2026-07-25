@@ -19,9 +19,20 @@ func on_move(_old_pos: int, _new_pos: int) -> void:
 	momentum = mini(momentum + 1, MAX_MOMENTUM)
 
 func on_turn() -> void:
-	if not last_was_move:
-		# Momentum decays when not moving
-		momentum = maxi(0, momentum - 3)
+	var stealth: int = _speedy_stealth_points()
+	if _is_invisible() and stealth >= 1 and momentum < MAX_MOMENTUM:
+		# Upstream act(): with SPEEDY_STEALTH, invisible turns build +2 stacks
+		# while not freerunning, instead of decaying.
+		momentum = mini(momentum + 2, MAX_MOMENTUM)
+	elif not last_was_move:
+		if _is_invisible() and stealth >= 2:
+			# Upstream SPEEDY_STEALTH +2: the freerun timer is frozen while
+			# invisible. The port has no separate timer, so invisibility
+			# preserves momentum outright instead.
+			pass
+		else:
+			# Momentum decays when not moving
+			momentum = maxi(0, momentum - 3)
 	last_was_move = false
 
 func on_damage_dealt(_amount: int, _target: Node) -> void:
@@ -39,6 +50,17 @@ func _projectile_momentum_points() -> int:
 		return target.get_talent_level("freerunner_projectile_momentum")
 	return 0
 
+func _speedy_stealth_points() -> int:
+	if target != null and target.has_method("get_talent_level"):
+		return target.get_talent_level("freerunner_speedy_stealth")
+	return 0
+
+func _is_invisible() -> bool:
+	if target == null:
+		return false
+	var invis: Variant = target.get("invisible")
+	return invis != null and int(invis) > 0
+
 ## Upstream Talent.PROJECTILE_MOMENTUM (Hero.attackSkill ranged branch):
 ## while freerunning, ranged accuracy *= 1 + points/2 (+50%/100%/150%).
 func ranged_accuracy_multiplier() -> float:
@@ -55,6 +77,10 @@ func modify_evasion(eva: int) -> int:
 	return eva
 
 func modify_speed(speed: float) -> float:
+	# Upstream Momentum.speedMultiplier(): SPEEDY_STEALTH +3 gives 2x speed
+	# while invisible, independent of freerunning state.
+	if _is_invisible() and _speedy_stealth_points() >= 3:
+		return speed * 2.0
 	if momentum >= MAX_MOMENTUM:
 		return speed * 1.5  # +50% speed at max
 	elif momentum > 0:

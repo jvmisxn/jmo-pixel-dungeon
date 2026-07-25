@@ -85,7 +85,11 @@ func _test_subclass_inert_talents_blocked(t: Object) -> void:
 		"Projectile Momentum is now upgradable"
 	)
 	t.check(
-		not hero.can_upgrade_talent("freerunner_kinetic_flow"),
-		"Kinetic Flow stays inert"
+		hero.can_upgrade_talent("freerunner_speedy_stealth"),
+		"Speedy Stealth is now upgradable"
+	)
+	t.check(
+		not hero.can_upgrade_talent("freerunner_evasive_armor"),
+		"Evasive Armor stays inert"
 	)
 	hero.free()

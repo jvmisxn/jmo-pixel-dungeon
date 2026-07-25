@@ -108,8 +108,9 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 			]
 		ConstantsData.HeroSubclass.FREERUNNER:
 			return [
+				_make_inert("freerunner_evasive_armor", "Evasive Armor", "Groundwork slot: while freerunning, excess strength over the armor requirement adds bonus evasion per point (excess-armor-strength tracking not implemented yet).", 3, 3, hero_subclass),
 				_make("freerunner_projectile_momentum", "Projectile Momentum", "While at full momentum, the Freerunner's thrown weapon attacks are 50%/100%/150% more accurate.", 3, 3, hero_subclass),
-				_make_inert("freerunner_kinetic_flow", "Kinetic Flow", "Groundwork slot for stronger speed and evasion payoff.", 3, 3, hero_subclass),
+				_make("freerunner_speedy_stealth", "Speedy Stealth", "While invisible, the Freerunner builds momentum rapidly instead of losing it. At +2 invisibility fully preserves his momentum, and at +3 he also moves twice as fast while invisible.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.SNIPER:
 			return [
