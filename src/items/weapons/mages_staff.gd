@@ -46,10 +46,19 @@ func get_imbued_wand() -> Variant:
 	return imbued_wand
 
 ## Zap the imbued wand at a target position. Routed by the hero's zap path.
+## A successful zap (one that spent a charge, including cursed backfires)
+## primes Empowered Strike for 10 turns, mirroring upstream Wand.wandUsed's
+## staff-wand branch. Buff merge gives Buff.prolong semantics.
 func zap(hero: Char, target_pos: int) -> void:
 	if imbued_wand == null:
 		return
+	var charges_before: int = imbued_wand.charges
 	imbued_wand.zap(hero, target_pos)
+	if imbued_wand.charges >= charges_before:
+		return
+	if hero != null and hero.has_method("get_talent_level") \
+			and hero.get_talent_level("battlemage_empowered_strikes") > 0:
+		hero.add_buff(EmpoweredStrikeTracker.new())
 
 func get_damage_range() -> Array[int]:
 	var lvl: int = buffed_lvl()

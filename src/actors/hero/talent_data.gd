@@ -91,7 +91,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 			]
 		ConstantsData.HeroSubclass.BATTLEMAGE:
 			return [
-				_make_inert("battlemage_empowered_strikes", "Empowered Strikes", "Supports stronger staff-triggered magic effects.", 3, 3, hero_subclass),
+				_make("battlemage_empowered_strikes", "Empowered Strike", "The Battlemage's first melee strike with his staff within 10 turns of zapping it deals 17%/33%/50% bonus damage. (Upstream's bonus wand-effect power is not ported yet.)", 3, 3, hero_subclass),
 				_make_inert("battlemage_arcane_renewal", "Arcane Renewal", "Groundwork slot for charge recovery synergies.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.WARLOCK:

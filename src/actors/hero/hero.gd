@@ -1067,6 +1067,15 @@ func attack_proc(target_char: Char, damage: int) -> int:
 	if hero_class == ConstantsData.HeroClass.HUNTRESS and followup_strike_level > 0 and _followup_strike_ready:
 		result = roundi(float(result) * (1.10 + 0.15 * followup_strike_level))
 
+	# Battlemage Empowered Strike (upstream MagesStaff.proc): the first staff
+	# melee hit after zapping the staff deals x(1 + points/6) damage and
+	# consumes the tracker.
+	var empowered_level: int = get_talent_level("battlemage_empowered_strikes")
+	if empowered_level > 0 and has_buff("EmpoweredStrikeTracker") \
+			and belongings != null and belongings.get_equipped_weapon() is MagesStaff:
+		result = roundi(float(result) * (1.0 + float(empowered_level) / 6.0))
+		remove_buff_by_id("EmpoweredStrikeTracker")
+
 	if belongings != null:
 		var weapon: Variant = belongings.get_equipped_weapon()
 		if weapon != null and weapon.has_method("proc_enchantment"):
