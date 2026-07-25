@@ -484,6 +484,30 @@ func defense_proc(enemy: Char, damage: int) -> int:
 			mark.process_restoration(damage, enemy)
 	return super.defense_proc(enemy, damage)
 
+## Warlock Soul Eater on-kill trigger (upstream Mob loot roll): killing a
+## soul marked mob has a points-in-10 chance to fire the hero's on-eat talent
+## effects (Talent.onFoodEaten with no actual food). [forced_roll] >= 0
+## substitutes for the random 0-9 roll so tests stay deterministic.
+func _soul_eater_on_kill(forced_roll: int = -1) -> bool:
+	if not has_buff("SoulMark"):
+		return false
+	var hero: Node = GameManager.hero if GameManager else null
+	if hero == null or not hero.is_alive:
+		return false
+	if hero.get("hero_subclass") != ConstantsData.HeroSubclass.WARLOCK:
+		return false
+	var eater: int = 0
+	if hero.has_method("get_talent_level"):
+		eater = hero.get_talent_level("warlock_soul_eater")
+	if eater <= 0:
+		return false
+	var roll: int = forced_roll if forced_roll >= 0 else randi() % 10
+	if roll >= eater:
+		return false
+	if hero.has_method("on_food_eaten"):
+		hero.on_food_eaten(null, 0.0, hero.hp, hero.hp_max)
+	return true
+
 ## Override take_damage to wake sleeping mobs and trigger flee checks.
 func take_damage(dmg: int, source: Variant = null) -> int:
 	# Allies shrug off friendly fire from the hero (e.g. bumping, area zaps).
@@ -539,6 +563,7 @@ func on_attack_miss(target_char: Char) -> void:
 	last_visible_target_pos = target_char.pos if target_char != null else -1
 
 func _on_death(_source: Variant) -> void:
+	_soul_eater_on_kill()
 	# Drop loot
 	if is_boss():
 		_drop_skeleton_key()

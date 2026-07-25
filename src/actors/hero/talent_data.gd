@@ -97,7 +97,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 		ConstantsData.HeroSubclass.WARLOCK:
 			return [
 				_make("warlock_soul_siphon", "Soul Siphon", "Physical damage dealt by other characters triggers the Warlock's soul mark at 13%/27%/40% effectiveness.", 3, 3, hero_subclass),
-				_make_inert("warlock_soul_eater", "Soul Eater", "Groundwork slot: soul mark satiety and on-eat triggers from marked kills.", 3, 3, hero_subclass),
+				_make("warlock_soul_eater", "Soul Eater", "Soul mark restoration also feeds the Warlock at 33%/67%/100% effectiveness, and killing a soul marked enemy has a 10%/20%/30% chance to trigger his on-eat talent effects.", 3, 3, hero_subclass),
 				_make_inert("warlock_necromancers_minions", "Necromancer's Minions", "Groundwork slot: chance to raise soul marked enemies as corrupted wraiths.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.ASSASSIN:

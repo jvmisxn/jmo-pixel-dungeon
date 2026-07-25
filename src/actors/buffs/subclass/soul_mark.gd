@@ -45,7 +45,7 @@ func process_restoration(damage: int, attacker: Variant) -> int:
 		restoration = roundi(restoration * 0.4 * float(siphon) / 3.0)
 	if restoration <= 0:
 		return 0
-	# Soul Eater satiety (inert until the talent is implemented; points are 0).
+	# Soul Eater satiety (restoration * points / 3).
 	var eater: int = 0
 	if hero.has_method("get_talent_level"):
 		eater = hero.get_talent_level("warlock_soul_eater")
