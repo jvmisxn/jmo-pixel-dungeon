@@ -69,13 +69,11 @@ static func examine(scene: Variant, cell: int) -> void:
 		"plant":
 			var plant: Variant = info.get("plant")
 			var plant_name: String = str(plant.plant_name) if plant != null else "plant"
-			_show_text(plant_name.capitalize(),
-				"This plant will activate when someone steps on it.")
+			_show_text(plant_name.capitalize(), plant_desc(plant))
 		"trap":
 			var trap: Variant = info.get("trap")
 			var trap_title: String = str(trap.trap_name) if trap != null else "trap"
-			_show_text(trap_title.capitalize(),
-				"Stepping on this hidden pressure plate will activate the trap.")
+			_show_text(trap_title.capitalize(), trap_desc(trap))
 		"terrain":
 			_show_text(str(info.get("title", "")).capitalize(), str(info.get("text", "")))
 
@@ -154,6 +152,80 @@ static func terrain_desc(terrain: int) -> String:
 		ConstantsData.Terrain.WEB:
 			return "Sticky spider webs. Moving through them takes extra effort."
 	return "You are not sure what this is."
+
+const GENERIC_TRAP_DESC: String = "Stepping on this hidden pressure plate will activate the trap."
+const GENERIC_PLANT_DESC: String = "This plant will activate when someone steps on it."
+
+## Upstream trap descriptions (messages/levels/levels.properties,
+## `levels.traps.<class>.desc`), keyed by the port's `trap_name`. "fire trap"
+## carries upstream BurningTrap's text; "paralytic gas trap" is a classic trap
+## the port kept, so its text is adapted in the upstream style.
+const TRAP_DESCS: Dictionary = {
+	"alarm trap": "This trap seems to be tied to a loud alarm mechanism. Triggering it will likely alert everything on the level.",
+	"blazing trap": "Stepping on this trap will ignite a powerful chemical mixture, setting a wide area ablaze.",
+	"chilling trap": "When activated, chemicals in this trap will rapidly freeze the air around its location.",
+	"confusion gas trap": "Triggering this trap will set a cloud of confusion gas loose within the immediate area.",
+	"corrosion trap": "Triggering this trap will set a cloud of deadly acidic gas loose within the immediate area.",
+	"cursing trap": "This trap contains the same malevolent magic found in cursed equipment. Triggering it will curse some items in the immediate area.",
+	"disarming trap": "This trap contains very specific teleportation magic, which will warp the weapon of its victim to some other location.",
+	"disintegration trap": "When triggered, this trap will lance the nearest target with beams of disintegration, dealing significant damage and destroying items.\n\nThankfully the trigger mechanism isn't hidden.",
+	"distortion trap": "Built from strange magic of unknown origin, this trap will summon all manner of creatures to this location.",
+	"explosive trap": "This trap contains some powdered explosive and a trigger mechanism. Activating it will cause an explosion in the immediate area.",
+	"fire trap": "Stepping on this trap will ignite a chemical mixture, setting the surrounding area aflame.",
+	"flashing trap": "On activation, this trap will ignite a potent flashing powder stored within, temporarily blinding, crippling, and injuring its victim.\n\nThe trap must have a large store of powder, as it can activate many times without breaking.",
+	"flock trap": "Perhaps a joke from some amateur mage, triggering this trap will create a flock of magical sheep.",
+	"frost trap": "When activated, chemicals in this trap will rapidly freeze the air in a wide range around its location.",
+	"gateway trap": "This special teleportation trap can activate an infinite numbers of times and always teleports to the same location.",
+	"geyser trap": "When triggered, this trap will cause a geyser of water to spew forth, damaging fiery enemies, knocking away all nearby characters, dousing fires, and converting the surrounding terrain to water.",
+	"grim trap": "Extremely powerful destructive magic is stored within this trap, enough to instantly kill all but the healthiest of heroes. Triggering it will send a ranged blast of lethal magic towards the nearest character.\n\nThankfully the trigger mechanism isn't hidden.",
+	"gripping trap": "This trap latches onto the feet of whoever trigger it, damaging them and slowing their movement.\n\nDue to its simple nature, this trap can activate many times without breaking.",
+	"guardian trap": "This trap is tied to a strange magical mechanism, which will summon guardians and alert all enemies on the floor.",
+	"ooze trap": "This trap will splash out caustic ooze when activated, which will burn until it is washed away.",
+	"paralytic gas trap": "Triggering this trap will set a cloud of paralysing gas loose within the immediate area.",
+	"pitfall trap": "This trap is connected to a large trapdoor mechanism, and shortly after it is triggered anything near it will slip right through the ground and fall! It won't work in areas with especially solid floors though.",
+	"poison dart trap": "A small dart-blower must be hidden nearby, activating this trap will cause it to shoot a poisoned dart at the nearest target.\n\nThankfully the trigger mechanism isn't hidden.",
+	"rockfall trap": "This trap is connected to a series of loose rocks above, triggering it will cause them to come crashing down over the entire room! If the trap isn't in a specific room, rocks will fall in an area around the trap instead.\n\nThankfully the trigger mechanism isn't hidden.",
+	"shocking trap": "A mechanism with a large amount of energy stored into it. Triggering this trap will discharge that energy into a field around it.",
+	"storm trap": "A mechanism with a massive amount of energy stored into it. Triggering this trap will discharge that energy into a large electrical storm.",
+	"summoning trap": "Triggering this trap will summon a number of this area's monsters to this location.",
+	"teleportation trap": "Whenever this trap is triggered, everything around it will be teleported to random locations on this floor.",
+	"toxic gas trap": "Triggering this trap will set a cloud of toxic gas loose within the surrounding area.",
+	"warping trap": "This trap is similar to a teleportation trap, but will also cause the hero to lose their knowledge of the floor's layout!",
+	"weakening trap": "Dark magic in this trap sucks the energy out of anything that comes into contact with it. Powerful enemies may resist the effect, however.",
+	"worn dart trap": "A small dart-blower must be hidden nearby, activating this trap will cause it to shoot at the nearest target.\n\nDue to its age it's not very harmful though, it isn't even hidden...",
+}
+
+## Upstream plant descriptions (messages/plants/plants.properties), keyed by
+## `plant_name`. Dreamfoil keeps its pre-rename identity in this port (upstream
+## renamed it to Mageroyal), so its text is the upstream cleansing description
+## adapted to also cover the port's sleep-lesser-creatures behavior.
+const PLANT_DESCS: Dictionary = {
+	"Blindweed": "Upon being touched a blindweed perishes in a bright flash of light. The flash is strong enough to disorient for several seconds.",
+	"Dreamfoil": "The dreamfoil's prickly flowers contain a chemical which is known for its properties as a strong neutralizing agent. Anything that steps in this plant will be cleansed of many mind-affecting ailments, while lesser creatures are lulled into a deep sleep.",
+	"Earthroot": "When a creature touches an earthroot, its roots create a kind of immobile natural armor around it.",
+	"Fadeleaf": "Touching a fadeleaf will teleport any creature to a random place on the current level.",
+	"Firebloom": "When something touches a firebloom, it bursts into flames.",
+	"Icecap": "Upon being touched, an icecap lets out a puff of freezing pollen. The freezing effect is much stronger if the environment is wet.",
+	"Rotberry": "The berries of a young rotberry shrub taste like sweet, sweet death. Over a few years, this rotberry shrub will grow into another rot heart. When trampled, a young rotberry will produce a small puff of toxic gas.",
+	"Sorrowmoss": "A sorrowmoss is a flower (not a moss) with razor-sharp petals, coated with a deadly venom.",
+	"Starflower": "A rare plant, starflower is said to grant holy power to whomever touches it.",
+	"Stormvine": "Gravity affects the stormvine plant strangely, allowing its whispy blue tendrils to 'hang' on the air. Anything caught in the vine is affected by this, and becomes disoriented.",
+	"Sungrass": "Sungrass is renowned for its sap's slow but effective healing properties.",
+	"Swiftthistle": "When trampled, swiftthistle will briefly accelerate the flow of time around it, allowing the trampler to perform several actions instantly.",
+}
+
+## Full examine text for a revealed trap, falling back to the generic
+## pressure-plate line for unknown trap types.
+static func trap_desc(trap: Variant) -> String:
+	if trap == null:
+		return GENERIC_TRAP_DESC
+	return String(TRAP_DESCS.get(str(trap.trap_name), GENERIC_TRAP_DESC))
+
+## Full examine text for a plant, falling back to a generic activation line.
+static func plant_desc(plant: Variant) -> String:
+	if plant == null:
+		return GENERIC_PLANT_DESC
+	return String(PLANT_DESCS.get(str(plant.plant_name), GENERIC_PLANT_DESC))
 
 static func _flag(arr: Variant, cell: int) -> bool:
 	if not (arr is Array):
