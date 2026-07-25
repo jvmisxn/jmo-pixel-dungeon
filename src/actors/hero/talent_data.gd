@@ -92,7 +92,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 		ConstantsData.HeroSubclass.BATTLEMAGE:
 			return [
 				_make("battlemage_empowered_strikes", "Empowered Strike", "The Battlemage's first melee strike with his staff within 10 turns of zapping it deals 17%/33%/50% bonus damage. (Upstream's bonus wand-effect power is not ported yet.)", 3, 3, hero_subclass),
-				_make_inert("battlemage_mystical_charge", "Mystical Charge", "Groundwork slot: upstream grants 0.5/1/1.5 turns of artifact recharging when the Battlemage hits with his staff; artifact recharging is not ported yet.", 3, 3, hero_subclass),
+				_make("battlemage_mystical_charge", "Mystical Charge", "Every melee hit with his staff instantly grants the Battlemage 0.5/1/1.5 turns of artifact recharging. Cursed artifacts do not benefit.", 3, 3, hero_subclass),
 				_make("battlemage_excess_charge", "Excess Charge", "When the Battlemage zaps his staff while its wand is at full charge, he gains a shield equal to 0.67x/1.33x/2x the staff's level.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.WARLOCK:

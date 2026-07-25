@@ -1088,6 +1088,14 @@ func attack_proc(target_char: Char, damage: int) -> int:
 	if hero_class == ConstantsData.HeroClass.HUNTRESS and followup_strike_level > 0 and _followup_strike_ready:
 		result = roundi(float(result) * (1.10 + 0.15 * followup_strike_level))
 
+	# Battlemage Mystical Charge (upstream MagesStaff.proc head): every staff
+	# melee hit instantly grants points/2 turns of artifact recharging via
+	# ArtifactRecharge.chargeArtifacts.
+	var mystical_level: int = get_talent_level("battlemage_mystical_charge")
+	if mystical_level > 0 and belongings != null \
+			and belongings.get_equipped_weapon() is MagesStaff:
+		_charge_artifacts(float(mystical_level) / 2.0)
+
 	# Battlemage Empowered Strike (upstream MagesStaff.proc): the first staff
 	# melee hit after zapping the staff deals x(1 + points/6) damage and
 	# consumes the tracker.
@@ -1104,6 +1112,15 @@ func attack_proc(target_char: Char, damage: int) -> int:
 
 	_followup_strike_ready = false
 	return maxi(0, result)
+
+## Upstream ArtifactRecharge.chargeArtifacts: instantly charge all equipped
+## non-cursed artifacts by `turns` turns' worth of passive charging.
+func _charge_artifacts(turns: float) -> void:
+	if belongings == null:
+		return
+	for slot: Item in [belongings.artifact, belongings.misc]:
+		if slot is Artifact:
+			(slot as Artifact).charge_turns(turns)
 
 func defense_proc(attacker: Char, damage: int) -> int:
 	var result: int = super.defense_proc(attacker, damage)

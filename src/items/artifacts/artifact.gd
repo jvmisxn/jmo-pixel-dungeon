@@ -106,6 +106,15 @@ func _spend_charge(amount: int) -> bool:
 	charge -= amount
 	return true
 
+## Upstream ArtifactRecharge.chargeArtifacts: instantly grant `turns` turns'
+## worth of passive charging (charge_rate * turns). Cursed artifacts do not
+## benefit. Port adaptation: uses the uniform charge_rate model instead of
+## upstream's per-artifact charge(hero, amount) overrides.
+func charge_turns(turns: float) -> void:
+	if cursed or turns <= 0.0:
+		return
+	_recharge(charge_rate * turns)
+
 # ---------------------------------------------------------------------------
 # Item Interface Overrides
 # ---------------------------------------------------------------------------
