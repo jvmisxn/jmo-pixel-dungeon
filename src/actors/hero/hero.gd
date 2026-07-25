@@ -1176,6 +1176,17 @@ func heal(amount: int) -> void:
 	if EventBus:
 		EventBus.hero_stats_changed.emit()
 
+## Death-prevention hook (upstream Berserk.berserking() with Deathless Fury):
+## a Berserker at full rage survives a lethal hit behind a fury shield.
+func _try_prevent_death(_source: Variant) -> bool:
+	var rage_buff: Variant = get_buff("BerserkerRage")
+	if rage_buff != null and rage_buff.has_method("try_prevent_death"):
+		if rage_buff.try_prevent_death():
+			if EventBus:
+				EventBus.hero_stats_changed.emit()
+			return true
+	return false
+
 ## Override _on_death to emit the EventBus.hero_died signal so the game
 ## transitions to the death screen.
 func _on_death(source: Variant) -> void:

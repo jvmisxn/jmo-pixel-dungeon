@@ -64,6 +64,7 @@ func _test_no_multiplier_at_or_below_base(t: Object) -> void:
 func _test_death_prevention_still_triggers_at_base(t: Object) -> void:
 	var hero := _make_berserker()
 	hero.talent_levels["berserker_endless_rage"] = 3
+	hero.talent_levels["berserker_deathless_fury"] = 1
 	var rage := _rage(hero)
 	rage.rage = 100.0
 	hero.hp = 0

@@ -6,8 +6,11 @@ extends Buff
 
 var rage: float = 0.0
 const MAX_RAGE: float = 100.0
-## Whether the death-prevention has been used this fight.
-var rage_used: bool = false
+## Turns left before deathless fury can trigger again. Port adaptation of
+## upstream Berserk levelRecovery (4 - Deathless Fury points, in hero levels):
+## one level is approximated as 25 turns. No rage builds while recovering.
+var recovery_left: float = 0.0
+const RECOVERY_TURNS_PER_LEVEL: float = 25.0
 
 ## Upstream Talent.ENDLESS_RAGE: rage cap raised by 16.67% per point
 ## (up to 150%). Excess rage above 100% further empowers the fury.
@@ -42,31 +45,67 @@ func modify_damage(dmg: int) -> int:
 	return int(result)
 
 func on_damage_taken(amount: int, _source: Variant) -> void:
-	# Build rage from damage taken
+	# Build rage from damage taken. Upstream Berserk.damage() gains no power
+	# while berserking/recovering.
+	if recovery_left > 0:
+		return
 	rage = minf(rage + amount * 2.0, max_rage())
 
 func on_turn() -> void:
 	# Rage decays slowly when not taking damage
 	if rage > 0:
 		rage = maxf(0, rage - 1.0)
-	# Reset rage_used between fights (when fully healed)
-	if target and target.hp >= target.hp_max:
-		rage_used = false
+	if recovery_left > 0:
+		recovery_left = maxf(0.0, recovery_left - 1.0)
 
-## Called from Hero._on_death override — prevents death once per fight at max rage.
+func _deathless_fury_points() -> int:
+	if target != null and target.has_method("get_talent_level"):
+		return target.get_talent_level("berserker_deathless_fury")
+	return 0
+
+## Upstream Berserk.currentShieldBoost(): base 8 + 2*armor level, multiplied
+## by 1 + 2*(1 - HP/HT)^3 (3x at 0 HP), further multiplied by overfill power.
+func deathless_shield_amount() -> int:
+	var base_shield: float = 8.0
+	if target != null and target.get("belongings") != null:
+		var armor: Variant = target.belongings.get_equipped_armor()
+		if armor != null and armor.has_method("buffed_lvl"):
+			base_shield += 2.0 * float(armor.buffed_lvl())
+	var hp_ratio: float = 0.0
+	if target != null and target.hp_max > 0:
+		hp_ratio = clampf(float(maxi(target.hp, 0)) / float(target.hp_max), 0.0, 1.0)
+	var multiplier: float = 1.0 + 2.0 * pow(1.0 - hp_ratio, 3.0)
+	if rage > MAX_RAGE:
+		multiplier *= rage / MAX_RAGE
+	return roundi(base_shield * multiplier)
+
+## Called from Hero._try_prevent_death. Upstream Berserk.berserking(): only
+## with the Deathless Fury talent can a lethal hit start berserking instead of
+## death. Port adaptation: the hero survives at 1 HP with an upstream-formula
+## Barrier instead of standing at 0 HP behind shielding.
 func try_prevent_death() -> bool:
-	if rage >= MAX_RAGE and not rage_used:
-		rage_used = true
-		rage = 0.0
-		if target:
-			target.hp = 1
-			target.is_alive = true
-		if MessageLog:
-			MessageLog.add_positive("Your rage refuses to let you fall!")
-		return true
-	return false
+	if _deathless_fury_points() <= 0:
+		return false
+	if rage < MAX_RAGE or recovery_left > 0:
+		return false
+	var shield: int = deathless_shield_amount()
+	recovery_left = RECOVERY_TURNS_PER_LEVEL * float(4 - mini(_deathless_fury_points(), 3))
+	rage = 0.0
+	if target:
+		target.hp = 1
+		target.is_alive = true
+		var barrier: Barrier = target.get_buff("Barrier") as Barrier
+		if barrier == null:
+			barrier = target.add_buff(Barrier.new()) as Barrier
+		if barrier != null:
+			barrier.inc_shield(shield)
+	if MessageLog:
+		MessageLog.add_positive("Your rage refuses to let you fall!")
+	return true
 
 func description() -> String:
+	if recovery_left > 0:
+		return "Berserker Rage (recovering, %d turns)" % int(ceilf(recovery_left))
 	if rage > 0:
 		return "Berserker Rage (%.0f%%)" % (rage / MAX_RAGE * 100)
 	return "Berserker Rage"
@@ -74,10 +113,14 @@ func description() -> String:
 func serialize() -> Dictionary:
 	var data: Dictionary = super.serialize()
 	data["rage"] = rage
-	data["rage_used"] = rage_used
+	data["recovery_left"] = recovery_left
 	return data
 
 func deserialize(data: Dictionary) -> void:
 	super.deserialize(data)
 	rage = float(data.get("rage", rage))
-	rage_used = bool(data.get("rage_used", rage_used))
+	recovery_left = float(data.get("recovery_left", recovery_left))
+	# Legacy saves stored a once-per-fight rage_used flag instead of a
+	# recovery timer; map a spent flag to a conservative 3-level recovery.
+	if bool(data.get("rage_used", false)) and recovery_left <= 0:
+		recovery_left = RECOVERY_TURNS_PER_LEVEL * 3.0

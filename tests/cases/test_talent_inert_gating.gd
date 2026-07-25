@@ -22,7 +22,10 @@ func _test_registry_flags(t: Object) -> void:
 	t.check(iron_will != null and iron_will.implemented, "Iron Will is flagged implemented")
 	var duelist_barrier: TalentData.TalentInfo = TalentData.get_talent(ConstantsData.HeroClass.DUELIST, "duelist_aggressive_barrier")
 	t.check(duelist_barrier != null and not duelist_barrier.implemented, "Aggressive Barrier is flagged unimplemented")
-	var implemented_subclass_talents: Array[String] = ["berserker_endless_rage"]
+	var implemented_subclass_talents: Array[String] = [
+		"berserker_endless_rage",
+		"berserker_deathless_fury",
+	]
 	for subclass: int in [ConstantsData.HeroSubclass.BERSERKER, ConstantsData.HeroSubclass.MONK]:
 		for talent: TalentData.TalentInfo in TalentData._subclass_talents(subclass):
 			if talent.id in implemented_subclass_talents:
@@ -50,6 +53,6 @@ func _test_implemented_talent_still_upgrades(t: Object) -> void:
 func _test_subclass_inert_talents_blocked(t: Object) -> void:
 	var hero := _make_warrior()
 	hero.hero_subclass = ConstantsData.HeroSubclass.BERSERKER
-	t.check(not hero.can_upgrade_talent("berserker_deathless_fury"), "Inert subclass talent cannot be upgraded")
+	t.check(not hero.can_upgrade_talent("berserker_enraged_catalyst"), "Inert subclass talent cannot be upgraded")
 	t.check(hero.can_upgrade_talent("berserker_endless_rage"), "Implemented subclass talent (Endless Rage) is upgradable")
 	hero.free()
