@@ -81,7 +81,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 			return [
 				_make("berserker_endless_rage", "Endless Rage", "The Berserker's rage cap is raised to 117%/133%/150%. Rage above 100% multiplies his damage.", 3, 3, hero_subclass),
 				_make("berserker_deathless_fury", "Deathless Fury", "At full rage, lethal damage sends the Berserker into a deathless fury instead of killing him, granting a rage shield. More points shorten the recovery before it can trigger again.", 3, 3, hero_subclass),
-				_make_inert("berserker_enraged_catalyst", "Enraged Catalyst", "Groundwork slot for rage-boosted enchantment and glyph activation.", 3, 3, hero_subclass),
+				_make("berserker_enraged_catalyst", "Enraged Catalyst", "Enchantments on the Berserker's weapon trigger more often the more rage he has, up to 15%/30%/45% more often at 100% rage.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.GLADIATOR:
 			return [

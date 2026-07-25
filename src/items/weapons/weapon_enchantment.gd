@@ -27,6 +27,17 @@ static func _emit_proc(ench_id: String, attacker: Variant, defender: Variant) ->
 # Proc (Virtual)
 # ---------------------------------------------------------------------------
 
+## Upstream Weapon.Enchantment.genericProcChanceMultiplier(): a Berserker with
+## the Enraged Catalyst talent boosts enchant activation chance by rage.
+## (Arcana/RunicBlade/Smite sources are not ported yet.)
+static func proc_chance_multiplier(attacker: Variant) -> float:
+	var multi: float = 1.0
+	if attacker is Object and attacker.has_method("get_buff"):
+		var rage: Variant = attacker.get_buff("BerserkerRage")
+		if rage != null and rage.has_method("enchant_proc_bonus"):
+			multi += rage.enchant_proc_bonus()
+	return multi
+
 ## Called when the enchanted weapon hits. Returns modified damage.
 ## Dispatches to the correct proc implementation based on enchant_id.
 func proc(weapon: Variant, attacker: Variant, defender: Variant, damage: int) -> int:
@@ -219,7 +230,7 @@ static func random_curse(exclude: Array[String] = []) -> WeaponEnchantment:
 func _blazing_proc(_weapon: Variant, _attacker: Variant, defender: Variant, damage: int) -> int:
 	# 33% chance to ignite the defender, dealing bonus fire damage
 	var bonus: int = 0
-	if randf() < 0.33:
+	if randf() < 0.33 * proc_chance_multiplier(_attacker):
 		bonus = maxi(1, int(damage * 0.25))
 		if defender != null and defender.has_method("add_buff"):
 			var burning: Variant = null
@@ -240,7 +251,7 @@ func _blazing_proc(_weapon: Variant, _attacker: Variant, defender: Variant, dama
 
 func _chilling_proc(_weapon: Variant, _attacker: Variant, defender: Variant, damage: int) -> int:
 	# 33% chance to apply Cripple (slow) to defender
-	if randf() < 0.33:
+	if randf() < 0.33 * proc_chance_multiplier(_attacker):
 		if defender != null and defender.has_method("add_buff"):
 			var script: GDScript = load("res://src/actors/buffs/cripple.gd") as GDScript
 			if script:
@@ -266,7 +277,7 @@ func _shocking_proc(_weapon: Variant, attacker: Variant, defender: Variant, dama
 
 func _lucky_proc(_weapon: Variant, _attacker: Variant, _defender: Variant, damage: int) -> int:
 	# 20% chance to critically strike for 2x damage
-	if randf() < 0.20:
+	if randf() < 0.20 * proc_chance_multiplier(_attacker):
 		if MessageLog:
 			MessageLog.add("A lucky strike!")
 		WeaponEnchantment._emit_proc("lucky", _attacker, _defender)
@@ -301,7 +312,7 @@ func _grim_proc(_weapon: Variant, _attacker: Variant, defender: Variant, damage:
 	var hp_ratio: float = float(hp) / float(maxi(1, ht))
 	if hp_ratio < 0.2:
 		var kill_chance: float = 0.5 * (1.0 - hp_ratio / 0.2)
-		if randf() < kill_chance:
+		if randf() < kill_chance * proc_chance_multiplier(_attacker):
 			if defender.has_method("die"):
 				defender.die(_attacker)
 				if MessageLog:
@@ -344,7 +355,7 @@ func _kinetic_proc(_weapon: Variant, _attacker: Variant, _defender: Variant, dam
 	# Stores excess (overkill) damage and adds it to the next attack.
 	# For now, 20% chance to deal 50% bonus damage (simplified kinetic energy storage).
 	var bonus: int = 0
-	if randf() < 0.20:
+	if randf() < 0.20 * proc_chance_multiplier(_attacker):
 		bonus = maxi(1, int(damage * 0.5))
 		if MessageLog:
 			MessageLog.add("Kinetic energy surges through the weapon!")
@@ -379,7 +390,7 @@ func _blooming_proc(_weapon: Variant, _attacker: Variant, defender: Variant, dam
 func _corrupting_proc(_weapon: Variant, _attacker: Variant, defender: Variant, damage: int) -> int:
 	# On kill, corrupt the enemy (handled at kill time). On hit, apply weakness.
 	if defender != null and defender.has_method("add_buff"):
-		if randf() < 0.25:
+		if randf() < 0.25 * proc_chance_multiplier(_attacker):
 			var script: GDScript = load("res://src/actors/buffs/weakness.gd") as GDScript
 			if script:
 				var weak: Variant = script.new()

@@ -22,6 +22,18 @@ func _endless_rage_points() -> int:
 		return target.get_talent_level("berserker_endless_rage")
 	return 0
 
+func _enraged_catalyst_points() -> int:
+	if target != null and target.has_method("get_talent_level"):
+		return target.get_talent_level("berserker_enraged_catalyst")
+	return 0
+
+## Upstream Berserk.enchantFactor(): the weapon enchantment proc-chance
+## multiplier gains min(1, power) * 0.15 per Enraged Catalyst point, so
+## +15%/30%/45% activation at 100% rage. Overfill rage past 100% does not
+## raise it further (upstream caps power at 1 here).
+func enchant_proc_bonus() -> float:
+	return minf(1.0, rage / MAX_RAGE) * 0.15 * float(_enraged_catalyst_points())
+
 func _init() -> void:
 	buff_id = "BerserkerRage"
 	buff_name = "Berserker Rage"
