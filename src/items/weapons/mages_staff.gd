@@ -59,6 +59,29 @@ func zap(hero: Char, target_pos: int) -> void:
 	if hero != null and hero.has_method("get_talent_level") \
 			and hero.get_talent_level("battlemage_empowered_strikes") > 0:
 		hero.add_buff(EmpoweredStrikeTracker.new())
+	_apply_excess_charge(hero, charges_before)
+
+## Upstream Wand.wandUsed staff-wand branch (Talent.EXCESS_CHARGE): zapping the
+## staff while its wand is at full charges grants Barrier shielding equal to
+## round(wand buffed level * 0.67 * points). Mirrors upstream setShield
+## semantics: an existing barrier is only raised to the value, never lowered
+## and never stacked.
+func _apply_excess_charge(hero: Char, charges_before: int) -> void:
+	if hero == null or not hero.has_method("get_talent_level"):
+		return
+	var points: int = hero.get_talent_level("battlemage_excess_charge")
+	if points <= 0:
+		return
+	if charges_before < imbued_wand.charges_max:
+		return
+	var shield: int = roundi(float(imbued_wand.buffed_lvl()) * 0.67 * float(points))
+	if shield <= 0:
+		return
+	var barrier: Barrier = hero.add_buff(Barrier.new()) as Barrier
+	if barrier != null and barrier.get_shielding() < shield:
+		barrier.set_shield(shield)
+	if MessageLog:
+		MessageLog.add_positive("Excess charge shields you for %d." % shield)
 
 func get_damage_range() -> Array[int]:
 	var lvl: int = buffed_lvl()
