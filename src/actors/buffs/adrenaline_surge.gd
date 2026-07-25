@@ -24,6 +24,9 @@ static func create(str_bonus: int) -> AdrenalineSurge:
 func str_bonus() -> int:
 	return bonus
 
+func description() -> String:
+	return "A surge of great might, but sadly not permanent.\n\nStrength boost: +%d.\nTurns until boost weakens: %s." % [bonus, disp_turns(time_left)]
+
 func on_attach() -> void:
 	if MessageLog and target:
 		MessageLog.add_positive("%s surges with adrenaline! (+%d STR)" % [target.name, bonus])

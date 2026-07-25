@@ -32,3 +32,6 @@ func on_detach() -> void:
 	if target:
 		if target.invisible > 0:
 			target.invisible -= 1
+
+func description() -> String:
+	return "You are completely blended into the surrounding terrain, making you impossible to see.\n\nWhile you are invisible enemies are unable to attack or follow you. Physical attacks and magical effects (such as scrolls and wands) will immediately cancel invisibility.\n\nTurns of invisibility remaining: %s." % disp_turns(time_left)

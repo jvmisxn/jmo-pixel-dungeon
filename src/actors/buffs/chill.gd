@@ -31,6 +31,9 @@ func extend(dur: float) -> void:
 func speed_factor() -> float:
 	return maxf(0.5, 1.0 - left * 0.1)
 
+func description() -> String:
+	return "Not quite frozen, but still much too cold.\n\nChilled targets perform all actions more slowly, depending on how many turns are left in the effect. At its worst, this is equivalent to being slowed.\n\nTurns of chill remaining: %s.\nSpeed is reduced by: %d%%" % [disp_turns(left), roundi((1.0 - speed_factor()) * 100.0)]
+
 ## NOTE: Chill does NOT modify speed() — it works through time scaling in
 ## spend_turn() via speed_factor(). Slow and Chill don't stack (original).
 ## Do NOT add modify_speed() here — it would double-apply the slowdown.

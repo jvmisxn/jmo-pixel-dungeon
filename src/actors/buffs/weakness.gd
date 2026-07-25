@@ -11,3 +11,6 @@ func _init() -> void:
 	duration = BASE_DURATION
 	time_left = BASE_DURATION
 	icon_color = Color.WHITE
+
+func description() -> String:
+	return "Everything suddenly seems much heavier.\n\nWeakening magic reduces a character's physical strength, causing them to deal 33%% reduced damage.\n\nTurns of weakness remaining: %s." % disp_turns(time_left)

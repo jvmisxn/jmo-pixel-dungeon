@@ -52,6 +52,11 @@ func max_shield() -> int:
 func is_cooling_down() -> bool:
 	return cooldown > 0
 
+func description() -> String:
+	if shield_amount > 0:
+		return "The Warrior's broken seal is currently helping him persevere, granting him shielding on top of his health. There is a cooldown after the shielding initially triggers before it can be used again.\n\nThis shield does not decay over time, but will end if no enemies are nearby for a few turns. When it ends, any unused shielding will reduce the cooldown, up to a max of 50%%.\n\nShield remaining: %d.\n\nCurrent Cooldown: %d." % [shield_amount, cooldown]
+	return "The Warrior has recently gained shielding from his broken seal, and must wait until he can benefit from its shielding effect again.\n\nTurns Remaining: %d." % cooldown
+
 func activate() -> void:
 	shield_amount += max_shield()
 	cooldown = maxi(0, cooldown + COOLDOWN_START)

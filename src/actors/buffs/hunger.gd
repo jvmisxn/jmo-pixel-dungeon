@@ -107,6 +107,14 @@ func status_text() -> String:
 func icon_text() -> String:
 	return status_text()
 
+func description() -> String:
+	var intro: String
+	if is_starving():
+		intro = "You're so hungry it hurts."
+	else:
+		intro = "You can feel your stomach calling out for food, but it's not too urgent yet."
+	return intro + "\n\nHunger slowly increases as you spend time in the dungeon, eventually you will begin to starve. While starving you will slowly lose health instead of regenerating it.\n\nRationing is important! If you have health to spare starving isn't a bad idea if it means there will be more food later. Effective rationing can make food last a lot longer!"
+
 func serialize() -> Dictionary:
 	var data: Dictionary = super.serialize()
 	data["hunger_value"] = hunger_value
