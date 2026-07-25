@@ -152,6 +152,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_enhanced_combo.gd",
 	"res://tests/cases/test_soul_mark.gd",
 	"res://tests/cases/test_soul_eater_kill.gd",
+	"res://tests/cases/test_assassin_preparation.gd",
 ]
 
 var _checks: int = 0

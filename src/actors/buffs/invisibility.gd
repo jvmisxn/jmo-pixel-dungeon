@@ -25,6 +25,10 @@ func on_attach() -> void:
 				and target.get_talent_level("rogue_protective_shadows") > 0 \
 				and not target.has_buff("ProtectiveShadowsTracker"):
 			target.add_buff(ProtectiveShadowsTrackerScript.new())
+		# Original: Invisibility.attachTo attaches Preparation for Assassins.
+		if target.get("hero_subclass") == ConstantsData.HeroSubclass.ASSASSIN \
+				and not target.has_buff("AssassinPreparation"):
+			target.add_buff(AssassinPreparation.new())
 		if MessageLog:
 			MessageLog.add_positive("%s fades from view." % target.name)
 
@@ -32,6 +36,16 @@ func on_detach() -> void:
 	if target:
 		if target.invisible > 0:
 			target.invisible -= 1
+
+## Break invisibility early (attacking, using items, etc.).
+## Original: Invisibility.dispel also consumes the Assassin's Preparation.
+func dispel() -> void:
+	var tgt: Node = target
+	if tgt == null:
+		return
+	tgt.remove_buff(self)
+	if int(tgt.get("invisible")) <= 0:
+		tgt.remove_buff_by_id("AssassinPreparation")
 
 func description() -> String:
 	return "You are completely blended into the surrounding terrain, making you impossible to see.\n\nWhile you are invisible enemies are unable to attack or follow you. Physical attacks and magical effects (such as scrolls and wands) will immediately cancel invisibility.\n\nTurns of invisibility remaining: %s." % disp_turns(time_left)

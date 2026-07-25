@@ -107,8 +107,14 @@ func attack(target: Char, dmg_multi: float = 1.0, dmg_bonus: float = 0.0, acc_mu
 		return false
 
 	if hit(self, target, acc_multi):
-		# Hit — roll damage
-		var dmg: float = float(damage_roll())
+		# Hit — roll damage. A prepared Assassin replaces the base roll with
+		# the best of N rolls plus the attack-level bonus (SPD Preparation).
+		var prep_buff: Node = get_buff("AssassinPreparation")
+		var dmg: float
+		if prep_buff != null and prep_buff.has_method("prep_damage_roll"):
+			dmg = float(prep_buff.prep_damage_roll(Callable(self, "damage_roll")))
+		else:
+			dmg = float(damage_roll())
 
 		# Damage multiplier and bonus
 		dmg = dmg * dmg_multi + dmg_bonus
@@ -140,6 +146,16 @@ func attack(target: Char, dmg_multi: float = 1.0, dmg_bonus: float = 0.0, acc_mu
 		# Apply damage
 		target.take_damage(effective_dmg, self)
 		on_attack_hit(target, effective_dmg)
+
+		# Prepared assassination: execute a surviving hostile under the KO
+		# threshold (SPD Char.attack Preparation block).
+		if prep_buff != null and target.is_alive and not target.is_hero \
+				and not (target is Mob and (target as Mob).is_ally) \
+				and prep_buff.has_method("can_ko") and prep_buff.can_ko(target):
+			target.hp = 0
+			target.die(self)
+			if MessageLog:
+				MessageLog.add_positive("Assassinated!")
 
 		# Notify buffs of damage dealt
 		for b: Node in _buffs:

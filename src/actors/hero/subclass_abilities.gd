@@ -160,10 +160,12 @@ static func _apply_warlock(hero: Hero) -> void:
 	var soul_mark: SoulMarkPassive = SoulMarkPassive.new()
 	hero.add_buff(soul_mark)
 
-static func _apply_assassin(hero: Hero) -> void:
-	# Assassin gets preparation tracker
-	var prep: AssassinPreparation = AssassinPreparation.new()
-	hero.add_buff(prep)
+static func _apply_assassin(_hero: Hero) -> void:
+	# Upstream parity: Preparation is no longer a permanent buff — it attaches
+	# while the Assassin is invisible (see Invisibility.on_attach) and detaches
+	# when visibility returns. Old saves carrying the permanent buff shed it on
+	# their first non-invisible turn.
+	pass
 
 static func _apply_freerunner(hero: Hero) -> void:
 	# Freerunner gets momentum tracker
