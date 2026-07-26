@@ -100,7 +100,7 @@ func zap(hero: Char, target_pos: int) -> void:
 		_cursed_zap(hero)
 		spend_charge()
 		_lingering_magic_proc(hero)
-		_use_for_identification()
+		_use_for_identification(hero)
 		return
 	# Build trajectory via Ballistica
 	var path: Array[int] = _build_zap_path(hero, target_pos)
@@ -112,7 +112,7 @@ func zap(hero: Char, target_pos: int) -> void:
 	on_zap(hero, path)
 	_lingering_magic_proc(hero)
 	_warlock_wand_proc(hero, path)
-	_use_for_identification()
+	_use_for_identification(hero)
 	if MessageLog:
 		MessageLog.add("You zap the %s." % item_name)
 	if EventBus:
@@ -155,14 +155,20 @@ func _warlock_wand_proc(hero: Char, path: Array[int]) -> void:
 	if mark.has_method("prolong"):
 		mark.prolong(SoulMark.DURATION + float(level))
 
-func _use_for_identification() -> void:
+func _use_for_identification(hero: Char = null) -> void:
 	if identified or is_identified():
 		return
 	if _available_uses_to_id <= 0.0:
 		return
-	_available_uses_to_id -= 1.0
-	_uses_left_to_id -= 1.0
-	if _uses_left_to_id <= 0.0:
+	# Original: Talent.itemIDSpeedFactor — Scholar's Intuition consumes
+	# 1+2*points ID uses per zap (3x/5x), and +2 identifies after one zap.
+	var intuition: int = 0
+	if hero != null and hero.has_method("get_talent_level"):
+		intuition = hero.get_talent_level("mage_scholars_intuition")
+	var uses: float = minf(_available_uses_to_id, 1.0 + 2.0 * float(intuition))
+	_available_uses_to_id -= uses
+	_uses_left_to_id -= uses
+	if _uses_left_to_id <= 0.0 or intuition >= 2:
 		identify()
 		if MessageLog:
 			MessageLog.add_positive("You have identified the %s." % item_name)

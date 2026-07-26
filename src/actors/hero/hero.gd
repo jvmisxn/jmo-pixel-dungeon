@@ -1097,11 +1097,6 @@ func on_item_picked_up(item: Item) -> void:
 		if item.item_id == "healing" or item.item_id == "identify":
 			_maybe_identify_pickup(item, 0.50 * warrior_hypothesis, "Your practical instincts reveal the %s.")
 
-	var mage_intuition: int = get_talent_level("mage_scholars_intuition")
-	if hero_class == ConstantsData.HeroClass.MAGE and mage_intuition > 0:
-		if item.category == ConstantsData.ItemCategory.SCROLL or item.category == ConstantsData.ItemCategory.WAND:
-			_maybe_identify_pickup(item, 0.30 * mage_intuition, "Arcane intuition reveals the %s.")
-
 	var rogue_intuition: int = get_talent_level("rogue_thiefs_intuition")
 	if hero_class == ConstantsData.HeroClass.ROGUE and rogue_intuition > 0:
 		if item.category == ConstantsData.ItemCategory.RING:
