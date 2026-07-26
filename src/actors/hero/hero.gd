@@ -1010,6 +1010,8 @@ func upgrade_talent(talent_id: String) -> bool:
 	if not can_upgrade_talent(talent_id):
 		return false
 	talent_levels[talent_id] = get_talent_level(talent_id) + 1
+	if talent_id == "warrior_strongman":
+		update_strongman_bonus()
 	if EventBus:
 		EventBus.hero_stats_changed.emit()
 	if MessageLog:
@@ -1017,6 +1019,24 @@ func upgrade_talent(talent_id: String) -> bool:
 		if talent != null:
 			MessageLog.add_positive("%s improved to %d." % [talent.name, talent_levels[talent_id]])
 	return true
+
+
+## Keep the Strongman talent's live strength bonus in sync. Upstream Hero.STR()
+## computes floor(STR * (0.03 + 0.05*points)) dynamically; the port bakes it
+## into str_val via a live StrongmanBuff (same contract as Ring of Might's
+## MightBuff), so this must be called after talent upgrades, base-strength
+## changes (Potion of Strength), and load.
+func update_strongman_bonus() -> void:
+	var points: int = get_talent_level("warrior_strongman")
+	var strongman: StrongmanBuff = get_buff("Strongman") as StrongmanBuff
+	if points <= 0:
+		if strongman != null:
+			remove_buff(strongman)
+		return
+	if strongman == null:
+		strongman = add_buff(StrongmanBuff.new()) as StrongmanBuff
+	if strongman != null:
+		strongman.update_bonus()
 
 
 func on_item_picked_up(item: Item) -> void:
@@ -1265,6 +1285,9 @@ func deserialize(data: Dictionary) -> void:
 		for ring_item: Variant in [belongings.ring_left, belongings.ring_right]:
 			if ring_item != null and ring_item.has_method("resolve_post_load"):
 				ring_item.resolve_post_load(self)
+	# Strongman's live strength bonus is not serialized (see StrongmanBuff);
+	# rebuild it on top of the restored base stats.
+	update_strongman_bonus()
 
 # ---------------------------------------------------------------------------
 # Damage & Death Overrides

@@ -48,6 +48,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make("warrior_runic_transference", "Runic Transference", "When the Warrior's broken seal moves to unglyphed armor, the old armor's glyph transfers with it. At +1 common and uncommon glyphs transfer, at +2 any glyph transfers.", 2, 2),
 				_make("warrior_lethal_momentum", "Lethal Momentum", "When the Warrior lands a killing blow, there is a 67%/100% chance that the attack takes no time.", 2, 2),
 				_make("warrior_hold_fast", "Hold Fast", "When the Warrior waits he gains 1-2/2-4/3-6 armor and slows the decay of combo and shielding buffs by 50%/75%/100% until he moves.", 3, 3),
+				_make("warrior_strongman", "Strongman", "The Warrior's strength is increased by 8%/13%/18% of its base value, rounded down.", 3, 3),
 			]
 		ConstantsData.HeroClass.MAGE:
 			return [

@@ -358,6 +358,8 @@ class PotionStrength extends Potion:
 		if hero == null:
 			return
 		hero.str_val += 1
+		if hero.has_method("update_strongman_bonus"):
+			hero.update_strongman_bonus()
 		if MessageLog:
 			MessageLog.add_positive("Newfound strength surges through your body!")
 		if EventBus:
