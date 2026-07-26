@@ -21,7 +21,11 @@ const SETTINGS_PATH: String = "user://settings.dat"
 # v4: Run state gains "pending_dropped_items" (SPD Dungeon.droppedItems — items
 #     that fell through a chasm/pitfall awaiting delivery on a lower depth).
 #     Additive with an empty default, so migration is a version stamp only.
-const SAVE_VERSION: int = 4
+# v5: Run state gains "limited_drops" (SPD Dungeon.LimitedDrops counters for
+#     guaranteed strength-potion/upgrade-scroll region quotas). Additive with
+#     an empty default (counts as none dropped), so migration is a version
+#     stamp only.
+const SAVE_VERSION: int = 5
 
 func _notification(what: int) -> void:
 	match what:
@@ -256,6 +260,10 @@ func _migrate_save(save: Dictionary, from_version: int) -> Dictionary:
 				# v3 -> v4: run state gains optional "pending_dropped_items"
 				# (defaults to empty on read), so no data rewrite is needed.
 				version = 4
+			4:
+				# v4 -> v5: run state gains optional "limited_drops" (defaults
+				# to empty/zero counts on read), so no data rewrite is needed.
+				version = 5
 			_:
 				push_warning("SaveManager: No migration step registered for save version %d." % version)
 				version += 1

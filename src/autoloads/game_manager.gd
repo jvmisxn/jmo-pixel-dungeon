@@ -72,6 +72,12 @@ var _level_cache: Dictionary[int, Dictionary] = {}
 ## freed/cached; LoadingScene delivers and clears each depth's list on arrival.
 var pending_dropped_items: Dictionary = {}
 
+# --- Limited Drops (upstream Dungeon.LimitedDrops counters) ---
+## Per-run counters for quota-limited level spawns: 2 potions of strength and
+## 3 scrolls of upgrade are guaranteed per 5-floor region via pos_needed()/
+## sou_needed(), matching upstream Dungeon.posNeeded()/souNeeded().
+var limited_drops: Dictionary[String, int] = {}
+
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
@@ -122,6 +128,7 @@ func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: i
 	_level_cache.clear()
 	pending_dropped_items.clear()
 	quest_flags.clear()
+	limited_drops.clear()
 
 	if seed_value < 0:
 		run_seed = randi()
@@ -616,6 +623,43 @@ func take_dropped_items(target_depth: int) -> Array:
 	return items
 
 # ---------------------------------------------------------------------------
+# Limited Drops (upstream Dungeon.posNeeded/souNeeded)
+# ---------------------------------------------------------------------------
+
+func get_limited_drop_count(key: String) -> int:
+	return limited_drops.get(key, 0)
+
+
+func count_limited_drop(key: String) -> void:
+	limited_drops[key] = get_limited_drop_count(key) + 1
+
+
+## Upstream Dungeon.posNeeded(): 2 potions of strength per 5-floor set, one
+## per floor pair (1-2 and 3-4), with a 50% roll for the earlier floor.
+func pos_needed() -> bool:
+	@warning_ignore("integer_division")
+	var pos_left_this_set: int = 2 - (get_limited_drop_count("strength_potions") - (depth / 5) * 2)
+	if pos_left_this_set <= 0:
+		return false
+	var floor_this_set: int = depth % 5
+	@warning_ignore("integer_division")
+	var target_pos_left: int = 2 - floor_this_set / 2
+	if floor_this_set % 2 == 1 and randi_range(0, 1) == 0:
+		target_pos_left -= 1
+	return target_pos_left < pos_left_this_set
+
+
+## Upstream Dungeon.souNeeded(): 3 scrolls of upgrade per 5-floor set, with a
+## scrolls-left / floors-left chance each regular floor.
+func sou_needed() -> bool:
+	@warning_ignore("integer_division")
+	var sou_left_this_set: int = 3 - (get_limited_drop_count("upgrade_scrolls") - (depth / 5) * 3)
+	if sou_left_this_set <= 0:
+		return false
+	var floor_this_set: int = depth % 5
+	return randi_range(0, 4 - floor_this_set) < sou_left_this_set
+
+# ---------------------------------------------------------------------------
 # Run State Serialization
 # ---------------------------------------------------------------------------
 
@@ -633,6 +677,7 @@ func serialize_run_state() -> Dictionary:
 		"stats": stats.duplicate(true),
 		"quest_flags": quest_flags.duplicate(true),
 		"pending_dropped_items": pending_dropped_items.duplicate(true),
+		"limited_drops": limited_drops.duplicate(true),
 		"item_appearance": ItemAppearance.serialize() if ItemAppearance else {},
 	}
 
@@ -663,6 +708,12 @@ func apply_run_state(data: Dictionary) -> void:
 			var items_list: Variant = (saved_dropped as Dictionary)[key]
 			if items_list is Array:
 				pending_dropped_items[int(key)] = (items_list as Array).duplicate(true)
+
+	limited_drops.clear()
+	var saved_limited: Variant = data.get("limited_drops", {})
+	if saved_limited is Dictionary:
+		for key: Variant in saved_limited:
+			limited_drops[str(key)] = int(saved_limited[key])
 
 	if ItemAppearance:
 		var appearance_data: Dictionary = data.get("item_appearance", {})

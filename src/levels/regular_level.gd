@@ -141,7 +141,36 @@ func _build() -> bool:
 				los_blocking[food_pos] = false
 		drop_item(food_pos, Generator.random_food())
 
+	# Original Level.create(): guaranteed region quotas — 2 potions of
+	# strength and 3 scrolls of upgrade per 5-floor set, gated by
+	# Dungeon.posNeeded()/souNeeded() and tracked by LimitedDrops counters.
+	if GameManager != null:
+		if GameManager.pos_needed():
+			GameManager.count_limited_drop("strength_potions")
+			_drop_guaranteed_item(Generator.create_item("strength"))
+		if GameManager.sou_needed():
+			GameManager.count_limited_drop("upgrade_scrolls")
+			_drop_guaranteed_item(Generator.create_item("upgrade"))
+
 	return true
+
+
+## Drop a guaranteed spawn (upstream itemsToSpawn) on a random item cell,
+## clearing high grass like the random drops do.
+func _drop_guaranteed_item(item: Item) -> void:
+	if item == null:
+		return
+	var positions: Array[int] = item_spawn_positions(1)
+	if positions.is_empty():
+		return
+	var item_pos: int = positions[0]
+	var terrain: int = map[item_pos]
+	if (terrain == ConstantsData.Terrain.HIGH_GRASS
+			or terrain == ConstantsData.Terrain.FURROWED_GRASS):
+		map[item_pos] = ConstantsData.Terrain.GRASS
+		if item_pos >= 0 and item_pos < LEN:
+			los_blocking[item_pos] = false
+	drop_item(item_pos, item)
 
 
 func _spawn_mimic_with_item(item_pos: int, item: Item, p_depth: int) -> Mimic:
