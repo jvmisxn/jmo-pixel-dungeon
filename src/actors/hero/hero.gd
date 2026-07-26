@@ -1212,9 +1212,14 @@ func can_surprise_attack() -> bool:
 func attack_proc(target_char: Char, damage: int) -> int:
 	var result: int = super.attack_proc(target_char, damage)
 
+	# Rogue Sucker Punch (upstream Talent.onAttackProc): the first surprise
+	# attack against each enemy deals points..2 bonus damage; a permanent
+	# SuckerPunchTracker on the enemy keeps it once-per-enemy.
 	var sucker_punch_level: int = get_talent_level("rogue_sucker_punch")
-	if hero_class == ConstantsData.HeroClass.ROGUE and sucker_punch_level > 0 and _pending_surprise_attack:
-		result = roundi(float(result) * (1.15 + 0.15 * sucker_punch_level))
+	if sucker_punch_level > 0 and _pending_surprise_attack \
+			and target_char is Mob and not target_char.has_buff("SuckerPunchTracker"):
+		result += randi_range(sucker_punch_level, 2)
+		target_char.add_buff(SuckerPunchTracker.new())
 
 	var patient_strike_level: int = get_talent_level("duelist_patient_strike")
 	if hero_class == ConstantsData.HeroClass.DUELIST and patient_strike_level > 0 and _patient_strike_ready:
