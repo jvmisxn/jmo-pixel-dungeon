@@ -263,7 +263,7 @@ func get_damage(lvl: int) -> Array[int]:
 ## Mage's WandEmpower (Empowering Meal) per DamageWand.damageRoll, adding
 ## dmg_boost and detaching the buff once its zaps are spent.
 func roll_zap_damage(hero: Char = null) -> int:
-	var dmg_range: Array[int] = get_damage(level)
+	var dmg_range: Array[int] = get_damage(level + _desperate_power_bonus(hero))
 	var dmg: int = Balance.normal_int_range(dmg_range[0], dmg_range[1])
 	if hero != null and hero.has_method("get_buff"):
 		var emp: Variant = hero.get_buff("WandEmpower")
@@ -273,6 +273,18 @@ func roll_zap_damage(hero: Char = null) -> int:
 			if emp.zaps_left <= 0 and hero.has_method("remove_buff_by_id"):
 				hero.remove_buff_by_id("WandEmpower")
 	return dmg
+
+## Mage Desperate Power (upstream Wand.buffedLvl): zapping a wand's last
+## charge raises its effective level by the hero's talent points (+1/+2/+3).
+## Port adaptations: zap() spends the charge before on_zap, so charges == 0
+## at damage-roll time means the charge just spent was the last one; upstream
+## applies buffedLvl to all wand effect scaling, while the port's inner
+## classes read raw level for durations/gas strength, so the bonus currently
+## affects bolt damage rolls only.
+func _desperate_power_bonus(hero: Char) -> int:
+	if hero == null or charges != 0 or not hero.has_method("get_talent_level"):
+		return 0
+	return hero.get_talent_level("mage_desperate_power")
 
 # ---------------------------------------------------------------------------
 # Equip / Unequip
