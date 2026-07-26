@@ -127,6 +127,9 @@ signal status_effect_applied(target: Variant, effect_id: String)
 ## Emitted to enter targeting mode (throw, zap). payload: item, max_range, callback
 @warning_ignore("unused_signal")
 signal enter_targeting(item: Variant, max_range: int, callback: Callable)
+## Emitted by quickslots to fire at the remembered/nearest target when possible.
+@warning_ignore("unused_signal")
+signal enter_targeting_auto(item: Variant, max_range: int, callback: Callable)
 ## Emitted to cancel targeting mode.
 @warning_ignore("unused_signal")
 signal cancel_targeting

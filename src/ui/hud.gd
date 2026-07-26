@@ -987,7 +987,10 @@ func _on_quickslot_used(_slot_index: int, item: RefCounted) -> void:
 				EventBus.request_hero_action.emit({"type": "zap_wand", "item": wand, "target_pos": cell})
 		if EventBus:
 			var max_range: int = ConstantsData.get_prop(wand, "zap_range", 8) if ConstantsData.get_prop(wand, "zap_range") else 8
-			EventBus.enter_targeting.emit(wand, max_range, zap_callback)
+			if EventBus.has_signal("enter_targeting_auto"):
+				EventBus.enter_targeting_auto.emit(wand, max_range, zap_callback)
+			else:
+				EventBus.enter_targeting.emit(wand, max_range, zap_callback)
 		return
 	if EventBus and EventBus.has_signal("request_hero_action"):
 		EventBus.request_hero_action.emit({"type": "use_item", "item": item})

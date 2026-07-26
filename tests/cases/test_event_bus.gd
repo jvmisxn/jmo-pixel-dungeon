@@ -16,7 +16,7 @@ const REQUIRED_SIGNALS: Array[String] = [
 	"level_changed", "door_opened", "trap_triggered", "gold_collected",
 	"game_saved", "game_loaded",
 	"item_picked_up", "item_used", "item_equipped", "item_unequipped",
-	"enter_targeting", "cancel_targeting", "request_hero_action",
+	"enter_targeting", "enter_targeting_auto", "cancel_targeting", "request_hero_action",
 	"boss_fight_started", "boss_damaged", "boss_defeated",
 	"badge_unlocked", "quest_updated",
 ]

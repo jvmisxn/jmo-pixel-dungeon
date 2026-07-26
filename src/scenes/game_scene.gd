@@ -148,6 +148,8 @@ var _targeting_item: Variant = null
 var _targeting_max_range: int = -1
 ## Callback to invoke with the selected cell pos when target is chosen.
 var _targeting_callback: Callable = Callable()
+## Last targeted cell. Quickslot auto-targeting prefers this when still valid.
+var _last_target_pos: int = -1
 
 # --- HUD ---
 var _hud: Variant = null
@@ -1122,6 +1124,8 @@ func _connect_signals() -> void:
 
 		if EventBus.has_signal("enter_targeting"):
 			_connect_event_bus_signal("enter_targeting", _on_enter_targeting)
+		if EventBus.has_signal("enter_targeting_auto"):
+			_connect_event_bus_signal("enter_targeting_auto", _on_enter_targeting_auto)
 		if EventBus.has_signal("cancel_targeting"):
 			_connect_event_bus_signal("cancel_targeting", _on_cancel_targeting)
 		if EventBus.has_signal("request_hero_action"):
@@ -2622,6 +2626,10 @@ func _interrupt_rest_if_needed() -> void:
 ## Enter targeting mode via signal from inventory/item windows.
 func _on_enter_targeting(item: Variant, max_range: int, callback: Callable) -> void:
 	TargetingCoordinator.enter(self, item, max_range, callback)
+
+## Enter targeting from quickslots and auto-fire when a visible target is clear.
+func _on_enter_targeting_auto(item: Variant, max_range: int, callback: Callable) -> void:
+	TargetingCoordinator.enter(self, item, max_range, callback, true)
 
 ## Cancel targeting mode via signal.
 func _on_cancel_targeting() -> void:

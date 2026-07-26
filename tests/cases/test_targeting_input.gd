@@ -23,6 +23,8 @@ class FakeScene:
 	var _awaiting_hero_input: bool = true
 	var _hero_sprites: Dictionary = {}
 	var _current_level: Variant = null
+	var _last_target_pos: int = -1
+	var hero: FakeHero = FakeHero.new()
 
 	func _cancel_targeting_mode() -> void:
 		cancelled = true
@@ -38,7 +40,7 @@ class FakeScene:
 		return 0
 
 	func _get_input_hero() -> Variant:
-		return FakeHero.new()
+		return hero
 
 	func refresh_after_turn() -> void:
 		pass
@@ -50,9 +52,36 @@ class FakeHero:
 	extends RefCounted
 
 	var actor_id: int = 1
+	var pos: int = 0
 
 	func distance_to(cell: int) -> int:
-		return 0 if cell >= 0 else 999
+		return absi(cell - pos) if cell >= 0 else 999
+
+class FakeMob:
+	extends RefCounted
+
+	var pos: int = 0
+	var is_alive: bool = true
+	var is_ally: bool = false
+
+class FakeLevel:
+	extends RefCounted
+
+	var visible: Array[bool] = []
+	var mobs: Array[Variant] = []
+	var chars: Dictionary = {}
+
+	func _init() -> void:
+		visible.resize(ConstantsData.LENGTH)
+		visible.fill(false)
+
+	func add_mob(mob: FakeMob, is_visible: bool = true) -> void:
+		mobs.append(mob)
+		chars[mob.pos] = mob
+		visible[mob.pos] = is_visible
+
+	func find_char_at(cell: int) -> Variant:
+		return chars.get(cell, null)
 
 func run(t: Object) -> void:
 	var targeting_scene := FakeScene.new()
@@ -111,4 +140,48 @@ func run(t: Object) -> void:
 	t.check(
 		valid_target_scene.resolved_cells == [0],
 		"valid targeting cell invokes the target callback"
+	)
+	t.check(
+		valid_target_scene._last_target_pos == 0,
+		"manual targeting stores the selected cell as the last target"
+	)
+
+	var auto_scene := FakeScene.new()
+	auto_scene._current_level = FakeLevel.new()
+	var far_mob := FakeMob.new()
+	far_mob.pos = 20
+	var near_mob := FakeMob.new()
+	near_mob.pos = 8
+	auto_scene._current_level.add_mob(far_mob)
+	auto_scene._current_level.add_mob(near_mob)
+	TargetingCoordinator.enter(auto_scene, RefCounted.new(), 30, auto_scene.record_target, true)
+	t.check(
+		not auto_scene._targeting_active and auto_scene.resolved_cells == [8],
+		"quickslot auto-target resolves to the nearest visible enemy"
+	)
+
+	var last_scene := FakeScene.new()
+	last_scene._current_level = FakeLevel.new()
+	var previous_mob := FakeMob.new()
+	previous_mob.pos = 18
+	var closer_mob := FakeMob.new()
+	closer_mob.pos = 6
+	last_scene._current_level.add_mob(previous_mob)
+	last_scene._current_level.add_mob(closer_mob)
+	last_scene._last_target_pos = previous_mob.pos
+	TargetingCoordinator.enter(last_scene, RefCounted.new(), 30, last_scene.record_target, true)
+	t.check(
+		last_scene.resolved_cells == [18],
+		"quickslot auto-target prefers the last valid target over a nearer mob"
+	)
+
+	var no_target_scene := FakeScene.new()
+	no_target_scene._current_level = FakeLevel.new()
+	var hidden_mob := FakeMob.new()
+	hidden_mob.pos = 12
+	no_target_scene._current_level.add_mob(hidden_mob, false)
+	TargetingCoordinator.enter(no_target_scene, RefCounted.new(), 30, no_target_scene.record_target, true)
+	t.check(
+		no_target_scene._targeting_active and no_target_scene.resolved_cells.is_empty(),
+		"quickslot auto-target falls back to manual targeting when no enemy is visible"
 	)
