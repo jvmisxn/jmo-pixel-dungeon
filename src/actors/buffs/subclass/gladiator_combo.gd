@@ -17,6 +17,8 @@ var combo_window: int = BASE_WINDOW
 ## on_damage_dealt call for the same hit can tell finisher kills apart
 ## (Lethal Defense only triggers on finisher kills, upstream Combo.doAttack).
 var _finisher_this_hit: bool = false
+## Fractional combo-decay accumulator; Hold Fast slows decay below 1/turn.
+var _decay_accum: float = 0.0
 
 func _init() -> void:
 	buff_id = "GladiatorCombo"
@@ -60,6 +62,12 @@ func _apply_lethal_defense() -> void:
 		shield.reduce_cooldown(50 * points)
 
 func on_turn() -> void:
+	# Hold Fast slows combo decay by 50/75/100% while the Warrior braces;
+	# fractional turns accumulate since the port window is integer turns.
+	_decay_accum += HoldFastBuff.decay_factor(target)
+	if _decay_accum < 1.0:
+		return
+	_decay_accum -= 1.0
 	turns_since_attack += 1
 	if turns_since_attack > combo_window:
 		if combo_count > 0:
@@ -104,6 +112,7 @@ func serialize() -> Dictionary:
 	data["combo_count"] = combo_count
 	data["turns_since_attack"] = turns_since_attack
 	data["combo_window"] = combo_window
+	data["decay_accum"] = _decay_accum
 	return data
 
 func deserialize(data: Dictionary) -> void:
@@ -111,3 +120,4 @@ func deserialize(data: Dictionary) -> void:
 	combo_count = int(data.get("combo_count", combo_count))
 	turns_since_attack = int(data.get("turns_since_attack", turns_since_attack))
 	combo_window = int(data.get("combo_window", combo_window))
+	_decay_accum = float(data.get("decay_accum", 0.0))

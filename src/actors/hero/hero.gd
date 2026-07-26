@@ -714,6 +714,13 @@ func _do_wait() -> void:
 	# Silent single-turn wait — hero does not show a message
 	if hero_class == ConstantsData.HeroClass.DUELIST and get_talent_level("duelist_patient_strike") > 0:
 		_patient_strike_ready = true
+	# Hold Fast (upstream Hero.rest): waiting braces the Warrior on this tile.
+	if get_talent_level("warrior_hold_fast") > 0:
+		var hold_fast: HoldFastBuff = get_buff("HoldFast") as HoldFastBuff
+		if hold_fast == null:
+			hold_fast = add_buff(HoldFastBuff.new()) as HoldFastBuff
+		if hold_fast != null:
+			hold_fast.hold_pos = pos
 
 
 ## Rest until full HP or interrupted. Matches original Hero.rest(boolean).
@@ -1416,6 +1423,10 @@ func dr_roll() -> int:
 	if bark_lvl > 0:
 		@warning_ignore("integer_division")
 		dr += (randi_range(0, bark_lvl) + randi_range(0, bark_lvl)) / 2
+	# Hold Fast bonus armor while braced (upstream Hero.drRoll)
+	var hold_fast: HoldFastBuff = get_buff("HoldFast") as HoldFastBuff
+	if hold_fast != null:
+		dr += hold_fast.armor_bonus()
 	# Use equipped armor's dr_roll if available
 	if belongings:
 		var equipped_armor: Variant = belongings.get_equipped_armor()

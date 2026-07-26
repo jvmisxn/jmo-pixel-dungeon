@@ -39,7 +39,8 @@ func absorb_damage(dmg: int) -> int:
 func on_turn() -> void:
 	# Upstream Barrier.act(): decay is fractional, min(1, shielding/20) per turn,
 	# so small barriers persist for several turns instead of losing 1 flat per turn.
-	partial_lost_shield += minf(1.0, float(shield_amount) / 20.0)
+	# Hold Fast slows shielding decay by 50/75/100% while the Warrior braces.
+	partial_lost_shield += minf(1.0, float(shield_amount) / 20.0) * HoldFastBuff.decay_factor(target)
 	if partial_lost_shield >= 1.0:
 		partial_lost_shield = 0.0
 		shield_amount -= 1
