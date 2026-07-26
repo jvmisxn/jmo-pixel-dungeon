@@ -355,6 +355,20 @@ func update_fov(hero_pos: int, view_dist: int = -1) -> void:
 								visible[n] = true
 						visible[mob_pos] = true
 
+		# CharAwareness marks (Arcane Vision): reveal watched mobs through
+		# walls (original heroMindFov CharAwareness branch, buff inverted
+		# onto the watched mob — see CharAwareness).
+		for mob: Variant in mobs:
+			if mob is Object and mob.get("is_alive") == true \
+					and mob.has_method("has_buff") and mob.has_buff("CharAwareness"):
+				var aware_pos: int = mob.get("pos")
+				if aware_pos >= 0 and aware_pos < LEN:
+					for dir: int in ConstantsData.DIRS_8:
+						var n: int = aware_pos + dir
+						if n >= 0 and n < LEN:
+							visible[n] = true
+					visible[aware_pos] = true
+
 		# Awareness buff: reveal heap neighborhoods (original Awareness buff)
 		if hero.has_buff("Awareness"):
 			for heap: Dictionary in heaps:
