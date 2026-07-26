@@ -172,6 +172,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_generator_category_weights.gd",
 	"res://tests/cases/test_normal_int_range.gd",
 	"res://tests/cases/test_limited_drops.gd",
+	"res://tests/cases/test_badges_registry.gd",
 ]
 
 var _checks: int = 0
