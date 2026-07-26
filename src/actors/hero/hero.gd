@@ -1099,6 +1099,14 @@ func on_food_eaten(_food: Food, hunger_before: float, hp_before: int, hp_max_bef
 			if MessageLog and barrier != null:
 				MessageLog.add_positive("A hearty meal fortifies you.")
 
+	# Iron Stomach (upstream Talent.onFoodEaten): eating grants a
+	# WarriorFoodImmunity buff for the eating cooldown; take_damage quarters
+	# (+1) or negates (+2) damage while it lasts. Port eating takes 1 turn.
+	var iron_stomach: int = get_talent_level("warrior_iron_stomach")
+	if hero_class == ConstantsData.HeroClass.WARRIOR and iron_stomach > 0:
+		add_buff(WarriorFoodImmunity.new())
+		changed_state = true
+
 	var mage_meal: int = get_talent_level("mage_empowering_meal")
 	if hero_class == ConstantsData.HeroClass.MAGE and mage_meal > 0:
 		var recharge: Recharging = Recharging.new()
@@ -1320,6 +1328,14 @@ func deserialize(data: Dictionary) -> void:
 
 ## Override take_damage to emit hero_stats_changed so the HP bar updates.
 func take_damage(amount: int, source: Variant = null) -> int:
+	# Iron Stomach (upstream Hero.damage WarriorFoodImmunity check): while the
+	# eating-turn immunity is active, damage is quartered at +1 and negated at +2.
+	if amount > 0 and has_buff("WarriorFoodImmunity"):
+		var iron_stomach: int = get_talent_level("warrior_iron_stomach")
+		if iron_stomach == 1:
+			amount = roundi(float(amount) / 4.0)
+		elif iron_stomach >= 2:
+			amount = 0
 	var hp_before: int = hp
 	var actual: int = super.take_damage(amount, source)
 	if actual > 0:
