@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-26
+
+- Tags: talents, warrior, combat, turn-economy, source-fidelity, tests
+- Implemented Warrior Lethal Momentum (T2, 2 points) — first missing-upstream-talent add to the Warrior roster (previous slices only flipped inert slots; the port's class lists are still a subset of upstream's T1/T2). Source: upstream `Mob.die` (master, verified 2026-07-26): killing cause `hero || Weapon || Weapon.Enchantment` rolls `Random.Float() < 0.34 + 0.33*points` (67%/100% at +1/+2) → `Buff.affect(hero, LethalMomentumTracker, 0f)`; `Hero.attackDelay` head detaches the tracker and returns 0, so the killing blow itself costs no time (the tracker attaches mid-attack, before the delay is spent). Port: new `LethalMomentumTracker` buff (hidden, duration 1.0 ≈ upstream's 0f FlavourBuff one-action window since consumption happens inside the same attack action), `Mob._lethal_momentum_on_kill(source, forced_roll)` called from `_on_death` (gates on the killing source being a hero with points — covers melee; port thrown kills also pass the hero as source), and a consume-first head in `Hero._get_attack_delay` (no talent recheck, matching upstream). Talent registered as Warrior T2 `_make(...)`; not a save-contract change (buff persistence is script-path-generic). Tests: new `test_lethal_momentum.gd` (12 checks, registered): 0.66/0.67 threshold at +1, 0.99 success at +2, zero-points/null-source/mob-source gating, delay 0 + tracker consumed + next attack normal, live-randf determinism at +2 (chance 1.0). `LethalMomentumTracker` added to `test_buff_descriptions.gd` internal_ids (hidden tracker, same as ProtectiveShadowsTracker). `[ENGINE]` ask: Warrior playtest — at +2 every killing blow should be free (kill then immediately act again). `git diff --check` clean; gdparse/gdlint unavailable — Godot import + full headless suite is the parse gate (3912 checks, 0 failures), incl. fragile `hero.gd`/`mob.gd` (small hand-edits).
+
 ## 2026-07-25
 
 - Tags: combat, wands, weapons, rng, source-fidelity, tests

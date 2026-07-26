@@ -561,6 +561,29 @@ func _necromancers_minions_on_kill(forced_roll: float = -1.0) -> Variant:
 		MessageLog.add("A corrupted wraith rises from the %s's remains!" % mob_name)
 	return wraith
 
+## Warrior Lethal Momentum (upstream Mob.die): when the killing blow comes
+## from a hero with the talent, a 34% + 33%-per-point roll (67%/100% at
+## +1/+2) attaches a LethalMomentumTracker so the blow costs no time — the
+## tracker is consumed in Hero._get_attack_delay before the attack's time is
+## spent. [forced_roll] in [0,1) substitutes for the randf() roll so tests
+## stay deterministic. Returns whether the tracker was attached.
+func _lethal_momentum_on_kill(source: Variant, forced_roll: float = -1.0) -> bool:
+	if not (source is Char):
+		return false
+	var hero: Char = source as Char
+	if not hero.is_hero or not hero.is_alive:
+		return false
+	var points: int = 0
+	if hero.has_method("get_talent_level"):
+		points = hero.get_talent_level("warrior_lethal_momentum")
+	if points <= 0:
+		return false
+	var roll: float = forced_roll if forced_roll >= 0.0 else randf()
+	if roll >= 0.34 + 0.33 * float(points):
+		return false
+	hero.add_buff(LethalMomentumTracker.new())
+	return true
+
 ## Pick the corpse cell for a raised wraith, or an adjacent free passable cell.
 ## The dying mob still occupies [pos], so it does not block its own corpse cell.
 func _find_minion_spawn_cell() -> int:
@@ -644,6 +667,7 @@ func on_attack_miss(target_char: Char) -> void:
 func _on_death(_source: Variant) -> void:
 	_soul_eater_on_kill()
 	_necromancers_minions_on_kill()
+	_lethal_momentum_on_kill(_source)
 	# Drop loot
 	if is_boss():
 		_drop_skeleton_key()

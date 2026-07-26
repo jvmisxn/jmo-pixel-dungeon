@@ -1355,6 +1355,11 @@ func is_sighted() -> bool:
 ## Original: Hero.attackDelay() = weapon.speedFactor(hero), default 1.0.
 ## Fast weapons like dagger have < 1.0, slow weapons like glaive > 1.0.
 func _get_attack_delay() -> float:
+	# Warrior Lethal Momentum (upstream Hero.attackDelay): a pending tracker
+	# from a killing blow is consumed so the attack takes no time.
+	if has_buff("LethalMomentumTracker"):
+		remove_buff_by_id("LethalMomentumTracker")
+		return 0.0
 	var delay: float = 1.0
 	if belongings:
 		var equipped_weapon: Variant = belongings.get_equipped_weapon()
