@@ -213,10 +213,11 @@ func _cursed_zap(hero: Char) -> void:
 func get_damage(lvl: int) -> Array[int]:
 	return [1 + lvl, 2 + lvl * 2] as Array[int]
 
-## Roll damage for a zap using get_damage().
+## Roll damage for a zap using get_damage(). Upstream DamageWand.damageRoll
+## uses Random.NormalIntRange(min, max) — a bell curve, not a uniform roll.
 func roll_zap_damage() -> int:
 	var dmg_range: Array[int] = get_damage(level)
-	return randi_range(dmg_range[0], dmg_range[1])
+	return Balance.normal_int_range(dmg_range[0], dmg_range[1])
 
 # ---------------------------------------------------------------------------
 # Equip / Unequip

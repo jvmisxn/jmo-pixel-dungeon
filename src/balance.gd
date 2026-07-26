@@ -12,6 +12,23 @@ extends RefCounted
 ## this file directly.
 
 # =============================================================================
+# 0. SHARED RANDOM HELPERS
+# =============================================================================
+
+
+## Upstream watabou Random.NormalIntRange(min, max):
+##   min + (int)((Float() + Float()) * (max - min + 1) / 2f)
+## Sum of two uniform floats gives a triangular ("bell-ish") distribution over
+## [min, max] peaked at the middle. Used upstream for damage rolls, DR rolls,
+## excess-STR bonuses, and wand bolt damage. Godot's randf() is inclusive of
+## 1.0 (upstream Float() is exclusive), so clamp the vanishingly rare max+1.
+static func normal_int_range(min_val: int, max_val: int) -> int:
+	if max_val <= min_val:
+		return min_val
+	var roll: int = min_val + int((randf() + randf()) * float(max_val - min_val + 1) / 2.0)
+	return mini(roll, max_val)
+
+# =============================================================================
 # 1. EXPERIENCE & LEVELING
 # =============================================================================
 

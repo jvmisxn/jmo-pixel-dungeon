@@ -74,15 +74,11 @@ func evasion() -> int:
 			eva = b.modify_evasion(eva)
 	return eva
 
-## Roll damage for an attack. Uses triangular distribution approximating SPD's
-## Random.NormalIntRange(min, max) — a bell curve favoring the middle, matching
-## the original Mob.damageRoll(). dr_roll() and Weapon.damage_roll() share this shape.
+## Roll damage for an attack. Uses SPD's Random.NormalIntRange(min, max) — a
+## bell curve favoring the middle, matching the original Mob.damageRoll().
+## dr_roll() and Weapon.damage_roll() share this shape via the same helper.
 func damage_roll() -> int:
-	# Triangular distribution: average of two uniform rolls approximates NormalIntRange
-	var roll_a: int = randi_range(damage_roll_min, damage_roll_max)
-	var roll_b: int = randi_range(damage_roll_min, damage_roll_max)
-	@warning_ignore("integer_division")
-	var dmg: int = (roll_a + roll_b) / 2
+	var dmg: int = Balance.normal_int_range(damage_roll_min, damage_roll_max)
 	for b: Node in _buffs:
 		if b.has_method("modify_damage"):
 			dmg = b.modify_damage(dmg)
@@ -251,8 +247,8 @@ func defense_proc(_enemy: Char, damage: int) -> int:
 func attack_proc(_enemy: Char, damage: int) -> int:
 	return damage
 
-## Roll damage reduction from armor. Uses triangular distribution approximating
-## SPD's NormalIntRange(0, armor) which is a bell curve favoring the middle.
+## Roll damage reduction from armor. Uses SPD's NormalIntRange(0, armor) — a
+## bell curve favoring the middle.
 ## Original Char.drRoll() also includes Barkskin level.
 func dr_roll() -> int:
 	var dr: int = 0
@@ -261,13 +257,11 @@ func dr_roll() -> int:
 	# Uses static current_level() which takes max across all Barkskin instances
 	var bark_lvl: int = Barkskin.current_level(self)
 	if bark_lvl > 0:
-		# NormalIntRange(0, barkskin_level) approximated by triangular
-		dr += int((randi_range(0, bark_lvl) + randi_range(0, bark_lvl)) / 2.0)
+		dr += Balance.normal_int_range(0, bark_lvl)
 
 	var armor: int = effective_armor()
 	if armor > 0:
-		# Triangular distribution: average of two uniform rolls approximates NormalIntRange
-		dr += int((randi_range(0, armor) + randi_range(0, armor)) / 2.0)
+		dr += Balance.normal_int_range(0, armor)
 
 	return dr
 

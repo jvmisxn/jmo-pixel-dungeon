@@ -67,29 +67,22 @@ func _damage_range_for_level(lvl: int) -> Array[int]:
 
 	return [final_min, final_max]
 
-## Roll weapon damage using triangular distribution (NormalIntRange approximation).
+## Roll weapon damage using SPD's Random.NormalIntRange (bell curve).
 ## Includes augment scaling and excess STR bonus. Called by Hero.damage_roll().
 ## Matches original MeleeWeapon.damageRoll(owner).
 func damage_roll(owner: Variant = null) -> int:
 	return _roll_from_range(get_damage_range(), owner)
 
-## Roll a triangular damage value from a [min, max] range plus the wielder's
-## excess-STR bonus. Shared by melee and missile damage paths.
+## Roll a NormalIntRange damage value from a [min, max] range plus the
+## wielder's excess-STR bonus. Shared by melee and missile damage paths.
 func _roll_from_range(dmg_range: Array[int], owner: Variant) -> int:
-	# Triangular distribution approximating NormalIntRange(min, max)
-	var roll_a: int = randi_range(dmg_range[0], dmg_range[1])
-	var roll_b: int = randi_range(dmg_range[0], dmg_range[1])
-	@warning_ignore("integer_division")
-	var dmg: int = (roll_a + roll_b) / 2
+	var dmg: int = Balance.normal_int_range(dmg_range[0], dmg_range[1])
 
 	# Excess STR bonus: NormalIntRange(0, excessSTR) added to damage
 	if owner != null and owner.get("str_val") != null:
 		var excess_str: int = owner.str_val - get_str_requirement()
 		if excess_str > 0:
-			var str_a: int = randi_range(0, excess_str)
-			var str_b: int = randi_range(0, excess_str)
-			@warning_ignore("integer_division")
-			dmg += (str_a + str_b) / 2
+			dmg += Balance.normal_int_range(0, excess_str)
 
 	return maxi(0, dmg)
 
