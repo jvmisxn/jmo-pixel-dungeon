@@ -99,6 +99,7 @@ func zap(hero: Char, target_pos: int) -> void:
 	if cursed_effect or (cursed and randf() < 0.35):
 		_cursed_zap(hero)
 		spend_charge()
+		_lingering_magic_proc(hero)
 		_use_for_identification()
 		return
 	# Build trajectory via Ballistica
@@ -109,12 +110,23 @@ func zap(hero: Char, target_pos: int) -> void:
 		return
 	spend_charge()
 	on_zap(hero, path)
+	_lingering_magic_proc(hero)
 	_warlock_wand_proc(hero, path)
 	_use_for_identification()
 	if MessageLog:
 		MessageLog.add("You zap the %s." % item_name)
 	if EventBus:
 		EventBus.item_used.emit(get_display_name())
+
+## Mage Lingering Magic (upstream Wand.wandUsed tail): zapping a wand or the
+## staff refreshes a 5-turn LingeringMagicTracker; Hero.attack_proc consumes
+## it for IntRange(points, 2) bonus physical damage.
+func _lingering_magic_proc(hero: Char) -> void:
+	if hero == null or not hero.has_method("get_talent_level"):
+		return
+	if hero.get_talent_level("mage_lingering_magic") <= 0:
+		return
+	hero.add_buff(LingeringMagicTracker.new())
 
 ## Warlock subclass wand proc (upstream Wand.wandProc): each zap has a chance
 ## to soul mark the character the bolt stops on. Chance mirrors upstream:
