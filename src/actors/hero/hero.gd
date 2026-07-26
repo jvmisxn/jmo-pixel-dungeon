@@ -1115,10 +1115,21 @@ func on_food_eaten(_food: Food, hunger_before: float, hp_before: int, hp_max_bef
 		add_buff(WarriorFoodImmunity.new())
 		changed_state = true
 
+	# Empowering Meal (upstream Talent.onFoodEaten): eating grants 1+points
+	# (2/3) bonus damage on the next 3 damage-wand zaps via WandEmpower.
 	var mage_meal: int = get_talent_level("mage_empowering_meal")
 	if hero_class == ConstantsData.HeroClass.MAGE and mage_meal > 0:
+		var emp: WandEmpower = WandEmpower.new()
+		emp.set_boost(1 + mage_meal, 3)
+		add_buff(emp)
+		changed_state = true
+
+	# Energizing Meal (upstream Talent.onFoodEaten): eating grants
+	# 2+3*points (5/8) turns of Recharging.
+	var energizing_meal: int = get_talent_level("mage_energizing_meal")
+	if hero_class == ConstantsData.HeroClass.MAGE and energizing_meal > 0:
 		var recharge: Recharging = Recharging.new()
-		recharge.set_duration(4.0 + 4.0 * mage_meal)
+		recharge.set_duration(2.0 + 3.0 * energizing_meal)
 		add_buff(recharge)
 		changed_state = true
 

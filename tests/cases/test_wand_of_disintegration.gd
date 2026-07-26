@@ -21,7 +21,7 @@ class _FixedDisintegration:
 
 	var fixed_damage: int = 20
 
-	func roll_zap_damage() -> int:
+	func roll_zap_damage(_hero: Char = null) -> int:
 		return fixed_damage
 
 class _FixedArcaneArmor:

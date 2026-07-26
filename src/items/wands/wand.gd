@@ -215,9 +215,20 @@ func get_damage(lvl: int) -> Array[int]:
 
 ## Roll damage for a zap using get_damage(). Upstream DamageWand.damageRoll
 ## uses Random.NormalIntRange(min, max) — a bell curve, not a uniform roll.
-func roll_zap_damage() -> int:
+## Pass the zapping hero from damage-wand rolls only: upstream consumes the
+## Mage's WandEmpower (Empowering Meal) per DamageWand.damageRoll, adding
+## dmg_boost and detaching the buff once its zaps are spent.
+func roll_zap_damage(hero: Char = null) -> int:
 	var dmg_range: Array[int] = get_damage(level)
-	return Balance.normal_int_range(dmg_range[0], dmg_range[1])
+	var dmg: int = Balance.normal_int_range(dmg_range[0], dmg_range[1])
+	if hero != null and hero.has_method("get_buff"):
+		var emp: Variant = hero.get_buff("WandEmpower")
+		if emp != null:
+			dmg += emp.dmg_boost
+			emp.zaps_left -= 1
+			if emp.zaps_left <= 0 and hero.has_method("remove_buff_by_id"):
+				hero.remove_buff_by_id("WandEmpower")
+	return dmg
 
 # ---------------------------------------------------------------------------
 # Equip / Unequip
@@ -390,7 +401,7 @@ class WandOfMagicMissile extends Wand:
 		if path.is_empty():
 			return
 		var target_pos: int = path[path.size() - 1]
-		var dmg: int = roll_zap_damage()
+		var dmg: int = roll_zap_damage(hero)
 		_hit_char_at(hero, target_pos, dmg)
 
 	func _hit_char_at(hero: Char, pos: int, dmg: int) -> void:
@@ -428,7 +439,7 @@ class WandOfFireBolt extends Wand:
 		if path.is_empty():
 			return
 		var target_pos: int = path[path.size() - 1]
-		var dmg: int = roll_zap_damage()
+		var dmg: int = roll_zap_damage(hero)
 		var lvl: Variant = hero.get("level") if hero != null else null
 		if lvl == null or not lvl.has_method("find_char_at"):
 			return
@@ -467,7 +478,7 @@ class WandOfFrost extends Wand:
 		if path.is_empty():
 			return
 		var target_pos: int = path[path.size() - 1]
-		var dmg: int = roll_zap_damage()
+		var dmg: int = roll_zap_damage(hero)
 		var lvl: Variant = hero.get("level") if hero != null else null
 		if lvl == null or not lvl.has_method("find_char_at"):
 			return
@@ -564,7 +575,7 @@ class WandOfLightning extends Wand:
 			if ch == null or not ch.is_alive:
 				continue
 			# SPD rolls damage fresh for each affected target.
-			var base_roll: float = float(roll_zap_damage())
+			var base_roll: float = float(roll_zap_damage(hero))
 			if ch == hero:
 				# The caster is only caught when the chain reaches them (adjacent,
 				# or farther through water) and then takes half damage.
@@ -687,7 +698,7 @@ class WandOfDisintegration extends Wand:
 		var beam_path: Array[int] = Ballistica.cast_line(
 			hero_pos, target_pos, _make_open_passable(), Ballistica.STOP_TARGET)
 		# Damage every character along the entire beam
-		var base_dmg: int = roll_zap_damage()
+		var base_dmg: int = roll_zap_damage(hero)
 		# Damage increases with beam length (2% per cell)
 		var distance_bonus: float = 1.0 + 0.02 * float(beam_path.size())
 		var total_dmg: int = int(float(base_dmg) * distance_bonus)
@@ -767,7 +778,7 @@ class WandOfLivingEarth extends Wand:
 		if path.is_empty():
 			return
 		var target_pos: int = path[path.size() - 1]
-		var dmg: int = roll_zap_damage()
+		var dmg: int = roll_zap_damage(hero)
 		var lvl: Variant = hero.get("level") if hero != null else null
 		if lvl != null and lvl.has_method("find_char_at"):
 			var target_char: Variant = lvl.find_char_at(target_pos)
@@ -815,7 +826,7 @@ class WandOfBlastWave extends Wand:
 		if path.is_empty():
 			return
 		var target_pos: int = path[path.size() - 1]
-		var dmg: int = roll_zap_damage()
+		var dmg: int = roll_zap_damage(hero)
 		var lvl: Variant = hero.get("level") if hero != null else null
 		if lvl == null or not lvl.has_method("find_char_at"):
 			return
@@ -903,7 +914,7 @@ class WandOfPrismaticLight extends Wand:
 			var target_char: Variant = lvl.find_char_at(cell_pos)
 			if target_char == null or not target_char.has_method("take_damage"):
 				continue
-			var dmg: int = roll_zap_damage()
+			var dmg: int = roll_zap_damage(hero)
 			# Bonus damage vs undead/demonic mobs
 			if target_char.has_method("get") and target_char.get("mob_type") != null:
 				var mob_type: Variant = target_char.mob_type

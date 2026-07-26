@@ -39,7 +39,7 @@ class _FakeLevel extends RefCounted:
 
 ## Deterministic damage roll so multiplier math is exact.
 class _FixedLightning extends Wand.WandOfLightning:
-	func roll_zap_damage() -> int:
+	func roll_zap_damage(_hero: Char = null) -> int:
 		return 100
 
 func run(t: Object) -> void:
