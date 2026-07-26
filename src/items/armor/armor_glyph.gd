@@ -13,6 +13,16 @@ var color: Color = Color.WHITE
 ## True for curse glyphs (upstream Glyph.curse()); they weakly curse the armor.
 var is_curse: bool = false
 
+## Upstream Armor.Glyph rarity buckets (common/uncommon; everything else is
+## rare or a curse). Camouflage is unported. Used by Runic Transference:
+## +1 transfers only common/uncommon glyphs, +2 transfers any glyph.
+const COMMON_IDS: Array[String] = ["obfuscation", "swiftness", "viscosity", "potential"]
+const UNCOMMON_IDS: Array[String] = ["brimstone", "stone", "entanglement", "repulsion", "flow"]
+
+## Original: BrokenSeal.canTransferGlyph() rarity gate.
+func is_common_or_uncommon() -> bool:
+	return glyph_id in COMMON_IDS or glyph_id in UNCOMMON_IDS
+
 # ---------------------------------------------------------------------------
 # Visual Effect Emission
 # ---------------------------------------------------------------------------

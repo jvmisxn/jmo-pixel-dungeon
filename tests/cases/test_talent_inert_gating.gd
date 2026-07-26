@@ -17,7 +17,7 @@ func _make_warrior() -> Hero:
 
 func _test_registry_flags(t: Object) -> void:
 	var runic: TalentData.TalentInfo = TalentData.get_talent(ConstantsData.HeroClass.WARRIOR, "warrior_runic_transference")
-	t.check(runic != null and not runic.implemented, "Runic Transference is flagged unimplemented")
+	t.check(runic != null and runic.implemented, "Runic Transference is flagged implemented")
 	var iron_will: TalentData.TalentInfo = TalentData.get_talent(ConstantsData.HeroClass.WARRIOR, "warrior_iron_will")
 	t.check(iron_will != null and iron_will.implemented, "Iron Will is flagged implemented")
 	var duelist_barrier: TalentData.TalentInfo = TalentData.get_talent(ConstantsData.HeroClass.DUELIST, "duelist_aggressive_barrier")
@@ -38,12 +38,15 @@ func _test_registry_flags(t: Object) -> void:
 				t.check(not talent.implemented, "Subclass talent %s is flagged unimplemented" % talent.id)
 
 func _test_cannot_upgrade_inert_talent(t: Object) -> void:
-	var hero := _make_warrior()
-	t.check(not hero.can_upgrade_talent("warrior_runic_transference"), "Inert talent cannot be upgraded even with points available")
+	var hero := Hero.new()
+	hero.init_class(ConstantsData.HeroClass.DUELIST)
+	hero.hero_level = 13
+	hero.talent_points_available = 2
+	t.check(not hero.can_upgrade_talent("duelist_aggressive_barrier"), "Inert talent cannot be upgraded even with points available")
 	var before: int = hero.talent_points_available
-	t.check(not hero.upgrade_talent("warrior_runic_transference"), "upgrade_talent refuses inert talents")
+	t.check(not hero.upgrade_talent("duelist_aggressive_barrier"), "upgrade_talent refuses inert talents")
 	t.check(hero.talent_points_available == before, "No point is consumed by a refused inert upgrade")
-	t.check(hero.get_talent_level("warrior_runic_transference") == 0, "Inert talent level stays at 0")
+	t.check(hero.get_talent_level("duelist_aggressive_barrier") == 0, "Inert talent level stays at 0")
 	hero.free()
 
 func _test_implemented_talent_still_upgrades(t: Object) -> void:

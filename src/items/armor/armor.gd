@@ -219,7 +219,8 @@ func has_glyph() -> bool:
 func has_seal() -> bool:
 	return seal_attached
 
-## Original: Armor.affixSeal(). Seal upgrade/glyph transfer is not ported yet.
+## Original: Armor.affixSeal(). Seal upgrades are not ported; Runic
+## Transference glyph transfer lives in Belongings._transfer_seal_glyph().
 func affix_seal() -> void:
 	seal_attached = true
 

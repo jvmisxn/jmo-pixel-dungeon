@@ -172,12 +172,32 @@ func equip_armor(new_armor: Item) -> Item:
 			and not (new_armor as Armor).has_seal():
 		(old as Armor).detach_seal()
 		(new_armor as Armor).affix_seal()
+		_transfer_seal_glyph(old as Armor, new_armor as Armor)
 	armor = new_armor
 	if new_armor and new_armor.has_method("on_equip"):
 		new_armor.on_equip(owner)
 	if old and old.has_method("on_unequip"):
 		old.on_unequip(owner)
 	return old
+
+## Original: BrokenSeal.canTransferGlyph() + Armor.detachSeal()/affixSeal() —
+## with Runic Transference the transferring seal carries the old armor's glyph
+## onto the new armor (+1: common/uncommon glyphs only, +2: any glyph,
+## including curses). Port adaptation: the seal moves automatically at equip
+## time, so instead of upstream's overwrite-with-confirmation the glyph only
+## moves when the new armor is unglyphed; otherwise both armors keep theirs.
+func _transfer_seal_glyph(old_armor: Armor, new_armor: Armor) -> void:
+	if old_armor.glyph == null or new_armor.glyph != null:
+		return
+	var points: int = 0
+	if owner != null and owner.has_method("get_talent_level"):
+		points = owner.get_talent_level("warrior_runic_transference")
+	if points <= 0:
+		return
+	if points < 2 and not old_armor.glyph.is_common_or_uncommon():
+		return
+	new_armor.inscribe(old_armor.glyph)
+	old_armor.erase_glyph()
 
 ## Equip artifact. Returns the previously equipped artifact (or null).
 func equip_artifact(new_artifact: Item) -> Item:
