@@ -111,6 +111,7 @@ func zap(hero: Char, target_pos: int) -> void:
 	spend_charge()
 	on_zap(hero, path)
 	_lingering_magic_proc(hero)
+	_arcane_vision_proc(hero, path)
 	_warlock_wand_proc(hero, path)
 	_use_for_identification(hero)
 	if MessageLog:
@@ -127,6 +128,31 @@ func _lingering_magic_proc(hero: Char) -> void:
 	if hero.get_talent_level("mage_lingering_magic") <= 0:
 		return
 	hero.add_buff(LingeringMagicTracker.new())
+
+## Mage Arcane Vision (upstream Wand.wandProc head): zapping a character marks
+## it with CharAwareness for 5 + 5*points turns (10/15), letting the Mage see
+## it through walls. Upstream attaches the buff to the hero keyed by actor id;
+## the port marks the target character instead (see CharAwareness). Adaptation:
+## like the warlock proc below, only the bolt's stop cell is checked.
+func _arcane_vision_proc(hero: Char, path: Array[int]) -> void:
+	if hero == null or path.is_empty() or not hero.has_method("get_talent_level"):
+		return
+	var points: int = hero.get_talent_level("mage_arcane_vision")
+	if points <= 0:
+		return
+	var lvl: Variant = hero.get("level")
+	if lvl == null or not lvl.has_method("find_char_at"):
+		return
+	var target_char: Variant = lvl.find_char_at(path[path.size() - 1])
+	if target_char == null or target_char == hero or not target_char.is_alive:
+		return
+	if not target_char.has_method("add_buff"):
+		return
+	var awareness: CharAwareness = CharAwareness.new()
+	var dur: float = 5.0 + 5.0 * float(points)
+	awareness.duration = dur
+	awareness.time_left = dur
+	target_char.add_buff(awareness)
 
 ## Warlock subclass wand proc (upstream Wand.wandProc): each zap has a chance
 ## to soul mark the character the bolt stops on. Chance mirrors upstream:

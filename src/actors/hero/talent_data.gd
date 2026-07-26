@@ -62,6 +62,9 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make("mage_lingering_magic", "Lingering Magic", "When the Mage zaps with a wand or staff, his next physical attack deals 1-2/2 bonus damage.", 2, 1),
 				_make("mage_backup_barrier", "Backup Barrier", "Crossing below half health triggers an emergency barrier once until you recover.", 2, 1),
 				_make("mage_energizing_meal", "Energizing Meal", "Eating food grants the Mage 5/8 turns of Recharging.", 2, 2),
+				_make_inert("mage_inscribed_power", "Inscribed Power", "Groundwork slot: reading a scroll grants bonus wand levels for a few turns (ScrollEmpower buff not ported yet).", 2, 2),
+				_make_inert("mage_wand_preservation", "Wand Preservation", "Groundwork slot: a wand consumed to imbue the Mage's staff has a chance to be preserved (staff imbue flow not ported yet).", 2, 2),
+				_make("mage_arcane_vision", "Arcane Vision", "When the Mage zaps a character with a wand, he can see that character for 10/15 turns, even through walls.", 2, 2),
 				_make("mage_shield_battery", "Shield Battery", "The Mage can zap a wand at himself to convert all of its charges into a barrier of 4% max HP per charge, 6% at +2.", 2, 2),
 			]
 		ConstantsData.HeroClass.ROGUE:
