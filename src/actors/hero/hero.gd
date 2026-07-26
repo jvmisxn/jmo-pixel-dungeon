@@ -20,7 +20,6 @@ var hero_subclass: int = ConstantsData.HeroSubclass.NONE
 var hero_level: int = 1
 var xp: int = 0
 var xp_to_next: int = 10  # 5 + level * 5
-var talent_points_available: int = 0
 var talent_levels: Dictionary[String, int] = {}
 var belongings: Belongings = null
 
@@ -74,7 +73,6 @@ func init_class(chosen_class: int) -> void:
 	hero_level = 1
 	xp = 0
 	xp_to_next = ConstantsData.xp_for_level(1)
-	talent_points_available = 0
 	talent_levels.clear()
 	_pending_surprise_attack = false
 	_patient_strike_ready = false
@@ -914,7 +912,6 @@ func earn_xp(amount: int) -> void:
 		xp -= xp_to_next
 		hero_level += 1
 		xp_to_next = ConstantsData.xp_for_level(hero_level)
-		talent_points_available += 1
 
 		# Level up bonuses: +5 HP, +1 attack, +1 defense
 		# Original updateHT(true): HP += max(newHT - oldHT, 0); HP = min(HP, HT)
@@ -956,9 +953,41 @@ func get_talents() -> Array[TalentData.TalentInfo]:
 func get_talent_level(talent_id: String) -> int:
 	return talent_levels.get(talent_id, 0)
 
+## Upstream Hero.talentPointsSpent: total points invested in one tier.
+func talent_points_spent(tier: int) -> int:
+	var total: int = 0
+	for talent: TalentData.TalentInfo in get_talents():
+		if talent.tier == tier:
+			total += get_talent_level(talent.id)
+	return total
+
+## Upstream Hero.talentPointsAvailable: per-tier point buckets. Each tier earns
+## one point per hero level inside its own level band (2-6 / 7-12 / 13-20 /
+## 21-30), minus points already spent in that tier. Tier 3 requires a subclass;
+## tier 4 requires an armor ability, which the port does not have yet.
+func talent_points_available_for(tier: int) -> int:
+	if tier < 1 or tier > 3:
+		return 0
+	if hero_level < TalentData.tier_unlock_level(tier) - 1:
+		return 0
+	if tier == 3 and hero_subclass == ConstantsData.HeroSubclass.NONE:
+		return 0
+	var tier_start: int = TalentData.tier_unlock_level(tier)
+	var tier_end: int = TalentData.tier_unlock_level(tier + 1)
+	var earned: int = 0
+	if hero_level >= tier_end:
+		earned = tier_end - tier_start
+	else:
+		earned = 1 + hero_level - tier_start
+	return maxi(0, earned - talent_points_spent(tier))
+
+func total_talent_points_available() -> int:
+	var total: int = 0
+	for tier: int in range(1, 5):
+		total += talent_points_available_for(tier)
+	return total
+
 func can_upgrade_talent(talent_id: String) -> bool:
-	if talent_points_available <= 0:
-		return false
 	var talent: TalentData.TalentInfo = TalentData.get_talent(hero_class, talent_id, hero_subclass)
 	if talent == null:
 		return false
@@ -966,13 +995,14 @@ func can_upgrade_talent(talent_id: String) -> bool:
 		return false
 	if hero_level < TalentData.tier_unlock_level(talent.tier):
 		return false
+	if talent_points_available_for(talent.tier) <= 0:
+		return false
 	return get_talent_level(talent_id) < talent.max_points
 
 func upgrade_talent(talent_id: String) -> bool:
 	if not can_upgrade_talent(talent_id):
 		return false
 	talent_levels[talent_id] = get_talent_level(talent_id) + 1
-	talent_points_available -= 1
 	if EventBus:
 		EventBus.hero_stats_changed.emit()
 	if MessageLog:
@@ -1174,7 +1204,6 @@ func serialize() -> Dictionary:
 	data["hero_level"] = hero_level
 	data["xp"] = xp
 	data["xp_to_next"] = xp_to_next
-	data["talent_points_available"] = talent_points_available
 	data["talent_levels"] = talent_levels.duplicate(true)
 	data["hero_name"] = hero_name
 	data["owner_peer_id"] = owner_peer_id
@@ -1194,7 +1223,8 @@ func deserialize(data: Dictionary) -> void:
 	hero_level = data.get("hero_level", 1)
 	xp = data.get("xp", 0)
 	xp_to_next = data.get("xp_to_next", ConstantsData.xp_for_level(hero_level))
-	talent_points_available = data.get("talent_points_available", 0)
+	# Pre-v6 saves stored a shared "talent_points_available" pool; availability
+	# is now derived per tier from hero_level and talent_levels, so it is ignored.
 	talent_levels = data.get("talent_levels", {}).duplicate(true)
 	# Migrate the retired mage_energizing_upgrade slot (removed upstream) to
 	# its replacement Shield Battery, clamped to the new 2-point cap.

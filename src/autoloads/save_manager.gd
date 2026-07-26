@@ -25,7 +25,11 @@ const SETTINGS_PATH: String = "user://settings.dat"
 #     guaranteed strength-potion/upgrade-scroll region quotas). Additive with
 #     an empty default (counts as none dropped), so migration is a version
 #     stamp only.
-const SAVE_VERSION: int = 5
+# v6: Hero "talent_points_available" is no longer stored; per-tier availability
+#     is derived from hero_level and talent_levels (upstream point buckets).
+#     Old saves' stale key is ignored on read, so migration is a version stamp
+#     only.
+const SAVE_VERSION: int = 6
 
 func _notification(what: int) -> void:
 	match what:
@@ -264,6 +268,11 @@ func _migrate_save(save: Dictionary, from_version: int) -> Dictionary:
 				# v4 -> v5: run state gains optional "limited_drops" (defaults
 				# to empty/zero counts on read), so no data rewrite is needed.
 				version = 5
+			5:
+				# v5 -> v6: hero "talent_points_available" retired in favor of
+				# derived per-tier buckets; stale key is ignored on read, so no
+				# data rewrite is needed.
+				version = 6
 			_:
 				push_warning("SaveManager: No migration step registered for save version %d." % version)
 				version += 1

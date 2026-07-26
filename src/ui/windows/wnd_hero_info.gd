@@ -69,7 +69,7 @@ func _build_content() -> Control:
 
 	_add_stat_row(stats_grid, "Level", "%d" % _hero.hero_level)
 	_add_stat_row(stats_grid, "Experience", "%d / %d" % [_hero.xp, _hero.xp_to_next])
-	_add_stat_row(stats_grid, "Talent Points", "%d" % _hero.talent_points_available)
+	_add_stat_row(stats_grid, "Talent Points", "%d" % _hero.total_talent_points_available())
 	_add_stat_row(stats_grid, "HP", "%d / %d" % [_hero.hp, _hero.hp_max])
 	_add_stat_row(stats_grid, "Max HP (HT)", "%d" % _hero.ht)
 	_add_stat_row(stats_grid, "Strength", "%d" % _hero.str_val)

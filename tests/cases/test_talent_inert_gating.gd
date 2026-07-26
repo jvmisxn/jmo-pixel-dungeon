@@ -12,7 +12,6 @@ func _make_warrior() -> Hero:
 	var hero := Hero.new()
 	hero.init_class(ConstantsData.HeroClass.WARRIOR)
 	hero.hero_level = 13
-	hero.talent_points_available = 2
 	return hero
 
 func _test_registry_flags(t: Object) -> void:
@@ -41,20 +40,20 @@ func _test_cannot_upgrade_inert_talent(t: Object) -> void:
 	var hero := Hero.new()
 	hero.init_class(ConstantsData.HeroClass.DUELIST)
 	hero.hero_level = 13
-	hero.talent_points_available = 2
 	t.check(not hero.can_upgrade_talent("duelist_aggressive_barrier"), "Inert talent cannot be upgraded even with points available")
-	var before: int = hero.talent_points_available
+	var before: int = hero.total_talent_points_available()
 	t.check(not hero.upgrade_talent("duelist_aggressive_barrier"), "upgrade_talent refuses inert talents")
-	t.check(hero.talent_points_available == before, "No point is consumed by a refused inert upgrade")
+	t.check(hero.total_talent_points_available() == before, "No point is consumed by a refused inert upgrade")
 	t.check(hero.get_talent_level("duelist_aggressive_barrier") == 0, "Inert talent level stays at 0")
 	hero.free()
 
 func _test_implemented_talent_still_upgrades(t: Object) -> void:
 	var hero := _make_warrior()
+	var before: int = hero.talent_points_available_for(2)
 	t.check(hero.can_upgrade_talent("warrior_iron_will"), "Implemented talent remains upgradable")
 	t.check(hero.upgrade_talent("warrior_iron_will"), "upgrade_talent succeeds for implemented talents")
 	t.check(hero.get_talent_level("warrior_iron_will") == 1, "Implemented talent level increments")
-	t.check(hero.talent_points_available == 1, "Point is spent on implemented upgrade")
+	t.check(hero.talent_points_available_for(2) == before - 1, "Point is spent from the tier-2 bucket")
 	hero.free()
 
 func _test_subclass_inert_talents_blocked(t: Object) -> void:

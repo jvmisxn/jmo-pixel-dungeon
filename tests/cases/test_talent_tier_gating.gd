@@ -13,7 +13,6 @@ func _make_warrior(level: int) -> Hero:
 	var hero := Hero.new()
 	hero.init_class(ConstantsData.HeroClass.WARRIOR)
 	hero.hero_level = level
-	hero.talent_points_available = 5
 	return hero
 
 func _test_thresholds(t: Object) -> void:
@@ -21,8 +20,8 @@ func _test_thresholds(t: Object) -> void:
 	t.check(TalentData.tier_unlock_level(2) == 7, "Tier 2 unlocks at level 7")
 	t.check(TalentData.tier_unlock_level(3) == 13, "Tier 3 unlocks at level 13")
 	t.check(TalentData.tier_unlock_level(4) == 21, "Tier 4 unlocks at level 21")
-	t.check(TalentData.tier_unlock_level(0) == 21, "Out-of-range tier falls back to the top threshold")
-	t.check(TalentData.tier_unlock_level(9) == 21, "Out-of-range tier falls back to the top threshold")
+	t.check(TalentData.tier_unlock_level(0) == 31, "Out-of-range tier falls back to the top threshold")
+	t.check(TalentData.tier_unlock_level(9) == 31, "Out-of-range tier falls back to the top threshold")
 
 func _test_tier1_locked_at_level_1(t: Object) -> void:
 	var hero := _make_warrior(1)
@@ -50,9 +49,9 @@ func _test_tier3_locked_until_level_13(t: Object) -> void:
 
 func _test_locked_upgrade_refused_without_spending(t: Object) -> void:
 	var hero := _make_warrior(3)
-	var before: int = hero.talent_points_available
+	var before: int = hero.total_talent_points_available()
 	var refused: bool = not hero.upgrade_talent("warrior_iron_will")
 	t.check(refused, "upgrade_talent refuses a locked-tier talent")
-	t.check(hero.talent_points_available == before, "No point consumed by a refused locked upgrade")
+	t.check(hero.total_talent_points_available() == before, "No point consumed by a refused locked upgrade")
 	t.check(hero.get_talent_level("warrior_iron_will") == 0, "Locked talent level stays at 0")
 	hero.free()

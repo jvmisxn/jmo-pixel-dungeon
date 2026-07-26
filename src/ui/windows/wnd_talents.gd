@@ -34,7 +34,7 @@ func _build_content() -> Control:
 		return scroll
 
 	var points_label: Label = Label.new()
-	points_label.text = "Available Points: %d" % _hero.talent_points_available
+	points_label.text = "Available Points: %d" % _hero.total_talent_points_available()
 	points_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	points_label.add_theme_font_size_override("font_size", 16)
 	points_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.45))
@@ -67,7 +67,7 @@ func _build_content() -> Control:
 				tier_label.text = "Tier %d  (unlocks at level %d)" % [current_tier, unlock_level]
 				tier_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.6))
 			else:
-				tier_label.text = "Tier %d" % current_tier
+				tier_label.text = "Tier %d  (%d points)" % [current_tier, _hero.talent_points_available_for(current_tier)]
 				tier_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.95))
 			tier_label.add_theme_font_size_override("font_size", 15)
 			main.add_child(tier_label)

@@ -15,8 +15,10 @@ class TalentInfo:
 	## Unimplemented talents cannot be upgraded and are flagged in the picker.
 	var implemented: bool = true
 
-## Upstream Talent.tierLevelThresholds: tiers 1/2/3/4 start at levels 2/7/13/21.
-const TIER_LEVEL_THRESHOLDS: Array[int] = [0, 2, 7, 13, 21]
+## Upstream Talent.tierLevelThresholds: tiers 1/2/3/4 start at levels 2/7/13/21,
+## and the final 31 bounds tier 4's point band (tiers earn points only inside
+## their own level band — see Hero.talent_points_available_for).
+const TIER_LEVEL_THRESHOLDS: Array[int] = [0, 2, 7, 13, 21, 31]
 
 static func tier_unlock_level(tier: int) -> int:
 	if tier < 1 or tier >= TIER_LEVEL_THRESHOLDS.size():
