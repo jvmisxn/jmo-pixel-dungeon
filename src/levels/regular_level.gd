@@ -127,6 +127,20 @@ func _build() -> bool:
 			# Regular HEAP (70%)
 			drop_item(item_pos, item)
 
+	# Original Level.initForDepth: every non-boss floor spawns one guaranteed
+	# food item on top of the random drops (FOOD has weight 0 in the random
+	# category deck). RegularLevel is never a boss arena, so always drop it.
+	var food_positions: Array[int] = item_spawn_positions(1)
+	if not food_positions.is_empty():
+		var food_pos: int = food_positions[0]
+		var food_terrain: int = map[food_pos]
+		if (food_terrain == ConstantsData.Terrain.HIGH_GRASS
+				or food_terrain == ConstantsData.Terrain.FURROWED_GRASS):
+			map[food_pos] = ConstantsData.Terrain.GRASS
+			if food_pos >= 0 and food_pos < LEN:
+				los_blocking[food_pos] = false
+		drop_item(food_pos, Generator.random_food())
+
 	return true
 
 
@@ -600,12 +614,17 @@ func _near_entrance(pos: int) -> bool:
 # Item Placement
 # ---------------------------------------------------------------------------
 
-## Number of items to place on this level.
-## Original: 3 items per floor, +1 on LARGE levels.
+## Number of random items to place on this level.
+## Original: 3/4/5 items 60%/30%/10% of the time, +2 on LARGE levels.
 func item_count() -> int:
 	var count: int = 3
-	if feeling == Feeling.LARGE:
+	var roll: float = randf() * 10.0
+	if roll >= 9.0:
+		count += 2
+	elif roll >= 6.0:
 		count += 1
+	if feeling == Feeling.LARGE:
+		count += 2
 	return count
 
 ## Returns positions suitable for item spawning. Avoids entrance/exit.

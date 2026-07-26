@@ -8,23 +8,27 @@ extends RefCounted
 ## This is the single factory entry point for the entire item system.
 
 # ---------------------------------------------------------------------------
-# Category Weights (approximate Shattered PD distribution)
+# Category Weights (Shattered PD Generator.Category distribution)
 # ---------------------------------------------------------------------------
 
 ## Weights for random_item category selection. Higher = more common.
+## Upstream Generator.Category's two 35-item decks averaged and doubled to
+## stay integer (deck 1 has ring + extra armor, deck 2 has artifact + extra
+## thrown weapon). Upstream WEAPON(2) and MISSILE(1.5) are folded into one
+## WEAPON weight; random_item splits it 50/50 melee vs missile.
+## FOOD is 0 upstream (each floor drops one guaranteed food item instead),
+## so it is absent here, as is the port-only MISC fallback.
 const CATEGORY_WEIGHTS: Dictionary = {
-	ConstantsData.ItemCategory.GOLD:     16,
-	ConstantsData.ItemCategory.POTION:   12,
-	ConstantsData.ItemCategory.SCROLL:   12,
-	ConstantsData.ItemCategory.FOOD:     6,
-	ConstantsData.ItemCategory.WEAPON:   8,
-	ConstantsData.ItemCategory.ARMOR:    6,
-	ConstantsData.ItemCategory.STONE:    6,
-	ConstantsData.ItemCategory.SEED:     4,
-	ConstantsData.ItemCategory.RING:     2,
+	ConstantsData.ItemCategory.GOLD:     20,
+	ConstantsData.ItemCategory.POTION:   16,
+	ConstantsData.ItemCategory.SCROLL:   16,
+	ConstantsData.ItemCategory.WEAPON:   7,
+	ConstantsData.ItemCategory.ARMOR:    3,
 	ConstantsData.ItemCategory.WAND:     2,
+	ConstantsData.ItemCategory.SEED:     2,
+	ConstantsData.ItemCategory.STONE:    2,
+	ConstantsData.ItemCategory.RING:     1,
 	ConstantsData.ItemCategory.ARTIFACT: 1,
-	ConstantsData.ItemCategory.MISC:     1,
 }
 
 # ---------------------------------------------------------------------------
