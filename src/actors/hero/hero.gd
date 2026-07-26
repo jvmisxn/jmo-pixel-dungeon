@@ -472,6 +472,7 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 			shatter_pos = target_pos
 		potion.shatter(shatter_pos, level)
 		potion.identify()
+		on_potion_used()
 		if EventBus:
 			EventBus.item_used.emit(potion.item_name)
 		if GameManager:
@@ -565,6 +566,22 @@ func _try_shield_battery(item: Variant) -> bool:
 	if EventBus:
 		EventBus.hero_stats_changed.emit()
 	return true
+
+## Upstream Talent.onPotionUsed (Warrior Liquid Willpower): using a potion
+## grants a Barrier of HT * (3% + 3.5% per point) — 6.5%/10% of max HP.
+## Upstream setShield keeps the larger of the existing and new shield.
+func on_potion_used() -> void:
+	var points: int = get_talent_level("warrior_liquid_willpower")
+	if points <= 0:
+		return
+	var shield_to_give: int = roundi(float(ht) * (0.030 + 0.035 * float(points)))
+	var barrier: Barrier = add_buff(Barrier.new()) as Barrier
+	if barrier != null:
+		barrier.set_shield(maxi(barrier.get_shielding(), shield_to_give))
+	if MessageLog:
+		MessageLog.add_positive("Your willpower hardens into a shield.")
+	if EventBus:
+		EventBus.hero_stats_changed.emit()
 
 func _projectile_collision_pos(target_pos: int) -> int:
 	if level == null:

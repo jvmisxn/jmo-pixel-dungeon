@@ -173,6 +173,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_hold_fast.gd",
 	"res://tests/cases/test_strongman.gd",
 	"res://tests/cases/test_provoked_anger.gd",
+	"res://tests/cases/test_liquid_willpower.gd",
 	"res://tests/cases/test_generator_category_weights.gd",
 	"res://tests/cases/test_normal_int_range.gd",
 	"res://tests/cases/test_limited_drops.gd",

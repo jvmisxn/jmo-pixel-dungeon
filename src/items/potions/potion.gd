@@ -37,6 +37,9 @@ func execute(hero: Char) -> void:
 		hero.spend(TIME_TO_DRINK)
 	drink(hero)
 	identify()
+	# Original: Talent.onPotionUsed fires after a non-anonymous drink.
+	if hero.has_method("on_potion_used"):
+		hero.on_potion_used()
 	_consume(hero)
 
 ## Virtual — override in each potion type for the drinking effect.
