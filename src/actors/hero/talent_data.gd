@@ -58,6 +58,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 		ConstantsData.HeroClass.MAGE:
 			return [
 				_make("mage_empowering_meal", "Empowering Meal", "Eating food grants the Mage 2/3 bonus damage on his next 3 damage-wand zaps.", 2, 1),
+				_make("mage_lingering_magic", "Lingering Magic", "When the Mage zaps with a wand or staff, his next physical attack deals 1-2/2 bonus damage.", 2, 1),
 				_make("mage_backup_barrier", "Backup Barrier", "Crossing below half health triggers an emergency barrier once until you recover.", 2, 1),
 				_make("mage_energizing_meal", "Energizing Meal", "Eating food grants the Mage 5/8 turns of Recharging.", 2, 2),
 				_make("mage_scholars_intuition", "Scholar's Intuition", "Scrolls and wands can be identified on pickup.", 2, 2),

@@ -1254,6 +1254,14 @@ func attack_proc(target_char: Char, damage: int) -> int:
 		result += 1 + 2 * provoked_level
 		remove_buff_by_id("ProvokedAngerTracker")
 
+	# Mage Lingering Magic (upstream Talent.onAttackProc): a physical attack
+	# made while the zap tracker is active deals +IntRange(points, 2) bonus
+	# damage and consumes the tracker.
+	var lingering_level: int = get_talent_level("mage_lingering_magic")
+	if lingering_level > 0 and has_buff("LingeringMagicTracker"):
+		result += randi_range(lingering_level, 2)
+		remove_buff_by_id("LingeringMagicTracker")
+
 	if belongings != null:
 		var weapon: Variant = belongings.get_equipped_weapon()
 		if weapon != null and weapon.has_method("proc_enchantment"):
