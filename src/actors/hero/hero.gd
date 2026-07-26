@@ -446,6 +446,8 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 	last_visible_action = "throw_item"
 	last_visible_target_pos = target_pos
 
+	_try_improvised_projectiles(item, level.find_char_at(_projectile_collision_pos(target_pos)))
+
 	if item is Bomb:
 		var bomb: Bomb = item as Bomb
 		if MessageLog:
@@ -566,6 +568,28 @@ func _try_shield_battery(item: Variant) -> bool:
 	if EventBus:
 		EventBus.hero_stats_changed.emit()
 	return true
+
+## Warrior Improvised Projectiles talent (original: Item.cast): throwing any
+## item that is not a thrown weapon at an enemy blinds it for 1 + points
+## turns (2/3), then the talent cools down for 50 turns. Applied when the
+## throw is declared, matching upstream (not gated on the throw hitting).
+func _try_improvised_projectiles(item: Variant, target: Variant) -> void:
+	var points: int = get_talent_level("warrior_improvised_projectiles")
+	if points <= 0 or item is MissileWeapon or item is SpiritBow:
+		return
+	if has_buff("ImprovisedProjectileCooldown"):
+		return
+	if not (target is Mob) or target is NPC:
+		return
+	var mob: Mob = target as Mob
+	if not mob.is_alive or mob.is_ally:
+		return
+	var blind: Blindness = Blindness.new()
+	blind.duration = 1.0 + float(points)
+	mob.add_buff(blind)
+	add_buff(ImprovisedProjectileCooldown.new())
+	if MessageLog:
+		MessageLog.add("Your improvised projectile blinds the %s!" % mob.mob_name)
 
 ## Upstream Talent.onPotionUsed (Warrior Liquid Willpower): using a potion
 ## grants a Barrier of HT * (3% + 3.5% per point) — 6.5%/10% of max HP.
