@@ -1029,6 +1029,14 @@ func upgrade_talent(talent_id: String) -> bool:
 	talent_levels[talent_id] = get_talent_level(talent_id) + 1
 	if talent_id == "warrior_strongman":
 		update_strongman_bonus()
+	# Original: Talent.onTalentUpgraded — reaching Veteran's Intuition +2
+	# retroactively identifies the currently worn armor.
+	if talent_id == "warrior_veterans_intuition" and talent_levels[talent_id] >= 2:
+		var worn_armor: Item = belongings.armor if belongings != null else null
+		if worn_armor != null and not worn_armor.is_identified():
+			worn_armor.identify()
+			if MessageLog:
+				MessageLog.add_positive("Your veteran's intuition reveals the %s." % worn_armor.get_display_name())
 	if EventBus:
 		EventBus.hero_stats_changed.emit()
 	if MessageLog:

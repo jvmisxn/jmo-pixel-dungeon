@@ -43,6 +43,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 		ConstantsData.HeroClass.WARRIOR:
 			return [
 				_make("warrior_hearty_meal", "Hearty Meal", "Eating while healthy grants a temporary barrier.", 2, 1),
+				_make("warrior_veterans_intuition", "Veteran's Intuition", "The Warrior's intuition with armor improves: equipping armor has a 50% chance to identify it, or always identifies it at +2.", 2, 1),
 				_make("warrior_tested_hypothesis", "Tested Hypothesis", "Potions of Healing and Scrolls of Identify can be recognized on pickup.", 2, 1),
 				_make("warrior_provoked_anger", "Provoked Anger", "When any shielding buff applied to the Warrior is broken by damage, his next physical attack deals 3/5 bonus damage.", 2, 1),
 				_make("warrior_iron_will", "Iron Will", "The Warrior's broken seal grants +1/+2 max shield.", 2, 2),

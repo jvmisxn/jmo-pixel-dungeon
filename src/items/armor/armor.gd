@@ -246,6 +246,16 @@ func on_equip(hero: Char) -> void:
 	# Note: Do NOT call hero.belongings.equip_armor(self) here — that method
 	# already calls on_equip(), which would create an infinite recursion loop.
 	# Belongings.equip_armor() is the caller; this callback handles side-effects only.
+	# Original: Talent.onItemEquipped + itemIDSpeedFactor — Veteran's Intuition
+	# identifies armor instantly on equip at +2; at +1 upstream doubles the
+	# gradual usage-based ID speed. Port adaptation: no gradual ID system
+	# exists, so +1 becomes a 50% chance to identify on equip instead.
+	if hero != null and hero.has_method("get_talent_level") and not is_identified():
+		var vet_points: int = hero.get_talent_level("warrior_veterans_intuition")
+		if vet_points >= 2 or (vet_points == 1 and randf() < 0.5):
+			identify()
+			if MessageLog:
+				MessageLog.add_positive("Your veteran's intuition reveals the %s." % get_display_name())
 	if cursed and not cursed_known:
 		cursed_known = true
 		if MessageLog:
