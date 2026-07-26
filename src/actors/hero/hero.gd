@@ -1178,6 +1178,14 @@ func attack_proc(target_char: Char, damage: int) -> int:
 		result = roundi(float(result) * (1.0 + float(empowered_level) / 6.0))
 		remove_buff_by_id("EmpoweredStrikeTracker")
 
+	# Warrior Provoked Anger (upstream Talent.onAttackProc): a physical attack
+	# made while the shield-break tracker is active deals +1+2*points bonus
+	# damage (3/5) and consumes the tracker.
+	var provoked_level: int = get_talent_level("warrior_provoked_anger")
+	if provoked_level > 0 and has_buff("ProvokedAngerTracker"):
+		result += 1 + 2 * provoked_level
+		remove_buff_by_id("ProvokedAngerTracker")
+
 	if belongings != null:
 		var weapon: Variant = belongings.get_equipped_weapon()
 		if weapon != null and weapon.has_method("proc_enchantment"):

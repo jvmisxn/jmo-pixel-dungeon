@@ -360,7 +360,15 @@ func take_damage(dmg: int, source: Variant = null) -> int:
 			if actual <= 0:
 				break
 			if b.has_method("absorb_damage"):
+				var had_shield: bool = b.has_method("get_shielding") and b.get_shielding() > 0
 				actual = b.absorb_damage(actual)
+				# Warrior Provoked Anger (original: ShieldBuff.processDamage):
+				# a shield buff broken by damage grants a 5-turn tracker whose
+				# next physical attack deals bonus damage.
+				if had_shield and b.get_shielding() <= 0 \
+						and has_method("get_talent_level") \
+						and call("get_talent_level", "warrior_provoked_anger") > 0:
+					add_buff(ProvokedAngerTracker.new())
 
 	# Then apply to flat shielding (legacy, for cases without ShieldBuff pattern)
 	if shielding > 0 and actual > 0:
