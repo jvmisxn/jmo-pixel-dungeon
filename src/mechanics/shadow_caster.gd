@@ -34,6 +34,14 @@ static func _init_rounding() -> void:
 # Public API
 # ---------------------------------------------------------------------------
 
+## Upstream ShadowCaster.rounding[distance]: per-row column limits for a
+## circular area of the given radius. Used by circular search shapes
+## (e.g. Rogue Wide Search at +1) in addition to FOV casting.
+static func rounding_row(distance: int) -> Array[int]:
+	_init_rounding()
+	return _rounding[clampi(distance, 1, MAX_DISTANCE)]
+
+
 ## Calculate field of view from [origin] on a flat grid.
 ## [blocking] is an Array[bool] of size width*height — true where vision is blocked.
 ## [width] is the grid width (columns).

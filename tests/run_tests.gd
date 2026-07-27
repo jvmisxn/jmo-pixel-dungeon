@@ -186,6 +186,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_rogue_mystical_meal.gd",
 	"res://tests/cases/test_rogue_inscribed_stealth.gd",
 	"res://tests/cases/test_silent_steps.gd",
+	"res://tests/cases/test_rogue_wide_search.gd",
 	"res://tests/cases/test_invisibility_dispel_on_item_use.gd",
 	"res://tests/cases/test_generator_category_weights.gd",
 	"res://tests/cases/test_normal_int_range.gd",

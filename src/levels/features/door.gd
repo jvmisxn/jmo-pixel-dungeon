@@ -80,13 +80,19 @@ static func close(level: Level, pos: int) -> bool:
 	return false
 
 ## Search nearby cells for secret doors/traps. Called when hero uses the search action.
-static func search(level: Level, hero_pos: int, radius: int = 1) -> int:
+static func search(level: Level, hero_pos: int, radius: int = 1, circular: bool = false) -> int:
 	var found: int = 0
 	var search_radius: int = maxi(1, radius)
 	var hero_x: int = ConstantsData.pos_to_x(hero_pos)
 	var hero_y: int = ConstantsData.pos_to_y(hero_pos)
+	var rounding: Array[int] = []
+	if circular:
+		rounding = ShadowCaster.rounding_row(search_radius)
 	for y: int in range(maxi(0, hero_y - search_radius), mini(ConstantsData.HEIGHT - 1, hero_y + search_radius) + 1):
-		for x: int in range(maxi(0, hero_x - search_radius), mini(ConstantsData.WIDTH - 1, hero_x + search_radius) + 1):
+		var half_width: int = search_radius
+		if circular:
+			half_width = _circular_half_width(search_radius, absi(y - hero_y), rounding)
+		for x: int in range(maxi(0, hero_x - half_width), mini(ConstantsData.WIDTH - 1, hero_x + half_width) + 1):
 			var cell: int = ConstantsData.xy_to_pos(x, y)
 			if cell == hero_pos:
 				continue
@@ -103,3 +109,16 @@ static func search(level: Level, hero_pos: int, radius: int = 1) -> int:
 					trap.reveal(level)
 				found += 1
 	return found
+
+## Upstream Hero.search row clamping for the circular (rounded-corner) search
+## shape: rows near the edge are narrowed by the ShadowCaster rounding table,
+## with the symmetric fallback for rows the table does not narrow directly.
+static func _circular_half_width(distance: int, dy: int, rounding: Array[int]) -> int:
+	if dy == 0:
+		return distance
+	if rounding[dy] < dy:
+		return rounding[dy]
+	var half: int = distance
+	while rounding[half] < rounding[dy]:
+		half -= 1
+	return half
