@@ -678,7 +678,7 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 		return false
 	var acc_multi: float = 1.0
 	if item.has_method("accuracy_factor"):
-		acc_multi = item.accuracy_factor(self)
+		acc_multi = item.accuracy_factor(self, target)
 	if item is MissileWeapon or item is SpiritBow:
 		var momentum: Buff = get_buff("FreerunnerMomentum")
 		if momentum != null and momentum.has_method("ranged_accuracy_multiplier"):

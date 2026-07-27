@@ -113,7 +113,9 @@ func get_str_requirement() -> int:
 
 ## Accuracy factor applied to the hero's base accuracy.
 ## 1.0 = no change. Reduced by STR encumbrance (pow(1.5, deficit)).
-func accuracy_factor(hero: Char = null) -> float:
+## `target` is unused for melee weapons; missile weapons use it for the
+## SPD adjacent/ranged accuracy split.
+func accuracy_factor(hero: Char = null, _target: Char = null) -> float:
 	if hero == null:
 		return 1.0
 	var encumbrance: int = get_str_requirement() - hero.str_val

@@ -94,6 +94,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make("huntress_rejuvenating_steps", "Rejuvenating Steps", "When the Huntress steps on short grass or embers, they spring up into tall grass which she immediately furrows. This has a 10/5 turn cooldown. The grass sprouts already furrowed, with no drops, if she has not gained exp in a long time.", 2, 2),
 				_make("huntress_heightened_senses", "Heightened Senses", "The Huntress gains mind vision on characters within 2/3 tiles of her position.", 2, 2),
 				_make("huntress_durable_projectiles", "Durable Projectiles", "The Huntress preserves her thrown weapons carefully, giving them 50%/75% increased durability.", 2, 2),
+				_make("huntress_point_blank", "Point Blank", "Thrown weapons normally suffer a 50% accuracy penalty against adjacent enemies. For the Huntress this penalty is reduced to 25%, removed entirely, or converted into a 25% accuracy bonus.", 3, 3),
 			]
 		ConstantsData.HeroClass.DUELIST:
 			return [

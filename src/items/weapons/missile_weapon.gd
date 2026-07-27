@@ -127,6 +127,33 @@ func damage_roll(owner: Variant = null) -> int:
 	return _roll_from_range(_damage_range_for_level(buffed_lvl() + bonus), owner)
 
 # ---------------------------------------------------------------------------
+# Accuracy
+# ---------------------------------------------------------------------------
+
+## Upstream MissileWeapon.accuracyFactor: base weapon accuracy (STR
+## encumbrance) times the adjacency split — 0.5x against adjacent targets,
+## 1.5x at range. Huntress Point Blank (T3) raises the adjacent factor to
+## 0.75x/1.0x/1.25x.
+func accuracy_factor(hero: Char = null, target: Char = null) -> float:
+	return super.accuracy_factor(hero, target) * adjacent_acc_factor_for(hero, target)
+
+## Shared with SpiritBow, which mirrors upstream SpiritArrow inheriting this.
+static func adjacent_acc_factor_for(owner: Char, target: Char) -> float:
+	if owner == null or target == null:
+		return 1.0
+	var w: int = ConstantsData.WIDTH
+	var adjacent: bool = (
+		owner.pos != target.pos
+		and absi(owner.pos % w - target.pos % w) <= 1
+		and absi(owner.pos / w - target.pos / w) <= 1
+	)
+	if not adjacent:
+		return 1.5
+	if owner is Hero:
+		return 0.5 + 0.25 * (owner as Hero).get_talent_level("huntress_point_blank")
+	return 0.5
+
+# ---------------------------------------------------------------------------
 # Speed
 # ---------------------------------------------------------------------------
 
