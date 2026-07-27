@@ -95,6 +95,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make("huntress_heightened_senses", "Heightened Senses", "The Huntress gains mind vision on characters within 2/3 tiles of her position.", 2, 2),
 				_make("huntress_durable_projectiles", "Durable Projectiles", "The Huntress preserves her thrown weapons carefully, giving them 50%/75% increased durability.", 2, 2),
 				_make("huntress_point_blank", "Point Blank", "Thrown weapons normally suffer a 50% accuracy penalty against adjacent enemies. For the Huntress this penalty is reduced to 25%, removed entirely, or converted into a 25% accuracy bonus.", 3, 3),
+				_make("huntress_seer_shot", "Seer Shot", "When the Huntress shoots her spirit bow at a tile with no character on it, the area around that tile is revealed for 5/10/15 turns. This effect has a 20 turn cooldown.", 3, 3),
 			]
 		ConstantsData.HeroClass.DUELIST:
 			return [

@@ -493,6 +493,8 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 
 	var collision_pos: int = _projectile_collision_pos(target_pos)
 	var collision_target: Variant = level.find_char_at(collision_pos) if collision_pos >= 0 else null
+	if item is SpiritBow:
+		SpiritBow.apply_seer_shot(self, collision_pos if collision_pos >= 0 else target_pos)
 	var hit_target: Char = collision_target as Char if collision_target is Char and collision_target != self else null
 	var hit_landed: bool = false
 	if EventBus:
