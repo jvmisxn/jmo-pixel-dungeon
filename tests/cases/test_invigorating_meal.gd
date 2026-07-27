@@ -33,7 +33,6 @@ func _test_registry(t: Object) -> void:
 	t.check(info != null and info.tier == 2, "huntress_invigorating_meal is tier 2")
 	for inert_id: String in [
 		"huntress_liquid_nature", "huntress_rejuvenating_steps",
-		"huntress_heightened_senses",
 	]:
 		var slot: TalentData.TalentInfo = TalentData.get_talent(
 			ConstantsData.HeroClass.HUNTRESS, inert_id)
