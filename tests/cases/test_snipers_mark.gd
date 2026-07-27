@@ -154,7 +154,6 @@ func _test_special_action_flag(t: Object) -> void:
 		"Non-Sniper subclass never fires special shots")
 
 	hero.free()
-	level.free()
 
 func _test_special_damage_modifiers(t: Object) -> void:
 	var bow := FixedRollBow.new()
@@ -215,7 +214,6 @@ func _test_special_shot_consumes_mark(t: Object) -> void:
 		"Special shot records the target distance for the DAMAGE augment")
 
 	hero.free()
-	level.free()
 
 func _test_bow_damage_uses_hero_level(t: Object) -> void:
 	var bow := SpiritBow.new()
