@@ -2,6 +2,30 @@
 
 ## 2026-07-27
 
+- Tags: wands, chasm, knockback, source-fidelity, tests
+- Blast Wave knockback into chasms (upstream `Char.throwChar` →
+  `Level.occupyCell`; audit:S09 reconcile). Source check invalidated the S09
+  backlog claim that Halls/Last chasm rings could break boss fights via
+  knockback: CHASM is impassable in this port, so `move_to` refused it and
+  knockback wall-slammed at the ring edge. The actual parity gap was the
+  reverse — upstream chasm is AVOID terrain and forced movement pushes chars
+  in: mobs die to the fall, heroes descend. Implemented for Blast Wave:
+  `WandOfBlastWave._apply_knockback` now traverses CHASM cells (flying chars
+  sail over and can hover; grounded chars are moved onto the cell, then new
+  `Chasm.force_fall` resolves it — mobs via `Chasm.mob_fall`, heroes via the
+  shared `hero_fell` descent used by walking/pitfall falls). Wall slam
+  unchanged for real walls; char-blocked check now runs before the terrain
+  check. Fragile-file edit small: one block inside `_apply_knockback` in
+  `wand.gd`. Tests: `test_blast_wave_chasm.gd` (registered, 8 checks):
+  grounded mob pushed in + dies, flying mob crosses to far side alive, hero
+  emits `hero_fell` and survives in place, wall slam still applies.
+  Verification: `git diff --check` clean, gdparse clean on all 4 touched
+  files, gdlint advisory (pre-existing wand.gd file-length/order only), full
+  headless suite 4503 checks 0 failures. Remaining (backlog S09 updated):
+  other forced-movement sites (Repulsion glyph, Elastic, Monk, Gladiator)
+  still treat chasm as wall; voluntary walk-in chasm entry + upstream
+  confirm-prompt not ported.
+
 - Tags: bosses, levels, source-fidelity, persistence, tests
 - Bidirectional boss-floor seal (upstream `Level.seal()`/`unseal()`; audit:S09).
   Before this slice only the down-exit was blocked (LOCKED_DOOR terrain) and
