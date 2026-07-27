@@ -97,6 +97,8 @@ func zap(hero: Char, target_pos: int) -> void:
 	if cursed and not cursed_known:
 		cursed_known = true
 	if cursed_effect or (cursed and randf() < 0.35):
+		# Original: wand zaps call Invisibility.dispel() even when cursed.
+		Invisibility.dispel_for(hero)
 		_cursed_zap(hero)
 		spend_charge()
 		_lingering_magic_proc(hero)
@@ -109,6 +111,8 @@ func zap(hero: Char, target_pos: int) -> void:
 			MessageLog.add_warning("There is nothing to target there.")
 		return
 	spend_charge()
+	# Original: Wand cell selector calls Invisibility.dispel() before onZap.
+	Invisibility.dispel_for(hero)
 	on_zap(hero, path)
 	_lingering_magic_proc(hero)
 	_arcane_vision_proc(hero, path)

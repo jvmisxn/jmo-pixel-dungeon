@@ -37,6 +37,9 @@ func execute(hero: Char) -> void:
 	# Spend a turn to read (original: hero.spend(TIME_TO_READ))
 	if hero.has_method("spend"):
 		hero.spend(TIME_TO_READ)
+	# Original: Scroll.readAnimation calls Invisibility.dispel() before the
+	# talent hook, so Inscribed Stealth's grant survives the dispel.
+	Invisibility.dispel_for(hero)
 	read_scroll(hero)
 	# Talent hook (upstream Talent.onScrollUsed via Scroll.readAnimation).
 	if hero.has_method("on_scroll_read"):
@@ -713,6 +716,8 @@ class ScrollTransmutation extends Scroll:
 			if MessageLog:
 				MessageLog.add_warning("You can't read a scroll while blinded!")
 			return
+		# Original: readAnimation dispels Invisibility before the talent hook.
+		Invisibility.dispel_for(hero)
 		read_scroll(hero)
 		if hero.has_method("on_scroll_read"):
 			hero.on_scroll_read()
