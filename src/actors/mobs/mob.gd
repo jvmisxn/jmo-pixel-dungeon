@@ -534,13 +534,34 @@ func _drop_loot(killer: Variant = null) -> void:
 ## from Preparation with Bounty Hunter adds 2/4/8/16% per preparation level,
 ## multiplied by talent points. Preparation is still attached at loot time
 ## because the hero dispels Invisibility only after attack() returns.
+## A worn Ring of Wealth then multiplies the total by 1.15^bonus (upstream
+## RingOfWealth.dropChanceMultiplier). Port adaptation: the killing hero's
+## ring is used — upstream reads the single Dungeon.hero, this port is
+## multi-hero.
 func _loot_chance_multiplier(killer: Variant) -> float:
 	var mult: float = 1.0
 	if killer is Char and (killer as Char).is_hero:
 		var prep: Node = (killer as Char).get_buff("AssassinPreparation")
 		if prep != null and prep.has_method("bounty_hunter_bonus"):
 			mult += prep.bounty_hunter_bonus()
+		mult *= _wealth_drop_multiplier(killer as Char)
 	return mult
+
+## Ring of Wealth drop-chance factor for the killing hero: 1.15^bonus, or
+## 1.0 with no (or a bonus-0) ring. Mirrors the gold-pile lookup in gold.gd.
+func _wealth_drop_multiplier(hero: Char) -> float:
+	if not hero.has_method("get_buff"):
+		return 1.0
+	var wealth_buff: Variant = hero.get_buff("RingOfWealth")
+	if wealth_buff == null or wealth_buff.get("ring") == null:
+		return 1.0
+	var ring: Variant = wealth_buff.ring
+	if not ring.has_method("bonus"):
+		return 1.0
+	var b: int = ring.bonus()
+	if b == 0:
+		return 1.0
+	return pow(1.15, float(b))
 
 func _drop_skeleton_key() -> void:
 	if level == null or not level.has_method("drop_item"):

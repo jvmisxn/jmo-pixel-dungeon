@@ -2,6 +2,20 @@
 
 ## 2026-07-27
 
+- Tags: rings, loot, source-fidelity, audit:S16, tests
+- Ring of Wealth now boosts mob loot drop chance (upstream `Mob.lootChance`
+  tail: `RingOfWealth.dropChanceMultiplier` = 1.15^bonus). New
+  `Mob._wealth_drop_multiplier(hero)` reads the killing hero's worn
+  `RingOfWealth` buff (same lookup pattern as the gold-pile multiplier in
+  `gold.gd`) and multiplies into `_loot_chance_multiplier`, stacking
+  multiplicatively with Bounty Hunter preparation. Port adaptation: uses the
+  killing hero's ring, not a global single hero, since this port is
+  multi-hero. `test_wealth_loot_chance.gd`. Backlog S16 wealth item marked
+  PARTIAL — the deck-based rare bonus-drop system (`tryForBonusDrop`) is the
+  remaining half.
+
+## 2026-07-27
+
 - Tags: blobs, bombs, source-fidelity, audit:S19, tests
 - Unified the remaining divergent healing-cure lists: `WaterOfHealth.affect_char`
   and Regrowth Bomb `_heal_like_potion` now call the shared
