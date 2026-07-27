@@ -110,7 +110,9 @@ static func connect_adjacent(a: Room, b: Room) -> bool:
 
 ## Build a tunnel (line of empty cells) between two positions.
 ## Used when rooms aren't directly adjacent.
-static func build_tunnel(level: Level, from_pos: int, to_pos: int) -> void:
+## [protected] cells (e.g. gated special-room border walls) are never carved,
+## so an L-leg crossing a secret/vault wall can't open a hole beside the door.
+static func build_tunnel(level: Level, from_pos: int, to_pos: int, protected: Dictionary = {}) -> void:
 	var fx: int = from_pos % ConstantsData.WIDTH
 	var fy: int = from_pos / ConstantsData.WIDTH
 	var tx: int = to_pos % ConstantsData.WIDTH
@@ -119,25 +121,29 @@ static func build_tunnel(level: Level, from_pos: int, to_pos: int) -> void:
 	# L-shaped tunnel: horizontal first, then vertical (or vice versa)
 	if randi() % 2 == 0:
 		# Horizontal first
-		_carve_h_line(level, fx, tx, fy)
-		_carve_v_line(level, fy, ty, tx)
+		_carve_h_line(level, fx, tx, fy, protected)
+		_carve_v_line(level, fy, ty, tx, protected)
 	else:
 		# Vertical first
-		_carve_v_line(level, fy, ty, fx)
-		_carve_h_line(level, fx, tx, ty)
+		_carve_v_line(level, fy, ty, fx, protected)
+		_carve_h_line(level, fx, tx, ty, protected)
 
-static func _carve_h_line(level: Level, x1: int, x2: int, y: int) -> void:
+static func _carve_h_line(level: Level, x1: int, x2: int, y: int, protected: Dictionary = {}) -> void:
 	var start_x: int = mini(x1, x2)
 	var end_x: int = maxi(x1, x2)
 	for x: int in range(start_x, end_x + 1):
 		var pos: int = y * ConstantsData.WIDTH + x
+		if protected.has(pos):
+			continue
 		if level.terrain_at(pos) == ConstantsData.Terrain.WALL:
 			level.set_terrain(pos, ConstantsData.Terrain.EMPTY)
 
-static func _carve_v_line(level: Level, y1: int, y2: int, x: int) -> void:
+static func _carve_v_line(level: Level, y1: int, y2: int, x: int, protected: Dictionary = {}) -> void:
 	var start_y: int = mini(y1, y2)
 	var end_y: int = maxi(y1, y2)
 	for y: int in range(start_y, end_y + 1):
 		var pos: int = y * ConstantsData.WIDTH + x
+		if protected.has(pos):
+			continue
 		if level.terrain_at(pos) == ConstantsData.Terrain.WALL:
 			level.set_terrain(pos, ConstantsData.Terrain.EMPTY)
