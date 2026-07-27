@@ -432,19 +432,28 @@ func destroy() -> void:
 # Buffs
 # ---------------------------------------------------------------------------
 
+## Type key that identifies "the same buff" everywhere buffs are matched:
+## a Buff's buff_id, or the node's script path for non-Buff attachments.
+## add_buff and the id-based lookups must all use this so path-keyed nodes
+## stay findable and removable.
+static func buff_type_key(node: Node) -> String:
+	if node is Buff:
+		return (node as Buff).buff_id
+	var script: Variant = node.get_script()
+	return str(script.get_path()) if script != null else ""
+
 ## Add a buff to this character. If the buff type already exists, refreshes it.
 ## Checks immunity before attaching — if immune, the buff is rejected and freed.
 func add_buff(buff_node: Node) -> Node:
 	# Immunity check (original: attachTo checks target.isImmune(getClass()))
-	var buff_type: String = (buff_node as Buff).buff_id if buff_node is Buff else buff_node.get_script().get_path()
+	var buff_type: String = buff_type_key(buff_node)
 	if is_immune(buff_type):
 		buff_node.queue_free()
 		return null
 
 	# Check for existing buff of same type
 	for existing: Node in _buffs:
-		var existing_type: String = (existing as Buff).buff_id if existing is Buff else existing.get_script().get_path()
-		if existing_type == buff_type:
+		if buff_type_key(existing) == buff_type:
 			# Merge/refresh
 			if existing.has_method("merge"):
 				existing.merge(buff_node)
@@ -475,24 +484,29 @@ func remove_buff(buff_node: Node) -> void:
 		buff_removed.emit(buff_node)
 		buff_node.queue_free()
 
-## Remove all buffs with a given buff_id.
+## Remove all buffs with a given buff_id (or script path for non-Buff nodes).
 func remove_buff_by_id(buff_id: String) -> void:
 	for b: Node in _buffs.duplicate():
-		if b is Buff and (b as Buff).buff_id == buff_id:
+		if buff_type_key(b) == buff_id:
 			remove_buff(b)
 
 ## Check if this character has a buff with the given ID.
 func has_buff(buff_id: String) -> bool:
 	for b: Node in _buffs:
-		if b is Buff and (b as Buff).buff_id == buff_id:
+		if buff_type_key(b) == buff_id:
 			return true
 	return false
 
-## Get a buff by ID (or null).
+## Get a buff by ID (or null). Non-Buff attachments come back null here;
+## use get_buff_node for those.
 func get_buff(buff_id: String) -> Buff:
+	return get_buff_node(buff_id) as Buff
+
+## Get a buff/attachment node by ID or script path (or null).
+func get_buff_node(buff_id: String) -> Node:
 	for b: Node in _buffs:
-		if b is Buff and (b as Buff).buff_id == buff_id:
-			return b as Buff
+		if buff_type_key(b) == buff_id:
+			return b
 	return null
 
 ## Get all active buffs.
