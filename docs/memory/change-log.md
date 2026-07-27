@@ -2,6 +2,23 @@
 
 ## 2026-07-27
 
+- Tags: plants, potions, source-fidelity, audit:S19, tests
+- Healing-cure parity with upstream `PotionOfHealing.cure(ch)`: new shared
+  static `Potion.PotionHealing.cure()` detaches the upstream nine
+  (Poison/Cripple/Weakness/Vulnerable/Bleeding/Blindness/Drowsy/Slow/Vertigo).
+  Healing potion drink + shatter target now use it (previously only
+  Bleeding+Poison on drink, nothing on shatter). Dreamfoil brought to upstream
+  Mageroyal behavior: cure applies to ANY character (old hero-only
+  Blindness/Terror/Charm/Amok/Vertigo mind-cleanse removed — that list never
+  matched upstream), hero message now upstream "You feel refreshed.";
+  mob-sleep kept as the documented port adaptation, examine desc adjusted
+  ("negative effects"). Warden BlobImmunity on trigger noted as unported (no
+  BlobImmunity buff). Follow-up filed: WaterOfHealth/regrowth-bomb carry
+  divergent cure lists (bomb.gd is TRUNCATED) — unify or document later.
+  `test_healing_cure_parity.gd` (44 checks). Verification: `git diff --check`
+  clean, full headless suite 4573 checks 0 failures (gdparse/gdlint
+  unavailable this session).
+
 - Tags: items, artifacts, persistence, audit:S12, tests
 - Artifact uniqueness now survives save/load (upstream
   Generator.storeInBundle "spawned_artifacts" parity). The static

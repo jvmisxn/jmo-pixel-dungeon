@@ -311,6 +311,19 @@ static func _create_mastery() -> Potion:
 # Potion of Healing
 # ---------------------------------------------------------------------------
 class PotionHealing extends Potion:
+	## Upstream PotionOfHealing.cure(Char): debuffs detached alongside the heal.
+	## Shared with Dreamfoil (upstream Mageroyal calls the same helper).
+	const CURE_IDS: Array[String] = [
+		"Poison", "Cripple", "Weakness", "Vulnerable", "Bleeding",
+		"Blindness", "Drowsy", "Slow", "Vertigo",
+	]
+
+	static func cure(ch: Variant) -> void:
+		if ch == null or not ch.has_method("remove_buff_by_id"):
+			return
+		for buff_id: String in CURE_IDS:
+			ch.remove_buff_by_id(buff_id)
+
 	func _init() -> void:
 		super._init()
 		item_id = "healing"
@@ -324,10 +337,7 @@ class PotionHealing extends Potion:
 		var missing: int = hero.hp_max - hero.hp
 		if missing > 0:
 			hero.heal(missing)
-		# Also remove bleeding and poison
-		if hero.has_method("remove_buff_by_id"):
-			hero.remove_buff_by_id("Bleeding")
-			hero.remove_buff_by_id("Poison")
+		PotionHealing.cure(hero)
 		if MessageLog:
 			MessageLog.add_positive("Your wounds heal completely!")
 
@@ -342,6 +352,7 @@ class PotionHealing extends Potion:
 				var missing: int = target.hp_max - target.hp
 				if missing > 0:
 					target.heal(missing)
+				PotionHealing.cure(target)
 		if MessageLog:
 			MessageLog.add_positive("A healing mist fills the area.")
 
