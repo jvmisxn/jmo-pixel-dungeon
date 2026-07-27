@@ -901,7 +901,7 @@ func _check_terrain_effects() -> void:
 
 		ConstantsData.Terrain.GRASS:
 			# Warden subclass gains barkskin from grass
-			pass
+			_rejuvenating_steps_step()
 
 		ConstantsData.Terrain.EMBERS:
 			# Embers can ignite the hero
@@ -911,6 +911,7 @@ func _check_terrain_effects() -> void:
 					add_buff(burning)
 					if MessageLog:
 						MessageLog.add_negative("The hot embers set you ablaze!")
+			_rejuvenating_steps_step()
 
 		ConstantsData.Terrain.ENTRANCE:
 			# Standing on entrance — ascending is possible
@@ -985,6 +986,16 @@ func earn_xp(amount: int) -> void:
 	# consuming XP, then lets carried wands regenerate their use-based-ID pool.
 	if belongings != null and xp_to_next > 0:
 		belongings.notify_hero_gain_exp(float(amount) / float(xp_to_next))
+
+	# Upstream Hero.earnExp counts the Rejuvenating Steps furrow counter down
+	# by 200x the level fraction gained, detaching at 0. (Upstream skips this
+	# for Potion of Experience; the port's earn_xp has no source, matching the
+	# notify_hero_gain_exp precedent above.)
+	if xp_to_next > 0 and has_buff("RejuvenatingStepsFurrow"):
+		var furrow: Variant = get_buff("RejuvenatingStepsFurrow")
+		furrow.count -= (float(amount) / float(xp_to_next)) * 200.0
+		if furrow.count <= 0.0:
+			remove_buff_by_id("RejuvenatingStepsFurrow")
 
 	xp += amount
 	xp_gained.emit(amount)
@@ -1248,6 +1259,36 @@ func on_scroll_read() -> void:
 		add_buff(empower)
 		if EventBus:
 			EventBus.hero_stats_changed.emit()
+
+
+## Huntress Rejuvenating Steps (upstream Level.occupyCell): stepping on short
+## grass or embers sprouts high grass, which the Huntress immediately tramples
+## into furrowed grass with the normal trample drop rolls (upstream sets
+## HIGH_GRASS then pressCell -> HighGrass.trample huntress branch). Once the
+## furrow counter reaches 200 the sprout comes up already furrowed with no
+## drops, until exp gain counts it down. 15 - 5*points turn cooldown (10/5).
+## Port adaptation: upstream's regen-disabled challenge branch is omitted
+## (the port has no challenges).
+func _rejuvenating_steps_step() -> void:
+	var points: int = get_talent_level("huntress_rejuvenating_steps")
+	if points <= 0 or has_buff("RejuvenatingStepsCooldown"):
+		return
+	if level == null or not level.has_method("set_terrain"):
+		return
+	var furrow: Variant = get_buff("RejuvenatingStepsFurrow")
+	if furrow != null and furrow.count >= 200.0:
+		level.set_terrain(pos, ConstantsData.Terrain.FURROWED_GRASS)
+	else:
+		if furrow == null:
+			furrow = add_buff(RejuvenatingStepsFurrow.new())
+		furrow.count += float(3 - points)
+		level.set_terrain(pos, ConstantsData.Terrain.FURROWED_GRASS)
+		if EventBus:
+			EventBus.hero_trampled_grass.emit(pos)
+		on_trampled_grass()
+	var cd := RejuvenatingStepsCooldown.new()
+	cd.set_duration(15.0 - 5.0 * float(points))
+	add_buff(cd)
 
 
 func on_trampled_grass() -> void:
