@@ -43,8 +43,8 @@ func _test_registry(t: Object) -> void:
 		ConstantsData.HeroClass.MAGE, "mage_wand_preservation")
 	t.check(inscribed != null and inscribed.implemented,
 		"Inscribed Power is implemented (see test_inscribed_power.gd)")
-	t.check(preservation != null and not preservation.implemented,
-		"Wand Preservation is an inert groundwork slot")
+	t.check(preservation != null and preservation.implemented,
+		"Wand Preservation is implemented (see test_wand_preservation.gd)")
 
 func _test_proc_marks_target(t: Object) -> void:
 	for points: int in [1, 2]:

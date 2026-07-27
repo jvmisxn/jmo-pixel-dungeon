@@ -59,7 +59,8 @@ func run(t: Object) -> void:
 
 	# --- Every non-internal buff now returns a non-empty description ---
 	var internal_ids := ["DelayedPit", "LethalMomentumTracker",
-		"ParalysisResist", "ProtectiveShadowsTracker", "Regeneration"]
+		"ParalysisResist", "ProtectiveShadowsTracker", "Regeneration",
+		"WandPreservationCounter"]
 	var dir := DirAccess.open("res://src/actors/buffs")
 	t.check(dir != null, "buffs directory opens")
 	if dir != null:
