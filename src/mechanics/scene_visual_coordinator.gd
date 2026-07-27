@@ -133,6 +133,43 @@ static func refresh_plant_sprites(scene: Variant) -> void:
 		scene._entity_layer.add_child(sprite)
 		scene._plant_sprites[plant_pos] = sprite
 
+## Keep one TrapSprite per revealed trap. Upstream renders visible traps as
+## distinct animated tiles; this port's terrain layer draws TRAP cells as
+## floor, so revealed traps need their own sprites like plants do. Hidden
+## traps get no sprite; triggered one-shot traps grey out via set_trap_state.
+static func refresh_trap_sprites(scene: Variant) -> void:
+	if scene == null or scene._current_level == null:
+		return
+	var valid_positions: Dictionary[int, bool] = {}
+	for trap_pos_variant: Variant in scene._current_level.traps.keys():
+		var trap_entry: Variant = scene._current_level.traps[trap_pos_variant]
+		if trap_entry != null and bool(trap_entry.get("visible")):
+			valid_positions[int(trap_pos_variant)] = true
+	var to_remove: Array[int] = []
+	for pos: int in scene._trap_sprites.keys():
+		if valid_positions.has(pos):
+			continue
+		var stale_sprite: Variant = scene._trap_sprites[pos]
+		if is_instance_valid(stale_sprite):
+			stale_sprite.queue_free()
+		to_remove.append(pos)
+	for pos: int in to_remove:
+		scene._trap_sprites.erase(pos)
+	for trap_pos: int in valid_positions.keys():
+		var trap: Variant = scene._current_level.traps.get(trap_pos)
+		if trap == null:
+			continue
+		if scene._trap_sprites.has(trap_pos):
+			var existing: Variant = scene._trap_sprites[trap_pos]
+			if is_instance_valid(existing) and existing.has_method("set_trap_state"):
+				existing.set_trap_state(bool(trap.get("active")))
+			continue
+		var sprite: Variant = scene._instantiate_script("res://src/sprites/trap_sprite.gd")
+		sprite.setup_for_trap(str(trap.get("trap_name")), bool(trap.get("active")))
+		sprite.place_at(trap_pos)
+		scene._entity_layer.add_child(sprite)
+		scene._trap_sprites[trap_pos] = sprite
+
 static func refresh_blob_overlays(scene: Variant) -> void:
 	if scene == null or scene._current_level == null or scene._blob_layer == null:
 		return
@@ -204,6 +241,11 @@ static func update_entity_visibility(scene: Variant) -> void:
 		var plant_sprite: Variant = scene._plant_sprites[pos]
 		if pos >= 0 and pos < scene._current_level.visible.size():
 			plant_sprite.visible = scene._current_level.visible[pos] or scene._current_level.visited[pos]
+	refresh_trap_sprites(scene)
+	for pos: int in scene._trap_sprites.keys():
+		var trap_sprite: Variant = scene._trap_sprites[pos]
+		if is_instance_valid(trap_sprite) and pos >= 0 and pos < scene._current_level.visible.size():
+			trap_sprite.visible = scene._current_level.visible[pos] or scene._current_level.visited[pos]
 	for pos: int in scene._armed_bomb_sprites.keys():
 		var bomb_sprite: Variant = scene._armed_bomb_sprites[pos]
 		if pos >= 0 and pos < scene._current_level.visible.size():
