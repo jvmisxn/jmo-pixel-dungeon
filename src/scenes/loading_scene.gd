@@ -282,13 +282,12 @@ func _generate_current_level() -> void:
 
 		# Spawn quest NPCs and shopkeepers only for freshly generated levels.
 		if not reused_existing_state:
-			if QuestHandler.is_quest_depth(depth):
-				var npc: Variant = QuestHandler.spawn_quest_npc(level, depth)
-				if npc != null and npc is Object:
-					var npc_pos: int = QuestHandler._find_spawn_pos(level)
-					if npc_pos >= 0:
-						npc.set("pos", npc_pos)
-						level.add_mob(npc)
+			var npc: Variant = QuestHandler.spawn_quest_npc(level, depth)
+			if npc != null and npc is Object:
+				var npc_pos: int = QuestHandler._find_spawn_pos(level)
+				if npc_pos >= 0:
+					npc.set("pos", npc_pos)
+					level.add_mob(npc)
 
 			if QuestHandler.is_shop_depth(depth):
 				var keeper: Shopkeeper = QuestHandler.spawn_shopkeeper(level, depth)
