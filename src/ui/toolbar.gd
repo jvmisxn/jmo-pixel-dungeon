@@ -298,6 +298,7 @@ func _apply_button_labels() -> void:
 	var visible_quickslots_per_page: int = _visible_quickslots_per_page()
 	_quickslot_page = clampi(_quickslot_page, 0, _quickslot_page_count() - 1)
 	alignment = BoxContainer.ALIGNMENT_CENTER
+	_apply_child_order()
 	var button_size: Vector2 = (
 		MOBILE_NARROW_BUTTON_MIN_SIZE
 		if is_narrow_compact
@@ -323,12 +324,9 @@ func _apply_button_labels() -> void:
 		_btn_inventory.size = button_size
 		_btn_inventory.add_theme_font_size_override("font_size", action_font_size)
 	if _btn_map:
-		# Map access is essential on mobile: the minimap widget and the M
-		# keyboard shortcut are both unavailable there, so keep the toolbar
-		# Map button visible in compact mode instead of desktop-only.
 		_btn_map.text = ""
 		_btn_map.tooltip_text = "Map [M]"
-		_btn_map.visible = true
+		_btn_map.visible = not _compact_mode
 		_btn_map.custom_minimum_size = button_size
 		_btn_map.size = button_size
 		_btn_map.add_theme_font_size_override("font_size", action_font_size)
@@ -355,6 +353,7 @@ func _apply_button_labels() -> void:
 	if _btn_settings:
 		_btn_settings.text = ""
 		_btn_settings.tooltip_text = "Menu [Esc]"
+		_btn_settings.visible = not _compact_mode
 		_btn_settings.custom_minimum_size = button_size
 		_btn_settings.size = button_size
 		_btn_settings.add_theme_font_size_override("font_size", action_font_size)
@@ -380,7 +379,7 @@ func _apply_button_labels() -> void:
 	if _quickslot_sep:
 		_quickslot_sep.visible = not is_narrow_compact
 	if _settings_sep:
-		_settings_sep.visible = not is_narrow_compact
+		_settings_sep.visible = not is_narrow_compact and not _compact_mode
 	var first_visible_quickslot: int = _quickslot_page * visible_quickslots_per_page
 	var last_visible_quickslot: int = first_visible_quickslot + visible_quickslots_per_page
 	for i: int in range(_quickslots.size()):
@@ -404,6 +403,39 @@ func _apply_button_labels() -> void:
 			slot_label.position = Vector2(5.0, quickslot_size.y - 20.0)
 			slot_label.add_theme_font_size_override("font_size", 13 if _compact_mode else 11)
 	_fit_compact_width_to_viewport()
+
+
+func _apply_child_order() -> void:
+	if _compact_mode:
+		_move_child_if_present(_btn_wait, 0)
+		_move_child_if_present(_btn_search, 1)
+		_move_child_if_present(_quickslot_sep, 2)
+		for i: int in range(_quickslots.size()):
+			_move_child_if_present(_quickslots[i], 3 + i)
+		_move_child_if_present(_btn_quickslot_page, 3 + _quickslots.size())
+		_move_child_if_present(_settings_sep, 4 + _quickslots.size())
+		_move_child_if_present(_btn_inventory, 5 + _quickslots.size())
+		_move_child_if_present(_btn_map, 6 + _quickslots.size())
+		_move_child_if_present(_btn_rest, 7 + _quickslots.size())
+		_move_child_if_present(_btn_settings, 8 + _quickslots.size())
+		return
+	_move_child_if_present(_btn_inventory, 0)
+	_move_child_if_present(_btn_map, 1)
+	_move_child_if_present(_btn_wait, 2)
+	_move_child_if_present(_btn_rest, 3)
+	_move_child_if_present(_btn_search, 4)
+	_move_child_if_present(_quickslot_sep, 5)
+	for i: int in range(_quickslots.size()):
+		_move_child_if_present(_quickslots[i], 6 + i)
+	_move_child_if_present(_btn_quickslot_page, 6 + _quickslots.size())
+	_move_child_if_present(_settings_sep, 7 + _quickslots.size())
+	_move_child_if_present(_btn_settings, 8 + _quickslots.size())
+
+
+func _move_child_if_present(child: Node, index: int) -> void:
+	if child == null or child.get_parent() != self:
+		return
+	move_child(child, clampi(index, 0, get_child_count() - 1))
 
 
 func _fit_compact_width_to_viewport() -> void:

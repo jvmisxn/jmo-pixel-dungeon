@@ -23,6 +23,7 @@
 - Some systems are broad in coverage but not yet hardened enough for framework reuse.
 - Mobile combat input and real-time pacing need real-device/windowed validation after `b0c8971`: confirm tap attacks no longer double-submit, damage numbers are not duplicated, and the restored `0.1s` visible-mob delay feels close to Shattered Pixel Dungeon.
 - If duplicate damage numbers are still reported only in online/co-op, investigate snapshot HP-delta feedback echoing local combat feedback rather than re-opening the fixed single-player/mobile tap path.
+- Mobile HUD now targets the Shattered Pixel Dungeon reference composition: status top-left, version/menu cluster top-right, floating transparent log text, and bottom toolbar ordered wait/search -> quickslots -> bag.
 
 ## Working Assumptions
 

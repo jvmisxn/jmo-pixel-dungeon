@@ -26,8 +26,11 @@ const MOBILE_SAFE_LANDSCAPE_TOP_INSET: float = 8.0
 const WEB_LAYOUT_POLL_INTERVAL: float = 0.25
 const HERO_AVATARS_PATH: String = "res://assets/spd/sprites/avatars.png"
 const STATUS_PANE_PATH: String = "res://assets/spd/interfaces/status_pane.png"
+const ICONS_PATH: String = "res://assets/spd/interfaces/icons.png"
 const STATUS_AVATAR_SOCKET_REGION: Rect2 = Rect2(0, 0, 30, 36)
 const HERO_AVATAR_FRAME_SIZE: Vector2 = Vector2(24, 32)
+const ICON_REGION_MAP: Rect2 = Rect2(136, 0, 17, 15)
+const ICON_REGION_SETTINGS: Rect2 = Rect2(102, 0, 14, 14)
 
 # --- Child panels ---
 var toolbar: MarginContainer = null
@@ -54,6 +57,10 @@ var _status_xp_label: Label = null
 var _status_depth_label: Label = null
 var _status_str_label: Label = null
 var _mobile_buffs_row: HFlowContainer = null
+var _top_menu_cluster: PanelContainer = null
+var _top_menu_version_label: Label = null
+var _top_menu_map_button: Button = null
+var _top_menu_menu_button: Button = null
 
 # --- Active popup window ---
 var _active_window: Control = null
@@ -169,10 +176,11 @@ func _build_layout() -> void:
 	log_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var log_panel: PanelContainer = PanelContainer.new()
+	log_panel.name = "GameLogPanel"
 	log_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	log_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var log_style: StyleBoxFlat = StyleBoxFlat.new()
-	log_style.bg_color = Color(0.0, 0.0, 0.0, 0.35)
+	log_style.bg_color = Color(0.0, 0.0, 0.0, 0.0)
 	log_style.content_margin_left = 4.0
 	log_style.content_margin_right = 4.0
 	log_style.content_margin_top = 2.0
@@ -193,9 +201,7 @@ func _build_layout() -> void:
 	var toolbar_panel: PanelContainer = PanelContainer.new()
 	toolbar_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var toolbar_style: StyleBoxFlat = StyleBoxFlat.new()
-	toolbar_style.bg_color = Color(0.1, 0.09, 0.08, 0.95)
-	toolbar_style.border_color = Color(0.4, 0.35, 0.28)
-	toolbar_style.border_width_top = 1
+	toolbar_style.bg_color = Color(0.0, 0.0, 0.0, 0.0)
 	toolbar_style.content_margin_left = 8.0
 	toolbar_style.content_margin_right = 8.0
 	toolbar_style.content_margin_top = 2.0
@@ -235,6 +241,7 @@ func _build_layout() -> void:
 	info_row.add_child(gold_label)
 
 	root.add_child(info_row)
+	_build_top_menu_cluster(root)
 
 	# --- Party Row (top-center, hidden in solo play) ---
 	_party_row = HBoxContainer.new()
@@ -288,6 +295,8 @@ func contains_screen_position(screen_pos: Vector2) -> bool:
 		return true
 	if toolbar != null and _control_contains_screen_position(toolbar, screen_pos):
 		return true
+	if _top_menu_cluster != null and _top_menu_cluster.visible and _control_contains_screen_position(_top_menu_cluster, screen_pos):
+		return true
 	var status_container: Control = root_node.get_node_or_null("StatusContainer") as Control
 	if status_container != null and _control_contains_screen_position(status_container, screen_pos):
 		return true
@@ -305,6 +314,8 @@ func handle_screen_tap(screen_pos: Vector2) -> bool:
 			var toolbar_pos: Vector2 = _screen_position_for_control(toolbar, screen_pos)
 			return bool(_toolbar_bar.activate_button_at_screen_position(toolbar_pos))
 		return true
+	if _top_menu_cluster != null and _top_menu_cluster.visible and _control_contains_screen_position(_top_menu_cluster, screen_pos):
+		return _activate_top_menu_button_at_screen_position(screen_pos)
 	if _party_row != null and _party_row.visible and _control_contains_screen_position(_party_row, screen_pos):
 		return _activate_party_button_at_screen_position(screen_pos)
 	return false
@@ -350,6 +361,26 @@ func _activate_party_button_at_screen_position(screen_pos: Vector2) -> bool:
 		_on_party_focus_pressed(int(button.get_meta("hero_index", -1)))
 		return true
 	return false
+
+
+func _activate_top_menu_button_at_screen_position(screen_pos: Vector2) -> bool:
+	if _top_menu_cluster == null or not _top_menu_cluster.visible:
+		return false
+	for button: Button in [_top_menu_map_button, _top_menu_menu_button]:
+		if button == null or button.disabled or not button.visible:
+			continue
+		if _control_contains_screen_position(button, screen_pos):
+			button.pressed.emit()
+			return true
+	var cluster_pos: Vector2 = _screen_position_for_control(_top_menu_cluster, screen_pos)
+	var local_pos: Vector2 = cluster_pos - _top_menu_cluster.get_global_rect().position
+	if local_pos.y >= 24.0:
+		if local_pos.x < _top_menu_cluster.size.x * 0.5:
+			_on_map_pressed()
+		else:
+			_on_settings_pressed()
+		return true
+	return true
 
 
 func _connect_signals() -> void:
@@ -712,6 +743,87 @@ func _build_mobile_buffs_row(root: Control) -> void:
 	_mobile_buffs_row.add_theme_constant_override("h_separation", 3)
 	_mobile_buffs_row.add_theme_constant_override("v_separation", 2)
 	root.add_child(_mobile_buffs_row)
+
+
+func _build_top_menu_cluster(root: Control) -> void:
+	_top_menu_cluster = PanelContainer.new()
+	_top_menu_cluster.name = "TopMenuCluster"
+	_top_menu_cluster.mouse_filter = Control.MOUSE_FILTER_STOP
+	var cluster_style: StyleBoxFlat = StyleBoxFlat.new()
+	cluster_style.bg_color = Color(0.42, 0.44, 0.38, 0.96)
+	cluster_style.border_color = Color(0.70, 0.72, 0.62, 0.95)
+	cluster_style.border_width_left = 2
+	cluster_style.border_width_top = 2
+	cluster_style.border_width_right = 2
+	cluster_style.border_width_bottom = 2
+	cluster_style.content_margin_left = 4.0
+	cluster_style.content_margin_right = 4.0
+	cluster_style.content_margin_top = 2.0
+	cluster_style.content_margin_bottom = 4.0
+	_top_menu_cluster.add_theme_stylebox_override("panel", cluster_style)
+
+	var content: VBoxContainer = VBoxContainer.new()
+	content.name = "Content"
+	content.add_theme_constant_override("separation", 3)
+	_top_menu_cluster.add_child(content)
+
+	_top_menu_version_label = Label.new()
+	_top_menu_version_label.name = "VersionLabel"
+	_top_menu_version_label.text = "v%s" % _project_version()
+	_top_menu_version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_top_menu_version_label.add_theme_font_size_override("font_size", 12)
+	_top_menu_version_label.add_theme_color_override("font_color", Color(0.92, 0.92, 0.82))
+	_top_menu_version_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.9))
+	_top_menu_version_label.add_theme_constant_override("shadow_offset_x", 1)
+	_top_menu_version_label.add_theme_constant_override("shadow_offset_y", 1)
+	content.add_child(_top_menu_version_label)
+
+	var button_row: HBoxContainer = HBoxContainer.new()
+	button_row.name = "ButtonRow"
+	button_row.add_theme_constant_override("separation", 4)
+	content.add_child(button_row)
+
+	_top_menu_map_button = _create_top_menu_button("Map [M]", ICON_REGION_MAP)
+	_top_menu_menu_button = _create_top_menu_button("Menu [Esc]", ICON_REGION_SETTINGS)
+	button_row.add_child(_top_menu_map_button)
+	button_row.add_child(_top_menu_menu_button)
+	root.add_child(_top_menu_cluster)
+
+	_top_menu_map_button.pressed.connect(_on_map_pressed)
+	_top_menu_menu_button.pressed.connect(_on_settings_pressed)
+
+
+func _create_top_menu_button(tooltip: String, icon_region: Rect2) -> Button:
+	var button: Button = Button.new()
+	button.text = ""
+	button.tooltip_text = tooltip
+	button.custom_minimum_size = Vector2(48, 40)
+	button.icon = UIUtils.atlas_texture(ICONS_PATH, icon_region)
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.expand_icon = true
+	button.add_theme_constant_override("icon_max_width", 26)
+	button.add_theme_font_size_override("font_size", 1)
+	var normal: StyleBoxFlat = StyleBoxFlat.new()
+	normal.bg_color = Color(0.70, 0.18, 0.16, 1.0)
+	normal.border_color = Color(0.35, 0.08, 0.07, 1.0)
+	normal.set_border_width_all(2)
+	normal.content_margin_left = 4.0
+	normal.content_margin_right = 4.0
+	normal.content_margin_top = 4.0
+	normal.content_margin_bottom = 4.0
+	button.add_theme_stylebox_override("normal", normal)
+	var hover: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.84, 0.24, 0.20, 1.0)
+	button.add_theme_stylebox_override("hover", hover)
+	var pressed: StyleBoxFlat = normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.44, 0.10, 0.09, 1.0)
+	button.add_theme_stylebox_override("pressed", pressed)
+	return button
+
+
+func _project_version() -> String:
+	var version: String = str(ProjectSettings.get_setting("application/config/version", "0.1.2"))
+	return version if not version.is_empty() else "0.1.2"
 
 
 func _on_viewport_resized() -> void:
@@ -1092,6 +1204,9 @@ func _apply_responsive_layout() -> void:
 		info_row.position = Vector2(maxf(HUD_MARGIN, _vp_size.x - info_width - HUD_MARGIN), _hud_top_margin())
 		info_row.visible = not is_mobile_layout
 
+	if _top_menu_cluster:
+		_layout_top_menu_cluster()
+
 	if party_row:
 		var party_safe_left: float = _safe_area_inset("left") if is_mobile_layout else 0.0
 		var party_safe_right: float = _safe_area_inset("right") if is_mobile_layout else 0.0
@@ -1155,6 +1270,24 @@ func _apply_responsive_layout() -> void:
 		_toolbar_bar.set_compact_mode(is_mobile_layout)
 
 	_layout_toolbar()
+
+
+func _layout_top_menu_cluster() -> void:
+	if _top_menu_cluster == null:
+		return
+	var is_mobile_layout: bool = _is_mobile_layout()
+	_top_menu_cluster.visible = is_mobile_layout
+	if not is_mobile_layout:
+		return
+	var safe_right: float = _safe_area_inset("right")
+	var width: float = 120.0
+	var height: float = 72.0
+	_top_menu_cluster.custom_minimum_size = Vector2(width, height)
+	_top_menu_cluster.size = Vector2(width, height)
+	_top_menu_cluster.position = Vector2(
+		maxf(HUD_MARGIN, _vp_size.x - safe_right - width - HUD_MARGIN),
+		_hud_top_margin()
+	)
 
 
 func _layout_game_log(log_container: Control, status_container: Control, party_row: Control) -> void:

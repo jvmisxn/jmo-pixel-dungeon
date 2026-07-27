@@ -222,14 +222,12 @@ func run(t: Object) -> void:
 		"very narrow mobile toolbar fits a 320px visible width"
 	)
 	t.check(
-		toolbar._btn_inventory.visible and toolbar._btn_settings.visible,
-		"very narrow mobile toolbar keeps Bag and Menu visible"
+		toolbar._btn_inventory.visible and not toolbar._btn_settings.visible,
+		"very narrow mobile toolbar keeps Bag visible and moves Menu to the top-right HUD cluster"
 	)
 	t.check(
 		toolbar._btn_inventory.icon != null
 				and _button_icon_region_has_pixels(toolbar._btn_inventory)
-				and toolbar._btn_settings.icon != null
-				and _button_icon_region_has_pixels(toolbar._btn_settings)
 				and toolbar._btn_quickslot_page.icon != null
 				and _button_icon_region_has_pixels(toolbar._btn_quickslot_page),
 		"core mobile toolbar actions use non-empty SPD atlas icons"
@@ -247,7 +245,6 @@ func run(t: Object) -> void:
 	)
 	t.check(
 		toolbar._btn_inventory.custom_minimum_size.x > 0.0
-				and toolbar._btn_settings.custom_minimum_size.x > 0.0
 				and toolbar._btn_quickslot_page.custom_minimum_size.x > 0.0,
 		"foldable-width mobile toolbar preserves tappable core controls"
 	)
@@ -260,15 +257,15 @@ func run(t: Object) -> void:
 		"ultra-narrow mobile toolbar hides search before shrinking core controls too far"
 	)
 	t.check(
-		toolbar._btn_map != null and toolbar._btn_map.visible,
-		"ultra-narrow mobile toolbar keeps Map reachable (no minimap/keyboard on mobile)"
+		toolbar._btn_map != null and not toolbar._btn_map.visible,
+		"ultra-narrow mobile toolbar moves Map out of the bottom row"
 	)
 	t.check(
 		toolbar._btn_map.text == ""
 				and toolbar._btn_map.icon != null
 				and _button_icon_region_has_pixels(toolbar._btn_map)
 				and toolbar._btn_map.tooltip_text == "Map [M]",
-		"compact mobile Map button uses an SPD icon with a clear tooltip"
+		"compact mobile Map button keeps an SPD icon for the top-right duplicate"
 	)
 	t.check(
 		toolbar._btn_wait.text == ""
@@ -308,8 +305,8 @@ func run(t: Object) -> void:
 	)
 	toolbar.set_available_width(480.0)
 	t.check(
-		toolbar._btn_map.visible,
-		"narrow mobile toolbar exposes the full-map button"
+		not toolbar._btn_map.visible,
+		"narrow mobile toolbar keeps the full-map button in the top-right cluster"
 	)
 	toolbar.set_available_width(280.0)
 	toolbar._btn_inventory.position = Vector2.ZERO
@@ -434,14 +431,30 @@ func run(t: Object) -> void:
 		"mobile portrait online state label stays below party controls and inside the visible viewport width"
 	)
 	var log_container: Control = layout_root.get_node_or_null("GameLog") as Control
+	var log_panel: PanelContainer = layout_root.get_node_or_null("GameLog/GameLogPanel") as PanelContainer
+	var top_menu_cluster: Control = layout_root.get_node_or_null("TopMenuCluster") as Control
+	var top_menu_version: Label = layout_root.get_node_or_null("TopMenuCluster/Content/VersionLabel") as Label
 	t.check(
 		log_container != null
 				and log_container.position.y + log_container.size.y <= layout_hud.toolbar.position.y - HUD.HUD_MARGIN,
 		"mobile game log stays clear of the safe-area-adjusted toolbar"
 	)
 	t.check(
+		log_panel != null
+				and (log_panel.get_theme_stylebox("panel") as StyleBoxFlat).bg_color.a == 0.0,
+		"mobile game log uses transparent backing like SPD's floating message text"
+	)
+	t.check(
 		layout_hud._status_overlay != null and layout_hud._status_overlay.visible,
 		"mobile status overlay remains visible in portrait layout"
+	)
+	t.check(
+		top_menu_cluster != null
+				and top_menu_cluster.visible
+				and top_menu_cluster.position.x + top_menu_cluster.size.x <= 393.0 - HUD.HUD_MARGIN
+				and top_menu_version != null
+				and top_menu_version.text == "v0.1.2",
+		"mobile HUD shows the SPD-style top-right version/menu cluster"
 	)
 	var stale_party_x: float = portrait_party_row.position.x
 	portrait_party_row.position = Vector2(250.0, 6.0)
@@ -558,6 +571,15 @@ func run(t: Object) -> void:
 	t.check(
 		layout_hud.toolbar_action_taps == 1,
 		"mobile toolbar tap emits the matching toolbar action"
+	)
+	var opened_windows_before_top_menu_tap: int = layout_hud.window_layer.get_child_count()
+	t.check(
+		layout_hud.handle_screen_tap(top_menu_cluster.position + Vector2(90.0, 48.0)),
+		"mobile HUD touch release activates the top-right menu cluster"
+	)
+	t.check(
+		layout_hud.window_layer.get_child_count() > opened_windows_before_top_menu_tap,
+		"top-right menu cluster opens a HUD window"
 	)
 	layout_hud.free()
 
