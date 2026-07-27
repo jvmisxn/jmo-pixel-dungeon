@@ -336,29 +336,12 @@ class RepulsionGlyph extends ArmorGlyph:
 		var armor_level: int = armor.level if armor != null else 0
 		if ArmorGlyph.check_proc(armor_level):
 			if attacker != null and defender != null:
-				if attacker.has_method("move_to") and attacker.get("pos") != null and defender.get("pos") != null:
-					var atk_pos: int = attacker.pos
-					var def_pos: int = defender.pos
-					# Calculate knockback direction: away from defender
-					var atk_x: int = ConstantsData.pos_to_x(atk_pos)
-					var atk_y: int = ConstantsData.pos_to_y(atk_pos)
-					var def_x: int = ConstantsData.pos_to_x(def_pos)
-					var def_y: int = ConstantsData.pos_to_y(def_pos)
-					var dx: int = signi(atk_x - def_x)
-					var dy: int = signi(atk_y - def_y)
-					var new_pos: int = ConstantsData.xy_to_pos(atk_x + dx, atk_y + dy)
-					if ConstantsData.is_valid_pos(new_pos):
-						# Attempt to push attacker; if blocked, they stay put
-						var level_ref: Variant = attacker.get("level")
-						var can_move: bool = true
-						if level_ref != null and level_ref.has_method("is_passable"):
-							can_move = level_ref.is_passable(new_pos)
-							if can_move and level_ref.has_method("find_char_at"):
-								can_move = level_ref.find_char_at(new_pos) == null
-						if can_move:
-							attacker.pos = new_pos
-							if MessageLog:
-								MessageLog.add("Your armor " + "repels the " + "attacker!")
+				if attacker.get("pos") != null and defender.get("pos") != null:
+					# Upstream Repulsion: throwChar(attacker, ..., 2) — pushed
+					# chars can be forced onto chasm cells and fall in.
+					if KnockBack.throw_char(attacker, defender.pos, 2):
+						if MessageLog:
+							MessageLog.add("Your armor " + "repels the " + "attacker!")
 			ArmorGlyph._emit_glyph_proc("repulsion", defender, attacker)
 		return damage
 

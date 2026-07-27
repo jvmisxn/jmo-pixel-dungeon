@@ -332,20 +332,11 @@ func _vampiric_proc(_weapon: Variant, _attacker: Variant, _defender: Variant, da
 	return damage
 
 func _elastic_proc(_weapon: Variant, _attacker: Variant, defender: Variant, damage: int) -> int:
-	# Knock the defender back 1-2 tiles.
-	if defender != null and defender.has_method("move_to") and defender.get("pos") != null:
+	# Upstream Elastic: throwChar(defender, ..., 2) — pushed chars can be
+	# forced onto chasm cells and fall in.
+	if defender != null and defender.get("pos") != null:
 		if _attacker != null and _attacker.get("pos") != null:
-			var atk_x: int = ConstantsData.pos_to_x(_attacker.pos)
-			var atk_y: int = ConstantsData.pos_to_y(_attacker.pos)
-			var def_x: int = ConstantsData.pos_to_x(defender.pos)
-			var def_y: int = ConstantsData.pos_to_y(defender.pos)
-			var dx: int = signi(def_x - atk_x)
-			var dy: int = signi(def_y - atk_y)
-			var new_x: int = def_x + dx
-			var new_y: int = def_y + dy
-			var new_pos: int = ConstantsData.xy_to_pos(new_x, new_y)
-			if ConstantsData.is_valid_pos(new_pos):
-				defender.move_to(new_pos)
+			if KnockBack.throw_char(defender, _attacker.pos, 2):
 				if MessageLog:
 					MessageLog.add("The elastic force pushes the target back!")
 	WeaponEnchantment._emit_proc("elastic", _attacker, defender)
