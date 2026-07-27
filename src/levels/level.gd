@@ -390,6 +390,20 @@ func update_fov(hero_pos: int, view_dist: int = -1) -> void:
 							visible[n] = true
 					visible[aware_pos] = true
 
+		# RevealedArea (Huntress Seer Shot): reveal the 3x3 around the shot
+		# cell while the buff lasts, on its own depth only (original
+		# heroMindFov RevealedArea branch).
+		var revealed: Variant = hero.get_buff("RevealedArea") if hero.has_method("get_buff") else null
+		if revealed != null and int(revealed.get("reveal_depth")) == \
+				(int(GameManager.depth) if GameManager != null else 0):
+			var reveal_pos: int = int(revealed.get("reveal_pos"))
+			if reveal_pos >= 0 and reveal_pos < LEN:
+				for dir: int in ConstantsData.DIRS_8:
+					var n: int = reveal_pos + dir
+					if n >= 0 and n < LEN:
+						visible[n] = true
+				visible[reveal_pos] = true
+
 		# Awareness buff: reveal heap neighborhoods (original Awareness buff)
 		if hero.has_buff("Awareness"):
 			for heap: Dictionary in heaps:

@@ -76,6 +76,34 @@ func accuracy_factor(hero: Char = null, target: Char = null) -> float:
 	return MissileWeapon.adjacent_acc_factor_for(hero, target)
 
 # ---------------------------------------------------------------------------
+# Seer Shot (Huntress T3 talent)
+# ---------------------------------------------------------------------------
+
+## Upstream `SpiritBow.SpiritArrow.cast`: shooting the bow at a cell with no
+## character on it, while Seer Shot is off cooldown, attaches a RevealedArea
+## buff (3x3 fog reveal around the shot cell for 5 turns per talent point)
+## and a 20-turn SeerShotCooldown.
+static func apply_seer_shot(hero: Variant, shot_pos: int) -> void:
+	if hero == null or shot_pos < 0:
+		return
+	if not hero.has_method("get_talent_level") \
+			or hero.get_talent_level("huntress_seer_shot") <= 0:
+		return
+	if hero.has_method("has_buff") and hero.has_buff("SeerShotCooldown"):
+		return
+	var level: Variant = hero.get("level")
+	if level != null and level.has_method("find_char_at") \
+			and level.find_char_at(shot_pos) != null:
+		return
+	var points: int = hero.get_talent_level("huntress_seer_shot")
+	var reveal: RevealedArea = RevealedArea.new()
+	reveal.reveal_pos = shot_pos
+	reveal.reveal_depth = int(GameManager.depth) if GameManager != null else 0
+	reveal.set_duration(5.0 * points)
+	hero.add_buff(reveal)
+	hero.add_buff(SeerShotCooldown.new())
+
+# ---------------------------------------------------------------------------
 # Surprise Attack
 # ---------------------------------------------------------------------------
 
