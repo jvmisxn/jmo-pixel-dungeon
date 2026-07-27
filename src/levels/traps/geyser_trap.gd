@@ -11,7 +11,9 @@ extends Trap
 ## Documented divergences from upstream (kept out of this narrow slice, matching
 ## how earlier trap slices scoped their omissions):
 ##  - No `throwChar` wall-collision slam damage; knockback simply stops at the
-##    first blocking cell.
+##    first blocking cell. Since 2026-07-27 the push routes through the shared
+##    `KnockBack` helper, so chasm cells behave like upstream AVOID terrain:
+##    flying chars sail over, grounded chars fall in (`Chasm.force_fall`).
 ##  - Hero-specific hazard-avoidance for the centre knockback direction is not
 ##    modelled (this port has no `Level.avoid` map); the centre character is
 ##    pushed in the first open direction (or a forced `center_knock_back_direction`).
@@ -100,10 +102,18 @@ func _erupt_char(level: Level, ch: Variant, ch_pos: int, dmg_mult: float) -> voi
 	# The water douses any burning on a living character.
 	if _char_alive(ch) and ch.has_method("has_buff") and ch.has_buff("Burning"):
 		ch.remove_buff_by_id("Burning")
-	# Determine and apply knockback.
-	var dir: int = _center_direction(level) if ch_pos == pos else _away_offset(ch_pos)
-	if dir != 0:
-		_knock_back(ch, ch_pos, dir)
+	# Determine and apply knockback via the shared forced-movement helper
+	# (upstream routes through WandOfBlastWave.throwChar with no collide
+	# damage): grounded chars pushed onto a chasm cell fall in.
+	if ch_pos == pos:
+		var dir: int = _center_direction(level)
+		if dir != 0:
+			# Decompose the DIRS_8 offset into unit dx/dy for the helper.
+			var dy: int = roundi(float(dir) / float(ConstantsData.WIDTH))
+			var dx: int = dir - dy * ConstantsData.WIDTH
+			KnockBack.throw_char_dir(ch, dx, dy, KNOCKBACK, level)
+	else:
+		KnockBack.throw_char(ch, pos, KNOCKBACK, level)
 	# Scald fiery enemies (fire elementals). take_damage keeps their fire immunity.
 	if _is_fiery(ch) and ch.has_method("take_damage"):
 		var depth: int = level.depth if level != null else 0
@@ -112,26 +122,8 @@ func _erupt_char(level: Level, ch: Variant, ch_pos: int, dmg_mult: float) -> voi
 		if dmg > 0:
 			ch.take_damage(dmg, self)
 
-func _knock_back(ch: Variant, from_pos: int, dir: int) -> void:
-	if not ch.has_method("move_to"):
-		return
-	var current: int = from_pos
-	for _step: int in range(KNOCKBACK):
-		var next_pos: int = current + dir
-		if not _valid_step(current, next_pos):
-			break
-		# move_to already rejects impassable/occupied cells.
-		if not ch.move_to(next_pos):
-			break
-		current = next_pos
-
-## Direction offset pushing a neighbour directly away from the trap centre.
-func _away_offset(ch_pos: int) -> int:
-	var dx: int = signi(ConstantsData.pos_to_x(ch_pos) - ConstantsData.pos_to_x(pos))
-	var dy: int = signi(ConstantsData.pos_to_y(ch_pos) - ConstantsData.pos_to_y(pos))
-	return dy * ConstantsData.WIDTH + dx
-
-## Knockback direction for a character standing on the trap cell.
+## Knockback direction for a character standing on the trap cell. Chasm cells
+## count as open: forced movement can enter them upstream (AVOID terrain).
 func _center_direction(level: Level) -> int:
 	if center_knock_back_direction != -1:
 		return center_knock_back_direction
@@ -139,7 +131,11 @@ func _center_direction(level: Level) -> int:
 	dirs.shuffle()
 	for dir: int in dirs:
 		var target: int = pos + dir
-		if _valid_step(pos, target) and (level == null or not level.has_method("is_passable") or level.is_passable(target)):
+		if not _valid_step(pos, target):
+			continue
+		if level == null or not level.has_method("is_passable") \
+				or level.is_passable(target) \
+				or level.terrain_at(target) == ConstantsData.Terrain.CHASM:
 			return dir
 	return 0
 

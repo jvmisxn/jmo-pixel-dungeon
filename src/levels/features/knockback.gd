@@ -12,15 +12,24 @@ extends RefCounted
 static func throw_char(ch: Variant, from_pos: int, distance: int, lvl: Variant = null) -> bool:
 	if ch == null or not is_instance_valid(ch) or ch.get("pos") == null:
 		return false
+	var start_pos: int = ch.pos
+	var dx: int = signi(ConstantsData.pos_to_x(start_pos) - ConstantsData.pos_to_x(from_pos))
+	var dy: int = signi(ConstantsData.pos_to_y(start_pos) - ConstantsData.pos_to_y(from_pos))
+	return throw_char_dir(ch, dx, dy, distance, lvl)
+
+## Push `ch` up to `distance` cells along the explicit unit direction
+## (`dx`, `dy` in -1/0/1) — for sites whose push direction is chosen rather
+## than derived from a source cell (e.g. GeyserTrap's centre knockback).
+static func throw_char_dir(ch: Variant, dx: int, dy: int, distance: int, lvl: Variant = null) -> bool:
+	if ch == null or not is_instance_valid(ch) or ch.get("pos") == null:
+		return false
 	if lvl == null:
 		lvl = ch.get("level")
 	if lvl == null:
 		return false
-	var start_pos: int = ch.pos
-	var dx: int = signi(ConstantsData.pos_to_x(start_pos) - ConstantsData.pos_to_x(from_pos))
-	var dy: int = signi(ConstantsData.pos_to_y(start_pos) - ConstantsData.pos_to_y(from_pos))
 	if dx == 0 and dy == 0:
 		return false
+	var start_pos: int = ch.pos
 	var current_pos: int = start_pos
 	for _step: int in range(distance):
 		var nx: int = ConstantsData.pos_to_x(current_pos) + dx
