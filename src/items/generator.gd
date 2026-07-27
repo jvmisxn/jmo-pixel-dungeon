@@ -191,6 +191,20 @@ static var _generated_artifacts: Array[String] = []
 static func reset_artifacts() -> void:
 	_generated_artifacts.clear()
 
+
+## Persisted so mid-run save/load can't regenerate an already-found artifact
+## (upstream Generator.storeInBundle "spawned_artifacts").
+static func serialize_artifacts() -> Array:
+	return _generated_artifacts.duplicate()
+
+
+static func restore_artifacts(data: Array) -> void:
+	_generated_artifacts.clear()
+	for art_id: Variant in data:
+		var id_str: String = str(art_id)
+		if id_str in ARTIFACTS and id_str not in _generated_artifacts:
+			_generated_artifacts.append(id_str)
+
 const ITEM_ID_ALIASES: Dictionary = {
 	"potion_of_healing": "healing",
 	"scroll_of_identify": "identify",
