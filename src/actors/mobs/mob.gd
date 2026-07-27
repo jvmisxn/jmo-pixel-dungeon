@@ -29,6 +29,9 @@ var aggro_range: int = 8  # Max range to begin hunting
 var is_ally: bool = false
 ## The hero this ally follows when idle (single-player: GameManager.hero).
 var ally_hero: Char = null
+## Upstream Char Property.IMMOVABLE: this mob can never be moved by position
+## swaps or Ally Warp (e.g. ward sentries).
+var immovable: bool = false
 
 # --- Loot & XP ---
 var xp_value: int = 1
@@ -251,6 +254,63 @@ func _act_fleeing() -> void:
 func _act_passive() -> void:
 	# Do nothing (stationary mobs, NPCs)
 	spend_turn()
+
+## Upstream Char.canInteract: an ally can be interacted with (position swap)
+## when adjacent, or from up to 2*points tiles away when the hero has the
+## Mage's Ally Warp talent. Hostile mobs are never interactable, so input
+## routing keeps treating them as attack targets.
+func can_interact(c: Variant) -> bool:
+	if not is_ally or not is_alive or immovable:
+		return false
+	if c == null or level == null or c.get("pos") == null:
+		return false
+	if level.adjacent(pos, int(c.pos)):
+		return true
+	if c is Hero and c.has_method("get_talent_level"):
+		var points: int = c.get_talent_level("mage_ally_warp")
+		if points > 0 and level.distance(pos, int(c.pos)) <= 2 * points:
+			return true
+	return false
+
+## Upstream Char.interact: swap places with the interacting hero. With Ally
+## Warp the swap is an instant teleport that works at range (and even when
+## adjacent); without it, an adjacent swap requires both characters to have
+## unrestricted movement. Signature matches NPC.interact overrides.
+func interact(c: Variant) -> void:
+	if not can_interact(c) or not (c is Char):
+		return
+	# Can't swap the interactor onto a hazard cell unless they fly
+	# (upstream: !passable[pos] && !c.flying).
+	if level.has_method("is_passable") and not level.is_passable(pos) \
+			and not bool(c.get("flying")):
+		return
+	var warp: bool = c is Hero and c.has_method("get_talent_level") \
+			and c.get_talent_level("mage_ally_warp") > 0
+	if warp:
+		# Upstream requires the ally to be reachable over passable terrain
+		# (PathFinder distance map); a wall between them blocks the warp.
+		if level.get("passable") != null:
+			var route: Array[int] = Pathfinder.find_path(int(c.pos), pos,
+				level.passable, ConstantsData.WIDTH)
+			if route.is_empty():
+				return
+	else:
+		# Upstream blocks plain swaps while either char has restricted movement.
+		if paralysed > 0 or int(c.get("paralysed")) > 0:
+			return
+		if has_buff("Roots") or has_buff("Vertigo"):
+			return
+		if c.has_method("has_buff") and (c.has_buff("Roots") or c.has_buff("Vertigo")):
+			return
+	var my_old: int = pos
+	var other_old: int = int(c.pos)
+	pos = other_old
+	c.pos = my_old
+	on_move(my_old, other_old)
+	if c.has_method("on_move"):
+		c.on_move(other_old, my_old)
+	if warp and MessageLog:
+		MessageLog.add("You swap places with the %s." % name)
 
 ## Allied behavior (corrupted mobs, summoned helpers). Mirrors the proven
 ## SummonedElemental loop: attack the nearest visible hostile mob, otherwise

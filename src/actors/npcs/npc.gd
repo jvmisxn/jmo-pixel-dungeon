@@ -39,6 +39,13 @@ func act() -> void:
 # Interaction
 # ---------------------------------------------------------------------------
 
+## NPCs are always interactable when adjacent, regardless of ally status
+## (they use dialogue/quest interaction, not the Mob position swap).
+func can_interact(c: Variant) -> bool:
+	if c == null or level == null or c.get("pos") == null:
+		return true
+	return level.adjacent(pos, int(c.pos))
+
 ## Called when the hero interacts with this NPC (e.g., bumps into them).
 ## Subclasses override this to provide quest logic.
 func interact(hero: Variant) -> void:

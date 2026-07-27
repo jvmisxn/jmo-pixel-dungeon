@@ -117,7 +117,9 @@ static func _is_valid_auto_target(scene: Variant, hero: Variant, cell: int) -> b
 	var target: Variant = level.find_char_at(cell) if level.has_method("find_char_at") else null
 	if target == null or target == hero:
 		return false
-	if target.has_method("interact"):
+	# NPCs are dialogue targets, never attack targets (allies are excluded
+	# below; hostile mobs now also expose interact() but stay attackable).
+	if target is NPC:
 		return false
 	if target.get("is_alive") != null and target.get("is_alive") != true:
 		return false
