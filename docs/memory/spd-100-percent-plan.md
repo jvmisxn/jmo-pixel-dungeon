@@ -128,11 +128,10 @@ and pitfall/chasm landing parity including fallen-item heap drops
 2026-07-24).
 
 1. Talent system foundation.
-2. Examine/info windows (foundation + mob/trap/plant desc content + toolbar/X
-   entry + region tile overrides + heap multi-item chooser + tappable buff
-   icons + buff-description content pass all shipped 2026-07-24; remaining:
-   WndInfoTrap/WndInfoPlant styling, chooser INFO icon — see backlog examine
-   item).
+2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
+   toolbar/X entry + region tile overrides + heap multi-item chooser +
+   tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +
+   chooser INFO icon shipped 2026-07-27 — see backlog examine item).
 
 ## Done Criteria For Each Slice
 

@@ -135,12 +135,14 @@ static func examine_object(info: Dictionary) -> void:
 			_show_text(title, text)
 		"plant":
 			var plant: Variant = info.get("plant")
-			var plant_name: String = str(plant.plant_name) if plant != null else "plant"
-			_show_text(plant_name.capitalize(), plant_desc(plant))
+			var wnd_plant: WndInfoPlant = WndInfoPlant.new()
+			wnd_plant.setup(plant, plant_desc(plant))
+			_show(wnd_plant)
 		"trap":
 			var trap: Variant = info.get("trap")
-			var trap_title: String = str(trap.trap_name) if trap != null else "trap"
-			_show_text(trap_title.capitalize(), trap_desc(trap))
+			var wnd_trap: WndInfoTrap = WndInfoTrap.new()
+			wnd_trap.setup(trap, trap_desc(trap))
+			_show(wnd_trap)
 
 static func _hero_name(hero: Variant) -> String:
 	if hero != null and "hero_class" in hero:
