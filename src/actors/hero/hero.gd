@@ -481,7 +481,7 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 			shatter_pos = target_pos
 		potion.shatter(shatter_pos, level)
 		potion.identify()
-		on_potion_used()
+		on_potion_used(shatter_pos)
 		if EventBus:
 			EventBus.item_used.emit(potion.item_name)
 		if GameManager:
@@ -603,18 +603,59 @@ func _try_improvised_projectiles(item: Variant, target: Variant) -> void:
 ## Upstream Talent.onPotionUsed (Warrior Liquid Willpower): using a potion
 ## grants a Barrier of HT * (3% + 3.5% per point) — 6.5%/10% of max HP.
 ## Upstream setShield keeps the larger of the existing and new shield.
-func on_potion_used() -> void:
+## `cell` is the drink cell (hero pos) or thrown-potion splash cell.
+func on_potion_used(cell: int = -1) -> void:
 	var points: int = get_talent_level("warrior_liquid_willpower")
-	if points <= 0:
+	if points > 0:
+		var shield_to_give: int = roundi(float(ht) * (0.030 + 0.035 * float(points)))
+		var barrier: Barrier = add_buff(Barrier.new()) as Barrier
+		if barrier != null:
+			barrier.set_shield(maxi(barrier.get_shielding(), shield_to_give))
+		if MessageLog:
+			MessageLog.add_positive("Your willpower hardens into a shield.")
+		if EventBus:
+			EventBus.hero_stats_changed.emit()
+	_liquid_nature_on_potion(cell)
+
+## Upstream Talent.onPotionUsed (Huntress Liquid Nature): drinking or throwing
+## a potion roots adjacent enemies for 1/2 turns and sprouts grass in the 3x3
+## around the drink/splash cell — every EMPTY/EMBERS cell becomes short grass,
+## then 4/6 random cells without a plant grow into tall grass. The port has no
+## EMPTY_DECO terrain, so only EMPTY/EMBERS seed short grass.
+func _liquid_nature_on_potion(cell: int) -> void:
+	var points: int = get_talent_level("huntress_liquid_nature")
+	if points <= 0 or level == null:
 		return
-	var shield_to_give: int = roundi(float(ht) * (0.030 + 0.035 * float(points)))
-	var barrier: Barrier = add_buff(Barrier.new()) as Barrier
-	if barrier != null:
-		barrier.set_shield(maxi(barrier.get_shielding(), shield_to_give))
+	if cell < 0 or cell >= level.map.size():
+		cell = pos
+	var grass_cells: Array[int] = [cell]
+	for offset: int in ConstantsData.DIRS_8:
+		var neighbor: int = cell + offset
+		if neighbor >= 0 and neighbor < level.map.size():
+			grass_cells.append(neighbor)
+	grass_cells.shuffle()
+	for grass_cell: int in grass_cells:
+		var ch: Variant = level.find_char_at(grass_cell)
+		if ch is Mob and not (ch as Mob).is_ally:
+			var rooted: Rooted = Rooted.new()
+			rooted.set_duration(float(points))
+			(ch as Mob).add_buff(rooted)
+		var terrain: int = level.get_terrain(grass_cell)
+		if terrain == ConstantsData.Terrain.EMPTY or terrain == ConstantsData.Terrain.EMBERS:
+			level.set_terrain(grass_cell, ConstantsData.Terrain.GRASS)
+	var total_grass_cells: int = 2 + 2 * points
+	while grass_cells.size() > total_grass_cells:
+		grass_cells.remove_at(0)
+	for grass_cell: int in grass_cells:
+		var terrain: int = level.get_terrain(grass_cell)
+		if (terrain == ConstantsData.Terrain.EMPTY
+				or terrain == ConstantsData.Terrain.EMBERS
+				or terrain == ConstantsData.Terrain.GRASS
+				or terrain == ConstantsData.Terrain.FURROWED_GRASS) \
+				and not level.plants.has(grass_cell):
+			level.set_terrain(grass_cell, ConstantsData.Terrain.HIGH_GRASS)
 	if MessageLog:
-		MessageLog.add_positive("Your willpower hardens into a shield.")
-	if EventBus:
-		EventBus.hero_stats_changed.emit()
+		MessageLog.add_positive("Nature springs up around the potion.")
 
 func _projectile_collision_pos(target_pos: int) -> int:
 	if level == null:

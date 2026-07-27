@@ -31,13 +31,10 @@ func _test_registry(t: Object) -> void:
 	t.check(info != null and info.implemented,
 		"huntress_invigorating_meal is marked implemented")
 	t.check(info != null and info.tier == 2, "huntress_invigorating_meal is tier 2")
-	for inert_id: String in [
-		"huntress_liquid_nature",
-	]:
-		var slot: TalentData.TalentInfo = TalentData.get_talent(
-			ConstantsData.HeroClass.HUNTRESS, inert_id)
-		t.check(slot != null and not slot.implemented and slot.tier == 2,
-			"%s is an inert tier-2 groundwork slot" % inert_id)
+	var nature: TalentData.TalentInfo = TalentData.get_talent(
+		ConstantsData.HeroClass.HUNTRESS, "huntress_liquid_nature")
+	t.check(nature != null and nature.implemented and nature.tier == 2,
+		"huntress_liquid_nature is an implemented tier-2 talent")
 
 func _test_roster_tiers(t: Object) -> void:
 	for t1_id: String in ["huntress_followup_strike", "huntress_natures_aid"]:
