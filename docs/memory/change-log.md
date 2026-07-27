@@ -2,6 +2,29 @@
 
 ## 2026-07-27
 
+- Tags: traps, knockback, chasm, source-fidelity, audit:S09, tests
+- GeyserTrap knockback now routes through the shared `KnockBack` helper
+  (audit:S09 follow-up), matching upstream GeyserTrap →
+  `WandOfBlastWave.throwChar` (no collide damage): neighbours use
+  `throw_char(ch, trap_pos, 2)`, the centre character uses the new
+  `KnockBack.throw_char_dir(ch, dx, dy, 2)` entry point (its DIRS_8 offset
+  decomposed into unit dx/dy), and `throw_char` itself now delegates to
+  `throw_char_dir`. Consequence: a geyser push can finally force chasm falls —
+  grounded chars pushed onto CHASM fall in (`Chasm.force_fall`; mobs die,
+  heroes descend), flying chars sail over — where the old bespoke
+  `_knock_back` used `move_to`, which refuses impassable chasm cells.
+  `_center_direction` now also accepts chasm neighbours as open push
+  candidates (upstream picks a fully random Ballistica direction; the port
+  keeps its open-cell filter but no longer excludes AVOID-equivalent chasm).
+  Removed dead `_knock_back`/`_away_offset`. Covered by
+  `test_geyser_chasm_knockback.gd` (9 checks: neighbour/centre chasm falls,
+  flying sail-over, boxed-in centre picks the chasm, wall still stops the push
+  with no slam damage). Full headless suite green locally (4630 checks, 0
+  failures). Remaining S09 forced-movement gaps unchanged: Monk/Clobber combo
+  moves (system not ported) and the walk-in chasm confirm prompt.
+
+## 2026-07-27
+
 - Tags: rings, loot, source-fidelity, audit:S16, tests
 - Ring of Wealth now boosts mob loot drop chance (upstream `Mob.lootChance`
   tail: `RingOfWealth.dropChanceMultiplier` = 1.15^bonus). New
