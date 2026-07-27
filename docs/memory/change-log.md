@@ -2,6 +2,20 @@
 
 ## 2026-07-27
 
+- Tags: enchantments, buffs, source-fidelity, audit:S13, tests
+- Kinetic enchant now matches upstream Kinetic + Char.damage instead of the
+  old "20% chance for +50% damage" stand-in: the proc is RNG-free, consumes
+  stored `ConservedDamage` as bonus damage, and attaches a hidden
+  `KineticTracker` recording the recycled amount; `Char.take_damage` banks
+  overkill (-HP minus recycled bonus, × `proc_chance_multiplier`) on the
+  attacker when the victim is enemy-side (`is_ally == false`). New buffs
+  `conserved_damage.gd` (2.5%/turn decay, min 0.1, serialized
+  `preserved_damage`) and `kinetic_tracker.gd` (non-persistent, self-detaches
+  next tick). Tests: `test_kinetic_conserved_damage.gd` (proc passthrough,
+  overkill banking, recycled-bonus exclusion, consumption, non-lethal and
+  non-enemy gating, decay); `KineticTracker` added to the internal-buff list
+  in `test_buff_descriptions.gd`.
+
 - Tags: mob-ai, targeting, multiplayer, source-fidelity, audit:S05, tests
 - Mobs now acquire the NEAREST visible hero instead of hero-list order
   (audit:S05): `Mob._find_visible_heroes()` sorts nearest-first with a

@@ -361,15 +361,25 @@ func _elastic_proc(_weapon: Variant, _attacker: Variant, defender: Variant, dama
 	return damage
 
 func _kinetic_proc(_weapon: Variant, _attacker: Variant, _defender: Variant, damage: int) -> int:
-	# Stores excess (overkill) damage and adds it to the next attack.
-	# For now, 20% chance to deal 50% bonus damage (simplified kinetic energy storage).
-	var bonus: int = 0
-	if randf() < 0.20 * proc_chance_multiplier(_attacker):
-		bonus = maxi(1, int(damage * 0.5))
+	# Upstream Kinetic.proc: no RNG. Consume any stored ConservedDamage as
+	# bonus damage, and attach a KineticTracker recording the recycled amount
+	# so Char.take_damage can bank overkill without re-banking the bonus.
+	var conserved: int = 0
+	if _attacker is Object and _attacker.has_method("get_buff"):
+		var cd: Variant = _attacker.get_buff("ConservedDamage")
+		if cd != null:
+			conserved = cd.damage_bonus()
+			_attacker.remove_buff(cd)
+		var tracker: Variant = _attacker.get_buff("KineticTracker")
+		if tracker == null:
+			tracker = KineticTracker.new()
+			_attacker.add_buff(tracker)
+		tracker.conserved_damage = conserved
+	if conserved > 0:
 		if MessageLog:
 			MessageLog.add("Kinetic energy surges through the weapon!")
 		WeaponEnchantment._emit_proc("kinetic", _attacker, _defender)
-	return damage + bonus
+	return damage + conserved
 
 func _blocking_proc(_weapon: Variant, _attacker: Variant, _defender: Variant, damage: int) -> int:
 	# Grants a small shield (temporary armor) after hitting an enemy.
