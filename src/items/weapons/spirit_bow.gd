@@ -69,9 +69,11 @@ func speed_factor(_hero: Char) -> float:
 # Accuracy
 # ---------------------------------------------------------------------------
 
-## Bows have slightly improved accuracy at range.
-func accuracy_factor(_hero: Char = null) -> float:
-	return 1.2
+## Upstream SpiritArrow inherits MissileWeapon's adjacency accuracy split:
+## 1.5x at range, 0.5x adjacent (raised by Huntress Point Blank). The bow has
+## no STR encumbrance, so the adjacency factor is the whole multiplier.
+func accuracy_factor(hero: Char = null, target: Char = null) -> float:
+	return MissileWeapon.adjacent_acc_factor_for(hero, target)
 
 # ---------------------------------------------------------------------------
 # Surprise Attack
