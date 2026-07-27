@@ -39,6 +39,26 @@ static func handle_descend(scene: Variant) -> void:
 		OnlineEventCodec.broadcast_level_transition(NetworkManager, GameManager.depth, "descend")
 	transition_to_loading(scene, "descend")
 
+## Upstream GameScene.create ROGUES_FORESIGHT block: on arriving at a regular
+## floor holding at least one secret room (two when the level feeling is
+## SECRETS), a hero with Rogue's Foresight has a 2+points in 4 (75%/100%)
+## chance to sense it. Upstream seeds the roll with the level seed so every
+## visit agrees; the port rolls once and persists the roll on the level.
+static func rogues_foresight_secret_hint(level: Variant, hero: Variant) -> bool:
+	if level == null or hero == null or not (level is RegularLevel):
+		return false
+	var points: int = 0
+	if hero.has_method("get_talent_level"):
+		points = hero.get_talent_level("rogue_rogues_foresight")
+	if points <= 0:
+		return false
+	var req_secrets: int = 2 if level.feeling == Level.Feeling.SECRETS else 1
+	if level.secret_room_count < req_secrets:
+		return false
+	if level.foresight_roll < 0:
+		level.foresight_roll = randi() % 4
+	return level.foresight_roll < 2 + points
+
 static func handle_ascend(scene: Variant) -> void:
 	if scene == null:
 		return

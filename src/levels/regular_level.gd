@@ -63,6 +63,16 @@ func _build() -> bool:
 
 	rooms = room_list
 
+	# Record placed secret rooms for Rogue's Foresight (upstream counts
+	# SecretRoom instances in rooms(); a secret room whose branch placement
+	# failed has no connections/neighbors and never reaches the map).
+	secret_room_count = 0
+	for r: Variant in room_list:
+		var counted: Room = r as Room
+		if counted is SecretRoom and (
+				not counted.connected.is_empty() or not counted.neighbors.is_empty()):
+			secret_room_count += 1
+
 	# Step 4: Paint
 	StandardPainter.paint_level(self)
 

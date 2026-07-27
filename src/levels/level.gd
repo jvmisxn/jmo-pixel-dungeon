@@ -68,6 +68,12 @@ var rooms: Array[Room] = []
 enum Feeling { NONE, CHASM, WATER, GRASS, DARK, LARGE, TRAPS, SECRETS }
 var feeling: Feeling = Feeling.NONE
 
+# --- Rogue's Foresight (rooms are not serialized, so the placed secret-room
+# count is recorded at generation; the hint roll is rolled once per level and
+# persisted, standing in for upstream's level-seeded Random) ---
+var secret_room_count: int = 0
+var foresight_roll: int = -1
+
 # ---------------------------------------------------------------------------
 # Initialization
 # ---------------------------------------------------------------------------
@@ -754,6 +760,8 @@ func serialize() -> Dictionary:
 		"entrance": entrance,
 		"exit_pos": exit_pos,
 		"feeling": feeling,
+		"secret_room_count": secret_room_count,
+		"foresight_roll": foresight_roll,
 		"map": map.duplicate(),
 		"visited": visited.duplicate(),
 		"mapped": mapped.duplicate(),
@@ -827,6 +835,8 @@ func deserialize(data: Dictionary) -> void:
 	entrance = int(data.get("entrance", -1))
 	exit_pos = int(data.get("exit_pos", -1))
 	feeling = data.get("feeling", Feeling.NONE) as Feeling
+	secret_room_count = int(data.get("secret_room_count", 0))
+	foresight_roll = int(data.get("foresight_roll", -1))
 
 	var saved_map: Variant = data.get("map", [])
 	if saved_map is Array and (saved_map as Array).size() == LEN:
