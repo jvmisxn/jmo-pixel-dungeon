@@ -2,6 +2,29 @@
 
 ## 2026-07-27
 
+- Tags: items, artifacts, persistence, audit:S12, tests
+- Artifact uniqueness now survives save/load (upstream
+  Generator.storeInBundle "spawned_artifacts" parity). The static
+  `Generator._generated_artifacts` set was never serialized — a mid-run
+  save/load regenerated already-found artifacts as duplicates — and
+  `reset_artifacts()` was never called anywhere, so uniqueness state also
+  leaked across runs within one app session (later runs could exhaust the
+  artifact pool and always fall back to rings). New
+  `Generator.serialize_artifacts()/restore_artifacts(data)` (restore filters
+  unknown ids and duplicates), wired into `GameManager.serialize_run_state`
+  / `apply_run_state` as additive field `generated_artifacts` (old saves
+  default to empty — matches prior behavior, no migration needed), and
+  `Generator.reset_artifacts()` added to the new-run reset block next to
+  `limited_drops.clear()`. Fragile-file edits small: 12-line func block in
+  generator.gd; three 1-2 line insertions in game_manager.gd.
+  `test_artifact_uniqueness_persistence.gd` (6 checks): round-trip
+  identity, unknown-id/dupe filtering, `random_artifact` honoring a
+  restored set (only missing artifact generated, then ring fallback),
+  new-run reset. Verification: `git diff --check` clean, full headless
+  suite 4529 checks 0 failures (gdparse/gdlint unavailable this session;
+  isolated `--check-only` false-positives on autoload identifiers noted,
+  suite load is authoritative).
+
 - Tags: npcs, persistence, quests, rng, audit:S21, tests
 - Quest NPCs now survive save/load and cached-level backtracking. Root cause
   found while verifying the S21 backlog items: `Level.deserialize` rebuilds
