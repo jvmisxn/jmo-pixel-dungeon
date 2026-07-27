@@ -947,11 +947,24 @@ class WandOfBlastWave extends Wand:
 				_wall_slam(target_char)
 				break
 			var next_pos: int = ConstantsData.xy_to_pos(nx, ny)
+			if lvl.has_method("find_char_at") and lvl.find_char_at(next_pos) != null:
+				break  # Blocked by another character
+			# Upstream throwChar: chasm (AVOID) cells are traversable by forced
+			# movement — flying chars sail over, grounded chars fall in.
+			if lvl.has_method("terrain_at") \
+					and lvl.terrain_at(next_pos) == ConstantsData.Terrain.CHASM:
+				var prev_pos: int = current_pos
+				target_char.pos = next_pos
+				if target_char.has_method("on_move"):
+					target_char.on_move(prev_pos, next_pos)
+				current_pos = next_pos
+				if Chasm.can_cross(target_char):
+					continue
+				Chasm.force_fall(target_char, lvl)
+				break
 			if lvl.has_method("is_passable") and not lvl.is_passable(next_pos):
 				_wall_slam(target_char)
 				break
-			if lvl.has_method("find_char_at") and lvl.find_char_at(next_pos) != null:
-				break  # Blocked by another character
 			target_char.move_to(next_pos)
 			current_pos = next_pos
 

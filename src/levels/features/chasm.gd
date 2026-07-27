@@ -77,6 +77,23 @@ static func mob_fall(mob: Variant) -> void:
 static func is_chasm(level: Level, pos: int) -> bool:
 	return level.terrain_at(pos) == ConstantsData.Terrain.CHASM
 
+## Upstream Char.throwChar -> Level.occupyCell: a non-flying char FORCED onto
+## a chasm cell (knockback, blast wave) falls in. Mobs die to the fall
+## (Chasm.mobFall); heroes descend via the shared `hero_fell` path so the
+## floor transition matches walking/pitfall falls.
+static func force_fall(ch: Variant, level: Variant = null) -> void:
+	if ch == null or not is_instance_valid(ch):
+		return
+	if ch is Hero:
+		if MessageLog:
+			MessageLog.add_negative("You are knocked into the chasm!")
+		if EventBus and EventBus.has_signal("hero_fell"):
+			EventBus.hero_fell.emit(ch)
+		else:
+			apply_landing_damage(ch, level if level is Level else null)
+	else:
+		mob_fall(ch)
+
 ## Find safe landing positions around a chasm (for teleportation recovery).
 static func find_safe_landing(level: Level, around_pos: int) -> int:
 	for dir: int in ConstantsData.DIRS_8:
