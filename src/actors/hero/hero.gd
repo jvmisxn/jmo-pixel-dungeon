@@ -87,21 +87,14 @@ func init_class(chosen_class: int) -> void:
 	# Apply class-specific permanent buffs
 	_apply_class_buffs()
 
-## Apply permanent buffs based on hero class.
+## Apply buffs every hero starts with. Upstream HeroClass.initHero() attaches
+## no class-specific spawn passives; class perks live in their real systems
+## (broken seal shield, cloak of shadows, search radius, talents).
 func _apply_class_buffs() -> void:
-	# All heroes get regeneration and hunger
 	var regen: Regeneration = Regeneration.new()
 	add_buff(regen)
 	var hunger: Hunger = Hunger.new()
 	add_buff(hunger)
-
-	match hero_class:
-		ConstantsData.HeroClass.WARRIOR:
-			# Warrior regenerates faster (handled by modifying regen rate)
-			pass
-		ConstantsData.HeroClass.ROGUE:
-			# Rogue starts with some stealth-related buff
-			pass
 
 ## Give the hero starting items based on their class.
 ## Called after init_class() during new game setup.

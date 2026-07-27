@@ -63,11 +63,11 @@ static func get_class_name_str(hero_class: int) -> String:
 static func get_class_description(hero_class: int) -> String:
 	match hero_class:
 		ConstantsData.HeroClass.WARRIOR:
-			return "The Warrior starts with a worn shortsword and a shield. He is tougher than other classes, starting with extra HP and regenerating faster."
+			return "The Warrior starts with a worn shortsword and a unique broken seal. When a hit leaves him at or below half health, the seal grants a burst of shielding. The seal can be moved between armors."
 		ConstantsData.HeroClass.MAGE:
 			return "The Mage starts with a staff that can be imbued with wand effects. Wands recharge faster for the Mage, and he can use them as melee weapons."
 		ConstantsData.HeroClass.ROGUE:
-			return "The Rogue starts with a cloak of shadows and a dagger. He is more stealthy, detecting traps more easily and able to surprise attack more often."
+			return "The Rogue starts with a dagger and a unique cloak of shadows, which he can use to become invisible at will. He detects secrets and traps from a greater distance."
 		ConstantsData.HeroClass.HUNTRESS:
 			return "The Huntress starts with a spirit bow and has a natural affinity for thrown weapons. She can see further than other classes and has an innate bonus to her ranged attacks."
 		ConstantsData.HeroClass.DUELIST:
@@ -80,30 +80,30 @@ static func get_perks(hero_class: int) -> Array[String]:
 		ConstantsData.HeroClass.WARRIOR:
 			return [
 				"Starts with a worn shortsword and broken seal",
-				"Regenerates health faster",
-				"Can eat food when at full health to boost max HP",
-				"Identifies potions of healing through use",
+				"Seal grants a shield burst when dropped to half health",
+				"Seal can be moved between armors",
+				"Highest starting damage of any class",
 			]
 		ConstantsData.HeroClass.MAGE:
 			return [
-				"Starts with a staff and spell book",
-				"Wands recharge faster",
-				"Staff can be imbued with wand effects",
-				"Identifies scrolls through use",
+				"Starts with the Mage's Staff, imbued with Magic Missile",
+				"Staff recharges faster than a normal wand",
+				"Staff can be imbued with any wand found",
+				"Starts with a scroll of identify",
 			]
 		ConstantsData.HeroClass.ROGUE:
 			return [
 				"Starts with a dagger and cloak of shadows",
-				"Detects traps and secret doors more easily",
-				"Can surprise attack more readily",
-				"Identifies rings through use",
+				"Cloak of Shadows grants invisibility at will",
+				"Detects traps and secret doors from further away",
+				"Highest starting accuracy and evasion",
 			]
 		ConstantsData.HeroClass.HUNTRESS:
 			return [
 				"Starts with a spirit bow and studded gloves",
 				"Natural bonus to thrown weapon damage",
 				"Increased sight range (+2 tiles)",
-				"Can sense high grass and seeds from further away",
+				"Spirit bow conjures infinite arrows",
 			]
 		ConstantsData.HeroClass.DUELIST:
 			return [
