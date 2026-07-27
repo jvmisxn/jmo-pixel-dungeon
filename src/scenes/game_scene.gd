@@ -1109,6 +1109,10 @@ func _connect_signals() -> void:
 			_connect_event_bus_signal("mob_moved_detailed", _on_mob_moved_detailed)
 		if EventBus.has_signal("mob_damaged"):
 			_connect_event_bus_signal("mob_damaged", _on_mob_damaged)
+		if EventBus.has_signal("mob_damaged_detailed"):
+			_connect_event_bus_signal("mob_damaged_detailed", _on_mob_damaged_detailed)
+		if EventBus.has_signal("mob_alerted"):
+			_connect_event_bus_signal("mob_alerted", _on_mob_alerted)
 		if EventBus.has_signal("hero_attack_missed"):
 			_connect_event_bus_signal("hero_attack_missed", _on_hero_attack_missed)
 		_connect_event_bus_signal("gold_collected", _on_gold_collected)
@@ -2413,6 +2417,12 @@ func _on_mob_damaged(mob_pos: int, amount: int) -> void:
 	if effect_manager:
 		effect_manager.show_damage(mob_pos, amount)
 	_queue_online_snapshot_sync(true)
+
+func _on_mob_damaged_detailed(mob_pos: int, amount: int, source: Variant) -> void:
+	SceneFeedbackCoordinator.on_mob_damaged_detailed(self, mob_pos, amount, source)
+
+func _on_mob_alerted(mob: Variant) -> void:
+	SceneFeedbackCoordinator.on_mob_alerted(self, mob)
 
 func _on_hero_attack_missed(mob_pos: int) -> void:
 	SceneFeedbackCoordinator.on_hero_attack_missed(self, mob_pos)

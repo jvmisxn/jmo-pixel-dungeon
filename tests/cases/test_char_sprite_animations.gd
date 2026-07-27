@@ -3,6 +3,9 @@ extends RefCounted
 func run(t: Object) -> void:
 	_test_hero_sheet_animation_frames_advance(t)
 	_test_rat_sheet_animation_frames_advance(t)
+	_test_rat_idle_hop_offsets_sprite(t)
+	_test_alert_emote_expires(t)
+	_test_damage_number_type_metadata(t)
 	_test_sewer_mob_sheet_animation_frames_advance(t)
 	_test_sprite_shadow_uses_spd_asset(t)
 	_test_zap_animation_keeps_zap_state(t)
@@ -41,6 +44,56 @@ func _test_rat_sheet_animation_frames_advance(t: Object) -> void:
 		"Rat MobSprite attack advances through SPD attack frames")
 
 	sprite.free()
+
+
+func _test_rat_idle_hop_offsets_sprite(t: Object) -> void:
+	var sprite := MobSprite.new()
+	t.root.add_child(sprite)
+	sprite._ready()
+	sprite.setup_for_mob("rat")
+	sprite.place_at(ConstantsData.xy_to_pos(1, 1))
+	sprite.play_idle_animation()
+	var body: Sprite2D = sprite.get("_sprite") as Sprite2D
+	var start_y: float = body.position.y
+
+	sprite._process(0.14)
+	t.check(body.position.y < start_y,
+		"Rat idle animation hops upward while idle")
+
+	sprite.move_to(ConstantsData.xy_to_pos(2, 1), 0.2)
+	sprite._process(0.01)
+	t.check(is_equal_approx(body.position.y, start_y),
+		"Rat idle hop resets while the rat is moving")
+
+	sprite.free()
+
+
+func _test_alert_emote_expires(t: Object) -> void:
+	var sprite := MobSprite.new()
+	t.root.add_child(sprite)
+	sprite._ready()
+	sprite.setup_for_mob("rat")
+
+	sprite.show_alert(0.05)
+	t.check(int(sprite.get("_emo_type")) == CharSprite.EmoType.ALERT,
+		"show_alert displays the alert emote")
+	sprite._process(0.1)
+	t.check(int(sprite.get("_emo_type")) == CharSprite.EmoType.NONE,
+		"alert emote expires instead of staying over the mob forever")
+
+	sprite.free()
+
+
+func _test_damage_number_type_metadata(t: Object) -> void:
+	var num := DamageNumber.new()
+	t.root.add_child(num)
+	num.setup(7, false, "fire")
+	t.check(str(num.get("_damage_type")) == "fire",
+		"DamageNumber stores the requested damage type for icon drawing")
+	var label: Label = num.get("_label") as Label
+	t.check(label != null and int(label.position.x) == -12,
+		"DamageNumber leaves room for the type icon beside the amount")
+	num.free()
 
 
 func _test_sewer_mob_sheet_animation_frames_advance(t: Object) -> void:

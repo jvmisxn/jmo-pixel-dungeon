@@ -184,6 +184,7 @@ func _act_wandering() -> void:
 			_set_state(AIState.HUNTING)
 			target = hero
 			target_pos = target.pos
+			_notify_detected_player(hero)
 			if MessageLog:
 				MessageLog.add_info("The %s notices you!" % mob_name)
 			spend_turn()
@@ -366,6 +367,7 @@ func _wake_up(threat: Char) -> void:
 	target = threat
 	target_pos = threat.pos
 	_ensure_boss_bar_started()
+	_notify_detected_player(threat)
 	if MessageLog:
 		MessageLog.add_info("The %s notices you!" % mob_name)
 
@@ -460,6 +462,13 @@ func _acquire_nearest_hero_target() -> void:
 		target_pos = nearest.pos
 		if state != AIState.HUNTING:
 			_set_state(AIState.HUNTING)
+			_notify_detected_player(nearest)
+
+func _notify_detected_player(hero: Char) -> void:
+	if is_ally or hero == null or not hero.is_hero:
+		return
+	if EventBus and EventBus.has_signal("mob_alerted"):
+		EventBus.mob_alerted.emit(self)
 
 func _wander() -> void:
 	# Pick a random adjacent passable cell

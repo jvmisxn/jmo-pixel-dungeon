@@ -938,7 +938,10 @@ func _get_auto_ranged_item(target_pos: int) -> Variant:
 ## Emit damage signal so game_scene shows floating damage number on the mob.
 func on_attack_hit(target_char: Char, damage: int) -> void:
 	if EventBus and target_char != null:
-		EventBus.mob_damaged.emit(target_char.pos, damage)
+		if EventBus.has_signal("mob_damaged_detailed"):
+			EventBus.mob_damaged_detailed.emit(target_char.pos, damage, self)
+		else:
+			EventBus.mob_damaged.emit(target_char.pos, damage)
 		if _pending_surprise_attack:
 			EventBus.game_event.emit("surprise_attack", {"target_pos": target_char.pos, "damage": damage})
 	if AudioManager:

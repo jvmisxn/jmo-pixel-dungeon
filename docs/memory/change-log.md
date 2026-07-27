@@ -2,6 +2,20 @@
 
 ## 2026-07-27
 
+- Tags: polish, sprites, combat-feedback, detection, tests
+- Added the requested enemy/combat feedback slice: sewer rats/fetid rats now
+  idle-hop while standing still; hostile mobs emit `mob_alerted` when they
+  detect/acquire a hero and `GameScene` shows the existing above-head alert
+  emote for a short duration; damage numbers now draw a compact source-type
+  icon beside the number and color by type (physical, magic, fire, poison,
+  bleed, acid, fall, hunger, trap). Hero attacks now use the new
+  `mob_damaged_detailed` signal so the UI can carry source metadata without
+  double-emitting the old `mob_damaged` path. Added headless coverage for rat
+  hop offset/reset, alert expiration, damage type metadata, the new EventBus
+  signals, and detailed damage feedback source classification. Local checks:
+  `git diff --check` clean; `gdparse`/`gdlint` unavailable; full Godot headless
+  suite passed (4882 checks, 0 failures).
+
 - Tags: talents, sniper, spirit-bow, source-fidelity, audit:S02, tests, ENGINE
 - `sniper_shared_upgrades` is now real, shipped with the previously-missing
   sniper's-mark special-shot system (upstream SnipersMark +

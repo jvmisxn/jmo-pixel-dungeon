@@ -68,7 +68,7 @@ static func on_hero_damaged(scene: Variant, amount: int, source: Variant) -> voi
 		var intensity: float = clampf(float(amount) / 10.0, 1.0, 5.0)
 		scene.game_camera.shake(intensity, 0.2)
 	if scene.effect_manager and hero:
-		scene.effect_manager.show_damage(hero.pos, amount)
+		scene.effect_manager.show_damage(hero.pos, amount, false, _damage_type_for_source(source))
 	if AudioManager:
 		AudioManager.play_sfx("hit")
 		if hero and hero.get("hp") != null and hero.get("ht") != null:
@@ -114,11 +114,22 @@ static func on_mob_revealed(scene: Variant, mob: Variant) -> void:
 			OnlineEventCodec.emit_world_event(NetworkManager, OnlineEventCodec.build_mob_revealed_world_event_payload(mob))
 
 static func on_mob_damaged(scene: Variant, mob_pos: int, amount: int) -> void:
+	on_mob_damaged_detailed(scene, mob_pos, amount, null)
+
+static func on_mob_damaged_detailed(scene: Variant, mob_pos: int, amount: int, source: Variant) -> void:
 	if scene == null:
 		return
 	if scene.effect_manager:
-		scene.effect_manager.show_damage(mob_pos, amount)
+		scene.effect_manager.show_damage(mob_pos, amount, false, _damage_type_for_source(source))
 	scene._queue_online_snapshot_sync(true)
+
+static func on_mob_alerted(scene: Variant, mob: Variant) -> void:
+	if scene == null or mob == null or not is_instance_valid(mob):
+		return
+	var actor_id: int = int(ConstantsData.get_prop(mob, "actor_id", -1))
+	var sprite: Variant = scene._mob_sprites.get(actor_id) if actor_id >= 0 else null
+	if sprite != null and is_instance_valid(sprite) and sprite.has_method("show_alert"):
+		sprite.show_alert()
 
 static func on_hero_attack_missed(scene: Variant, mob_pos: int) -> void:
 	if scene == null:
@@ -176,3 +187,54 @@ static func on_trap_triggered(scene: Variant, pos: int, trap_name: String) -> vo
 	if scene._is_online_host():
 		OnlineEventCodec.emit_world_event(NetworkManager, {"type": "trap_triggered", "pos": pos, "trap_name": trap_name})
 	scene._queue_online_snapshot_sync(true)
+
+static func _damage_type_for_source(source: Variant) -> String:
+	if source == null:
+		return "physical"
+	if source is Char:
+		return "physical"
+	if source is Buff:
+		var buff_id: String = str((source as Buff).buff_id).to_lower()
+		if buff_id.find("burn") >= 0:
+			return "fire"
+		if buff_id.find("poison") >= 0:
+			return "poison"
+		if buff_id.find("bleed") >= 0:
+			return "bleed"
+		if buff_id.find("corrosion") >= 0 or buff_id.find("ooze") >= 0:
+			return "acid"
+		if buff_id.find("hunger") >= 0:
+			return "hunger"
+		return "magic"
+	if source is String:
+		return _damage_type_for_source_id(str(source))
+	var source_class: String = ""
+	if source is Object:
+		if source.get("trap_name") != null:
+			return "trap"
+		if source.get("wand_id") != null or source.get("item_id") != null:
+			source_class = str(source.get_class()).to_lower()
+			if source_class.find("wand") >= 0:
+				return "magic"
+		source_class = str(source.get_class()).to_lower()
+	return _damage_type_for_source_id(source_class)
+
+static func _damage_type_for_source_id(source_id: String) -> String:
+	var id: String = source_id.to_lower()
+	if id.find("fire") >= 0 or id.find("burn") >= 0 or id.find("explosive") >= 0:
+		return "fire"
+	if id.find("poison") >= 0 or id.find("toxic") >= 0:
+		return "poison"
+	if id.find("bleed") >= 0:
+		return "bleed"
+	if id.find("corrosion") >= 0 or id.find("caustic") >= 0 or id.find("acid") >= 0:
+		return "acid"
+	if id.find("chasm") >= 0 or id.find("fall") >= 0:
+		return "fall"
+	if id.find("hunger") >= 0 or id.find("starv") >= 0:
+		return "hunger"
+	if id.find("trap") >= 0 or id.find("dart") >= 0 or id.find("rockfall") >= 0:
+		return "trap"
+	if id.find("wand") >= 0 or id.find("magic") >= 0 or id.find("grim") >= 0:
+		return "magic"
+	return "physical"

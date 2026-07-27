@@ -71,6 +71,7 @@ var sleeping: bool = false
 var _emo_type: EmoType = EmoType.NONE
 var _emo_label: Label = null
 var _emo_timer: float = 0.0
+var _emo_duration: float = -1.0
 var _ally_label: Label = null
 var _ground_ring_visible: bool = false
 var _ground_ring_color: Color = Color(1.0, 1.0, 1.0, 0.22)
@@ -121,6 +122,8 @@ func _process(delta: float) -> void:
 	if _emo_label != null and _emo_type != EmoType.NONE:
 		_emo_timer += delta
 		_emo_label.position.y = -TILE_SIZE - 4 + sin(_emo_timer * 3.0) * 1.5
+		if _emo_duration > 0.0 and _emo_timer >= _emo_duration:
+			hide_emo()
 
 func _draw() -> void:
 	if not _ground_ring_visible:
@@ -439,8 +442,8 @@ func refresh_texture() -> void:
 func show_sleep() -> void:
 	_show_emo(EmoType.SLEEP, "Z")
 
-func show_alert() -> void:
-	_show_emo(EmoType.ALERT, "!")
+func show_alert(duration: float = 1.0) -> void:
+	_show_emo(EmoType.ALERT, "!", duration)
 
 func set_ally_label(text: String, color: Color = Color.WHITE) -> void:
 	if text.strip_edges().is_empty():
@@ -476,16 +479,20 @@ func clear_ground_ring() -> void:
 
 func hide_emo() -> void:
 	_emo_type = EmoType.NONE
+	_emo_duration = -1.0
 	if _emo_label and is_instance_valid(_emo_label):
 		_emo_label.queue_free()
 		_emo_label = null
 
-func _show_emo(emo: EmoType, text: String) -> void:
+func _show_emo(emo: EmoType, text: String, duration: float = -1.0) -> void:
 	if _emo_type == emo:
+		_emo_timer = 0.0
+		_emo_duration = duration
 		return
 	hide_emo()
 	_emo_type = emo
 	_emo_timer = 0.0
+	_emo_duration = duration
 	_emo_label = Label.new()
 	_emo_label.text = text
 	_emo_label.add_theme_font_size_override("font_size", 8)

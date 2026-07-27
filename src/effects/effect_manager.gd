@@ -24,11 +24,11 @@ func _ready() -> void:
 # ---------------------------------------------------------------------------
 
 ## Show a floating damage number at a cell position.
-func show_damage(pos: int, amount: int, is_crit: bool = false) -> void:
+func show_damage(pos: int, amount: int, is_crit: bool = false, damage_type: String = "physical") -> void:
 	if _active_numbers >= MAX_DAMAGE_NUMBERS:
 		return
 	var num: DamageNumber = DamageNumber.new()
-	num.setup(amount, is_crit)
+	num.setup(amount, is_crit, damage_type)
 	num.position = _cell_to_world(pos) + Vector2(0, -4)
 	add_child(num)
 	_active_numbers += 1

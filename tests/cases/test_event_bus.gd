@@ -12,7 +12,7 @@ extends RefCounted
 
 const REQUIRED_SIGNALS: Array[String] = [
 	"hero_moved", "hero_moved_detailed", "hero_died", "hero_fell", "hero_stats_changed",
-	"mob_defeated", "mob_died", "mob_damaged",
+	"mob_defeated", "mob_alerted", "mob_died", "mob_damaged", "mob_damaged_detailed",
 	"level_changed", "door_opened", "trap_triggered", "gold_collected",
 	"game_saved", "game_loaded",
 	"item_picked_up", "item_used", "item_equipped", "item_unequipped",
@@ -25,9 +25,11 @@ class CountingEffectManager:
 	extends Node
 
 	var damage_calls: int = 0
+	var last_damage_type: String = ""
 
-	func show_damage(_pos: int, _amount: int, _is_crit: bool = false) -> void:
+	func show_damage(_pos: int, _amount: int, _is_crit: bool = false, damage_type: String = "physical") -> void:
 		damage_calls += 1
+		last_damage_type = damage_type
 
 func run(t: Object) -> void:
 	var script: Variant = load("res://src/autoloads/event_bus.gd")
@@ -54,6 +56,12 @@ func _test_game_scene_event_bus_connections_are_idempotent(t: Object) -> void:
 	t.check(
 		effects.damage_calls == 1,
 		"GameScene connects mob damage feedback once even if setup runs twice"
+	)
+
+	EventBus.mob_damaged_detailed.emit(43, 9, "poison dart")
+	t.check(
+		effects.damage_calls == 2 and effects.last_damage_type == "poison",
+		"Detailed mob damage feedback carries source-derived damage type"
 	)
 
 	scene.free()
