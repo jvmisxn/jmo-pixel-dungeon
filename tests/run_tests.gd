@@ -165,6 +165,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_soul_eater_kill.gd",
 	"res://tests/cases/test_assassin_preparation.gd",
 	"res://tests/cases/test_bounty_hunter.gd",
+	"res://tests/cases/test_wealth_loot_chance.gd",
 	"res://tests/cases/test_projectile_momentum.gd",
 	"res://tests/cases/test_speedy_stealth.gd",
 	"res://tests/cases/test_evasive_armor.gd",
