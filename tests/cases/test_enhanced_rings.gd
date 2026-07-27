@@ -40,8 +40,8 @@ func _test_registry(t: Object) -> void:
 		"rogue_enhanced_rings has 3 max points")
 	var lc: TalentData.TalentInfo = TalentData.get_talent(
 		ConstantsData.HeroClass.ROGUE, "rogue_light_cloak")
-	t.check(lc != null and not lc.implemented and lc.tier == 3,
-		"rogue_light_cloak groundwork slot is registered inert at tier 3")
+	t.check(lc != null and lc.implemented and lc.tier == 3,
+		"rogue_light_cloak is registered implemented at tier 3")
 
 func _test_cloak_grants_buff(t: Object) -> void:
 	for points: int in [1, 2, 3]:

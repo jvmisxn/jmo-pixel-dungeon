@@ -231,6 +231,7 @@ func execute_action() -> void:
 	var equipped_artifact: Variant = belongings.get_equipped_artifact() if belongings != null else null
 	if equipped_artifact != null and equipped_artifact.has_method("on_turn"):
 		equipped_artifact.on_turn(self)
+	_light_cloak_recharge()
 
 	# If the hero died during buff processing (starvation, poison), skip the action
 	# but still complete the turn to avoid softlocking the turn system.
@@ -1306,6 +1307,21 @@ func attack_proc(target_char: Char, damage: int) -> int:
 
 	_followup_strike_ready = false
 	return maxi(0, result)
+
+## Upstream CloakOfShadows.cloakRecharge: with the Rogue's Light Cloak talent
+## the cloak also charges while sitting in the backpack, at 25%/50%/75% of its
+## equipped rate (0.75 * points / 3). Equipped cloaks recharge via on_turn.
+func _light_cloak_recharge() -> void:
+	if belongings == null:
+		return
+	var points: int = get_talent_level("rogue_light_cloak")
+	if points <= 0:
+		return
+	for item: Variant in belongings.backpack:
+		if item is Artifact and (item as Artifact).item_id == "cloak_of_shadows":
+			var cloak: Artifact = item as Artifact
+			if not cloak.cursed:
+				cloak._recharge(cloak.charge_rate * 0.25 * float(points))
 
 ## Upstream ArtifactRecharge.chargeArtifacts: instantly charge all equipped
 ## non-cursed artifacts by `turns` turns' worth of passive charging.
