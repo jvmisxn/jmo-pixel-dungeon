@@ -380,6 +380,22 @@ func take_damage(dmg: int, source: Variant = null) -> int:
 	if actual > 0 and source != null:
 		last_damage_source = source
 
+	# Grim enchant deferred execute (upstream Char.damage): a survivor carrying
+	# a GrimTracker rolls its max chance scaled by missing-HP fraction squared;
+	# success deals the remaining HP (scaled by resist) as bonus damage.
+	if hp > 0:
+		var grim_tracker: Node = get_buff("GrimTracker")
+		if grim_tracker != null:
+			var grim_chance: float = float(grim_tracker.max_chance)
+			grim_chance *= pow(float(ht - hp) / float(maxi(1, ht)), 2)
+			if randf() < grim_chance:
+				var grim_extra: int = roundi(hp * resist("grim"))
+				actual += grim_extra
+				hp -= grim_extra
+				if MessageLog:
+					MessageLog.add("The weapon reaps a soul!")
+				WeaponEnchantment._emit_proc("grim", source, self)
+
 	# Kinetic enchant overkill (upstream Char.damage): when a Char kills an
 	# enemy-side victim while carrying a KineticTracker, the overkill (minus
 	# the recycled conserved bonus already in this hit) is banked on the

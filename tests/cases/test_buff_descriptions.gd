@@ -58,7 +58,7 @@ func run(t: Object) -> void:
 		"WarriorShield cooldown desc shows turns remaining")
 
 	# --- Every non-internal buff now returns a non-empty description ---
-	var internal_ids := ["DelayedPit", "KineticTracker", "LethalMomentumTracker",
+	var internal_ids := ["DelayedPit", "GrimTracker", "KineticTracker", "LethalMomentumTracker",
 		"ParalysisResist", "ProtectiveShadowsTracker", "Regeneration",
 		"WandPreservationCounter", "RejuvenatingStepsFurrow"]
 	var dir := DirAccess.open("res://src/actors/buffs")
