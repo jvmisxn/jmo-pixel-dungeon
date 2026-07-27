@@ -590,6 +590,15 @@ class CloakOfShadows extends Artifact:
 		invis_turns = 5 + level
 		gain_exp(1)
 
+		# Upstream Talent.onArtifactUsed: Rogue Enhanced Rings — using the
+		# cloak enhances rings for 3 turns per point (Buff.prolong 3*points).
+		if hero.has_method("get_talent_level") and hero.has_method("add_buff"):
+			var er_points: int = hero.get_talent_level("rogue_enhanced_rings")
+			if er_points > 0:
+				var er: EnhancedRings = EnhancedRings.new()
+				er.set_duration(3.0 * er_points)
+				hero.add_buff(er)
+
 		# Apply invisibility buff
 		if hero.has_method("add_buff"):
 			var invis: Invisibility = Invisibility.new()

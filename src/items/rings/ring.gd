@@ -28,10 +28,17 @@ func is_equippable() -> bool:
 # ---------------------------------------------------------------------------
 
 ## Returns the effective bonus level. Positive when upgraded, negative if cursed.
+## While the wearer has the Rogue's EnhancedRings buff, the effective level is
+## +1 (upstream Ring.buffedLvl).
 func bonus() -> int:
+	var b: int = level
 	if cursed and level == 0:
-		return -1
-	return level
+		b = -1
+	if _passive_buff != null and _passive_buff.target != null \
+			and _passive_buff.target.has_method("has_buff") \
+			and _passive_buff.target.has_buff("EnhancedRings"):
+		b += 1
+	return b
 
 ## Missile-only Sharpshooting level bonus (SPD RingOfSharpshooting.levelDamageBonus).
 ## Returns the equipped Ring of Sharpshooting's bonus level for a character, or 0
