@@ -96,6 +96,8 @@ var _mob_sprites: Dictionary[int, Variant] = {}
 var _item_sprites: Dictionary[int, Variant] = {}
 ## Plant sprites on the ground. Key: pos (int) -> PlantSprite
 var _plant_sprites: Dictionary[int, Variant] = {}
+## Revealed-trap sprites. Key: pos (int) -> TrapSprite
+var _trap_sprites: Dictionary[int, Variant] = {}
 ## Armed bomb sprites on the ground. Key: pos (int) -> ItemSprite
 var _armed_bomb_sprites: Dictionary[int, Variant] = {}
 
@@ -653,6 +655,7 @@ func load_level(level: Variant, region: int) -> void:
 	_spawn_mob_sprites()
 	_spawn_item_sprites()
 	_refresh_plant_sprites()
+	_refresh_trap_sprites()
 	_refresh_armed_bomb_sprites()
 
 	# Initial FOV from the locally focused hero position
@@ -826,12 +829,14 @@ func _rebuild_scene_from_state(force_full_rebuild: bool = false, previous_hero_s
 		_spawn_mob_sprites()
 		_spawn_item_sprites()
 		_refresh_plant_sprites()
+		_refresh_trap_sprites()
 		_refresh_armed_bomb_sprites()
 	else:
 		_sync_hero_sprites_from_state(previous_hero_state)
 		_sync_mob_sprites_from_state(previous_mob_state)
 		_refresh_item_sprites()
 		_refresh_plant_sprites()
+		_refresh_trap_sprites()
 		_refresh_armed_bomb_sprites()
 		_apply_snapshot_world_feedback(previous_level_state)
 	_refresh_blob_overlays()
@@ -1306,6 +1311,10 @@ func _clear_entity_sprites() -> void:
 		if sprite is Node and is_instance_valid(sprite):
 			sprite.queue_free()
 	_plant_sprites.clear()
+	for sprite: Variant in _trap_sprites.values():
+		if sprite is Node and is_instance_valid(sprite):
+			sprite.queue_free()
+	_trap_sprites.clear()
 	for sprite: Variant in _armed_bomb_sprites.values():
 		if sprite is Node and is_instance_valid(sprite):
 			sprite.queue_free()
@@ -1324,6 +1333,9 @@ func _refresh_armed_bomb_sprites() -> void:
 
 func _refresh_plant_sprites() -> void:
 	SceneVisualCoordinator.refresh_plant_sprites(self)
+
+func _refresh_trap_sprites() -> void:
+	SceneVisualCoordinator.refresh_trap_sprites(self)
 
 func _refresh_blob_overlays() -> void:
 	SceneVisualCoordinator.refresh_blob_overlays(self)
