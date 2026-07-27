@@ -1175,6 +1175,19 @@ func on_food_eaten(_food: Food, hunger_before: float, hp_before: int, hp_max_bef
 		EventBus.hero_stats_changed.emit()
 
 
+func on_scroll_read() -> void:
+	# Inscribed Stealth (upstream Talent.onScrollUsed): reading a scroll grants
+	# the Rogue 1+2*points (3/5) turns of Invisibility. Port adaptation: buff
+	# merge keeps the longer remaining duration instead of stacking additively.
+	var inscribed: int = get_talent_level("rogue_inscribed_stealth")
+	if hero_class == ConstantsData.HeroClass.ROGUE and inscribed > 0:
+		var invis: Invisibility = Invisibility.new()
+		invis.set_duration(1.0 + 2.0 * inscribed)
+		add_buff(invis)
+		if EventBus:
+			EventBus.hero_stats_changed.emit()
+
+
 func on_trampled_grass() -> void:
 	if level == null:
 		return

@@ -38,6 +38,9 @@ func execute(hero: Char) -> void:
 	if hero.has_method("spend"):
 		hero.spend(TIME_TO_READ)
 	read_scroll(hero)
+	# Talent hook (upstream Talent.onScrollUsed via Scroll.readAnimation).
+	if hero.has_method("on_scroll_read"):
+		hero.on_scroll_read()
 	identify()
 	_consume(hero)
 
@@ -711,6 +714,8 @@ class ScrollTransmutation extends Scroll:
 				MessageLog.add_warning("You can't read a scroll while blinded!")
 			return
 		read_scroll(hero)
+		if hero.has_method("on_scroll_read"):
+			hero.on_scroll_read()
 		# Do NOT call _consume here — the WndTransmute handles it on confirm.
 		# If fallback was used, _transmutation_fallback already logged.
 
