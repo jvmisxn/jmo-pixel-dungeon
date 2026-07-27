@@ -4,6 +4,13 @@ extends Weapon
 ## than weapon tier. Cannot be thrown. Fires virtual SpiritArrow projectiles.
 ## Always tier 1 for upgrade cost purposes but damage scales independently.
 
+## Transient sniper-special state (upstream SpiritBow.sniperSpecial /
+## sniperSpecialBonusDamage): set just before a marked special shot resolves,
+## cleared after the action's time is spent. Never serialized.
+var sniper_special: bool = false
+var sniper_special_bonus: float = 0.0
+var sniper_special_distance: int = 0
+
 func _init() -> void:
 	super._init()
 	item_id = "spirit_bow"
@@ -41,6 +48,28 @@ func get_damage_range_for_level(hero_level: int) -> Array[int]:
 func get_damage_range() -> Array[int]:
 	return get_damage_range_for_level(1)
 
+## Upstream SpiritBow.damageRoll: hero-level-scaled roll + excess STR, then
+## sniper-special modifiers — x(1 + Shared Upgrades bonus), then per augment:
+## NONE x0.667, SPEED x0.5, DAMAGE x min(3, 1.2 * 1.125^(distance-1)).
+## (Also fixes the ranged-attack path rolling at hero_level=1: the base
+## Weapon.damage_roll ignored the wielder's level entirely.)
+func damage_roll(owner: Variant = null) -> int:
+	var hero_level: int = 1
+	if owner != null and owner.get("hero_level") != null:
+		hero_level = int(owner.hero_level)
+	var dmg: int = _roll_from_range(get_damage_range_for_level(hero_level), owner)
+	if sniper_special:
+		dmg = roundi(dmg * (1.0 + sniper_special_bonus))
+		match augment:
+			Augment.SPEED:
+				dmg = roundi(dmg * 0.5)
+			Augment.DAMAGE:
+				var dist: int = maxi(0, sniper_special_distance - 1)
+				dmg = roundi(dmg * minf(3.0, 1.2 * pow(1.125, dist)))
+			_:
+				dmg = roundi(dmg * 0.667)
+	return maxi(0, dmg)
+
 # ---------------------------------------------------------------------------
 # Strength Requirement (fixed at 10)
 # ---------------------------------------------------------------------------
@@ -53,7 +82,19 @@ func get_str_requirement() -> int:
 # ---------------------------------------------------------------------------
 
 ## Bows are slightly slower than melee weapons by default.
+## Upstream SpiritBow.baseDelay: sniper-special shots replace the base delay
+## per augment — NONE is a free (0-time) shot, SPEED costs 1 turn, DAMAGE 2.
+## Port adaptation: SPEED's 3-arrow flurry is not ported; it fires one
+## half-damage arrow at normal speed instead.
 func speed_factor(_hero: Char) -> float:
+	if sniper_special:
+		match augment:
+			Augment.SPEED:
+				return 1.0
+			Augment.DAMAGE:
+				return 2.0
+			_:
+				return 0.0
 	var base_delay: float = 1.0
 
 	match augment:
@@ -72,7 +113,11 @@ func speed_factor(_hero: Char) -> float:
 ## Upstream SpiritArrow inherits MissileWeapon's adjacency accuracy split:
 ## 1.5x at range, 0.5x adjacent (raised by Huntress Point Blank). The bow has
 ## no STR encumbrance, so the adjacency factor is the whole multiplier.
+## Upstream SpiritArrow.accuracyFactor: a DAMAGE-augmented sniper special
+## never misses (Float.POSITIVE_INFINITY).
 func accuracy_factor(hero: Char = null, target: Char = null) -> float:
+	if sniper_special and augment == Augment.DAMAGE:
+		return 1000000.0
 	return MissileWeapon.adjacent_acc_factor_for(hero, target)
 
 # ---------------------------------------------------------------------------

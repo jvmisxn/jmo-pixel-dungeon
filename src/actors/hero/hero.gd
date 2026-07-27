@@ -275,7 +275,8 @@ func execute_action() -> void:
 		"search":
 			_do_search()
 		"throw_item":
-			_do_throw_item(action.get("item"), action.get("target_pos", -1))
+			_do_throw_item(action.get("item"), action.get("target_pos", -1),
+				action.get("sniper_special", false))
 		"zap_wand":
 			_do_zap_wand(action.get("item"), action.get("target_pos", -1))
 		"wait":
@@ -303,8 +304,16 @@ func execute_action() -> void:
 			var atk_delay: float = _get_attack_delay()
 			spend_turn(atk_delay)
 		"throw_item":
+			# Sniper-special bow flags must survive until the delay is read
+			# (a NONE-augment special shot costs 0 time), then reset.
 			var throw_delay: float = _get_throw_delay(action.get("item"))
 			spend_turn(throw_delay)
+			var thrown: Variant = action.get("item")
+			if thrown is SpiritBow:
+				var thrown_bow: SpiritBow = thrown as SpiritBow
+				thrown_bow.sniper_special = false
+				thrown_bow.sniper_special_bonus = 0.0
+				thrown_bow.sniper_special_distance = 0
 		"zap_wand":
 			spend_turn(_get_non_movement_action_delay())
 		"interact":
@@ -454,7 +463,7 @@ func _do_search() -> void:
 	_patient_strike_ready = false
 	_followup_strike_ready = false
 
-func _do_throw_item(item: Variant, target_pos: int) -> void:
+func _do_throw_item(item: Variant, target_pos: int, sniper_special: bool = false) -> void:
 	if item == null or target_pos < 0 or level == null or belongings == null:
 		return
 	if item != belongings.weapon and item != belongings.get_equipped_spirit_bow() and not belongings.has_item(item):
@@ -505,6 +514,17 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 	if item is SpiritBow:
 		SpiritBow.apply_seer_shot(self, collision_pos if collision_pos >= 0 else target_pos)
 	var hit_target: Char = collision_target as Char if collision_target is Char and collision_target != self else null
+	# Sniper special shot (upstream SnipersMark.doAction): arm the bow's
+	# special flags from the target's mark; the mark is consumed when the
+	# shot fires, whether or not it lands.
+	if sniper_special and item is SpiritBow and hit_target != null:
+		var mark: SnipersMark = hit_target.get_buff("SnipersMark") as SnipersMark
+		if mark != null:
+			var special_bow: SpiritBow = item as SpiritBow
+			special_bow.sniper_special = true
+			special_bow.sniper_special_bonus = mark.percent_dmg_bonus
+			special_bow.sniper_special_distance = distance_to(hit_target.pos)
+			hit_target.remove_buff(mark)
 	var hit_landed: bool = false
 	if EventBus:
 		EventBus.item_used.emit(ConstantsData.get_prop(item, "item_name", "item"))
@@ -719,9 +739,41 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 
 	target.take_damage(effective_damage, self)
 	on_attack_hit(target, effective_damage)
+	if item is MissileWeapon and not (item is SpiritBow):
+		_apply_snipers_mark(item, target)
 	if EventBus and item is MissileWeapon and not (item is SpiritBow):
 		EventBus.game_event.emit("thrown_weapon_hit", {"target_pos": target.pos})
 	return true
+
+## Upstream Hero.attackProc (SNIPER): hitting an enemy with a thrown missile
+## weapon (not a spirit arrow) marks it for 4 turns. With Shared Upgrades the
+## mark lasts min(2*points, weapon level) extra turns and the special shot
+## gains 16.67% damage per counted level (max +2/+4/+6 turns, +33%/67%/100%).
+## Port adaptation: the mark attaches to the enemy (no actor-id registry), and
+## tapping the marked enemy fires the special shot (no ActionIndicator).
+func _apply_snipers_mark(missile: MissileWeapon, target: Char) -> void:
+	if hero_subclass != ConstantsData.HeroSubclass.SNIPER:
+		return
+	if target == null or target == self or not target.is_alive:
+		return
+	if target.is_hero or target.get("is_ally") == true:
+		return
+	var level_bonus: int = 0
+	var points: int = get_talent_level("sniper_shared_upgrades")
+	if points > 0:
+		level_bonus = mini(2 * points, maxi(0, int(missile.level)))
+	var mark: SnipersMark = SnipersMark.new()
+	mark.set_duration(SnipersMark.DURATION + float(level_bonus))
+	mark.percent_dmg_bonus = float(level_bonus) / 6.0
+	target.add_buff(mark)
+
+## True when tapping [target_pos] should fire a sniper special shot: the hero
+## is a Sniper and the character there carries her mark.
+func _is_sniper_special_target(target_pos: int) -> bool:
+	if hero_subclass != ConstantsData.HeroSubclass.SNIPER or level == null:
+		return false
+	var ch: Variant = level.find_char_at(target_pos)
+	return ch is Char and ch != self and (ch as Char).has_buff("SnipersMark")
 
 ## Sniper Shared Enchantment (upstream MissileWeapon.proc): thrown-weapon hits
 ## have a points-in-3 chance to also proc the spirit bow's enchantment.
@@ -805,7 +857,10 @@ func get_auto_ranged_action(target_pos: int) -> Dictionary:
 	var ranged_item: Variant = _get_auto_ranged_item(target_pos)
 	if ranged_item == null:
 		return {}
-	return {"type": "throw_item", "item": ranged_item, "target_pos": target_pos}
+	var action: Dictionary = {"type": "throw_item", "item": ranged_item, "target_pos": target_pos}
+	if ranged_item is SpiritBow and _is_sniper_special_target(target_pos):
+		action["sniper_special"] = true
+	return action
 
 ## Assassin prepared blink-attack (upstream Preparation ActionIndicator; port
 ## adaptation: tapping a visible enemy within blink range while prepared
