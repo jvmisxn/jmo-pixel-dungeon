@@ -2,6 +2,24 @@
 
 ## 2026-07-27
 
+- Tags: talents, assassin, source-fidelity, audit:S02, tests, ENGINE
+- `assassin_assassins_reach` is now real, shipped together with the
+  previously-missing prepared blink attack (upstream Preparation
+  ActionIndicator/doAction): `AssassinPreparation.BLINK_RANGES` +
+  `blink_distance()` follow upstream `AttackLevel.blinkRanges` (prep level x
+  talent points, 1-10 tiles). Port adaptation: no ActionIndicator — tapping a
+  visible hostile within blink range while prepared routes through
+  `Hero._get_prep_blink_action` (hooked in `get_auto_ranged_action`) and
+  yields one attack action with a `blink_pos`; `_do_attack` teleports via
+  `move_to` (buff `on_move` + terrain effects fire, occupyCell parity) then
+  strikes. Dest choice mirrors upstream: distance map over passable cells
+  within blink range (blinking over occupied cells allowed), free neighbor of
+  the target with min map distance, euclidean tie-break; rooted heroes,
+  out-of-FOV targets, and allies are excluded. Falls back to normal
+  walk-to-attack when out of reach. `test_assassins_reach.gd` (range table,
+  action gating, occupied-neighbor skip, blink+strike integration).
+  [ENGINE] tap-path UX needs a device playtest.
+
 - Tags: enchantments, buffs, source-fidelity, audit:S13, tests
 - Kinetic enchant now matches upstream Kinetic + Char.damage instead of the
   old "20% chance for +50% damage" stand-in: the proc is RNG-free, consumes
