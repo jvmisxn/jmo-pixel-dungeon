@@ -33,27 +33,32 @@ static func reset() -> void:
 # Quest Depth Detection
 # ---------------------------------------------------------------------------
 
-## Returns true if the given depth can spawn a quest NPC.
-## Original uses probabilistic spawning: Random.Int(N - depth) == 0
-## Ghost: Random.Int(5 - depth) == 0 for depth 2-4 -> 33%/50%/100%
-## Wandmaker: Random.Int(10 - depth) == 0 for depth 7-9 -> 33%/50%/100%
-## Blacksmith: Random.Int(15 - depth) == 0 for depth 12-14 -> 33%/50%/100%
-## Imp: Random.Int(20 - depth) == 0 for depth 17-19 -> 33%/50%/100%
-## Each quest is guaranteed to spawn by the last eligible depth.
-static func is_quest_depth(depth: int) -> bool:
-	# Sad Ghost: Sewers depth 2-4
-	if depth >= 2 and depth <= 4 and _quest_available("ghost_quest"):
-		return randi() % (5 - depth) == 0
-	# Wandmaker: Prison depth 7-9
-	if depth >= 7 and depth <= 9 and _quest_available("wandmaker_quest"):
-		return randi() % (10 - depth) == 0
-	# Blacksmith: Caves depth 12-14
-	if depth >= 12 and depth <= 14 and _quest_available("blacksmith_quest"):
-		return randi() % (15 - depth) == 0
-	# Imp: City depth 17-19
-	if depth >= 17 and depth <= 19 and _quest_available("imp_quest"):
-		return randi() % (20 - depth) == 0
-	return false
+## Single source of truth for quest spawn windows.
+## Original uses probabilistic spawning: Random.Int(guaranteed_by - depth) == 0
+## within [min_depth, max_depth], so odds run 33%/50%/100% across each window
+## (Ghost/Wandmaker/Blacksmith/Imp Quest.spawn). Each quest is guaranteed to
+## spawn by the last eligible depth. Windows must not overlap.
+const QUEST_WINDOWS: Array[Dictionary] = [
+	{"id": "ghost_quest", "min_depth": 2, "max_depth": 4, "guaranteed_by": 5},
+	{"id": "wandmaker_quest", "min_depth": 7, "max_depth": 9, "guaranteed_by": 10},
+	{"id": "blacksmith_quest", "min_depth": 12, "max_depth": 14, "guaranteed_by": 15},
+	{"id": "imp_quest", "min_depth": 17, "max_depth": 19, "guaranteed_by": 20},
+]
+
+## Roll which quest (if any) should spawn on the given depth. Returns the
+## quest id or "" when none. This is the only depth gate; spawn_quest_npc
+## consumes the result, so the gate and the spawn dispatch cannot diverge.
+static func _roll_quest_for_depth(depth: int) -> String:
+	if not _initialized:
+		reset()
+	for window: Dictionary in QUEST_WINDOWS:
+		if depth < int(window["min_depth"]) or depth > int(window["max_depth"]):
+			continue
+		if not _quest_available(str(window["id"])):
+			continue
+		if randi() % (int(window["guaranteed_by"]) - depth) == 0:
+			return str(window["id"])
+	return ""
 
 ## Returns true if a quest has not yet been spawned or completed.
 static func _quest_available(quest_id: String) -> bool:
@@ -66,30 +71,24 @@ static func _quest_available(quest_id: String) -> bool:
 # NPC Spawning
 # ---------------------------------------------------------------------------
 
-## Spawn the appropriate quest NPC for the given depth. Returns the NPC, or null
-## if no quest should spawn on this depth. The caller is responsible for placing
-## the NPC on the level at a valid position.
+## Roll the depth gate and spawn the matching quest NPC. Returns the NPC, or
+## null if no quest should spawn on this depth. The caller is responsible for
+## placing the NPC on the level at a valid position.
 static func spawn_quest_npc(level_ref: Variant, depth: int) -> Variant:
-	if not _initialized:
-		reset()
+	var quest_id: String = _roll_quest_for_depth(depth)
+	if quest_id == "":
+		return null
 
 	var npc: Variant = null
-
-	# Sad Ghost — Sewers (depth 2-4)
-	if depth >= 2 and depth <= 4 and _quest_available("ghost_quest"):
-		npc = _spawn_ghost(level_ref, depth)
-
-	# Wandmaker — Prison (depth 7-9)
-	elif depth >= 7 and depth <= 9 and _quest_available("wandmaker_quest"):
-		npc = _spawn_wandmaker(level_ref, depth)
-
-	# Blacksmith — Caves (depth 12-14)
-	elif depth >= 12 and depth <= 14 and _quest_available("blacksmith_quest"):
-		npc = _spawn_blacksmith(level_ref, depth)
-
-	# Imp — City (depth 17-19)
-	elif depth >= 17 and depth <= 19 and _quest_available("imp_quest"):
-		npc = _spawn_imp(level_ref, depth)
+	match quest_id:
+		"ghost_quest":
+			npc = _spawn_ghost(level_ref, depth)
+		"wandmaker_quest":
+			npc = _spawn_wandmaker(level_ref, depth)
+		"blacksmith_quest":
+			npc = _spawn_blacksmith(level_ref, depth)
+		"imp_quest":
+			npc = _spawn_imp(level_ref, depth)
 
 	if npc != null:
 		_register_npc(npc)
