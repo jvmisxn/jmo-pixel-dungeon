@@ -2,6 +2,30 @@
 
 ## 2026-07-27
 
+- Tags: talents, sniper, spirit-bow, source-fidelity, audit:S02, tests, ENGINE
+- `sniper_shared_upgrades` is now real, shipped with the previously-missing
+  sniper's-mark special-shot system (upstream SnipersMark +
+  SpiritBow.sniperSpecial). Mark: `Hero._apply_snipers_mark` in
+  `_resolve_ranged_attack` — a Sniper's thrown-missile hit (not spirit arrow)
+  attaches `SnipersMark` (new `snipers_mark.gd`) for 4 turns; Shared Upgrades
+  adds min(2*points, weapon level) turns and banks levelBonus/6 bonus damage
+  (upstream Hero.attackProc). Port adaptation: mark attaches to the ENEMY
+  (no actor-id registry, CharAwareness precedent) and tap-to-shoot replaces
+  ActionIndicator — `get_auto_ranged_action` flags `sniper_special` when
+  tapping a marked enemy (`_is_sniper_special_target`), `_do_throw_item`
+  arms the bow from the mark and consumes it whether or not the shot lands.
+  SpiritBow special modifiers per upstream: NONE augment x0.667 damage at
+  0 time (free shot), SPEED x0.5 at 1 turn (3-arrow flurry NOT ported),
+  DAMAGE x min(3, 1.2*1.125^(dist-1)) at 2 turns with guaranteed accuracy
+  (accuracy_factor 1e6). Flags reset after the throw's time is spent in
+  `execute_action`. Same slice fixed a latent bug: the ranged-attack path
+  rolled spirit-bow damage via base `Weapon.damage_roll` at hero_level=1 —
+  new `SpiritBow.damage_roll(owner)` uses the wielder's hero_level (plus the
+  special-shot multipliers). Coop divergence noted: mark is per-enemy, not
+  per-hero, so any Sniper with a bow could fire at another Sniper's mark.
+  `test_snipers_mark.gd` (26 checks). [ENGINE]: tap-flow feel + free-action
+  pacing need a playtest.
+
 - Tags: allies, dried-rose, floor-transitions, source-fidelity, audit:S24, tests
 - Dried Rose ghost now follows the party across floors (upstream
   `Mob.holdAllies`/`restoreAllies` — the old backlog claim of an upstream

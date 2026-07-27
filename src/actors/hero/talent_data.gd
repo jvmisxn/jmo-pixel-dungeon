@@ -148,7 +148,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 			return [
 				_make("sniper_farsight", "Farsight", "The Sniper's vision range is increased by 25%/50%/75%.", 3, 3, hero_subclass),
 				_make("sniper_shared_enchantment", "Shared Enchantment", "The Sniper's thrown weapons have a 33%/67%/100% chance to also benefit from the enchantment on her spirit bow.", 3, 3, hero_subclass),
-				_make_inert("sniper_shared_upgrades", "Shared Upgrades", "Groundwork slot: the Sniper's marked bonus shots gain duration and damage from thrown-weapon upgrades (sniper's-mark free-shot system not ported yet).", 3, 3, hero_subclass),
+				_make("sniper_shared_upgrades", "Shared Upgrades", "Sniper's Mark lasts longer and its special shot deals bonus damage, based on the level of the thrown weapon that applied it: up to +2/+4/+6 turns and +33%/67%/100% damage.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.WARDEN:
 			return [
