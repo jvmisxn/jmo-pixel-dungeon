@@ -77,7 +77,6 @@ func _test_spirit_bow_inherits(t: Object) -> void:
 	t.check(is_equal_approx(bow.accuracy_factor(hero, distant), 1.5),
 		"Spirit bow: ranged factor 1.5x")
 	hero.free()
-	bow.free()
 	adjacent.free()
 	distant.free()
 
