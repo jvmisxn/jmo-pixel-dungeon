@@ -65,7 +65,7 @@ func _test_detonation_seeds_regrowth_and_heals_hero(t: Object) -> void:
 				"center cell seeded at 10 volume")
 	t.check(hero.hp == hero.hp_max, "regrowth bomb heals heroes like a healing potion")
 	t.check(not hero.has_buff("Poison"), "regrowth bomb cures poison on healed heroes")
-	t.check(not hero.has_buff("Weakness"), "regrowth bomb cures the broader healing-potion debuff set")
+	t.check(not hero.has_buff("Weakness"), "regrowth bomb cures the shared PotionOfHealing.cure debuff set")
 
 	hero.free()
 

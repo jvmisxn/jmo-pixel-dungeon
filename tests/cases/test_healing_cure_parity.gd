@@ -18,6 +18,8 @@ func run(t: Object) -> void:
 	_test_healing_shatter_cures_target(t)
 	_test_dreamfoil_cures_hero(t)
 	_test_dreamfoil_cures_mob_then_sleeps(t)
+	_test_well_water_cures_shared_list(t)
+	_test_regrowth_bomb_cures_shared_list(t)
 
 func _make_char(cell: int) -> Char:
 	var ch: Char = Char.new()
@@ -95,3 +97,41 @@ func _test_dreamfoil_cures_mob_then_sleeps(t: Object) -> void:
 	_check_all_cured(t, mob, "Dreamfoil (mob)")
 	t.check(mob.has_buff("Sleep"), "Dreamfoil still sleeps mobs (port adaptation)")
 	mob.free()
+
+func _apply_non_curables(ch: Char) -> void:
+	# Upstream PotionOfHealing.cure does NOT touch these; the old divergent
+	# well/regrowth-bomb lists stripped them.
+	for id: String in ["Burning", "Charm", "Chill"]:
+		var b: Buff = Buff.new()
+		b.buff_id = id
+		b.buff_name = id
+		ch.add_buff(b)
+
+func _check_non_curables_kept(t: Object, ch: Char, label: String) -> void:
+	for id: String in ["Burning", "Charm", "Chill"]:
+		t.check(ch.has_buff(id), "%s does not cure %s (upstream parity)" % [label, id])
+
+func _test_well_water_cures_shared_list(t: Object) -> void:
+	# Upstream WaterOfHealth.affectHero calls PotionOfHealing.cure(hero).
+	var hero: Char = _make_char(ConstantsData.xy_to_pos(5, 5))
+	hero.is_hero = true
+	_apply_curables(hero)
+	_apply_non_curables(hero)
+	var well: WaterOfHealth = WaterOfHealth.new()
+	well.affect_char(hero)
+	t.check(hero.hp == hero.hp_max, "well water heals to full")
+	_check_all_cured(t, hero, "well water")
+	_check_non_curables_kept(t, hero, "well water")
+	hero.free()
+
+func _test_regrowth_bomb_cures_shared_list(t: Object) -> void:
+	# Upstream RegrowthBomb calls PotionOfHealing.cure(ch) on allied chars.
+	var hero: Char = _make_char(ConstantsData.xy_to_pos(6, 6))
+	_apply_curables(hero)
+	_apply_non_curables(hero)
+	var bomb: Bomb = Bomb.new()
+	bomb._heal_like_potion(hero)
+	t.check(hero.hp == hero.hp_max, "regrowth bomb heals to full")
+	_check_all_cured(t, hero, "regrowth bomb")
+	_check_non_curables_kept(t, hero, "regrowth bomb")
+	hero.free()

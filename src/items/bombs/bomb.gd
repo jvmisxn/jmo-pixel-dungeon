@@ -22,10 +22,8 @@ const FROST_SEED_VOLUME: float = 10.0
 ## SPD FrostBomb also applies a short direct Frost buff to characters in the
 ## blast footprint in addition to the lingering Freezing blob.
 const FROST_DIRECT_DURATION: float = 2.0
-const HEALING_CURE_IDS: Array[String] = [
-	"Poison", "Cripple", "Weakness", "Bleeding", "Blindness", "Burning",
-	"Ooze", "Paralysis", "Slow", "Vertigo", "Chill", "Charm",
-]
+## Upstream RegrowthBomb calls PotionOfHealing.cure(ch) ("same as a healing
+## potion"); this port routes through the shared Potion.PotionHealing.cure().
 
 # --- Properties ---
 ## Number of turns before detonation after being thrown/placed.
@@ -267,8 +265,7 @@ func _heal_like_potion(ch: Variant) -> void:
 		if missing > 0:
 			ch.heal(missing)
 	if ch.has_method("remove_buff_by_id"):
-		for buff_id: String in HEALING_CURE_IDS:
-			ch.remove_buff_by_id(buff_id)
+		Potion.PotionHealing.cure(ch)
 
 ## Remove one from the stack and remove the item if depleted.
 func _consume_one(hero: Char) -> void:

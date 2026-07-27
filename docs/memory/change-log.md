@@ -2,6 +2,19 @@
 
 ## 2026-07-27
 
+- Tags: blobs, bombs, source-fidelity, audit:S19, tests
+- Unified the remaining divergent healing-cure lists: `WaterOfHealth.affect_char`
+  and Regrowth Bomb `_heal_like_potion` now call the shared
+  `Potion.PotionHealing.cure()` (upstream WaterOfHealth.affectHero and
+  RegrowthBomb both call `PotionOfHealing.cure`). Deleted
+  `WaterOfHealth.CURABLE_BUFFS` and `Bomb.HEALING_CURE_IDS`; wells/regrowth no
+  longer strip Burning/Ooze/Paralysis/Chill/Charm and now cure
+  Vulnerable/Drowsy. New checks in `test_healing_cure_parity.gd` (well +
+  regrowth route through the shared list, non-curables retained). Follow-up
+  filed: well still misses upstream uncurseEquipped + Hunger.satisfy.
+
+## 2026-07-27
+
 - Tags: plants, potions, source-fidelity, audit:S19, tests
 - Healing-cure parity with upstream `PotionOfHealing.cure(ch)`: new shared
   static `Potion.PotionHealing.cure()` detaches the upstream nine
