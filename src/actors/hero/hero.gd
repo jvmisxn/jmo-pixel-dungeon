@@ -271,7 +271,7 @@ func execute_action() -> void:
 		"move":
 			_do_move(action.get("target_pos", -1))
 		"attack":
-			_do_attack(action.get("target"), action.get("target_pos", -1))
+			_do_attack(action.get("target"), action.get("target_pos", -1), action.get("blink_pos", -1))
 		"search":
 			_do_search()
 		"throw_item":
@@ -395,7 +395,7 @@ func _step_toward(target_pos: int) -> int:
 	return level.find_step(pos, target_pos)
 
 
-func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1) -> void:
+func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1, blink_pos: int = -1) -> void:
 	var atk_target: Char = null
 	if target_or_null is Char:
 		atk_target = target_or_null as Char
@@ -407,6 +407,15 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1) -> void:
 				atk_target = c as Char
 	if atk_target == null:
 		return
+	# Prepared Assassin blink-attack (upstream Preparation.doAction): teleport
+	# to the chosen cell beside the target, then strike as one action.
+	if blink_pos >= 0 and not _is_adjacent_pos(pos, atk_target.pos) and move_to(blink_pos):
+		if EventBus:
+			EventBus.hero_moved_detailed.emit(self, blink_pos)
+			var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+			if focused_hero == self:
+				EventBus.hero_moved.emit(blink_pos)
+		_check_terrain_effects()
 	last_visible_action = "attack"
 	last_visible_target_pos = atk_target.pos
 	# Surprise applies whenever the target is unaware of us (invisible, or a mob
@@ -790,10 +799,74 @@ func _consume_thrown_stack_item(item: Variant) -> void:
 			belongings.remove_item(item)
 
 func get_auto_ranged_action(target_pos: int) -> Dictionary:
+	var blink_action: Dictionary = _get_prep_blink_action(target_pos)
+	if not blink_action.is_empty():
+		return blink_action
 	var ranged_item: Variant = _get_auto_ranged_item(target_pos)
 	if ranged_item == null:
 		return {}
 	return {"type": "throw_item", "item": ranged_item, "target_pos": target_pos}
+
+## Assassin prepared blink-attack (upstream Preparation ActionIndicator; port
+## adaptation: tapping a visible enemy within blink range while prepared
+## blinks adjacent and attacks in one action instead of using an indicator).
+func _get_prep_blink_action(target_pos: int) -> Dictionary:
+	if level == null or target_pos < 0 or has_buff("Rooted"):
+		return {}
+	var prep: Node = get_buff("AssassinPreparation")
+	if prep == null or not prep.has_method("blink_distance"):
+		return {}
+	var blink_range: int = prep.blink_distance()
+	if blink_range <= 0:
+		return {}
+	if target_pos >= level.visible.size() or not level.visible[target_pos]:
+		return {}
+	var char_at: Variant = level.find_char_at(target_pos)
+	if not (char_at is Char) or char_at == self:
+		return {}
+	var enemy: Char = char_at as Char
+	if not enemy.is_alive or enemy.is_hero or enemy.get("is_ally") == true:
+		return {}
+	var dest: int = _find_prep_blink_dest(target_pos, blink_range)
+	if dest < 0:
+		return {}
+	return {"type": "attack", "target": enemy, "target_pos": target_pos, "blink_pos": dest}
+
+## Upstream Preparation blink dest: distance map over passable cells within
+## [blink_range] of the hero (blinking over occupied cells is allowed), then
+## the reachable free neighbor of [target_pos] closest to the hero, breaking
+## ties by true (euclidean) distance.
+func _find_prep_blink_dest(target_pos: int, blink_range: int) -> int:
+	var dist_map: Dictionary = {pos: 0}
+	var frontier: Array[int] = [pos]
+	var depth: int = 0
+	while depth < blink_range and not frontier.is_empty():
+		depth += 1
+		var next_frontier: Array[int] = []
+		for cell: int in frontier:
+			for n: int in level.get_neighbors(cell):
+				if dist_map.has(n) or not level.is_passable(n):
+					continue
+				dist_map[n] = depth
+				next_frontier.append(n)
+		frontier = next_frontier
+	var dest: int = -1
+	for n: int in level.get_neighbors(target_pos):
+		if not dist_map.has(n) or level.find_char_at(n) != null:
+			continue
+		if dest < 0:
+			dest = n
+			continue
+		var d_n: int = int(dist_map[n])
+		var d_dest: int = int(dist_map[dest])
+		if d_n < d_dest or (d_n == d_dest and _true_dist_sq(pos, n) < _true_dist_sq(pos, dest)):
+			dest = n
+	return dest
+
+func _true_dist_sq(a: int, b: int) -> int:
+	var dx: int = ConstantsData.pos_to_x(a) - ConstantsData.pos_to_x(b)
+	var dy: int = ConstantsData.pos_to_y(a) - ConstantsData.pos_to_y(b)
+	return dx * dx + dy * dy
 
 func _get_auto_ranged_item(target_pos: int) -> Variant:
 	if hero_class != ConstantsData.HeroClass.HUNTRESS or belongings == null or level == null:

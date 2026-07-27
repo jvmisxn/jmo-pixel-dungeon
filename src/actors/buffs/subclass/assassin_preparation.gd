@@ -5,8 +5,9 @@ extends Buff
 ## preparation per invisible turn. A prepared attack replaces the base damage
 ## roll with the best of N rolls plus a staged bonus, and can outright execute
 ## enemies under a KO threshold. Detaches as soon as invisibility ends.
-## Port adaptation: the upstream blink-attack ActionIndicator (and with it
-## Assassin's Reach) is not implemented yet.
+## Port adaptation: instead of the upstream ActionIndicator, tapping a
+## visible enemy within blink range while prepared blinks adjacent and
+## attacks in one action (see Hero._get_prep_blink_action).
 
 ## Upstream Preparation.AttackLevel: turns required, base damage bonus, rolls.
 const TURNS_REQ: Array[int] = [1, 3, 5, 9]
@@ -19,6 +20,14 @@ const KO_THRESHOLDS: Array = [
 	[0.10, 0.13, 0.17, 0.20],
 	[0.20, 0.27, 0.33, 0.40],
 	[0.50, 0.67, 0.83, 1.00],
+]
+## Blink-attack ranges (upstream AttackLevel.blinkRanges): 1st index is prep
+## level ordinal, 2nd is Assassin's Reach talent points (0-3).
+const BLINK_RANGES: Array = [
+	[1, 1, 2, 2],
+	[2, 3, 4, 5],
+	[3, 4, 6, 7],
+	[4, 6, 8, 10],
 ]
 
 var turns_invis: int = 0
@@ -77,6 +86,13 @@ func can_ko(defender: Node) -> bool:
 		threshold /= 5.0
 	return float(defender.hp) / float(defender.hp_max) < threshold
 
+## Prepared blink-attack range (upstream AttackLevel.blinkDistance).
+func blink_distance() -> int:
+	var points: int = 0
+	if target != null and target.has_method("get_talent_level"):
+		points = clampi(target.get_talent_level("assassin_assassins_reach"), 0, 3)
+	return BLINK_RANGES[level_ordinal()][points]
+
 ## Bounty Hunter loot-chance bonus (upstream Mob.lootChance): 2/4/8/16% per
 ## preparation level, multiplied by talent points. 0 without the talent.
 func bounty_hunter_bonus() -> float:
@@ -94,6 +110,8 @@ func description() -> String:
 		% [int(BASE_DMG_BONUS[lvl] * 100), int(KO_THRESHOLDS[lvl][_lethality_points()] * 100), int(KO_THRESHOLDS[lvl][_lethality_points()] * 20)]
 	if DAMAGE_ROLLS[lvl] > 1:
 		desc += " Bonus damage is more likely to roll high."
+	if blink_distance() > 0:
+		desc += "\n\nYou can blink-attack visible enemies up to %d tiles away by tapping them." % blink_distance()
 	desc += "\n\nTurns of invisibility: %d." % turns_invis
 	if lvl < TURNS_REQ.size() - 1:
 		desc += "\nNext level at %d turns." % TURNS_REQ[lvl + 1]
