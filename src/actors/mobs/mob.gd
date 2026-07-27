@@ -157,6 +157,8 @@ func _act_sleeping() -> void:
 	var dist: float = float(distance_to(hero.pos))
 	var hero_stealth: float = hero.stealth() if hero.has_method("stealth") else 0.0
 	var detection_chance: float = 1.0 / (dist + hero_stealth)
+	if _silent_steps_blocks(hero, dist):
+		detection_chance = 0.0
 	if randf() < detection_chance:
 		_wake_up(hero)
 		spend_turn()  # original: spend(TIME_TO_WAKE_UP) which is 1f
@@ -497,6 +499,18 @@ func defense_proc(enemy: Char, damage: int) -> int:
 		if mark.has_method("process_restoration"):
 			mark.process_restoration(damage, enemy)
 	return super.defense_proc(enemy, damage)
+
+## Rogue Silent Steps (upstream Mob.act sleeping block): a hero with the
+## talent cannot wake a sleeping mob from distance >= 4 - points
+## (+1: 3+ tiles away, +2: any non-adjacent tile). Only sleeping detection
+## checks this; wandering mobs notice the hero normally.
+func _silent_steps_blocks(hero: Char, dist: float) -> bool:
+	if hero == null or not hero.has_method("get_talent_level"):
+		return false
+	var points: int = hero.get_talent_level("rogue_silent_steps")
+	if points <= 0:
+		return false
+	return dist >= float(4 - points)
 
 ## Warlock Soul Eater on-kill trigger (upstream Mob loot roll): killing a
 ## soul marked mob has a points-in-10 chance to fire the hero's on-eat talent
