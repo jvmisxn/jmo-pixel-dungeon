@@ -360,6 +360,21 @@ func update_fov(hero_pos: int, view_dist: int = -1) -> void:
 							if n >= 0 and n < LEN:
 								visible[n] = true
 						visible[mob_pos] = true
+		elif hero.has_method("get_talent_level") \
+				and hero.get_talent_level("huntress_heightened_senses") > 0:
+			# Heightened Senses (original Level.updateFieldOfView mindVisRange
+			# branch): mind vision on mobs within 1+points tiles, through walls.
+			var sense_range: int = 1 + hero.get_talent_level("huntress_heightened_senses")
+			for mob: Variant in mobs:
+				if mob is Object and mob.get("is_alive") == true:
+					var mob_pos: int = mob.get("pos")
+					if mob_pos >= 0 and mob_pos < LEN and not visible[mob_pos] \
+							and distance(hero_pos, mob_pos) <= sense_range:
+						for dir: int in ConstantsData.DIRS_8:
+							var n: int = mob_pos + dir
+							if n >= 0 and n < LEN:
+								visible[n] = true
+						visible[mob_pos] = true
 
 		# CharAwareness marks (Arcane Vision): reveal watched mobs through
 		# walls (original heroMindFov CharAwareness branch, buff inverted
