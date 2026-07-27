@@ -7,12 +7,9 @@ extends Blob
 ## empties the well (blob cleared + tile -> EMPTY_WELL), exactly as SPD's
 ## WellWater.use() consumes the well after affectHero() returns true.
 
-## Ailments SPD's PotionOfHealing.cure() strips; WaterOfHealth applies the same
-## cleanse when it heals. Only ids that exist as buffs in this port are listed.
-const CURABLE_BUFFS: Array[String] = [
-	"Poison", "Cripple", "Weakness", "Bleeding", "Blindness",
-	"Burning", "Ooze", "Paralysis", "Slow", "Vertigo", "Chill", "Charm",
-]
+## Upstream WaterOfHealth.affectHero() calls PotionOfHealing.cure(hero); this
+## port routes through the shared Potion.PotionHealing.cure() so the well,
+## healing potion, Dreamfoil, and regrowth bomb all strip the same ailment set.
 
 func _init() -> void:
 	super._init()
@@ -42,15 +39,13 @@ func affect_char(ch: Char) -> void:
 	if ch.hp >= ch.hp_max and not _has_curable_ailment(ch):
 		return
 	ch.heal(ch.hp_max - ch.hp)
-	for buff_id: String in CURABLE_BUFFS:
-		if ch.has_buff(buff_id):
-			ch.remove_buff_by_id(buff_id)
+	Potion.PotionHealing.cure(ch)
 	if MessageLog:
 		MessageLog.add_positive("The well's waters restore you.")
 	_consume(ch.pos)
 
 func _has_curable_ailment(ch: Char) -> bool:
-	for buff_id: String in CURABLE_BUFFS:
+	for buff_id: String in Potion.PotionHealing.CURE_IDS:
 		if ch.has_buff(buff_id):
 			return true
 	return false
