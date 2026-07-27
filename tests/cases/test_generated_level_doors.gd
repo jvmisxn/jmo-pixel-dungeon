@@ -1,0 +1,86 @@
+extends RefCounted
+## In-engine verification for the restored door system (audit:S08 P1):
+## full LevelFactory generation must paint doors at tunnel mouths on
+## regular levels, and special rooms must keep their gated entrances
+## (LOCKED_DOOR for vault/armory, CRYSTAL_DOOR for crystal vaults).
+## Complements the synthetic-pair coverage in test_level_generation_doors.gd.
+
+const DOOR_TERRAINS: Array[int] = [
+	ConstantsData.Terrain.DOOR,
+	ConstantsData.Terrain.OPEN_DOOR,
+	ConstantsData.Terrain.LOCKED_DOOR,
+	ConstantsData.Terrain.CRYSTAL_DOOR,
+	ConstantsData.Terrain.SECRET_DOOR,
+]
+
+
+func _border_cells(room: Room) -> Array[int]:
+	var cells: Array[int] = []
+	for x: int in range(room.left, room.right + 1):
+		cells.append(ConstantsData.xy_to_pos(x, room.top))
+		cells.append(ConstantsData.xy_to_pos(x, room.bottom))
+	for y: int in range(room.top + 1, room.bottom):
+		cells.append(ConstantsData.xy_to_pos(room.left, y))
+		cells.append(ConstantsData.xy_to_pos(room.right, y))
+	return cells
+
+
+func _border_has_terrain(level: Level, room: Room, terrain: int) -> bool:
+	for cell: int in _border_cells(room):
+		if level.terrain_at(cell) == terrain:
+			return true
+	return false
+
+
+func _count_doors(level: Level) -> int:
+	var count: int = 0
+	for i: int in range(Level.LEN):
+		if level.map[i] in DOOR_TERRAINS:
+			count += 1
+	return count
+
+
+func _free_mobs(level: Level) -> void:
+	for mob: Variant in level.mobs:
+		if mob != null and is_instance_valid(mob):
+			(mob as Node).free()
+	level.mobs.clear()
+
+
+func run(t: Object) -> void:
+	var prev_depth: int = GameManager.depth
+	var prev_limited: Dictionary = GameManager.limited_drops.duplicate(true)
+	GameManager.limited_drops.clear()
+
+	seed(24680)
+	for depth: int in [1, 2, 4, 6]:
+		GameManager.depth = depth
+		var level: Level = LevelFactory.create_for_depth(depth)
+		t.check(level != null and not level.rooms.is_empty(),
+			"depth %d generates a room-based regular level" % depth)
+
+		var doors: int = _count_doors(level)
+		t.check(doors > 0,
+			"depth %d paints at least one door (got %d)" % [depth, doors])
+
+		for room_ref: Variant in level.rooms:
+			var room: Room = room_ref as Room
+			if room == null:
+				continue
+			if room is CrystalVaultRoom:
+				t.check(_border_has_terrain(level, room, ConstantsData.Terrain.CRYSTAL_DOOR),
+					"depth %d crystal vault is sealed by a crystal door" % depth)
+			elif room is VaultRoom or room is ArmoryRoom:
+				t.check(_border_has_terrain(level, room, ConstantsData.Terrain.LOCKED_DOOR),
+					"depth %d vault/armory is sealed by a locked door" % depth)
+			elif room.type == Room.Type.SECRET and room.connected.size() > 0:
+				# Only connected secret rooms are asserted sealed: tunnel
+				# carving can still open extra wall cells or strand a room
+				# entirely — tracked as open audit:S08 backlog items.
+				t.check(_border_has_terrain(level, room, ConstantsData.Terrain.SECRET_DOOR),
+					"depth %d connected secret room is hidden behind a secret door" % depth)
+
+		_free_mobs(level)
+
+	GameManager.depth = prev_depth
+	GameManager.limited_drops = prev_limited

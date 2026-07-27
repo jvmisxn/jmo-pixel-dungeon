@@ -70,12 +70,16 @@ static func _room_pair_key(a: Room, b: Room) -> String:
 static func _place_tunnel_door(level: Level, room: Room, pos: int) -> void:
 	if pos < 0 or pos >= Level.LEN:
 		return
-	if _has_adjacent_door(level, pos):
-		return
 	var terrain: int = _tunnel_door_terrain(room)
 	if terrain < 0:
 		return
-	if not _is_valid_doorframe(level, pos):
+	# Gated entrances (secret/locked/crystal) must always be placed — the
+	# frame/adjacency guards are cosmetic and skipping the door here would
+	# leave the room open, bypassing its search/key gate.
+	var gated: bool = terrain != ConstantsData.Terrain.DOOR
+	if not gated and _has_adjacent_door(level, pos):
+		return
+	if not gated and not _is_valid_doorframe(level, pos):
 		return
 	level.set_terrain(pos, terrain)
 
