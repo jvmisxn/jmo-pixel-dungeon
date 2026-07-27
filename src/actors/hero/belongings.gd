@@ -273,6 +273,28 @@ func unequip(slot: String) -> Item:
 		item.on_unequip(owner)
 	return item
 
+## Lift curses from every equipped item, mirroring upstream
+## Belongings.uncurseEquipped() -> ScrollOfRemoveCurse.uncurse over the equip
+## slots. Cursed items lose their curse and become known; clean items are
+## revealed as uncursed. Returns the number of curses lifted. Port adaptation:
+## the spirit bow is an equip slot here (upstream keeps the bow in the
+## backpack), so it is included.
+func uncurse_equipped() -> int:
+	var uncursed_count: int = 0
+	var equipped: Array = [
+		weapon, armor, artifact, misc, spirit_bow, ring_left, ring_right,
+	]
+	for eq: Variant in equipped:
+		if eq == null:
+			continue
+		if eq.get("cursed") == true:
+			eq.cursed = false
+			eq.cursed_known = true
+			uncursed_count += 1
+		elif eq.has_method("is_actually_cursed") and not eq.is_actually_cursed():
+			eq.cursed_known = true
+	return uncursed_count
+
 ## Get total armor value from equipped armor and rings.
 func total_armor() -> int:
 	var total: int = 0

@@ -396,21 +396,7 @@ class ScrollRemoveCurse extends Scroll:
 	func read_scroll(hero: Char) -> void:
 		if hero == null or hero.belongings == null:
 			return
-		var uncursed_count: int = 0
-		var equipped: Array = [
-			hero.belongings.weapon, hero.belongings.armor,
-			hero.belongings.artifact, hero.belongings.misc,
-			hero.belongings.ring_left, hero.belongings.ring_right,
-		]
-		for eq: Variant in equipped:
-			if eq == null:
-				continue
-			if eq.get("cursed") == true:
-				eq.cursed = false
-				eq.cursed_known = true
-				uncursed_count += 1
-			elif eq.has_method("is_actually_cursed") and not eq.is_actually_cursed():
-				eq.cursed_known = true
+		var uncursed_count: int = hero.belongings.uncurse_equipped()
 		# Also check backpack items
 		for item: Variant in hero.belongings.backpack:
 			if item == null:

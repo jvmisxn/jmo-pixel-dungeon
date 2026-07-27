@@ -44,6 +44,7 @@ func _find_blob(level: Level, blob_id: String) -> Blob:
 func run(t: Object) -> void:
 	_test_room_paint_seeds_well(t)
 	_test_well_heals_and_consumes(t)
+	_test_well_uncurses_and_feeds(t)
 	_test_one_well_use_preserves_other_wells(t)
 	_test_mob_does_not_drain_well(t)
 	_test_well_survives_serialization(t)
@@ -97,6 +98,42 @@ func _test_well_heals_and_consumes(t: Object) -> void:
 	# Consuming clears the blob's cells, so the same tick drops it from the layer.
 	t.check(not _has_blob(level, "water_of_health"),
 			"a consumed well removes its blob from the level")
+
+	hero.free()
+
+## Upstream affectHero always fires for a living hero (no hurt/ailment gate):
+## a full-HP hero still consumes the well, equipped curses lift, and hunger is
+## satisfied by STARVING worth (upstream Hunger.satisfy(Hunger.STARVING)).
+func _test_well_uncurses_and_feeds(t: Object) -> void:
+	var level: Level = _make_level()
+	var well_cell: int = ConstantsData.xy_to_pos(22, 22)
+	level.set_terrain(well_cell, ConstantsData.Terrain.WELL)
+	WaterOfHealth.seed_well(level, well_cell)
+
+	var hero: Hero = _make_hero(well_cell, level)
+	hero.hp_max = 30
+	hero.ht = 30
+	hero.hp = 30
+	var cursed_weapon := Item.new()
+	cursed_weapon.item_name = "cursed test blade"
+	cursed_weapon.cursed = true
+	hero.belongings.weapon = cursed_weapon
+	# init_class already attached the permanent Hunger buff; starve it directly.
+	var hunger: Variant = hero.get_buff("Hunger")
+	t.check(hunger != null, "hero starts with a Hunger buff")
+	if hunger != null:
+		hunger.hunger_value = Hunger.STARVING_THRESHOLD
+	level.add_mob(hero)
+
+	level.tick_blobs()
+
+	t.check(level.terrain_at(well_cell) == ConstantsData.Terrain.EMPTY_WELL,
+			"a full-HP unafflicted hero still consumes the well (no hurt gate)")
+	t.check(not cursed_weapon.cursed and cursed_weapon.cursed_known,
+			"the well uncurses equipped items")
+	var hero_hunger: Variant = hero.get_buff("Hunger")
+	t.check(hero_hunger != null and hero_hunger.hunger_value == 0.0,
+			"the well satisfies STARVING worth of hunger")
 
 	hero.free()
 
