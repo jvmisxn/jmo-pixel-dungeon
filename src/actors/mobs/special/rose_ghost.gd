@@ -16,6 +16,7 @@ func _init() -> void:
 	awareness = 1.0
 	aggro_range = 8
 	is_ally = true  # So other allies don't target it
+	follows_hero = true  # Held/restored across floor transitions
 	state = AIState.HUNTING
 	flying = true
 

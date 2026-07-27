@@ -72,6 +72,14 @@ var _level_cache: Dictionary[int, Dictionary] = {}
 ## freed/cached; LoadingScene delivers and clears each depth's list on arrival.
 var pending_dropped_items: Dictionary = {}
 
+# --- Held Allies (upstream Mob.heldAllies) ---
+## Serialized follower allies (Dried Rose ghost) pulled off the departing
+## level by FloorTransitionCoordinator.hold_party_allies, restored beside the
+## party by restore_party_allies on arrival. Transient: transitions complete
+## within one session and the game saves after arrival, so this never
+## serializes (upstream heldAllies is a transient static too).
+var held_allies: Array[Dictionary] = []
+
 # --- Limited Drops (upstream Dungeon.LimitedDrops counters) ---
 ## Per-run counters for quota-limited level spawns: 2 potions of strength and
 ## 3 scrolls of upgrade are guaranteed per 5-floor region via pos_needed()/
@@ -127,6 +135,7 @@ func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: i
 	run_active = true
 	_level_cache.clear()
 	pending_dropped_items.clear()
+	held_allies.clear()
 	quest_flags.clear()
 	limited_drops.clear()
 	Generator.reset_artifacts()

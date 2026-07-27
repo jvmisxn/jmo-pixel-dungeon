@@ -302,6 +302,7 @@ func _generate_current_level() -> void:
 		# - Ascending: appear at exit (stairs down, where they came from)
 		var anchor_pos: int = _landing_anchor_for_transition(level)
 		_assign_party_positions(level, anchor_pos)
+		FloorTransitionCoordinator.restore_party_allies(level)
 		if _transition_type == "fall":
 			_apply_fall_arrival_effects(level)
 	else:

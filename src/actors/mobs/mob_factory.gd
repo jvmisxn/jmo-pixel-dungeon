@@ -139,6 +139,7 @@ static func create_mob(mob_id: String) -> Mob:
 		"wraith": return Wraith.new()
 		"bee": return Bee.new()
 		"sheep": return Sheep.new()
+		"rose_ghost": return RoseGhost.new()
 		# Quest NPCs & shopkeeper — required so level deserialization can
 		# restore them; their quest/stock state comes from deserialize().
 		"sad_ghost": return SadGhost.new()

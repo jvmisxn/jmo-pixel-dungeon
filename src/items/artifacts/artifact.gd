@@ -760,19 +760,17 @@ class DriedRose extends Artifact:
 			return candidate
 		return -1
 
-	## Called when moving to a new floor — ghost must be re-summoned.
+	## Called when moving to a new floor. The ghost follows the party
+	## (upstream Mob.holdAllies/restoreAllies): sync HP and drop the node
+	## reference — FloorTransitionCoordinator holds the mob right after this
+	## and re-links current_ghost via restore_party_allies on arrival.
+	## ghost_summoned stays true so on_turn doesn't report the spirit faded.
 	func on_floor_change() -> void:
 		if current_ghost != null and is_instance_valid(current_ghost):
 			ghost_hp = int(current_ghost.get("hp")) if current_ghost.get("hp") != null else ghost_hp
-			if current_ghost.get("level") != null and current_ghost.level.has_method("remove_mob"):
-				current_ghost.level.remove_mob(current_ghost)
-			if TurnManager:
-				TurnManager.remove_actor(current_ghost)
-			if current_ghost.has_method("destroy"):
-				current_ghost.destroy()
+			ghost_hp_max = int(current_ghost.get("hp_max")) if current_ghost.get("hp_max") != null else ghost_hp_max
 		current_ghost = null
 		summoned_ghost_actor_id = -1
-		ghost_summoned = false
 
 	func level_up() -> void:
 		super.level_up()
