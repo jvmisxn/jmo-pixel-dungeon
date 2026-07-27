@@ -979,6 +979,11 @@ func earn_xp(amount: int) -> void:
 	# Check for level up(s)
 	while xp >= xp_to_next and hero_level < ConstantsData.MAX_HERO_LEVEL:
 		xp -= xp_to_next
+		# Upstream Hero.earnExp: at Wand Preservation +2 the counter detaches
+		# on each level-up, making preservation repeatable per hero level.
+		if get_talent_level("mage_wand_preservation") >= 2 \
+				and has_buff("WandPreservationCounter"):
+			remove_buff_by_id("WandPreservationCounter")
 		hero_level += 1
 		xp_to_next = ConstantsData.xp_for_level(hero_level)
 

@@ -130,6 +130,8 @@ func _add_action_buttons(container: HFlowContainer) -> void:
 	var cat: int = ConstantsData.get_prop(_item, "category", -1)
 	if _item is SpiritBow:
 		_add_button(container, "Shoot", _action_shoot)
+	if _item is MagesStaff:
+		_add_button(container, "Imbue", _action_imbue)
 	match cat:
 		ConstantsData.ItemCategory.POTION:
 			_add_button(container, "Drink", _action_use)
@@ -314,6 +316,40 @@ func _action_shoot() -> void:
 		MessageLog.add("Select a target for the %s." % item_name_str)
 	if EventBus:
 		EventBus.enter_targeting.emit(_item, 8, _execute_throw_callback)
+	close_window()
+
+## Upstream MagesStaff AC_IMBUE: pick any carried wand (backpack or bag) and
+## consume it into the staff. Level/charge/preservation rules live in
+## MagesStaff.imbue_new_wand. Upstream spends no time for this action.
+func _action_imbue() -> void:
+	if _hero == null or _hero.belongings == null or not (_item is MagesStaff):
+		close_window()
+		return
+	var wands: Array = []
+	for backpack_item: Item in _hero.belongings.backpack:
+		if backpack_item is Wand:
+			wands.append(backpack_item)
+		elif backpack_item is Bag:
+			for bag_item: Item in (backpack_item as Bag).items:
+				if bag_item is Wand:
+					wands.append(bag_item)
+	if wands.is_empty():
+		if MessageLog:
+			MessageLog.add_warning("You have no wand to imbue your staff with.")
+		close_window()
+		return
+	var staff: MagesStaff = _item
+	var hero_ref: Variant = _hero
+	var wnd: WndItemSelect = WndItemSelect.new()
+	wnd.setup(wands, "Choose a wand to imbue:", func(chosen: Variant) -> void:
+		if chosen == null or hero_ref == null or hero_ref.belongings == null:
+			return
+		hero_ref.belongings.remove_item(chosen)
+		staff.imbue_new_wand(hero_ref, chosen)
+		if EventBus:
+			EventBus.hero_stats_changed.emit()
+	)
+	open_sub_window.emit(wnd)
 	close_window()
 
 func _action_quickslot() -> void:

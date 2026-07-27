@@ -33,6 +33,53 @@ func imbue_wand(wand: Wand) -> void:
 	imbued_wand = wand
 	_sync_imbued_wand()
 
+## Player-facing IMBUE flow (upstream MagesStaff.imbueWand): replace the
+## current wand with a new one selected from the backpack. Level sync rule:
+## target = max(staff, wand) true level, +1 extra when the wand overrides a
+## staff that already has upgrades. Old staff charges carry into the new wand
+## (capped at its max). Mage Wand Preservation: while the hero's
+## WandPreservationCounter is 0, the replaced wand is returned to the backpack
+## at +0 instead of being consumed (dropped if the pack is full).
+## Upstream spends no time for this action.
+func imbue_new_wand(hero: Char, new_wand: Wand) -> void:
+	if new_wand == null:
+		return
+	var old_staff_charges: int = imbued_wand.charges if imbued_wand != null else 0
+	var old_wand: Wand = imbued_wand
+	if hero != null and old_wand != null and hero.has_method("get_talent_level") \
+			and hero.get_talent_level("mage_wand_preservation") > 0:
+		var counter: Variant = hero.get_buff("WandPreservationCounter")
+		if counter == null:
+			counter = WandPreservationCounter.new()
+			hero.add_buff(counter)
+		if counter.count == 0:
+			counter.count += 1
+			old_wand.level = 0
+			var belongings: Variant = hero.get("belongings")
+			var collected: bool = belongings != null and belongings.add_item(old_wand)
+			if not collected:
+				var dungeon_level: Variant = hero.get("level")
+				if dungeon_level != null and dungeon_level.has_method("drop_item"):
+					dungeon_level.drop_item(int(hero.pos), old_wand)
+			if MessageLog:
+				MessageLog.add_positive("Your talent preserves the %s at +0!"
+					% old_wand.get_display_name())
+	# Sync levels: max of the two, preserving one staff upgrade on override.
+	var new_wand_level: int = new_wand.true_level()
+	var target_level: int = maxi(true_level(), new_wand_level)
+	if new_wand_level >= true_level() and true_level() > 0:
+		target_level += 1
+	level = target_level
+	var pre_imbue_charges: int = new_wand.charges
+	imbue_wand(new_wand)
+	# _sync fully recharges; upstream instead carries the old staff's charges.
+	imbued_wand.charges = mini(imbued_wand.charges_max,
+		pre_imbue_charges + old_staff_charges)
+	identify()
+	if MessageLog:
+		MessageLog.add_positive("You imbue your staff with the %s."
+			% new_wand.get_display_name())
+
 func _sync_imbued_wand() -> void:
 	if imbued_wand == null:
 		return
