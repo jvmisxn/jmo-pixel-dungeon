@@ -87,8 +87,13 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 			return [
 				_make("huntress_natures_bounty", "Nature's Bounty", "Trampling high grass can yield dewdrops or seeds.", 2, 1),
 				_make("huntress_survivalists_intuition", "Survivalist's Intuition", "Missile weapons can be identified on pickup.", 2, 1),
-				_make("huntress_followup_strike", "Followup Strike", "Landing a ranged hit empowers your next melee attack.", 2, 2),
-				_make("huntress_natures_aid", "Nature's Aid", "When a plant triggers within her sight, the Huntress gains 2 points of barkskin for 3/5 turns.", 2, 2),
+				_make("huntress_followup_strike", "Followup Strike", "Landing a ranged hit empowers your next melee attack.", 2, 1),
+				_make("huntress_natures_aid", "Nature's Aid", "When a plant triggers within her sight, the Huntress gains 2 points of barkskin for 3/5 turns.", 2, 1),
+				_make("huntress_invigorating_meal", "Invigorating Meal", "Eating food invigorates the Huntress, granting her 1/2 turns of haste.", 2, 2),
+				_make_inert("huntress_liquid_nature", "Liquid Nature", "Groundwork slot: drinking or throwing potions sprouts grass and roots enemies around the splash.", 2, 2),
+				_make_inert("huntress_rejuvenating_steps", "Rejuvenating Steps", "Groundwork slot: walking periodically sprouts grass behind the Huntress.", 2, 2),
+				_make_inert("huntress_heightened_senses", "Heightened Senses", "Groundwork slot: sense nearby enemies even through walls.", 2, 2),
+				_make_inert("huntress_durable_projectiles", "Durable Projectiles", "Groundwork slot: thrown weapons lose durability more slowly.", 2, 2),
 			]
 		ConstantsData.HeroClass.DUELIST:
 			return [

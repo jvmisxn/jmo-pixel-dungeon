@@ -1180,6 +1180,17 @@ func on_food_eaten(_food: Food, hunger_before: float, hp_before: int, hp_max_bef
 		_charge_artifacts(1.0 + 2.0 * mystical_meal)
 		changed_state = true
 
+	# Invigorating Meal (upstream Talent.onFoodEaten): eating grants the
+	# Huntress 0.67+points turns of Haste — effectively 1/2 hastened turns.
+	# Port adaptation: same-buff merge keeps the longer remaining duration
+	# instead of upstream prolong's flat reset.
+	var invigorating_meal: int = get_talent_level("huntress_invigorating_meal")
+	if hero_class == ConstantsData.HeroClass.HUNTRESS and invigorating_meal > 0:
+		var haste: Haste = Haste.new()
+		haste.set_duration(0.67 + float(invigorating_meal))
+		add_buff(haste)
+		changed_state = true
+
 	var rogue_rations: int = get_talent_level("rogue_cached_rations")
 	if hero_class == ConstantsData.HeroClass.ROGUE and rogue_rations > 0:
 		var hunger_buff: Variant = get_buff("Hunger")
