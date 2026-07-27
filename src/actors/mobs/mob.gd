@@ -378,7 +378,12 @@ func is_boss() -> bool:
 	return _properties.has("BOSS") or BOSS_MOB_IDS.has(mob_id)
 
 func _ensure_boss_bar_started() -> void:
-	if _boss_bar_announced or not is_boss() or EventBus == null:
+	if _boss_bar_announced or not is_boss():
+		return
+	# Upstream boss notice() seals the floor alongside assigning the boss bar.
+	if level and level.has_method("seal"):
+		level.seal()
+	if EventBus == null:
 		return
 	_boss_bar_announced = true
 	EventBus.boss_fight_started.emit(mob_name, maxi(hp, 0))

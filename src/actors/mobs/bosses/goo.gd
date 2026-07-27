@@ -8,8 +8,6 @@ extends Mob
 var pumped_up: int = 0
 ## Healing increment in water (original: starts at 1, can increase with Stronger Bosses).
 var heal_inc: int = 1
-## Whether the floor has been sealed (prevents hero from leaving until boss is dead).
-var floor_sealed: bool = false
 
 func _init() -> void:
 	super._init()
@@ -138,6 +136,6 @@ func _find_hero_target() -> void:
 func _on_death(source: Variant) -> void:
 	if MessageLog:
 		MessageLog.add_positive("Goo is vanquished! The way forward opens.")
-	if level and level.has_method("unlock_exit"):
-		level.unlock_exit()
+	if level and level.has_method("unseal"):
+		level.unseal()
 	super._on_death(source)

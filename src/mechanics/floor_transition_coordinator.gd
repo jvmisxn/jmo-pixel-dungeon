@@ -12,6 +12,13 @@ static func handle_descend(scene: Variant) -> void:
 			MessageLog.add_warning("You need to be on the stairs down to descend.")
 		scene._awaiting_hero_input = true
 		return
+	if scene._current_level and scene._current_level.locked:
+		if MessageLog:
+			MessageLog.add_warning(
+				"You cannot leave this floor while its guardian still lives!"
+			)
+		scene._awaiting_hero_input = true
+		return
 	if not party_ready_for_stairs(
 		scene,
 		scene._current_level.exit_pos,
@@ -68,6 +75,13 @@ static func handle_ascend(scene: Variant) -> void:
 	if scene._current_level and hero.pos != scene._current_level.entrance:
 		if MessageLog:
 			MessageLog.add_warning("You need to be on the stairs up to ascend.")
+		scene._awaiting_hero_input = true
+		return
+	if scene._current_level and scene._current_level.locked:
+		if MessageLog:
+			MessageLog.add_warning(
+				"You cannot leave this floor while its guardian still lives!"
+			)
 		scene._awaiting_hero_input = true
 		return
 	if not party_ready_for_stairs(
