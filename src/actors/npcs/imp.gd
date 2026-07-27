@@ -64,6 +64,9 @@ func _init() -> void:
 		"Excellent work! Here, take this ring as your reward.",
 	]
 
+## Roll the quest target and ring reward. Called by QuestHandler at spawn time
+## so load-path instantiation (MobFactory -> deserialize) consumes no RNG.
+func generate_quest() -> void:
 	_pick_quest_target()
 	_generate_reward()
 

@@ -138,6 +138,14 @@ static func create_mob(mob_id: String) -> Mob:
 		"golden_statue": return GoldenStatue.new()
 		"wraith": return Wraith.new()
 		"bee": return Bee.new()
+		"sheep": return Sheep.new()
+		# Quest NPCs & shopkeeper — required so level deserialization can
+		# restore them; their quest/stock state comes from deserialize().
+		"sad_ghost": return SadGhost.new()
+		"wandmaker": return Wandmaker.new()
+		"ambitious_imp": return AmbImp.new()
+		"blacksmith": return Blacksmith.new()
+		"shopkeeper": return Shopkeeper.new()
 		# Bosses
 		"goo": return Goo.new()
 		"tengu": return Tengu.new()
