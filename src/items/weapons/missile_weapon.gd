@@ -12,6 +12,9 @@ var special_effect: String = ""  # e.g. "slow" for bolas
 # Warden Durable Tips: throws survived by the current tipped dart since it was
 # last consumed (upstream TippedDart durability /= 1 + talent points).
 var durable_tips_uses: int = 0
+# Huntress Durable Projectiles: fractional wear accrued by the stack since the
+# last weapon was consumed (upstream durabilityPerUse usages *= 1.25 + 0.25*pts).
+var durable_wear: float = 0.0
 
 func _init() -> void:
 	super._init()
@@ -306,6 +309,7 @@ func serialize() -> Dictionary:
 	data["returns"] = returns
 	data["special_effect"] = special_effect
 	data["durable_tips_uses"] = durable_tips_uses
+	data["durable_wear"] = durable_wear
 	return data
 
 func deserialize(data: Dictionary) -> void:
@@ -316,3 +320,4 @@ func deserialize(data: Dictionary) -> void:
 	returns = data.get("returns", false)
 	special_effect = data.get("special_effect", "")
 	durable_tips_uses = data.get("durable_tips_uses", 0)
+	durable_wear = data.get("durable_wear", 0.0)

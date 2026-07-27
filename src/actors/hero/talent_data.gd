@@ -93,7 +93,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make_inert("huntress_liquid_nature", "Liquid Nature", "Groundwork slot: drinking or throwing potions sprouts grass and roots enemies around the splash.", 2, 2),
 				_make_inert("huntress_rejuvenating_steps", "Rejuvenating Steps", "Groundwork slot: walking periodically sprouts grass behind the Huntress.", 2, 2),
 				_make_inert("huntress_heightened_senses", "Heightened Senses", "Groundwork slot: sense nearby enemies even through walls.", 2, 2),
-				_make_inert("huntress_durable_projectiles", "Durable Projectiles", "Groundwork slot: thrown weapons lose durability more slowly.", 2, 2),
+				_make("huntress_durable_projectiles", "Durable Projectiles", "The Huntress preserves her thrown weapons carefully, giving them 50%/75% increased durability.", 2, 2),
 			]
 		ConstantsData.HeroClass.DUELIST:
 			return [

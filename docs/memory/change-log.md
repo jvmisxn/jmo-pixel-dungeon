@@ -1,5 +1,10 @@
 # Change Log
 
+## 2026-07-27
+
+- Tags: talents, huntress, items, source-fidelity, tests
+- Implemented Huntress Durable Projectiles (T2, 2 points). Source: current upstream `MissileWeapon.durabilityPerUse` — `usages *= 1.25f + 0.25f*points` (x1.5/x1.75 durability), multiplied on top of the tipped-dart Durable Tips divisor. Port adaptation: the port consumes one whole missile per throw (no fractional durability), so new serialized `MissileWeapon.durable_wear` accrues `1/(1.25+0.25*pts)` wear per throw and a weapon is only consumed once a full point of wear accumulates — 3 throws cost 2 weapons at +1, 7 cost 4 at +2, matching upstream expected durability exactly. `Hero._durable_projectiles_preserves` gates `_consume_thrown_stack_item` after `_durable_tips_preserves`, so Durable-Tips-preserved tipped-dart throws add no wear (multiplicative stacking like upstream). Additive save field with tolerant default (`durable_tips_uses` precedent) — no SAVE_VERSION bump. `talent_data.gd` flips the inert slot to implemented with the upstream description; `test_invigorating_meal.gd`'s stale inert probe updated. Fragile-file edit small: `hero.gd` one 2-line gate change + one new helper. Tests: `test_durable_projectiles.gd` (registered, 12 checks): registry/tier, no-talent always consumes with zero wear, +1 3→2 and 30→20 ratios, +2 7→4 and 28→16 ratios, Durable Tips stacking (6 throws → 2 darts), wear serialize round trip + legacy default. Slice history: parked in a stash on 2026-07-27 00:01 while a concurrent mobile-UI session owned the worktree; restored onto `cron/durable-projectiles` this run. Verification: `git diff --check` clean, gdparse clean on all touched files, gdlint advisory (pre-existing long-line style in `talent_data.gd` only), full headless suite 4316 checks 0 failures. Remaining Huntress gaps vs upstream: T2 liquid_nature/rejuvenating_steps/heightened_senses (inert), T3 POINT_BLANK/SEER_SHOT missing.
+
 ## 2026-07-26
 
 - Tags: talents, mage, items, ui, source-fidelity, tests
