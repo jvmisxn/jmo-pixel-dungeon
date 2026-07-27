@@ -322,21 +322,24 @@ func _unstable_proc(weapon: Variant, attacker: Variant, defender: Variant, damag
 	return temp_ench.proc(weapon, attacker, defender, damage)
 
 func _grim_proc(_weapon: Variant, _attacker: Variant, defender: Variant, damage: int) -> int:
-	# Chance to instantly kill enemies below 20% HP. Chance scales with how low they are.
-	if defender == null:
+	# Upstream Grim.proc: no roll here — attach a GrimTracker carrying the max
+	# chance (50% + 5% per weapon level, scaled by the proc multiplier) so
+	# Char.take_damage can roll the deferred execute against post-hit HP.
+	if defender == null or not defender.has_method("get_buff"):
 		return damage
-	var hp: int = defender.hp if defender.get("hp") != null else 999
-	var ht: int = defender.ht if defender.get("ht") != null else 999
-	var hp_ratio: float = float(hp) / float(maxi(1, ht))
-	if hp_ratio < 0.2:
-		var kill_chance: float = 0.5 * (1.0 - hp_ratio / 0.2)
-		if randf() < kill_chance * proc_chance_multiplier(_attacker):
-			if defender.has_method("die"):
-				defender.die(_attacker)
-				if MessageLog:
-					MessageLog.add("The weapon reaps a soul!")
-			WeaponEnchantment._emit_proc("grim", _attacker, defender)
-			return 0
+	if defender.has_method("is_immune") and defender.is_immune("grim"):
+		return damage
+	# Upstream BOSS property is immune to Grim.
+	if defender.has_method("is_boss") and defender.is_boss():
+		return damage
+	var level: int = 0
+	if _weapon != null and _weapon.get("level") != null:
+		level = maxi(0, int(_weapon.level))
+	var tracker: Node = defender.get_buff("GrimTracker")
+	if tracker == null:
+		tracker = GrimTracker.new()
+		defender.add_buff(tracker)
+	tracker.max_chance = (0.5 + 0.05 * level) * proc_chance_multiplier(_attacker)
 	return damage
 
 func _vampiric_proc(_weapon: Variant, _attacker: Variant, _defender: Variant, damage: int) -> int:

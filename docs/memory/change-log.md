@@ -2,6 +2,24 @@
 
 ## 2026-07-27
 
+- Tags: enchants, grim, source-fidelity, audit:S13, tests
+- Grim enchant now matches upstream Grim + Char.damage. The old bespoke
+  "<20% HP" pre-hit curve in `_grim_proc` is gone: the proc is RNG-free and
+  attaches a `GrimTracker` buff (new `src/actors/buffs/grim_tracker.gd`,
+  internal, never saved, detaches on its next tick) carrying
+  `max_chance = (0.5 + 0.05*weapon_level) * proc_chance_multiplier`.
+  `Char.take_damage` rolls after the hit lands (hp > 0 gate, just before the
+  Kinetic overkill block): chance = max_chance * ((ht-hp)/ht)^2; success
+  deals the remaining HP scaled by `resist("grim")` as bonus damage folded
+  into `actual`. Bosses get no tracker (upstream BOSS property Grim
+  immunity — port has no property-immunity table, so gated via `is_boss()`
+  in the proc). Known divergence: the tracker detaches on the next turn tick
+  rather than upstream's immediate VFX-priority act, so other damage landing
+  before that tick could also roll the execute. `test_grim_tracker.gd`
+  (tracker attach/chance math, level scaling, boss exclusion, deterministic
+  execute, full-HP zero-chance, self-removal); GrimTracker added to the
+  internal-buff description exemption list.
+
 - Tags: talents, assassin, source-fidelity, audit:S02, tests, ENGINE
 - `assassin_assassins_reach` is now real, shipped together with the
   previously-missing prepared blink attack (upstream Preparation
