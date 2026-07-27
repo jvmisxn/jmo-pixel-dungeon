@@ -442,6 +442,26 @@ static func buff_type_key(node: Node) -> String:
 	var script: Variant = node.get_script()
 	return str(script.get_path()) if script != null else ""
 
+## O(1) lookup index: buff type key -> Array[Node] of attached buffs with that key.
+## Maintained exclusively by _index_buff/_unindex_buff; every _buffs mutation must
+## go through them so has_buff/get_buff stay in sync with the array.
+var _buff_index: Dictionary = {}
+
+func _index_buff(buff_node: Node) -> void:
+	var key: String = buff_type_key(buff_node)
+	if not _buff_index.has(key):
+		_buff_index[key] = [] as Array[Node]
+	(_buff_index[key] as Array).append(buff_node)
+
+func _unindex_buff(buff_node: Node) -> void:
+	var key: String = buff_type_key(buff_node)
+	if not _buff_index.has(key):
+		return
+	var bucket: Array = _buff_index[key] as Array
+	bucket.erase(buff_node)
+	if bucket.is_empty():
+		_buff_index.erase(key)
+
 ## Add a buff to this character. If the buff type already exists, refreshes it.
 ## Checks immunity before attaching — if immune, the buff is rejected and freed.
 func add_buff(buff_node: Node) -> Node:
@@ -452,21 +472,22 @@ func add_buff(buff_node: Node) -> Node:
 		return null
 
 	# Check for existing buff of same type
-	for existing: Node in _buffs:
-		if buff_type_key(existing) == buff_type:
-			# Merge/refresh
-			if existing.has_method("merge"):
-				existing.merge(buff_node)
-			elif existing.has_method("set_duration"):
-				if buff_node.has_method("get_duration"):
-					existing.set_duration(buff_node.get_duration())
-			buff_node.queue_free()
-			if EventBus and EventBus.has_signal("status_effect_applied"):
-				EventBus.status_effect_applied.emit(self, buff_type)
-			return existing
+	var existing: Node = get_buff_node(buff_type)
+	if existing != null:
+		# Merge/refresh
+		if existing.has_method("merge"):
+			existing.merge(buff_node)
+		elif existing.has_method("set_duration"):
+			if buff_node.has_method("get_duration"):
+				existing.set_duration(buff_node.get_duration())
+		buff_node.queue_free()
+		if EventBus and EventBus.has_signal("status_effect_applied"):
+			EventBus.status_effect_applied.emit(self, buff_type)
+		return existing
 
 	# New buff
 	_buffs.append(buff_node)
+	_index_buff(buff_node)
 	add_child(buff_node)
 	if buff_node.has_method("attach"):
 		buff_node.attach(self)
@@ -479,6 +500,7 @@ func add_buff(buff_node: Node) -> Node:
 func remove_buff(buff_node: Node) -> void:
 	if buff_node in _buffs:
 		_buffs.erase(buff_node)
+		_unindex_buff(buff_node)
 		if buff_node.has_method("detach"):
 			buff_node.detach()
 		buff_removed.emit(buff_node)
@@ -486,16 +508,14 @@ func remove_buff(buff_node: Node) -> void:
 
 ## Remove all buffs with a given buff_id (or script path for non-Buff nodes).
 func remove_buff_by_id(buff_id: String) -> void:
-	for b: Node in _buffs.duplicate():
-		if buff_type_key(b) == buff_id:
-			remove_buff(b)
+	if not _buff_index.has(buff_id):
+		return
+	for b: Node in (_buff_index[buff_id] as Array).duplicate():
+		remove_buff(b)
 
 ## Check if this character has a buff with the given ID.
 func has_buff(buff_id: String) -> bool:
-	for b: Node in _buffs:
-		if buff_type_key(b) == buff_id:
-			return true
-	return false
+	return _buff_index.has(buff_id)
 
 ## Get a buff by ID (or null). Non-Buff attachments come back null here;
 ## use get_buff_node for those.
@@ -503,11 +523,12 @@ func get_buff(buff_id: String) -> Buff:
 	return get_buff_node(buff_id) as Buff
 
 ## Get a buff/attachment node by ID or script path (or null).
+## Returns the earliest-attached match, same as the old linear scan.
 func get_buff_node(buff_id: String) -> Node:
-	for b: Node in _buffs:
-		if buff_type_key(b) == buff_id:
-			return b
-	return null
+	if not _buff_index.has(buff_id):
+		return null
+	var bucket: Array = _buff_index[buff_id] as Array
+	return (bucket[0] as Node) if not bucket.is_empty() else null
 
 ## Get all active buffs.
 func get_buffs() -> Array[Node]:
@@ -603,6 +624,7 @@ func _deserialize_buffs(data: Variant) -> void:
 		if buff.has_method("deserialize"):
 			buff.deserialize(buff_dict)
 		_buffs.append(buff)
+		_index_buff(buff)
 		add_child(buff)
 		if buff.has_method("attach"):
 			buff.attach(self)
