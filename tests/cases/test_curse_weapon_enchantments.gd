@@ -86,14 +86,16 @@ func _check_curse_proc_emits_signal(t: Object) -> void:
 	t.check(sink.last_id == "annoying",
 		"_annoying_proc emits enchantment_proc('annoying') (got '%s')" % sink.last_id)
 
-## Non-curse dispatch must be unaffected: shocking still adds its flat bonus.
+## Non-curse dispatch must be unaffected: shocking routes and, per upstream,
+## never modifies the defender's damage (the chain hits OTHER chars instead).
 func _check_non_curse_proc_still_routes(t: Object) -> void:
 	var e: WeaponEnchantment = WeaponEnchantment.create("shocking")
 	var attacker := _StubAttacker.new()
 	var defender := _StubDefender.new()
 	var damage := 100
 	var out: int = e.proc(null, attacker, defender, damage)
-	t.check(out > damage, "_shocking_proc still adds bonus damage (got %d)" % out)
+	t.check(out == damage,
+		"_shocking_proc returns damage unmodified (got %d)" % out)
 
 # --- Stubs ---------------------------------------------------------------
 

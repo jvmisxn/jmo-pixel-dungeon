@@ -2,6 +2,28 @@
 
 ## 2026-07-27
 
+- Tags: enchantments, lightning, source-fidelity, audit:S13, tests
+- Shocking enchant brought from stub to upstream `Shocking.proc` parity
+  (audit:S13, shocking half closed): the old always-on flat +30% defender
+  bonus is replaced by a flat 33% proc chance (x `proc_chance_multiplier`,
+  so Enraged Catalyst both raises the chance and, via
+  `power_multi = max(1, chance)`, the arc damage). On proc the struck
+  defender takes NO bonus damage; lightning arcs from them through the new
+  shared `src/mechanics/lightning_arc.gd` (`LightningArc.chain`: BFS reach 2
+  from the defender, then 1 per hop, 2 while a caught non-flying char stands
+  in water, attacker never caught) and every other opposing caught char
+  takes `round(damage * 0.5 * power_multi)`. Allied mobs conduct the chain
+  without taking damage (upstream alignment filter). Deterministic half
+  split into `_shocking_discharge` so tests drive it without stubbing
+  randf(). `test_shocking_chain.gd` (10 checks);
+  `test_curse_weapon_enchantments.gd` routing check updated to the
+  damage-unmodified contract. WandOfLightning keeps its own arc (adds the
+  port's hero-adjacency safety rule); delegating it to `LightningArc` is a
+  possible later cleanup. Full headless suite green (4679 checks,
+  0 failures).
+
+## 2026-07-27
+
 - Tags: blobs, wells, curses, hunger, source-fidelity, audit:S19, tests
 - `WaterOfHealth` well brought to full upstream `affectHero` parity
   (audit:S19 follow-up closed): on hero step it now also lifts equipped
