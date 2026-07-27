@@ -184,6 +184,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_strongman.gd",
 	"res://tests/cases/test_provoked_anger.gd",
 	"res://tests/cases/test_liquid_willpower.gd",
+	"res://tests/cases/test_healing_cure_parity.gd",
 	"res://tests/cases/test_liquid_nature.gd",
 	"res://tests/cases/test_iron_stomach.gd",
 	"res://tests/cases/test_veterans_intuition.gd",

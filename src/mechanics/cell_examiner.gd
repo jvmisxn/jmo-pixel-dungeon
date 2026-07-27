@@ -352,7 +352,7 @@ const TRAP_DESCS: Dictionary = {
 ## adapted to also cover the port's sleep-lesser-creatures behavior.
 const PLANT_DESCS: Dictionary = {
 	"Blindweed": "Upon being touched a blindweed perishes in a bright flash of light. The flash is strong enough to disorient for several seconds.",
-	"Dreamfoil": "The dreamfoil's prickly flowers contain a chemical which is known for its properties as a strong neutralizing agent. Anything that steps in this plant will be cleansed of many mind-affecting ailments, while lesser creatures are lulled into a deep sleep.",
+	"Dreamfoil": "The dreamfoil's prickly flowers contain a chemical which is known for its properties as a strong neutralizing agent. Anything that steps in this plant will be cleansed of many negative effects, while lesser creatures are lulled into a deep sleep.",
 	"Earthroot": "When a creature touches an earthroot, its roots create a kind of immobile natural armor around it.",
 	"Fadeleaf": "Touching a fadeleaf will teleport any creature to a random place on the current level.",
 	"Firebloom": "When something touches a firebloom, it bursts into flames.",
