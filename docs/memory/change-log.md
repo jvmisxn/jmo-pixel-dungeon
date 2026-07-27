@@ -2,6 +2,30 @@
 
 ## 2026-07-27
 
+- Tags: allies, dried-rose, floor-transitions, source-fidelity, audit:S24, tests
+- Dried Rose ghost now follows the party across floors (upstream
+  `Mob.holdAllies`/`restoreAllies` — the old backlog claim of an upstream
+  "Item.onLevelChange fired on all belongings + buffs" was verified stale:
+  no such method exists upstream; ally continuity is the real mechanism).
+  New `Mob.follows_hero` flag (RoseGhost sets it);
+  `FloorTransitionCoordinator.hold_party_allies` (called at the end of
+  `notify_party_floor_change`, i.e. before `GameManager` caches/frees the
+  departing level's mobs) serializes live follower allies into transient
+  `GameManager.held_allies` and frees the nodes;
+  `restore_party_allies(level)` (called by LoadingScene right after
+  `_assign_party_positions`) respawns them on a free cell adjacent to a party
+  hero (fallback: random passable cell) and `_relink_rose_ghost` re-wires
+  `DriedRose.current_ghost`/`source_artifact`/`ally_hero`.
+  `DriedRose.on_floor_change` no longer destroys the ghost — it syncs
+  ghost_hp/ghost_hp_max, drops the node reference, and keeps `ghost_summoned`
+  true. `held_allies` is intentionally not serialized (upstream heldAllies is
+  a transient static; the port saves after arrival restore). Same slice fixed
+  a latent bug: `rose_ghost` was missing from `MobFactory.create_mob`, so a
+  mid-floor save/load silently dropped a summoned ghost during level
+  deserialization. No save-contract change. `test_ally_floor_follow.gd`
+  (17 checks: hold/restore round trip, HP carry, adjacency, re-link,
+  non-follower and dead-ally exclusion).
+
 - Tags: enchants, grim, source-fidelity, audit:S13, tests
 - Grim enchant now matches upstream Grim + Char.damage. The old bespoke
   "<20% HP" pre-hit curve in `_grim_proc` is gone: the proc is RNG-free and

@@ -229,6 +229,108 @@ static func notify_party_floor_change(scene: Variant) -> void:
 			var artifact: Variant = belongings.get_equipped_artifact()
 			if artifact != null and artifact.has_method("on_floor_change"):
 				artifact.on_floor_change()
+	hold_party_allies()
+
+## Upstream Mob.holdAllies: pull follower allies (Dried Rose ghost) off the
+## departing level — before GameManager caches/frees its mobs — so they can
+## be restored beside the party on the next floor.
+static func hold_party_allies() -> void:
+	if GameManager == null or GameManager.current_level == null:
+		return
+	var level: Variant = GameManager.current_level
+	if level.get("mobs") == null:
+		return
+	for mob: Variant in level.mobs.duplicate():
+		if mob == null or not is_instance_valid(mob):
+			continue
+		if not bool(mob.get("follows_hero")) or not bool(mob.get("is_alive")):
+			continue
+		if mob.has_method("serialize"):
+			GameManager.held_allies.append(mob.serialize())
+		if level.has_method("remove_mob"):
+			level.remove_mob(mob)
+		if TurnManager:
+			TurnManager.remove_actor(mob)
+		if mob is Node:
+			(mob as Node).free()
+
+## Upstream Mob.restoreAllies: respawn held allies on free cells beside the
+## party and re-link the Dried Rose to its ghost. Called by LoadingScene
+## after party positions are assigned on the arrival level.
+static func restore_party_allies(level: Variant) -> void:
+	if GameManager == null or level == null or GameManager.held_allies.is_empty():
+		return
+	var held: Array[Dictionary] = GameManager.held_allies.duplicate()
+	GameManager.held_allies.clear()
+	for data: Dictionary in held:
+		var mob_id: String = str(data.get("mob_id", ""))
+		var mob: Variant = MobFactory.create_mob(mob_id) if mob_id != "" else null
+		if mob == null:
+			continue
+		if mob.has_method("deserialize"):
+			mob.deserialize(data)
+		var spawn_pos: int = _ally_arrival_pos(level)
+		if spawn_pos < 0:
+			if mob is Node:
+				(mob as Node).free()
+			continue
+		mob.pos = spawn_pos
+		if level.has_method("add_mob"):
+			level.add_mob(mob)
+		if TurnManager:
+			TurnManager.add_actor(mob)
+		if mob.has_method("resolve_post_load"):
+			mob.resolve_post_load(level)
+		_relink_rose_ghost(mob)
+
+## Free cell adjacent to a party hero (upstream candidatePositions over
+## NEIGHBOURS8 of the arrival pos), falling back to any passable cell.
+static func _ally_arrival_pos(level: Variant) -> int:
+	if GameManager != null and GameManager.has_method("get_active_heroes"):
+		for party_hero: Variant in GameManager.get_active_heroes():
+			if party_hero == null:
+				continue
+			var hero_pos: int = int(party_hero.get("pos")) if party_hero.get("pos") != null else -1
+			if hero_pos < 0:
+				continue
+			for dir: int in ConstantsData.DIRS_8:
+				var candidate: int = hero_pos + dir
+				if candidate < 0 or candidate >= ConstantsData.LENGTH:
+					continue
+				if level.has_method("is_passable") and not level.is_passable(candidate):
+					continue
+				if level.has_method("find_char_at") and level.find_char_at(candidate) != null:
+					continue
+				return candidate
+	if level.has_method("random_passable_cell"):
+		return int(level.random_passable_cell())
+	return -1
+
+## Re-link a restored ghost with its owner's equipped Dried Rose so the
+## artifact keeps tracking/healing it (upstream keeps the object reference;
+## the port recreates the node from serialized data).
+static func _relink_rose_ghost(mob: Variant) -> void:
+	if str(mob.get("mob_id")) != "rose_ghost":
+		return
+	if GameManager == null or not GameManager.has_method("get_active_heroes"):
+		return
+	for party_hero: Variant in GameManager.get_active_heroes():
+		if party_hero == null:
+			continue
+		var belongings: Variant = party_hero.get("belongings")
+		if belongings == null or not belongings.has_method("get_equipped_artifact"):
+			continue
+		var artifact: Variant = belongings.get_equipped_artifact()
+		if artifact == null or str(artifact.get("item_id")) != "dried_rose":
+			continue
+		if not bool(artifact.get("ghost_summoned")):
+			continue
+		artifact.current_ghost = mob
+		artifact.summoned_ghost_actor_id = int(mob.get("actor_id")) if mob.get("actor_id") != null else -1
+		mob.source_artifact = artifact
+		if party_hero is Char:
+			mob.ally_hero = party_hero
+		return
 
 static func transition_to_loading(scene: Variant, transition_type: String = "descend", extra_meta: Dictionary = {}) -> void:
 	if scene == null:

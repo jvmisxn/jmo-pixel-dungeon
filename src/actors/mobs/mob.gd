@@ -32,6 +32,9 @@ var ally_hero: Char = null
 ## Upstream Char Property.IMMOVABLE: this mob can never be moved by position
 ## swaps or Ally Warp (e.g. ward sentries).
 var immovable: bool = false
+## Upstream Mob.holdAllies DirectableAlly rule: this ally is held on floor
+## transitions and restored beside the party on arrival (Dried Rose ghost).
+var follows_hero: bool = false
 
 # --- Loot & XP ---
 var xp_value: int = 1
