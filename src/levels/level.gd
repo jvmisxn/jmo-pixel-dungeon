@@ -74,6 +74,10 @@ var feeling: Feeling = Feeling.NONE
 var secret_room_count: int = 0
 var foresight_roll: int = -1
 
+# Boss-floor seal (upstream Level.seal/unseal): while locked, both staircases
+# refuse to transition until the floor's guardian dies.
+var locked: bool = false
+
 # ---------------------------------------------------------------------------
 # Initialization
 # ---------------------------------------------------------------------------
@@ -698,6 +702,20 @@ func unlock_exit() -> void:
 	if EventBus:
 		EventBus.door_opened.emit(exit_pos)
 
+## Seal the floor when a boss fight starts (upstream Level.seal): both
+## staircases refuse to transition while locked. Idempotent.
+func seal() -> void:
+	if locked:
+		return
+	locked = true
+	if MessageLog:
+		MessageLog.add_warning("The doors seal shut behind you!")
+
+## Lift the boss seal (upstream Level.unseal) and open the exit doors.
+func unseal() -> void:
+	locked = false
+	unlock_exit()
+
 ## Returns true if two positions are adjacent (within 1 step, 8-directional).
 func adjacent(a: int, b: int) -> bool:
 	if a < 0 or b < 0 or a >= LEN or b >= LEN:
@@ -791,6 +809,7 @@ func serialize() -> Dictionary:
 		"feeling": feeling,
 		"secret_room_count": secret_room_count,
 		"foresight_roll": foresight_roll,
+		"locked": locked,
 		"map": map.duplicate(),
 		"visited": visited.duplicate(),
 		"mapped": mapped.duplicate(),
@@ -866,6 +885,7 @@ func deserialize(data: Dictionary) -> void:
 	feeling = data.get("feeling", Feeling.NONE) as Feeling
 	secret_room_count = int(data.get("secret_room_count", 0))
 	foresight_roll = int(data.get("foresight_roll", -1))
+	locked = bool(data.get("locked", false))
 
 	var saved_map: Variant = data.get("map", [])
 	if saved_map is Array and (saved_map as Array).size() == LEN:

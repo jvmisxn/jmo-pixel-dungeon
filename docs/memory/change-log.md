@@ -2,6 +2,31 @@
 
 ## 2026-07-27
 
+- Tags: bosses, levels, source-fidelity, persistence, tests
+- Bidirectional boss-floor seal (upstream `Level.seal()`/`unseal()`; audit:S09).
+  Before this slice only the down-exit was blocked (LOCKED_DOOR terrain) and
+  nothing stopped the hero ascending the entrance mid-fight — upstream seals
+  both staircases while the boss lives. New `Level.locked` flag with `seal()`
+  (idempotent, "The doors seal shut behind you!") and `unseal()` (clears the
+  lock + `unlock_exit()`), serialized additively (`"locked"`, defaults false
+  so legacy saves load unlocked; no SAVE_VERSION bump needed). Sealing fires
+  in `Mob._ensure_boss_bar_started` — the same one-shot hook that starts the
+  boss HP bar on any HUNTING transition — mirroring upstream boss `notice()`
+  which assigns the boss bar and seals together; guarded so non-boss mobs and
+  already-locked levels no-op, and it now runs before the EventBus null guard.
+  All 5 boss `_on_death`s (goo/tengu/dm300/king/yog) switched from
+  `unlock_exit()` to `unseal()`. Both `FloorTransitionCoordinator.handle_ascend`
+  and `handle_descend` refuse while `_current_level.locked` ("You cannot leave
+  this floor while its guardian still lives!") — descend guard matters because
+  teleports can put a hero on the exit tile behind the still-locked door. Dead
+  `goo.gd floor_sealed` var removed. Test `test_boss_floor_seal.gd`
+  (registered, 9 checks): fresh-unlocked, seal/idempotence, save/load
+  round-trip + legacy default, boss-bar-start seals, boss death unseals and
+  opens the LOCKED_DOOR, non-boss never seals. Verification: `git diff
+  --check` clean, gdtoolkit parser clean on all 10 touched files (incl.
+  fragile level.gd/mob.gd/tengu.gd/king.gd), gdlint findings pre-existing
+  only, full headless suite 4473 checks 0 failures.
+
 - Tags: traps, rendering, source-fidelity, ux-parity, tests
 - Revealed traps are now visible in the main scene view. Before this slice `Terrain.TRAP` rendered as a plain FLOOR tile (only the minimap distinguished it), so a trap revealed by search or triggering was invisible on the play field — a major upstream divergence since SPD renders visible traps as distinct colored tiles the player routes around. New `src/sprites/trap_sprite.gd` (class_name TrapSprite) draws a procedural glyph per trap: `TRAP_STYLES` maps all 32 port `trap_name`s to upstream `TrapSprite.java` color/shape pairs (verified against current upstream levels/traps/*.java this run: e.g. blazing=ORANGE/STARS, pitfall=RED/DIAMOND, gateway=TEAL/CROSSHAIR; port-only `explosive trap`=ORANGE/DIAMOND and classic-adapted `paralytic gas trap`=YELLOW/GRILL are marked adapted; `fire trap` uses upstream BurningTrap ORANGE/DOTS). Shapes DOTS/WAVES/GRILL/STARS/DIAMOND/CROSSHAIR/LARGE_DOT are drawn procedurally on a dark plate; triggered (inactive) traps stay drawn but grey out at reduced alpha. Wiring mirrors plant sprites: new `SceneVisualCoordinator.refresh_trap_sprites` reconciles one sprite per `level.traps` entry with `visible == true` (hidden traps get nothing; removal/disarm drops the sprite; active-state changes flip existing sprites), and runs inside `update_entity_visibility` so search-reveals appear on the next FOV pass with visible/visited gating like plants. Fragile `game_scene.gd` edits are minimal: `_trap_sprites` var, `_refresh_trap_sprites()` wrapper, three refresh call sites next to the plant refreshes, and the `_clear_entity_sprites` block. Tests: `test_trap_sprites.gd` (registered, 12 checks): every trap class has a style entry, upstream color/shape lookups + unknown-name fallback, hidden-trap exclusion, reveal adds sprite, trigger greys, removal reconciles. Verification: `git diff --check` clean, `python3 -m gdtoolkit.parser` clean on all 5 touched files (gdlint hits are pre-existing long lines only), Godot `--import` class-cache refresh, full headless suite 4443 checks 0 failures. [ENGINE] flag: glyph legibility/size at real zoom levels needs a playtest look. Remaining divergences: upstream trap tilesheet art + frame animation not used; INACTIVE_TRAP terrain for traps erased from `level.traps` (pre-existing disarm path) renders as floor with only examine text.
 

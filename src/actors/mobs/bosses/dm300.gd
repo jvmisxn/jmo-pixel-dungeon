@@ -103,8 +103,8 @@ func _find_hero_target() -> void:
 func _on_death(source: Variant) -> void:
 	if MessageLog:
 		MessageLog.add_positive("DM-300 collapses! The caves shake as a path opens.")
-	if level and level.has_method("unlock_exit"):
-		level.unlock_exit()
+	if level and level.has_method("unseal"):
+		level.unseal()
 	super._on_death(source)
 
 func serialize() -> Dictionary:
