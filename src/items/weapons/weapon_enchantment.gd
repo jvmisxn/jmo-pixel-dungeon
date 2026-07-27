@@ -265,15 +265,33 @@ func _chilling_proc(_weapon: Variant, _attacker: Variant, defender: Variant, dam
 	return damage
 
 func _shocking_proc(_weapon: Variant, attacker: Variant, defender: Variant, damage: int) -> int:
-	# Chain lightning: deal bonus damage to the defender and potentially nearby enemies.
-	# For now, apply a flat bonus and flag the hit.
-	var bonus: int = maxi(1, int(damage * 0.3))
-	if defender != null and attacker != null:
-		# In a full implementation this would find adjacent enemies and damage them too.
-		if MessageLog:
-			MessageLog.add("Lightning arcs from the weapon!")
+	# Upstream Shocking.proc: flat 33% proc chance; the struck defender takes NO
+	# bonus damage -- the lightning arcs from them (reach 2, then 1 per hop, 2
+	# while a caught char stands in water) and every other opposing char caught
+	# takes round(damage * 0.5 * power_multi). power_multi = max(1, proc chance)
+	# only exceeds 1 via Enraged Catalyst rage.
+	var chance: float = (1.0 / 3.0) * proc_chance_multiplier(attacker)
+	if randf() >= chance:
+		return damage
+	_shocking_discharge(attacker, defender, damage, maxf(1.0, chance))
+	return damage
+
+## Deterministic half of the Shocking proc, split out so tests can drive it
+## without stubbing randf(). Arcs from the defender via the shared LightningArc
+## flood and damages every caught char opposing the attacker.
+func _shocking_discharge(attacker: Variant, defender: Variant, damage: int,
+		power_multi: float) -> void:
+	var lvl: Variant = attacker.get("level") if attacker is Object else null
+	var affected: Array = LightningArc.chain(lvl, attacker, defender, 2)
+	for ch: Variant in affected:
+		if ch == defender:
+			continue  # upstream: the defender isn't hurt by the lightning
+		if LightningArc.same_alignment(attacker, ch):
+			continue
+		ch.take_damage(int(round(damage * 0.5 * power_multi)), self)
+	if MessageLog:
+		MessageLog.add("Lightning arcs from the weapon!")
 	WeaponEnchantment._emit_proc("shocking", attacker, defender)
-	return damage + bonus
 
 func _lucky_proc(_weapon: Variant, _attacker: Variant, _defender: Variant, damage: int) -> int:
 	# 20% chance to critically strike for 2x damage
