@@ -1606,6 +1606,9 @@ class UnstableSpellbook extends Artifact:
 				"The Spellbook casts: %s!" % display_name,
 				icon_color
 			)
+		# Original: spellbook reads run Scroll.doRead -> readAnimation, which
+		# dispels Invisibility like any other scroll read.
+		Invisibility.dispel_for(hero)
 		scroll.read_scroll(hero)
 		if EventBus:
 			EventBus.item_used.emit(item_name)

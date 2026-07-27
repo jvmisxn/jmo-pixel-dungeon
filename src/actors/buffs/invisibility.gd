@@ -47,5 +47,14 @@ func dispel() -> void:
 	if int(tgt.get("invisible")) <= 0:
 		tgt.remove_buff_by_id("AssassinPreparation")
 
+## Original: static Invisibility.dispel(Char) — break a character's
+## invisibility from item use (scroll reads, wand zaps).
+static func dispel_for(ch: Node) -> void:
+	if ch == null or not ch.has_method("get_buff"):
+		return
+	var invis: Node = ch.get_buff("Invisibility")
+	if invis is Invisibility:
+		(invis as Invisibility).dispel()
+
 func description() -> String:
 	return "You are completely blended into the surrounding terrain, making you impossible to see.\n\nWhile you are invisible enemies are unable to attack or follow you. Physical attacks and magical effects (such as scrolls and wands) will immediately cancel invisibility.\n\nTurns of invisibility remaining: %s." % disp_turns(time_left)
