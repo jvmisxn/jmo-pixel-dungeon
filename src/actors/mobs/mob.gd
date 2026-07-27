@@ -421,6 +421,13 @@ func _find_visible_heroes() -> Array[Char]:
 	for h: Char in all_heroes:
 		if h.is_alive and _can_detect_char(h):
 			heroes.append(h)
+	# Nearest-first with random tie-break, matching Mob.chooseEnemy: "go after
+	# the closest potential enemy, breaking ties randomly". Callers taking
+	# heroes[0] (sleeping/wandering detection, alert, notice) get the nearest.
+	if heroes.size() > 1:
+		heroes.shuffle()
+		heroes.sort_custom(func(a: Char, b: Char) -> bool:
+			return distance_to(a.pos) < distance_to(b.pos))
 	return heroes
 
 func _can_detect_char(ch: Char) -> bool:

@@ -2,6 +2,17 @@
 
 ## 2026-07-27
 
+- Tags: mob-ai, targeting, multiplayer, source-fidelity, audit:S05, tests
+- Mobs now acquire the NEAREST visible hero instead of hero-list order
+  (audit:S05): `Mob._find_visible_heroes()` sorts nearest-first with a
+  pre-sort shuffle for random tie-break, matching upstream
+  `Mob.chooseEnemy` ("go after the closest potential enemy, breaking ties
+  randomly"). All `heroes[0]` call sites — sleeping/wandering stealth
+  detection rolls, `alert()`, notice/aggro — pick the nearest hero
+  automatically on multi-hero (co-op) levels. Single-hero behavior
+  unchanged. `test_mob_nearest_hero.gd` (sort order across repeated
+  shuffles, alert-targets-nearest, invisible/dead exclusion).
+
 - Tags: enchantments, lightning, source-fidelity, audit:S13, tests
 - Shocking enchant brought from stub to upstream `Shocking.proc` parity
   (audit:S13, shocking half closed): the old always-on flat +30% defender
