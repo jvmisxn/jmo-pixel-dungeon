@@ -7,6 +7,10 @@ extends WndBase
 
 signal option_selected(index: int)
 
+## Upstream Icons.INFO region in interfaces/icons.png (uvRectBySize 16,32,14,14).
+const ICONS_PATH: String = "res://assets/spd/interfaces/icons.png"
+const ICON_REGION_INFO: Rect2 = Rect2(16, 32, 14, 14)
+
 var _message: String = ""
 var _options: PackedStringArray = []
 
@@ -14,6 +18,25 @@ var _options: PackedStringArray = []
 func _init() -> void:
 	window_title = "Choose Examine"
 	custom_minimum_size = Vector2(300, 140)
+
+
+func _ready() -> void:
+	super._ready()
+	_add_title_info_icon()
+
+
+## Upstream GameScene.examineCell passes Icons.INFO as the WndOptions title
+## icon; mirror that by prefixing the title bar with the same atlas icon.
+func _add_title_info_icon() -> void:
+	if _title_bar == null:
+		return
+	var icon: TextureRect = TextureRect.new()
+	icon.texture = UIUtils.atlas_texture(ICONS_PATH, ICON_REGION_INFO)
+	icon.custom_minimum_size = Vector2(18, 18)
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_title_bar.add_child(icon)
+	_title_bar.move_child(icon, 0)
 
 
 func setup(message: String, options: PackedStringArray) -> void:
