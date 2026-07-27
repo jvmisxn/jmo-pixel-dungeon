@@ -1191,6 +1191,16 @@ func on_scroll_read() -> void:
 		add_buff(invis)
 		if EventBus:
 			EventBus.hero_stats_changed.emit()
+	# Inscribed Power (upstream Talent.onScrollUsed): reading a scroll grants
+	# the Mage ScrollEmpower for 1+points (2/3) empowered wand zaps (+2 wand
+	# levels each). reset() keeps the higher remaining count on re-read.
+	var inscribed_power: int = get_talent_level("mage_inscribed_power")
+	if hero_class == ConstantsData.HeroClass.MAGE and inscribed_power > 0:
+		var empower: ScrollEmpower = ScrollEmpower.new()
+		empower.reset(1 + inscribed_power)
+		add_buff(empower)
+		if EventBus:
+			EventBus.hero_stats_changed.emit()
 
 
 func on_trampled_grass() -> void:

@@ -101,6 +101,7 @@ func zap(hero: Char, target_pos: int) -> void:
 		Invisibility.dispel_for(hero)
 		_cursed_zap(hero)
 		spend_charge()
+		_scroll_empower_use(hero)
 		_lingering_magic_proc(hero)
 		_use_for_identification(hero)
 		return
@@ -114,6 +115,7 @@ func zap(hero: Char, target_pos: int) -> void:
 	# Original: Wand cell selector calls Invisibility.dispel() before onZap.
 	Invisibility.dispel_for(hero)
 	on_zap(hero, path)
+	_scroll_empower_use(hero)
 	_lingering_magic_proc(hero)
 	_arcane_vision_proc(hero, path)
 	_warlock_wand_proc(hero, path)
@@ -267,7 +269,8 @@ func get_damage(lvl: int) -> Array[int]:
 ## Mage's WandEmpower (Empowering Meal) per DamageWand.damageRoll, adding
 ## dmg_boost and detaching the buff once its zaps are spent.
 func roll_zap_damage(hero: Char = null) -> int:
-	var dmg_range: Array[int] = get_damage(level + _desperate_power_bonus(hero))
+	var dmg_range: Array[int] = get_damage(level + _desperate_power_bonus(hero)
+		+ _scroll_empower_bonus(hero))
 	var dmg: int = Balance.normal_int_range(dmg_range[0], dmg_range[1])
 	if hero != null and hero.has_method("get_buff"):
 		var emp: Variant = hero.get_buff("WandEmpower")
@@ -289,6 +292,25 @@ func _desperate_power_bonus(hero: Char) -> int:
 	if hero == null or charges != 0 or not hero.has_method("get_talent_level"):
 		return 0
 	return hero.get_talent_level("mage_desperate_power")
+
+## Mage Inscribed Power (upstream Wand.buffedLvl): while ScrollEmpower is
+## live, wand zaps gain +2 effective levels. Port adaptation: like Desperate
+## Power above, the bonus applies to bolt damage rolls only, since the port's
+## inner classes read raw level for durations/gas strength. The buff itself is
+## consumed once per zap in zap() (upstream Wand.wandUsed), not per roll.
+func _scroll_empower_bonus(hero: Char) -> int:
+	if hero == null or not hero.has_method("has_buff"):
+		return 0
+	return 2 if hero.has_buff("ScrollEmpower") else 0
+
+## Consume one ScrollEmpower use per zap (upstream Wand.wandUsed calls
+## empower.use()); the buff detaches itself at 0 uses left.
+func _scroll_empower_use(hero: Char) -> void:
+	if hero == null or not hero.has_method("get_buff"):
+		return
+	var empower: Variant = hero.get_buff("ScrollEmpower")
+	if empower != null and empower.has_method("use"):
+		empower.use()
 
 # ---------------------------------------------------------------------------
 # Equip / Unequip

@@ -41,8 +41,8 @@ func _test_registry(t: Object) -> void:
 		ConstantsData.HeroClass.MAGE, "mage_inscribed_power")
 	var preservation: TalentData.TalentInfo = TalentData.get_talent(
 		ConstantsData.HeroClass.MAGE, "mage_wand_preservation")
-	t.check(inscribed != null and not inscribed.implemented,
-		"Inscribed Power is an inert groundwork slot")
+	t.check(inscribed != null and inscribed.implemented,
+		"Inscribed Power is implemented (see test_inscribed_power.gd)")
 	t.check(preservation != null and not preservation.implemented,
 		"Wand Preservation is an inert groundwork slot")
 
