@@ -41,8 +41,8 @@ func _test_registry(t: Object) -> void:
 			"Desperate Power is an implemented 3-point T3 talent")
 	var warp: TalentData.TalentInfo = TalentData.get_talent(
 		ConstantsData.HeroClass.MAGE, "mage_ally_warp")
-	t.check(warp != null and not warp.implemented and warp.tier == 3,
-		"Ally Warp is an inert T3 groundwork slot")
+	t.check(warp != null and warp.implemented and warp.tier == 3,
+		"Ally Warp is an implemented T3 talent")
 
 func _test_bonus_on_last_charge(t: Object) -> void:
 	var hero := _make_mage(3)

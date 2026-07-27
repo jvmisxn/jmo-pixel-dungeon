@@ -67,7 +67,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make("mage_arcane_vision", "Arcane Vision", "When the Mage zaps a character with a wand, he can see that character for 10/15 turns, even through walls.", 2, 2),
 				_make("mage_shield_battery", "Shield Battery", "The Mage can zap a wand at himself to convert all of its charges into a barrier of 4% max HP per charge, 6% at +2.", 2, 2),
 				_make("mage_desperate_power", "Desperate Power", "When the Mage zaps a wand's last charge, that zap acts as if the wand were 1/2/3 levels higher. (In the port this currently boosts bolt damage only.)", 3, 3),
-				_make_inert("mage_ally_warp", "Ally Warp", "Groundwork slot: the Mage can target an ally with a wand to teleport them next to him instead of zapping (ally system not ported yet).", 3, 3),
+				_make("mage_ally_warp", "Ally Warp", "The Mage can swap positions with his allies from up to 2/4/6 tiles away. The swap is instant and costs no time.", 3, 3),
 			]
 		ConstantsData.HeroClass.ROGUE:
 			return [

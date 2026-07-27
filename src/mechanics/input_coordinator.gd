@@ -41,11 +41,15 @@ static func handle_cell_click(scene: Variant, cell: int) -> void:
 	var hero_pos: int = hero.pos
 	var char_at: Variant = scene._current_level.find_char_at(cell) if scene._current_level else null
 	if char_at != null and char_at != hero:
+		var interactable: bool = char_at.has_method("can_interact") and char_at.can_interact(hero)
 		if scene._current_level.adjacent(hero_pos, cell):
-			if char_at.has_method("interact"):
+			if interactable:
 				scene._submit_hero_action({"type": "interact", "target_pos": cell})
 			else:
 				scene._submit_hero_action({"type": "attack", "target": char_at, "target_pos": cell})
+		elif interactable:
+			# Non-adjacent but interactable: an ally within Ally Warp range.
+			scene._submit_hero_action({"type": "interact", "target_pos": cell})
 		else:
 			var ranged_action: Dictionary = hero.get_auto_ranged_action(cell) if hero.has_method("get_auto_ranged_action") else {}
 			if not ranged_action.is_empty():
@@ -181,7 +185,7 @@ static func move_direction(scene: Variant, dir_offset: int) -> void:
 		return
 	var char_at: Variant = scene._current_level.find_char_at(target) if scene._current_level else null
 	if char_at != null and char_at != hero:
-		if char_at.has_method("interact"):
+		if char_at.has_method("can_interact") and char_at.can_interact(hero):
 			scene._submit_hero_action({"type": "interact", "target_pos": target})
 		else:
 			scene._submit_hero_action({"type": "attack", "target": char_at, "target_pos": target})
@@ -206,7 +210,8 @@ static func attack_adjacent_enemy(scene: Variant) -> void:
 		if not ConstantsData.is_valid_pos(target_pos):
 			continue
 		var char_at: Variant = scene._current_level.find_char_at(target_pos)
-		if char_at == null or char_at == hero or char_at.has_method("interact"):
+		if char_at == null or char_at == hero \
+				or (char_at.has_method("can_interact") and char_at.can_interact(hero)):
 			continue
 		scene._submit_hero_action({"type": "attack", "target": char_at, "target_pos": target_pos})
 		return

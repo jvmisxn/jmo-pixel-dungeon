@@ -24,6 +24,7 @@ func _init() -> void:
 	awareness = 1.0
 	aggro_range = 8
 	is_ally = true
+	immovable = true  # Upstream wards have Property.IMMOVABLE — no swaps/warp
 	state = AIState.HUNTING
 
 ## Seed HP, damage and range from the wand that created this sentry.

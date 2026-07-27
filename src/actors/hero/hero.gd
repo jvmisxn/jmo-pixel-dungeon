@@ -43,6 +43,9 @@ var _pending_surprise_attack: bool = false
 var _patient_strike_ready: bool = false
 var _backup_barrier_ready: bool = true
 var _followup_strike_ready: bool = false
+## Set by _do_interact when an Ally Warp swap ran: upstream warps are instant,
+## so the interact action costs no time that turn.
+var _interact_was_free: bool = false
 
 ## Resting state — when true, hero automatically waits each turn until full HP
 ## or interrupted by a visible enemy or damage. Matches original Hero.java.
@@ -311,6 +314,11 @@ func execute_action() -> void:
 			spend_turn(throw_delay)
 		"zap_wand":
 			spend_turn(_get_non_movement_action_delay())
+		"interact":
+			# Ally Warp swaps are instant (upstream warps spend no time).
+			if not _interact_was_free:
+				spend_turn(_get_non_movement_action_delay())
+			_interact_was_free = false
 		_:
 			spend_turn(_get_non_movement_action_delay())
 
@@ -804,6 +812,13 @@ func _do_interact(target_pos: int) -> void:
 	if level.has_method("find_char_at"):
 		var target_char: Variant = level.find_char_at(target_pos)
 		if target_char != null and target_char != self and target_char is NPC:
+			target_char.interact(self)
+			return
+		# Ally position swap (upstream Char.interact): adjacent by default,
+		# at range with Ally Warp — where the swap is also instant/free.
+		if target_char != null and target_char != self and target_char is Mob \
+				and target_char.can_interact(self):
+			_interact_was_free = get_talent_level("mage_ally_warp") > 0
 			target_char.interact(self)
 			return
 	# Interact with terrain (open doors, search, pick up items)
