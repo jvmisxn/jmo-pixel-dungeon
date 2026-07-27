@@ -1152,6 +1152,15 @@ func on_food_eaten(_food: Food, hunger_before: float, hp_before: int, hp_max_bef
 		add_buff(recharge)
 		changed_state = true
 
+	# Mystical Meal (upstream Talent.onFoodEaten): eating grants 1+2*points
+	# (3/5) turns of artifact recharging. Port adaptation: applied instantly
+	# via _charge_artifacts, like Battlemage Mystical Charge, instead of an
+	# over-time ArtifactRecharge buff.
+	var mystical_meal: int = get_talent_level("rogue_mystical_meal")
+	if hero_class == ConstantsData.HeroClass.ROGUE and mystical_meal > 0:
+		_charge_artifacts(1.0 + 2.0 * mystical_meal)
+		changed_state = true
+
 	var rogue_rations: int = get_talent_level("rogue_cached_rations")
 	if hero_class == ConstantsData.HeroClass.ROGUE and rogue_rations > 0:
 		var hunger_buff: Variant = get_buff("Hunger")
