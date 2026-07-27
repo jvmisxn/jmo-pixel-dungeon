@@ -379,6 +379,24 @@ func take_damage(dmg: int, source: Variant = null) -> int:
 	hp -= actual
 	if actual > 0 and source != null:
 		last_damage_source = source
+
+	# Kinetic enchant overkill (upstream Char.damage): when a Char kills an
+	# enemy-side victim while carrying a KineticTracker, the overkill (minus
+	# the recycled conserved bonus already in this hit) is banked on the
+	# attacker as ConservedDamage for the next Kinetic proc.
+	if hp < 0 and source is Char and get("is_ally") == false:
+		var kinetic_tracker: Node = (source as Char).get_buff("KineticTracker")
+		if kinetic_tracker != null:
+			var dmg_to_add: int = -hp - int(kinetic_tracker.conserved_damage)
+			dmg_to_add = roundi(dmg_to_add * WeaponEnchantment.proc_chance_multiplier(source))
+			if dmg_to_add > 0:
+				var conserved: Node = (source as Char).get_buff("ConservedDamage")
+				if conserved == null:
+					conserved = ConservedDamage.new()
+					(source as Char).add_buff(conserved)
+				conserved.set_bonus(dmg_to_add)
+			(source as Char).remove_buff(kinetic_tracker)
+
 	damaged.emit(actual, source)
 
 	# Notify buffs
