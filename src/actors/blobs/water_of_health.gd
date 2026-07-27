@@ -3,9 +3,10 @@ extends Blob
 ## Healing well water, mirroring Shattered Pixel Dungeon's WaterOfHealth
 ## (a WellWater blob). Seeded on a WELL tile at generation, it holds its single
 ## cell without spreading or decaying until the hero stands on it. On use it
-## fully heals the hero, cures the standard PotionOfHealing ailment set, then
-## empties the well (blob cleared + tile -> EMPTY_WELL), exactly as SPD's
-## WellWater.use() consumes the well after affectHero() returns true.
+## fully heals the hero, cures the standard PotionOfHealing ailment set,
+## uncurses equipped items, satisfies hunger, then empties the well (blob
+## cleared + tile -> EMPTY_WELL), exactly as SPD's WellWater.use() consumes the
+## well after affectHero() returns true.
 
 ## Upstream WaterOfHealth.affectHero() calls PotionOfHealing.cure(hero); this
 ## port routes through the shared Potion.PotionHealing.cure() so the well,
@@ -31,24 +32,23 @@ static func seed_well(level: Variant, cell: int) -> void:
 	level.add_blob(WaterOfHealth.new(), cell, 1.0)
 
 ## SPD's WellWater only affects the hero; mobs wading through never drain it.
-## When the hero is hurt or carries a curable ailment, fully heal + cleanse, then
-## consume the well.
+## Upstream affectHero() always fires for a living hero standing in the well
+## (no hurt/ailment gate): cure the PotionOfHealing set, uncurse equipped
+## items, satisfy STARVING worth of hunger, heal to full, then consume.
 func affect_char(ch: Char) -> void:
 	if ch == null or not ch.is_hero:
 		return
-	if ch.hp >= ch.hp_max and not _has_curable_ailment(ch):
-		return
-	ch.heal(ch.hp_max - ch.hp)
 	Potion.PotionHealing.cure(ch)
+	var belongings: Variant = ch.get("belongings")
+	if belongings != null and belongings.has_method("uncurse_equipped"):
+		belongings.uncurse_equipped()
+	var hunger: Variant = ch.get_buff("Hunger")
+	if hunger != null and hunger.has_method("satisfy"):
+		hunger.satisfy(Hunger.STARVING_THRESHOLD)
+	ch.heal(ch.hp_max - ch.hp)
 	if MessageLog:
 		MessageLog.add_positive("The well's waters restore you.")
 	_consume(ch.pos)
-
-func _has_curable_ailment(ch: Char) -> bool:
-	for buff_id: String in Potion.PotionHealing.CURE_IDS:
-		if ch.has_buff(buff_id):
-			return true
-	return false
 
 ## Empty the used well cell: clear that cell's blob volume (so this blob
 ## deactivates when the final well is spent) and turn the WELL tile into a spent

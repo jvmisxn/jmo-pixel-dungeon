@@ -2,6 +2,24 @@
 
 ## 2026-07-27
 
+- Tags: blobs, wells, curses, hunger, source-fidelity, audit:S19, tests
+- `WaterOfHealth` well brought to full upstream `affectHero` parity
+  (audit:S19 follow-up closed): on hero step it now also lifts equipped
+  curses via the new shared `Belongings.uncurse_equipped()` (upstream
+  `belongings.uncurseEquipped()`; Scroll of Remove Curse's equipped pass was
+  refactored onto the same helper, which also fixes that scroll skipping the
+  port's spirit-bow equip slot) and satisfies `Hunger.STARVING_THRESHOLD`
+  (450) worth of hunger (upstream `Hunger.satisfy(Hunger.STARVING)`). The
+  non-upstream hurt-or-ailment gate is removed: a living hero always consumes
+  the well on step, exactly like upstream WellWater tick -> affectHero.
+  Effect order matches upstream: cure, uncurse, hunger, heal-to-full,
+  consume. New `_test_well_uncurses_and_feeds` checks in
+  `test_water_of_health_well.gd` (full-HP hero still consumes, equipped curse
+  lifted + known, hunger zeroed). Full headless suite green (4634 checks,
+  0 failures).
+
+## 2026-07-27
+
 - Tags: traps, knockback, chasm, source-fidelity, audit:S09, tests
 - GeyserTrap knockback now routes through the shared `KnockBack` helper
   (audit:S09 follow-up), matching upstream GeyserTrap →
