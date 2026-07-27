@@ -638,6 +638,12 @@ func load_level(level: Variant, region: int) -> void:
 	if is_dark and MessageLog:
 		MessageLog.add_warning("This floor feels unusually dark.")
 
+	# Rogue's Foresight secret hint (upstream GameScene.create)
+	if MessageLog and FloorTransitionCoordinator.rogues_foresight_secret_hint(
+			level, _get_focused_hero()):
+		MessageLog.add_positive(
+			"You're certain that there's a secret room somewhere on this floor.")
+
 	# Camera bounds
 	game_camera.set_map_bounds(tile_map.get_map_pixel_size())
 

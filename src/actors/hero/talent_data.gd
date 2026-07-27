@@ -79,7 +79,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 				_make("rogue_inscribed_stealth", "Inscribed Stealth", "Reading a scroll grants the Rogue 3/5 turns of invisibility.", 2, 2),
 				_make("rogue_wide_search", "Wide Search", "The Rogue's search radius is increased by 1. At +1 the corners of the expanded area are rounded off, at +2 the full expanded area is searched.", 2, 2),
 				_make("rogue_silent_steps", "Silent Steps", "The Rogue will not wake sleeping enemies while he is 3 or more tiles away from them, or at +2 while he is not adjacent to them.", 2, 2),
-				_make_inert("rogue_rogues_foresight", "Rogue's Foresight", "Groundwork slot: the Rogue has a 75%/100% chance to notice when a level contains a secret room (secret-room detection not ported yet).", 2, 2),
+				_make("rogue_rogues_foresight", "Rogue's Foresight", "When the Rogue is on a level with a secret room, he has a 75%/100% chance to notice that the level contains a secret.", 2, 2),
 			]
 		ConstantsData.HeroClass.HUNTRESS:
 			return [
