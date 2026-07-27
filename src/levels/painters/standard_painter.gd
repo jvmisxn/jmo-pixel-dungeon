@@ -34,6 +34,7 @@ static func paint_level(level: Level) -> void:
 
 static func _carve_tunnels(level: Level) -> void:
 	var carved: Dictionary[String, bool] = {}  # Track which pairs we've already tunneled
+	var protected: Dictionary = _gated_border_cells(level)
 
 	for room: Room in level.rooms:
 		if room == null:
@@ -55,10 +56,40 @@ static func _carve_tunnels(level: Level) -> void:
 			var from_pos: int = _tunnel_endpoint(room, neighbor)
 			var to_pos: int = _tunnel_endpoint(neighbor, room)
 
-			Builder.build_tunnel(level, from_pos, to_pos)
+			# Gated-room border walls are carve-protected except this
+			# tunnel's own door endpoints, so an L-leg crossing a
+			# secret/vault wall can't open an extra hole beside the door.
+			var tunnel_protected: Dictionary = protected.duplicate()
+			tunnel_protected.erase(from_pos)
+			tunnel_protected.erase(to_pos)
+			Builder.build_tunnel(level, from_pos, to_pos, tunnel_protected)
 
 			_place_tunnel_door(level, room, from_pos)
 			_place_tunnel_door(level, neighbor, to_pos)
+
+
+## Border cells of every gated special room (secret/vault/armory/crystal).
+## These walls must never be carved through by tunnels — the only opening
+## into a gated room is its placed gated door.
+static func _gated_border_cells(level: Level) -> Dictionary:
+	var cells: Dictionary = {}
+	for room_ref: Variant in level.rooms:
+		var room: Room = room_ref as Room
+		if room == null:
+			continue
+		if _tunnel_door_terrain(room) == ConstantsData.Terrain.DOOR:
+			continue
+		for x: int in range(room.left, room.right + 1):
+			for y: int in [room.top, room.bottom]:
+				var pos: int = y * ConstantsData.WIDTH + x
+				if pos >= 0 and pos < Level.LEN:
+					cells[pos] = true
+		for y: int in range(room.top + 1, room.bottom):
+			for x: int in [room.left, room.right]:
+				var pos: int = y * ConstantsData.WIDTH + x
+				if pos >= 0 and pos < Level.LEN:
+					cells[pos] = true
+	return cells
 
 
 static func _room_pair_key(a: Room, b: Room) -> String:

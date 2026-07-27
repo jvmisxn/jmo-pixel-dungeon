@@ -25,6 +25,26 @@ func _border_cells(room: Room) -> Array[int]:
 	return cells
 
 
+const SEALED_BORDER_TERRAINS: Array[int] = [
+	ConstantsData.Terrain.WALL,
+	ConstantsData.Terrain.WALL_DECO,
+	ConstantsData.Terrain.BARRICADE,
+	ConstantsData.Terrain.DOOR,
+	ConstantsData.Terrain.OPEN_DOOR,
+	ConstantsData.Terrain.LOCKED_DOOR,
+	ConstantsData.Terrain.CRYSTAL_DOOR,
+	ConstantsData.Terrain.SECRET_DOOR,
+]
+
+
+func _border_breaches(level: Level, room: Room) -> Array[int]:
+	var breaches: Array[int] = []
+	for cell: int in _border_cells(room):
+		if level.terrain_at(cell) not in SEALED_BORDER_TERRAINS:
+			breaches.append(cell)
+	return breaches
+
+
 func _border_has_terrain(level: Level, room: Room, terrain: int) -> bool:
 	for cell: int in _border_cells(room):
 		if level.terrain_at(cell) == terrain:
@@ -67,6 +87,15 @@ func run(t: Object) -> void:
 			var room: Room = room_ref as Room
 			if room == null:
 				continue
+			var gated: bool = (room is CrystalVaultRoom or room is VaultRoom
+				or room is ArmoryRoom or room.type == Room.Type.SECRET)
+			if gated and room.in_bounds():
+				# Tunnel carving must never open extra wall cells on a
+				# gated room's border (audit:S08 breach fix). Out-of-bounds
+				# rooms are a separate placement bug and skipped here.
+				var breaches: Array[int] = _border_breaches(level, room)
+				t.check(breaches.is_empty(),
+					"depth %d gated room border intact (breaches: %s)" % [depth, str(breaches)])
 			if room is CrystalVaultRoom:
 				t.check(_border_has_terrain(level, room, ConstantsData.Terrain.CRYSTAL_DOOR),
 					"depth %d crystal vault is sealed by a crystal door" % depth)
@@ -74,9 +103,9 @@ func run(t: Object) -> void:
 				t.check(_border_has_terrain(level, room, ConstantsData.Terrain.LOCKED_DOOR),
 					"depth %d vault/armory is sealed by a locked door" % depth)
 			elif room.type == Room.Type.SECRET and room.connected.size() > 0:
-				# Only connected secret rooms are asserted sealed: tunnel
-				# carving can still open extra wall cells or strand a room
-				# entirely — tracked as open audit:S08 backlog items.
+				# Only connected secret rooms are asserted sealed: a secret
+				# room can still generate stranded/isolated — tracked as an
+				# open audit:S08 backlog item.
 				t.check(_border_has_terrain(level, room, ConstantsData.Terrain.SECRET_DOOR),
 					"depth %d connected secret room is hidden behind a secret door" % depth)
 
