@@ -2,6 +2,34 @@
 
 ## 2026-07-27
 
+- Tags: npcs, persistence, quests, rng, audit:S21, tests
+- Quest NPCs now survive save/load and cached-level backtracking. Root cause
+  found while verifying the S21 backlog items: `Level.deserialize` rebuilds
+  mobs exclusively via `MobFactory.create_mob`, which had no cases for
+  `sad_ghost`/`wandmaker`/`ambitious_imp`/`blacksmith`/`shopkeeper`/`sheep` —
+  every quest NPC (with its quest target, rewards, kill counts, shop stock and
+  buyback list, all of which already had complete serialize/deserialize
+  contracts) was silently dropped with a push_warning on reload, and
+  `loading_scene` only spawns fresh NPCs for newly generated levels. Factory
+  cases added; `NPC.resolve_post_load` already re-registers restored NPCs with
+  QuestHandler so kill routing works post-load. Same slice closed the S21
+  regen item: Ghost/Imp/Wandmaker `_init` no longer rolls quest targets +
+  rewards (a dozen randi/randf calls plus item generation per instantiation,
+  previously re-run and discarded on every load, perturbing the global RNG
+  stream); generation moved to `generate_quest()`, called by
+  `QuestHandler._spawn_ghost/_spawn_wandmaker/_spawn_imp` at spawn time
+  (before `_spawn_wandmaker` reads `requested_seed_id` for the quest-item
+  drop). The separate S21 ghost double-subscribe item was verified stale — no
+  `mob_defeated.connect` remains in `ghost.gd`. Fragile-file edits small:
+  factory-case block in `mob_factory.gd`, two-line move in `imp.gd`. Test
+  `test_npc_load_persistence.gd` (registered, 16 checks): factory creates all
+  6 classes, seeded-RNG stream untouched by NPC instantiation, fresh NPCs
+  empty before `generate_quest()` / populated after, ghost and shopkeeper
+  factory round-trips preserve quest progress, reward identity, and stock.
+  Verification: `git diff --check` clean, gdparse clean on all 7 touched
+  files (incl. fragile mob_factory.gd/imp.gd), gdlint 19 findings identical
+  before/after (pre-existing), full headless suite 4523 checks 0 failures.
+
 - Tags: wands, chasm, knockback, source-fidelity, tests
 - Blast Wave knockback into chasms (upstream `Char.throwChar` →
   `Level.occupyCell`; audit:S09 reconcile). Source check invalidated the S09

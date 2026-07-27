@@ -52,6 +52,9 @@ func _init() -> void:
 		"You did it... thank you... take this as my gratitude.",
 	]
 
+## Roll the quest target and rewards. Called by QuestHandler at spawn time so
+## that load-path instantiation (MobFactory -> deserialize) consumes no RNG.
+func generate_quest() -> void:
 	_pick_quest_target()
 	_generate_rewards()
 

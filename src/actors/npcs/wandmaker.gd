@@ -54,6 +54,9 @@ func _init() -> void:
 		"Wonderful! Let me see... yes, yes! Now, which wand would you prefer?",
 	]
 
+## Roll the requested reagent and wand rewards. Called by QuestHandler at spawn
+## time so load-path instantiation (MobFactory -> deserialize) consumes no RNG.
+func generate_quest() -> void:
 	_pick_requested_seed()
 	_generate_wand_rewards()
 

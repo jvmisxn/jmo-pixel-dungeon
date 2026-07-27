@@ -99,6 +99,7 @@ static func spawn_quest_npc(level_ref: Variant, depth: int) -> Variant:
 static func _spawn_ghost(level_ref: Variant, _depth: int) -> Variant:
 	var ghost: Variant = load("res://src/actors/npcs/ghost.gd").new()
 	ghost.level = level_ref
+	ghost.generate_quest()
 	quest_states["ghost_quest"] = "active"
 	# Original: quest mob is spawned on first interaction, not at level gen.
 	# Ghost._spawn_quest_mob() handles this when the hero first talks to it.
@@ -108,6 +109,7 @@ static func _spawn_wandmaker(level_ref: Variant, _depth: int) -> Variant:
 	var wm_script: GDScript = load("res://src/actors/npcs/wandmaker.gd")
 	var wm: Variant = wm_script.new()
 	wm.level = level_ref
+	wm.generate_quest()
 	quest_states["wandmaker_quest"] = "active"
 
 	# Spawn the quest seed item on this level
@@ -129,6 +131,7 @@ static func _spawn_blacksmith(level_ref: Variant, _depth: int) -> Variant:
 static func _spawn_imp(level_ref: Variant, _depth: int) -> Variant:
 	var imp: Variant = load("res://src/actors/npcs/imp.gd").new()
 	imp.level = level_ref
+	imp.generate_quest()
 	quest_states["imp_quest"] = "active"
 	return imp
 
