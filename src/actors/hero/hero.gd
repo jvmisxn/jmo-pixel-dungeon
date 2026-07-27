@@ -510,7 +510,9 @@ func _do_throw_item(item: Variant, target_pos: int) -> void:
 			missile.apply_special_effect(hit_target)
 
 	if item is MissileWeapon and _should_consume_thrown_item(item):
-		if not _durable_tips_preserves(item as MissileWeapon):
+		var thrown_missile: MissileWeapon = item as MissileWeapon
+		if not _durable_tips_preserves(thrown_missile) \
+				and not _durable_projectiles_preserves(thrown_missile):
 			_consume_thrown_stack_item(item)
 
 	if item is SpiritBow and hit_landed:
@@ -713,6 +715,26 @@ func _durable_tips_preserves(missile: MissileWeapon) -> bool:
 	missile.durable_tips_uses += 1
 	if missile.durable_tips_uses > points:
 		missile.durable_tips_uses = 0
+		return false
+	return true
+
+## Huntress Durable Projectiles (upstream MissileWeapon.durabilityPerUse:
+## usages *= 1.25 + 0.25*points -> x1.5/x1.75 durability): port adaptation —
+## the stack accrues fractional wear per throw and only loses a weapon once a
+## full point of wear accumulates, giving 50%/75% more throws per stack.
+## Checked after Durable Tips so preserved tipped-dart throws add no wear,
+## stacking multiplicatively like upstream.
+func _durable_projectiles_preserves(missile: MissileWeapon) -> bool:
+	if missile == null:
+		return false
+	var points: int = get_talent_level("huntress_durable_projectiles")
+	if points <= 0:
+		return false
+	missile.durable_wear += 1.0 / (1.25 + 0.25 * points)
+	if missile.durable_wear >= 1.0 - 0.0001:
+		missile.durable_wear -= 1.0
+		if missile.durable_wear < 0.0001:
+			missile.durable_wear = 0.0
 		return false
 	return true
 
