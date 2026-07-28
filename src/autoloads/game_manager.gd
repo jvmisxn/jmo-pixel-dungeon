@@ -339,6 +339,9 @@ func ascend() -> int:
 	return depth
 
 func _on_depth_changed() -> void:
+	# Upstream Dungeon.newLevel: deepestFloor only ever increases.
+	if depth > stats.get("deepest_floor", 0):
+		stats["deepest_floor"] = depth
 	depth_changed.emit(depth)
 	if EventBus:
 		EventBus.level_changed.emit(depth)
@@ -704,7 +707,17 @@ func apply_run_state(data: Dictionary) -> void:
 	set_party_classes(data.get("party_classes", [hero_class]))
 	local_hero_index = int(data.get("local_hero_index", 0))
 	run_active = data.get("run_active", false)
-	stats = data.get("stats", {})
+	# JSON round-trips give an untyped Dictionary with float values; copy
+	# element-wise or the typed-dictionary assignment errors and stats keeps
+	# its previous run's values.
+	stats = {}
+	var saved_stats: Variant = data.get("stats", {})
+	if saved_stats is Dictionary:
+		for key: Variant in saved_stats:
+			stats[str(key)] = int(saved_stats[key])
+	# Older saves predate the deepest_floor stat; backfill from current depth.
+	if depth > stats.get("deepest_floor", 0):
+		stats["deepest_floor"] = depth
 
 	quest_flags.clear()
 	var saved_quest_flags: Variant = data.get("quest_flags", {})
@@ -777,6 +790,7 @@ func _reset_stats() -> void:
 		"damage_dealt": 0,
 		"damage_taken": 0,
 		"healing_done": 0,
+		"deepest_floor": 0,
 	}
 
 ## Increment a stat by a given amount.

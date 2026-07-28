@@ -2,6 +2,18 @@
 
 ## 2026-07-27
 
+- Tags: stats, persistence, source-fidelity, tests
+- "Deepest Floor" in `WndHeroInfo` is now recorded: `_on_depth_changed()`
+  sets `stats["deepest_floor"]` when depth exceeds the stored max (upstream
+  `Dungeon.newLevel`: `Statistics.deepestFloor` only ever increases —
+  ascending never lowers it), `_reset_stats()` seeds the key, and
+  `apply_run_state` backfills older saves from the loaded depth. The
+  round-trip test also exposed a real load bug: `stats = data.get("stats",
+  {})` raised a typed-dictionary assignment error for untyped/JSON-loaded
+  dicts, so `stats` silently kept the previous run's values on load — now an
+  element-wise `str(key)/int(value)` copy. New `test_deepest_floor_stat.gd`
+  registered in `run_tests.gd`. Full suite green (5023 checks).
+
 - Tags: audio, transitions, audit:S24, source-fidelity, tests
 - Descend-sting parity with upstream `GameScene.create`: the sound now plays
   only on first arrival at a new floor (freshly generated level entered via
