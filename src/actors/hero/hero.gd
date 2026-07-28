@@ -289,6 +289,8 @@ func execute_action() -> void:
 			_do_ascend()
 		"descend":
 			_do_descend()
+		"chasm_jump":
+			_do_chasm_jump(action.get("target_pos", -1))
 		_:
 			pass  # Unknown action — skip turn
 
@@ -385,6 +387,24 @@ func _do_move(target_pos: int) -> void:
 				EventBus.hero_moved.emit(step_pos)
 		# Check terrain effects at new position
 		_check_terrain_effects()
+
+## Voluntary chasm jump (upstream Chasm.heroJump): the input layer has already
+## shown the confirm prompt, so this action is the confirmed leap. Re-validate
+## that the tapped cell is still an adjacent chasm and the hero can actually
+## fall (rooted heroes can't step off, flying heroes glide over), then descend
+## via the shared Chasm fall path.
+func _do_chasm_jump(target_pos: int) -> void:
+	if target_pos < 0 or level == null:
+		return
+	if not _is_adjacent_pos(pos, target_pos):
+		return
+	if level.terrain_at(target_pos) != ConstantsData.Terrain.CHASM:
+		return
+	if Chasm.can_cross(self) or has_buff("Rooted"):
+		return
+	last_visible_action = "move"
+	last_visible_target_pos = target_pos
+	Chasm.jump_fall(self, level)
 
 ## Check if two positions are adjacent (Chebyshev distance == 1).
 func _is_adjacent_pos(a: int, b: int) -> bool:

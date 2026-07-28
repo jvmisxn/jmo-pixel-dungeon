@@ -70,6 +70,8 @@ static func handle_cell_click(scene: Variant, cell: int) -> void:
 			var terrain: int = scene._current_level.terrain_at(cell)
 			if terrain == ConstantsData.Terrain.DOOR or terrain == ConstantsData.Terrain.LOCKED_DOOR or terrain == ConstantsData.Terrain.CRYSTAL_DOOR:
 				scene._submit_hero_action({"type": "interact", "target_pos": cell})
+			elif terrain == ConstantsData.Terrain.CHASM and not Chasm.can_cross(hero):
+				_confirm_chasm_jump(scene, cell)
 			elif not scene._current_level.passable[cell]:
 				scene._submit_hero_action({"type": "search"})
 			else:
@@ -79,6 +81,22 @@ static func handle_cell_click(scene: Variant, cell: int) -> void:
 		else:
 			scene._start_auto_walk(cell)
 			scene._submit_hero_action({"type": "move", "target_pos": cell})
+
+## Upstream Chasm.heroJump: stepping toward an adjacent chasm interrupts the
+## move and asks for confirmation before the hero leaps in. Upstream text:
+## "Chasm" / "Do you really want to jump into the chasm? You will probably
+## get hurt badly." with jumpConfirmed only set on the yes option.
+static func _confirm_chasm_jump(scene: Variant, cell: int) -> void:
+	var chooser: WndExamineChoice = WndExamineChoice.new()
+	chooser.window_title = "Chasm"
+	chooser.setup(
+		"Do you really want to jump into the chasm? You will probably get hurt badly.",
+		PackedStringArray(["Yes, I know what I'm doing", "No, I changed my mind"]))
+	chooser.option_selected.connect(func(idx: int) -> void:
+		if idx == 0:
+			scene._submit_hero_action({"type": "chasm_jump", "target_pos": cell}))
+	if EventBus:
+		EventBus.show_window.emit(chooser)
 
 static func handle_key_input(scene: Variant, keycode: int) -> bool:
 	if scene == null:
