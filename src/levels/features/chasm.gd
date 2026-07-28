@@ -94,6 +94,21 @@ static func force_fall(ch: Variant, level: Variant = null) -> void:
 	else:
 		mob_fall(ch)
 
+## Upstream confirmed voluntary jump (Chasm.heroJump -> jumpConfirmed ->
+## hero steps onto the chasm -> Level.occupyCell -> Chasm.heroFall): the
+## input layer shows the confirm prompt; once confirmed the hero descends via
+## the shared `hero_fell` path and takes heroLand damage on arrival, exactly
+## like pitfall and knockback falls.
+static func jump_fall(ch: Variant, level: Variant = null) -> void:
+	if ch == null or not is_instance_valid(ch) or not (ch is Hero):
+		return
+	if MessageLog:
+		MessageLog.add_negative("You jump into the chasm!")
+	if EventBus and EventBus.has_signal("hero_fell"):
+		EventBus.hero_fell.emit(ch)
+	else:
+		apply_landing_damage(ch, level if level is Level else null)
+
 ## Find safe landing positions around a chasm (for teleportation recovery).
 static func find_safe_landing(level: Level, around_pos: int) -> int:
 	for dir: int in ConstantsData.DIRS_8:

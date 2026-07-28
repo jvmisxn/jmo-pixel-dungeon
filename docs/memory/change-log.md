@@ -2,6 +2,30 @@
 
 ## 2026-07-27
 
+- Tags: chasm, input, source-fidelity, audit:S09, tests
+- Voluntary walk-in chasm entry with upstream confirm prompt (the S09
+  remainder: chasm was fully impassable to voluntary movement). Upstream
+  `Chasm.heroJump` shows a WndOptions ("Do you really want to jump into the
+  chasm? You will probably get hurt badly." / yes / no) and only
+  `jumpConfirmed` lets the hero step in, falling via `Level.occupyCell ->
+  Chasm.heroFall`. Port adaptation: an adjacent tap on a CHASM cell in
+  `InputCoordinator.handle_cell_click` (previously fell into the impassable ->
+  "search" branch) now opens the same prompt via `WndExamineChoice`
+  (title "Chasm"); confirming submits a new `"chasm_jump"` hero action —
+  routed through `submit_action` so it codec-passes for online play — and
+  `Hero._do_chasm_jump` re-validates (still adjacent, still CHASM, not
+  flying/levitating via `Chasm.can_cross`, not Rooted) before the new
+  `Chasm.jump_fall` descends via the shared `hero_fell` path (same landing
+  damage as pitfall/knockback falls). Pathfinding/passability unchanged:
+  chasm stays non-passable so auto-walk never routes through it, matching
+  upstream AVOID semantics for the common case. Remaining S09 gap: a
+  levitating/flying hero still cannot voluntarily cross a chasm (upstream
+  flying chars traverse it); Monk/Gladiator knockback halves unchanged.
+  Fragile-file edits small: `chasm.gd` one appended static, `hero.gd` one
+  match arm + one method. `test_chasm_jump.gd` (5 checks: confirmed jump
+  fires hero_fell, flying/rooted refused, non-adjacent refused, non-chasm
+  target refused).
+
 - Tags: buffs, combat, source-fidelity, audit:S06, tests
 - Fire/Frost Imbue are now real in combat (they previously only ever attached
   via Warden firebloom/icecap trample and their `proc()` was dead code; the
