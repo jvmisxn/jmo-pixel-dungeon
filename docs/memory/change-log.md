@@ -3,6 +3,25 @@
 ## 2026-07-28
 
 - Tags: duelist, weapon-abilities, source-fidelity, tests
+- Guard weapon-ability family shipped (upstream RoundShield.guardAbility,
+  current master): RoundShield/Greatshield expose a self-targeted "Guard"
+  Duelist ability — spend one charge and one turn to gain the new
+  `GuardTracker` buff for 5+lvl (RoundShield) / 3+lvl (Greatshield) turns.
+  While guarding the hero blocks all incoming attacks
+  (`evasion_modifier` returns 1e9, over Char.hit's 1e6 infinite-evasion
+  threshold even after later multiplicative debuffs); a block is announced
+  and sets `has_blocked` (upstream icon tint, persisted in the save).
+  Re-casts prolong (postpone) and reset `has_blocked`. wnd_item skips
+  targeting for guard and submits the hero's own cell (upstream has no
+  targetingPrompt). Known micro-deviation: the port's surprise-attack
+  guaranteed-hit check (invisible attacker) runs before the
+  infinite-evasion check, so an invisible attacker can still hit a
+  guarding hero; upstream guard blocks those too. New
+  `test_weapon_ability_guard.gd`; suite green (5173 checks).
+  [ENGINE]: in-game Duelist round shield check wanted (guard buff icon,
+  block message spam feel over several attacked turns).
+
+- Tags: duelist, weapon-abilities, source-fidelity, tests
 - Lunge weapon ability shipped (upstream Rapier.lungeAbility, current
   master): Rapier exposes a "Lunge" Duelist ability — target a cell exactly
   one beyond weapon reach, dash to the open neighbor cell with the smallest

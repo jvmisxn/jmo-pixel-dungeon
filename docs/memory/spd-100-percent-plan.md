@@ -144,8 +144,10 @@ and pitfall/chasm landing parity including fallen-item heap drops
    (Spear/Glaive reach-only strike + one-cell knockback,
    `test_weapon_ability_spike.gd`). 2026-07-28: Rapier Lunge shipped
    (dash + boosted strike at reach+1, out-of-FOV waste case,
-   `test_weapon_ability_lunge.gd`). Next talent milestone = remaining
-   weapon families (guard, combo strike, sword dance, defensive stance,
+   `test_weapon_ability_lunge.gd`). 2026-07-28: Guard family shipped
+   (RoundShield/Greatshield GuardTracker stance,
+   `test_weapon_ability_guard.gd`). Next talent milestone = remaining
+   weapon families (combo strike, sword dance, defensive stance, greataxe,
    etc.), then the Champion/Monk talents.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +

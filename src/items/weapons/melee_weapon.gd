@@ -299,6 +299,12 @@ const LUNGE_BOOST: Dictionary = {
 	"rapier": [5, 1.5],
 }
 
+## Shield-family Guard stance base duration in turns (upstream
+## RoundShield.duelistAbility 5+buffedLvl, Greatshield 3+buffedLvl).
+const GUARD_DURATION: Dictionary = {
+	"round_shield": 5, "greatshield": 3,
+}
+
 func has_duelist_ability() -> bool:
 	return ability_kind() != ""
 
@@ -314,6 +320,8 @@ func ability_kind() -> String:
 		return "spike"
 	if LUNGE_BOOST.has(item_id):
 		return "lunge"
+	if GUARD_DURATION.has(item_id):
+		return "guard"
 	return ""
 
 func ability_name() -> String:
@@ -328,6 +336,8 @@ func ability_name() -> String:
 			return "Spike"
 		"lunge":
 			return "Lunge"
+		"guard":
+			return "Guard"
 	return ""
 
 ## Targeting range for the ability prompt: sneak blinks up to its family
@@ -343,6 +353,11 @@ func ability_target_range() -> int:
 ## the ability is instant, so the buff itself is applied one turn shorter).
 func sneak_invis_turns() -> int:
 	return 2 + maxi(0, level)
+
+## Guard stance duration (upstream RoundShield 5+buffedLvl, Greatshield
+## 3+buffedLvl turns of GuardTracker).
+func guard_duration() -> int:
+	return int(GUARD_DURATION.get(item_id, 0)) + maxi(0, level)
 
 ## Charge cost (upstream baseChargeUse): cleave is free while the
 ## CleaveTracker window from an ability kill is open.

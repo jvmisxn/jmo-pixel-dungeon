@@ -324,6 +324,14 @@ func _action_weapon_ability() -> void:
 	if weapon == null:
 		close_window()
 		return
+	if weapon.ability_kind() == "guard":
+		# Guard is self-targeted (upstream RoundShield has no targeting prompt).
+		if EventBus and EventBus.has_signal("request_hero_action") and _hero != null:
+			EventBus.request_hero_action.emit({
+				"type": "weapon_ability", "item": weapon, "target_pos": _hero.pos,
+			})
+		close_window()
+		return
 	if MessageLog:
 		if weapon.ability_kind() == "sneak":
 			MessageLog.add("Choose a place to sneak to.")
