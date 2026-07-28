@@ -1104,8 +1104,36 @@ func _on_quickslot_used(_slot_index: int, item: RefCounted) -> void:
 			else:
 				EventBus.enter_targeting.emit(wand, max_range, zap_callback)
 		return
+	if quickslot_uses_throw_targeting(item):
+		var throw_callback: Callable = func(cell: int) -> void:
+			if EventBus and EventBus.has_signal("request_hero_action"):
+				EventBus.request_hero_action.emit({"type": "throw_item", "item": item, "target_pos": cell})
+		if EventBus:
+			var throw_range: int = quickslot_throw_range(item)
+			if EventBus.has_signal("enter_targeting_auto"):
+				EventBus.enter_targeting_auto.emit(item, throw_range, throw_callback)
+			else:
+				EventBus.enter_targeting.emit(item, throw_range, throw_callback)
+		return
 	if EventBus and EventBus.has_signal("request_hero_action"):
 		EventBus.request_hero_action.emit({"type": "use_item", "item": item})
+
+## Quickslotted throwables auto-aim like upstream QuickSlotButton.useTargeting
+## (last target if still valid, else nearest visible enemy). Base Item.execute
+## is a no-op, so without this branch a quickslot tap on a missile weapon or
+## the spirit bow would fall through to use_item and burn a turn doing nothing.
+static func quickslot_uses_throw_targeting(item: Variant) -> bool:
+	return item is MissileWeapon or item is SpiritBow
+
+## Ranges mirror WndItem: shoot is 8, throw is 4 + tier * 2 (fallback 6).
+static func quickslot_throw_range(item: Variant) -> int:
+	if item is SpiritBow:
+		return 8
+	var throw_range: int = 6
+	var tier: Variant = ConstantsData.get_prop(item, "tier", null)
+	if tier is int:
+		throw_range = 4 + int(tier) * 2
+	return throw_range
 
 func has_active_window() -> bool:
 	return _active_window != null and is_instance_valid(_active_window)
