@@ -745,9 +745,14 @@ func move_to(new_pos: int) -> bool:
 	if level == null:
 		pos = new_pos
 		return true
-	# Check passability
+	# Check passability. Upstream flying/levitating chars treat AVOID cells
+	# (chasm) as traversable: Char.flying makes Level.avoid cells walkable and
+	# occupyCell skips Chasm.heroFall while flying.
 	if not level.is_passable(new_pos):
-		return false
+		var can_float_over: bool = level.terrain_at(new_pos) == ConstantsData.Terrain.CHASM \
+				and Chasm.can_cross(self)
+		if not can_float_over:
+			return false
 	# Check for other characters at target
 	if level.find_char_at(new_pos) != null:
 		return false
