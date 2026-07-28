@@ -143,6 +143,14 @@ func attack(target: Char, dmg_multi: float = 1.0, dmg_bonus: float = 0.0, acc_mu
 		target.take_damage(effective_dmg, self)
 		on_attack_hit(target, effective_dmg)
 
+		# Fire/Frost Imbue procs (upstream Char.attack: right after enemy.damage)
+		var fire_imbue: Node = get_buff("FireImbue")
+		if fire_imbue != null and fire_imbue.has_method("proc"):
+			fire_imbue.proc(target)
+		var frost_imbue: Node = get_buff("FrostImbue")
+		if frost_imbue != null and frost_imbue.has_method("proc"):
+			frost_imbue.proc(target)
+
 		# Prepared assassination: execute a surviving hostile under the KO
 		# threshold (SPD Char.attack Preparation block).
 		if prep_buff != null and target.is_alive and not target.is_hero \

@@ -25,6 +25,10 @@ func on_attach() -> void:
 		if chill_buff:
 			target.remove_buff(chill_buff)
 
+## Upstream Burning.reignite: reset the burn back to its full duration.
+func reignite(duration_turns: float = DURATION) -> void:
+	left = duration_turns
+
 func on_turn() -> void:
 	if target == null:
 		return
