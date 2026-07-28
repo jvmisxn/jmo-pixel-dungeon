@@ -2,6 +2,39 @@
 
 ## 2026-07-27
 
+- Tags: perf, fov, visibility, coordinators, audit:S25, tests, source-fidelity
+- Closed the audit:S25 P1 per-mob repaint gap: `on_mob_action` ran
+  `update_fov` + `fog_of_war.update_visibility()` + full
+  `_update_entity_visibility()` + `_interrupt_rest_if_needed()` for every
+  acting mob — and `did_visible_action` is set on every mob move/attack
+  regardless of FOV (the "only visible mobs" comment in
+  `turn_manager.gd:_process_mobs_async` was wrong), so every wandering mob
+  anywhere on the level triggered a full repaint each turn. Upstream observes
+  FOV once per hero turn (`Dungeon.observe()`/`afterObserve`). Fix in
+  `scene_feedback_coordinator.gd` uses both halves suggested by the audit:
+  new `_mob_action_affects_view()` gates an immediate `_refresh_visibility()`
+  to mobs whose current pos or previous sprite cell is in `level.visible`, or
+  within `view_distance + 1` of the hero (covers Heightened Senses / Arcane
+  Vision through-wall reveals near the hero); all other mob actions set a
+  `mob_visibility_dirty` scene meta flag (kept via `Object.set_meta` so the
+  fragile `game_scene.gd` needed no edits) that `on_round_completed` flushes
+  as one coalesced refresh per party round; `refresh_after_turn` clears the
+  flag since it already refreshes everything. Sprite move/attack/hp-bar
+  updates and the online snapshot queue still run per action. Accepted
+  deferral (documented in backlog): a far-away Arcane-Vision-marked mob's
+  through-wall overlay now updates at round end, not per action. New
+  `test_mob_action_visibility_coalesce.gd` (registered; 18 checks) with stub
+  scene/level/fog/sprite counters: far-fogged mob action performs zero
+  refreshes and marks dirty, four deferred actions flush as exactly one
+  round-end refresh and clear the flag, a clean following round does not
+  refresh, visible-cell and leaving-view (previous sprite cell visible)
+  actions refresh immediately, and a fogged mob within mind-vision reach
+  refreshes immediately. Verification: `git diff --check` clean; gdtoolkit
+  parser clean on all touched files; gdlint advisory-only pre-existing-style
+  findings (long lines matching the file's existing signatures, pre-existing
+  unused `round_number`); full Godot headless suite 4921 checks, 0 failures
+  (was 4903, +18 new).
+
 - Tags: level-gen, secret-rooms, loop-builder, audit:S08, tests, source-fidelity
 - Fixed the secret-room placement gap (audit:S08 P2): secret rooms could
   generate out of bounds (seed 1015 depth 3/4: `left=-5`), flush against the
