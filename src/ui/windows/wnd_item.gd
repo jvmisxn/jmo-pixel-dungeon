@@ -132,6 +132,11 @@ func _add_action_buttons(container: HFlowContainer) -> void:
 		_add_button(container, "Shoot", _action_shoot)
 	if _item is MagesStaff:
 		_add_button(container, "Imbue", _action_imbue)
+	# Duelist weapon ability (upstream MeleeWeapon AC_ABILITY: equipped only)
+	if _item is MeleeWeapon and _is_equipped and _hero != null \
+			and _hero.hero_class == ConstantsData.HeroClass.DUELIST \
+			and (_item as MeleeWeapon).has_duelist_ability():
+		_add_button(container, (_item as MeleeWeapon).ability_name(), _action_weapon_ability)
 	match cat:
 		ConstantsData.ItemCategory.POTION:
 			_add_button(container, "Drink", _action_use)
@@ -309,6 +314,23 @@ func _action_throw() -> void:
 func _execute_throw_callback(target_cell: int) -> void:
 	if EventBus and EventBus.has_signal("request_hero_action"):
 		EventBus.request_hero_action.emit({"type": "throw_item", "item": _item, "target_pos": target_cell})
+
+## Duelist weapon ability: select an enemy within weapon reach, then submit
+## the weapon_ability action (upstream MeleeWeapon AC_ABILITY targeting).
+func _action_weapon_ability() -> void:
+	var weapon: MeleeWeapon = _item as MeleeWeapon
+	if weapon == null:
+		close_window()
+		return
+	if MessageLog:
+		MessageLog.add("Choose an enemy to strike.")
+	if EventBus:
+		EventBus.enter_targeting.emit(weapon, weapon.get_reach(), _execute_weapon_ability_callback)
+	close_window()
+
+func _execute_weapon_ability_callback(target_cell: int) -> void:
+	if EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "weapon_ability", "item": _item, "target_pos": target_cell})
 
 func _action_shoot() -> void:
 	var item_name_str: String = ConstantsData.get_prop(_item, "item_name", "item")

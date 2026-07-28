@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-07-28
+
+- Tags: duelist, talents, weapon-abilities, source-fidelity, tests
+- Duelist weapon-ability execution path shipped, with sword-family Cleave as
+  the first ability (upstream MeleeWeapon AC_ABILITY + Sword.cleaveAbility):
+  equipped sword-family weapons show a "Cleave" button in WndItem for
+  Duelists, targeting picks an enemy within reach, and the new
+  `weapon_ability` hero action validates (equipped/class/STR/charge/
+  visibility/reach — refusals cost no time or charge), spends WeaponCharger
+  charges via `MeleeWeapon.before_ability_used`, then lands a guaranteed
+  hit (upstream INFINITE_ACCURACY) with the weapon's flat boost
+  (worn 3 / short 4 / sword 5 / long 6 / greatsword 7, + level). Kills are
+  instant (0 time) and open a 4-turn `CleaveTracker` window making the next
+  ability free; a kill inside the window closes it instead of chaining, and
+  a non-kill strike costs attack delay and closes it. Same slice:
+  `duelist_aggressive_barrier` is now real (upstream beforeAbilityUsed:
+  ability use at <=50% HP shields 1+2*points via Barrier) — the inert-gating
+  probe moved to `champion_dual_mastery`. Weapons without a ported ability
+  (all non-sword families) show no button yet. New
+  `test_weapon_ability_cleave.gd`. Full suite green (5061 checks).
+  [ENGINE]: the WndItem button -> targeting -> strike flow wants an
+  in-game Duelist check.
+
 ## 2026-07-27
 
 - Tags: input, targeting, quickslot, audit:S23, source-fidelity, tests
