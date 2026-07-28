@@ -20,6 +20,7 @@ var _transition_type: String = "descend"  # "descend" or "ascend"
 var _autosave_after_generation: bool = false
 var _fall_actor_id: int = -1
 var _fall_into_pit: bool = false
+var _reused_level_state: bool = false
 
 # --- UI References ---
 var _depth_label: Label = null
@@ -214,6 +215,20 @@ void fragment() {
 # Generation
 # ---------------------------------------------------------------------------
 
+## Upstream GameScene.create parity: the descend sting plays only on first
+## arrival at a new deepest floor — a freshly generated level entered by
+## descending or falling. Ascents, backtracking to cached floors, and
+## continuing a saved game are silent.
+static func should_play_descend_sfx(
+	transition_type: String,
+	reused_existing_state: bool,
+	is_continue: bool
+) -> bool:
+	if is_continue or reused_existing_state:
+		return false
+	return transition_type == "descend" or transition_type == "fall"
+
+
 func _perform_generation() -> void:
 	if _is_continue:
 		# For continue, the GameManager already has state loaded
@@ -237,8 +252,9 @@ func _perform_generation() -> void:
 
 		_generate_current_level()
 
-	# Play descend sound for level transitions
-	if AudioManager:
+	# Play descend sound only on first arrival at a new floor (upstream
+	# GameScene.create new-deepest-floor gate).
+	if AudioManager and should_play_descend_sfx(_transition_type, _reused_level_state, _is_continue):
 		AudioManager.play_sfx("descend")
 
 	if _autosave_after_generation and SaveManager and SaveManager.has_method("autosave_if_active"):
@@ -269,6 +285,8 @@ func _generate_current_level() -> void:
 	# Generate a fresh level using LevelFactory
 	if level == null:
 		level = LevelFactory.create_for_depth(depth)
+
+	_reused_level_state = reused_existing_state
 
 	if level != GameManager.current_level:
 		GameManager.current_level = level

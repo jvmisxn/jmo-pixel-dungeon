@@ -2,6 +2,18 @@
 
 ## 2026-07-27
 
+- Tags: audio, transitions, audit:S24, source-fidelity, tests
+- Descend-sting parity with upstream `GameScene.create`: the sound now plays
+  only on first arrival at a new floor (freshly generated level entered via
+  descend or fall). Removed `FloorTransitionCoordinator`'s plays on descend
+  (double-play with LoadingScene) and ascend (upstream has no ascend sound —
+  the old backlog idea of registering an "ascend" cue was wrong vs source).
+  `LoadingScene.should_play_descend_sfx(transition_type, reused, is_continue)`
+  gates the single remaining play; backtracking to cached floors and
+  continuing a save are silent. `test_descend_sfx_gate.gd`. Bonus finding
+  logged to backlog: `deepest_floor` stat is never recorded (WndHeroInfo
+  always shows 0).
+
 - Tags: heaps, sprites, audit:S25, source-fidelity, tests
 - Heap sprites now re-render when the top item at a cell changes, matching
   upstream `Heap.updateImage()`: `refresh_item_sprites` tracks the rendered
