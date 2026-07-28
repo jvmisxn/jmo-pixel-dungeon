@@ -2,6 +2,24 @@
 
 ## 2026-07-27
 
+- Tags: scrolls, items, source-fidelity, audit:S15, tests
+- `ScrollTransmutation` no-HUD fallback now actually transmutes: it routes
+  the first eligible backpack item through the static
+  `WndTransmute.transmute_item`, transfers upgrade level, identifies the
+  result, swaps it into the backpack, and logs the real
+  "shimmers and transforms into" message (previously it only called
+  `identify()` and still claimed the item transformed). Fizzle/no-eligible
+  paths keep their warnings. New `test_transmutation_fallback.gd` registered
+  in `run_tests.gd`.
+- Talent-foundation audit for the plan queue: every registered class and
+  subclass talent id in `talent_data.gd` is referenced by live gameplay code
+  except the intentionally inert `_make_inert` slots (Duelist
+  aggressive_barrier/weapon_recharging, Champion, Monk), which are blocked
+  on the unported Duelist weapon-ability/charge system — that system is the
+  real remaining talent milestone, not more per-talent wiring.
+
+## 2026-07-27
+
 - Tags: chasm, buffs, movement, source-fidelity, audit:S09, tests
 - Levitating/flying chars can now cross chasms (the last voluntary-movement
   S09 gap). Upstream: chasm is AVOID terrain — `Char.flying` makes avoid

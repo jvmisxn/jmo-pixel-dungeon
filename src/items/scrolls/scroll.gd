@@ -768,12 +768,27 @@ class ScrollTransmutation extends Scroll:
 		if transmutable.size() > 0:
 			var chosen: Variant = transmutable[0]
 			var old_name: String = chosen.get_display_name() if chosen.has_method("get_display_name") else "item"
-			if chosen.has_method("identify"):
-				chosen.identify()
+			var wnd_script: GDScript = load("res://src/ui/windows/wnd_transmute.gd") as GDScript
+			var result: Variant = null
+			if wnd_script != null and wnd_script.has_method("transmute_item"):
+				result = wnd_script.call("transmute_item", chosen)
+			if result == null:
+				if MessageLog:
+					MessageLog.add_warning("The transmutation fizzles... nothing happens.")
+				return
+			if result.get("level") != null:
+				result.level = int(ConstantsData.get_prop(chosen, "level", 0))
+			if result.has_method("identify"):
+				result.identify()
+			hero.belongings.remove_item(chosen)
+			hero.belongings.add_item(result)
+			var result_name: String = result.get_display_name() if result.has_method("get_display_name") else "item"
 			if EventBus:
-				EventBus.item_used.emit("transmutation_target:" + old_name)
+				EventBus.item_used.emit("transmutation")
+			if GameManager:
+				GameManager.record_stat("items_transmuted")
 			if MessageLog:
-				MessageLog.add_positive("The %s shimmers and transforms!" % old_name)
+				MessageLog.add_positive("Your %s shimmers and transforms into a %s!" % [old_name, result_name])
 		else:
 			if MessageLog:
 				MessageLog.add_warning("You have nothing that can be transmuted.")
