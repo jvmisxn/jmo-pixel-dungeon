@@ -515,6 +515,12 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 		if MessageLog:
 			MessageLog.add_warning("Your weapon can't reach that target.")
 		return
+	# Spike only works at reach, never adjacent (upstream Spear.spikeAbility
+	# refuses when Dungeon.level.adjacent(hero.pos, enemy.pos)).
+	if weapon.ability_kind() == "spike" and distance_to(enemy.pos) <= 1:
+		if MessageLog:
+			MessageLog.add_warning("That target is too close to spike.")
+		return
 	last_visible_action = "attack"
 	last_visible_target_pos = enemy.pos
 	if enemy is Mimic and (enemy as Mimic).disguised:
@@ -527,6 +533,7 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	if ability_kind == "heavy_blow" and enemy is Mob \
 			and not (enemy as Mob).is_surprised_by(self):
 		dmg_boost = 0
+	var enemy_pos_before: int = enemy.pos
 	attack(enemy, 1.0, float(dmg_boost), 1.0e9)
 	if has_buff("Invisibility"):
 		var invis: Node = get_buff("Invisibility")
@@ -537,6 +544,13 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 		# surviving target; kills have no follow-up window.
 		if enemy.is_alive:
 			enemy.add_buff(Daze.new())
+		_ability_spend = _get_attack_delay()
+	elif ability_kind == "spike":
+		# Upstream Spear.spikeAbility knocks a surviving target back one cell
+		# (unless something already moved it) and always costs the attack
+		# delay; kills open no free-recast window.
+		if enemy.is_alive and enemy.pos == enemy_pos_before:
+			KnockBack.throw_char(enemy, pos, 1, level)
 		_ability_spend = _get_attack_delay()
 	else:
 		var tracker: Buff = get_buff("CleaveTracker")
