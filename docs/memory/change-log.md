@@ -2,6 +2,19 @@
 
 ## 2026-07-27
 
+- Tags: heaps, sprites, audit:S25, source-fidelity, tests
+- Heap sprites now re-render when the top item at a cell changes, matching
+  upstream `Heap.updateImage()`: `refresh_item_sprites` tracks the rendered
+  item's instance id in sprite meta (`heap_item_id`) and calls
+  `setup_from_item` on the existing sprite when it differs (e.g. picking one
+  of several stacked drops, or the top heap at a shared pos being removed).
+  Previously the pos-keyed skip left the old icon on screen. New
+  `test_heap_top_item_icon.gd` (stub scene; re-render, no-op on unchanged,
+  shared-pos uncover) registered in `run_tests.gd`. Full suite green
+  (4987 checks).
+
+## 2026-07-27
+
 - Tags: transitions, victory, amulet, audit:S24, source-fidelity, tests
 - Depth-1 ascent now matches upstream Hero.actAscend: with the Amulet of
   Yendor in any party member's backpack (`party_has_amulet`, co-op
