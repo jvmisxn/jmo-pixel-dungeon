@@ -501,6 +501,9 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 		if MessageLog:
 			MessageLog.add_warning("Your weapon doesn't have enough charge for that ability.")
 		return
+	if weapon.ability_kind() == "guard":
+		_do_guard_ability(weapon, charge_use)
+		return
 	if weapon.ability_kind() == "sneak":
 		_do_sneak_ability(weapon, target_pos, charge_use)
 		return
@@ -644,6 +647,26 @@ func _do_lunge_ability(weapon: MeleeWeapon, target_pos: int, charge_use: float) 
 		if MessageLog:
 			MessageLog.add_warning("Your lunge found no target.")
 		_ability_spend = 1.0 / get_speed()
+	_patient_strike_ready = false
+	_followup_strike_ready = false
+
+## Shield-family Guard (upstream RoundShield.guardAbility): enter a guard
+## stance that blocks all incoming attacks for the family duration
+## (RoundShield 5+lvl, Greatshield 3+lvl turns), spending one turn. Re-casts
+## prolong the stance and reset the blocked marker.
+func _do_guard_ability(weapon: MeleeWeapon, charge_use: float) -> void:
+	weapon.before_ability_used(self, charge_use)
+	var existing: Variant = get_buff("GuardTracker")
+	if existing is GuardTracker:
+		(existing as GuardTracker).postpone(float(weapon.guard_duration()))
+		(existing as GuardTracker).has_blocked = false
+	else:
+		var guard: GuardTracker = GuardTracker.new()
+		guard.set_duration(float(weapon.guard_duration()))
+		add_buff(guard)
+	if MessageLog:
+		MessageLog.add("You raise your shield into a guard stance.")
+	_ability_spend = 1.0
 	_patient_strike_ready = false
 	_followup_strike_ready = false
 
