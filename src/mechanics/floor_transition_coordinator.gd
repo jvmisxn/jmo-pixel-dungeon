@@ -35,8 +35,8 @@ static func handle_descend(scene: Variant) -> void:
 		return
 	if MessageLog:
 		MessageLog.add("You descend deeper into the dungeon...")
-	if AudioManager:
-		AudioManager.play_sfx("descend")
+	# Descend sting is played by LoadingScene only on first arrival at a new
+	# floor (upstream GameScene.create), not here — avoids a double play.
 	notify_party_floor_change(scene)
 	var new_depth: int = GameManager.descend()
 	if new_depth < 0:
@@ -106,8 +106,8 @@ static func handle_ascend(scene: Variant) -> void:
 		return
 	if MessageLog:
 		MessageLog.add("You ascend the staircase...")
-	if AudioManager:
-		AudioManager.play_sfx("descend")
+	# Upstream plays no stairs sound on ascent (GameScene.create only plays
+	# Assets.Sounds.DESCEND when arriving at a new deepest floor).
 	notify_party_floor_change(scene)
 	var new_depth: int = GameManager.ascend()
 	if new_depth < 0:
