@@ -504,6 +504,9 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	if weapon.ability_kind() == "guard":
 		_do_guard_ability(weapon, charge_use)
 		return
+	if weapon.ability_kind() == "sword_dance":
+		_do_sword_dance_ability(weapon, charge_use)
+		return
 	if weapon.ability_kind() == "sneak":
 		_do_sneak_ability(weapon, target_pos, charge_use)
 		return
@@ -681,6 +684,24 @@ func _do_guard_ability(weapon: MeleeWeapon, charge_use: float) -> void:
 	if MessageLog:
 		MessageLog.add("You raise your shield into a guard stance.")
 	_ability_spend = 1.0
+	_patient_strike_ready = false
+	_followup_strike_ready = false
+
+## Scimitar Sword Dance (upstream Scimitar.duelistAbility): prolong the
+## SwordDance stance for 3+lvl turns (one fewer than the displayed 4+lvl
+## because the ability is instant), granting 1.5x accuracy and +0.6 attack
+## speed. Using the ability spends no time (upstream hero.next()).
+func _do_sword_dance_ability(weapon: MeleeWeapon, charge_use: float) -> void:
+	weapon.before_ability_used(self, charge_use)
+	var existing: Variant = get_buff("SwordDance")
+	if existing is SwordDance:
+		(existing as SwordDance).postpone(float(weapon.sword_dance_turns()))
+	else:
+		var dance: SwordDance = SwordDance.new()
+		dance.set_duration(float(weapon.sword_dance_turns()))
+		add_buff(dance)
+	if MessageLog:
+		MessageLog.add("You begin a sword dance!")
 	_patient_strike_ready = false
 	_followup_strike_ready = false
 
