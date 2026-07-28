@@ -95,6 +95,10 @@ func _apply_class_buffs() -> void:
 	add_buff(regen)
 	var hunger: Hunger = Hunger.new()
 	add_buff(hunger)
+	# Duelist starts with the weapon-ability charge pool
+	# (upstream HeroClass.initHero: new MeleeWeapon.Charger().attachTo(hero)).
+	if hero_class == ConstantsData.HeroClass.DUELIST:
+		add_buff(WeaponCharger.new())
 
 ## Give the hero starting items based on their class.
 ## Called after init_class() during new game setup.
@@ -1706,6 +1710,10 @@ func deserialize(data: Dictionary) -> void:
 	# Strongman's live strength bonus is not serialized (see StrongmanBuff);
 	# rebuild it on top of the restored base stats.
 	update_strongman_bonus()
+	# Saves from before the WeaponCharger buff existed lack it; a Duelist
+	# must always carry the charge pool, so attach one if missing.
+	if hero_class == ConstantsData.HeroClass.DUELIST and not has_buff("WeaponCharger"):
+		add_buff(WeaponCharger.new())
 
 # ---------------------------------------------------------------------------
 # Damage & Death Overrides
