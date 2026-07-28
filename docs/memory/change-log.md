@@ -3,6 +3,20 @@
 ## 2026-07-28
 
 - Tags: duelist, weapon-abilities, source-fidelity, tests
+- Sneak weapon-ability family shipped (upstream Dagger.sneakAbility, current
+  master): Dagger/Dirk/AssassinsBlade expose a "Sneak" Duelist ability —
+  blink to an empty, visible, passable cell within range 5/4/3 (uniform
+  8-way BFS step distance like upstream PathFinder.buildDistanceMap), spend
+  one charge, gain Invisibility for (2+lvl)-1 turns (postponed, never
+  shortened, if already invisible), and land on the tile normally
+  (`_check_terrain_effects`: traps/water/grass). Instant (0 time); refusals
+  (rooted/out-of-range/blocked/occupied/no-charge) cost nothing. WndItem
+  targeting now uses `ability_target_range()` and a sneak-specific prompt.
+  New `test_weapon_ability_sneak.gd`; suite green (5107 checks).
+  [ENGINE]: in-game Duelist dagger check wanted (blink visual, invis timing,
+  landing on a trap/door tile).
+
+- Tags: duelist, weapon-abilities, source-fidelity, tests
 - Heavy Blow weapon-ability family shipped (upstream Mace.heavyBlowAbility,
   current master): Cudgel/HandAxe/Mace/BattleAxe/WarHammer now expose a
   "Heavy Blow" Duelist ability through the existing `weapon_ability` path.

@@ -281,6 +281,12 @@ const HEAVY_BLOW_BASE_BOOST: Dictionary = {
 	"battle_axe": 5, "war_hammer": 6,
 }
 
+## Dagger-family Sneak blink range (upstream Dagger.sneakAbility maxDist:
+## Dagger 5, Dirk 4, AssassinsBlade 3).
+const SNEAK_MAX_DIST: Dictionary = {
+	"dagger": 5, "dirk": 4, "assassins_blade": 3,
+}
+
 func has_duelist_ability() -> bool:
 	return ability_kind() != ""
 
@@ -290,6 +296,8 @@ func ability_kind() -> String:
 		return "cleave"
 	if HEAVY_BLOW_BASE_BOOST.has(item_id):
 		return "heavy_blow"
+	if SNEAK_MAX_DIST.has(item_id):
+		return "sneak"
 	return ""
 
 func ability_name() -> String:
@@ -298,7 +306,21 @@ func ability_name() -> String:
 			return "Cleave"
 		"heavy_blow":
 			return "Heavy Blow"
+		"sneak":
+			return "Sneak"
 	return ""
+
+## Targeting range for the ability prompt: sneak blinks up to its family
+## range; strike abilities target within weapon reach.
+func ability_target_range() -> int:
+	if ability_kind() == "sneak":
+		return int(SNEAK_MAX_DIST.get(item_id, 0))
+	return get_reach()
+
+## Sneak invisibility duration (upstream Dagger.duelistAbility 2+buffedLvl;
+## the ability is instant, so the buff itself is applied one turn shorter).
+func sneak_invis_turns() -> int:
+	return 2 + maxi(0, level)
 
 ## Charge cost (upstream baseChargeUse): cleave is free while the
 ## CleaveTracker window from an ability kill is open.

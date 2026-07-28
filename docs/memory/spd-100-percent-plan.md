@@ -138,8 +138,10 @@ and pitfall/chasm landing parity including fallen-item heap drops
    duelist_aggressive_barrier is live (`test_weapon_ability_cleave.gd`).
    2026-07-28: heavy-blow family shipped (Cudgel/HandAxe/Mace/BattleAxe/
    WarHammer, `test_weapon_ability_heavy_blow.gd`; Greataxe has a distinct
-   upstream ability, still unported). Next talent milestone = remaining
-   weapon families (sneak, lunge, guard, spike, etc.), then the
+   upstream ability, still unported). 2026-07-28: sneak family shipped
+   (Dagger/Dirk/AssassinsBlade blink + invisibility,
+   `test_weapon_ability_sneak.gd`). Next talent milestone = remaining
+   weapon families (lunge, guard, spike, combo strike, etc.), then the
    Champion/Monk talents.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
