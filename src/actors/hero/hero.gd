@@ -501,6 +501,9 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 		if MessageLog:
 			MessageLog.add_warning("Your weapon doesn't have enough charge for that ability.")
 		return
+	if weapon.ability_kind() == "sneak":
+		_do_sneak_ability(weapon, target_pos, charge_use)
+		return
 	var char_at: Variant = level.find_char_at(target_pos)
 	if not (char_at is Char) or char_at == self \
 			or target_pos >= level.visible.size() or not level.visible[target_pos]:
@@ -548,6 +551,70 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 				remove_buff(tracker)
 	_patient_strike_ready = false
 	_followup_strike_ready = false
+
+## Dagger-family Sneak (upstream Dagger.sneakAbility): blink to an empty,
+## visible cell reachable within the family range, gain Invisibility for
+## (2+lvl)-1 turns (one fewer because the ability is instant), and land on
+## the tile normally (traps, water, grass). Refusals cost nothing; the whole
+## ability is instant so _ability_spend stays 0.
+func _do_sneak_ability(weapon: MeleeWeapon, target_pos: int, charge_use: float) -> void:
+	if has_buff("Rooted"):
+		if MessageLog:
+			MessageLog.add_warning("You can't move while rooted!")
+		return
+	if target_pos >= level.visible.size() or not level.visible[target_pos] \
+			or _sneak_step_distance(target_pos) > weapon.ability_target_range():
+		if MessageLog:
+			MessageLog.add_warning("You can't reach that position.")
+		return
+	if level.find_char_at(target_pos) != null:
+		if MessageLog:
+			MessageLog.add_warning("You can't sneak into an occupied cell.")
+		return
+	weapon.before_ability_used(self, charge_use)
+	var invis_turns: float = float(weapon.sneak_invis_turns() - 1)
+	var invis: Variant = get_buff("Invisibility")
+	if invis is Invisibility:
+		(invis as Invisibility).postpone(invis_turns)
+	else:
+		var new_invis: Invisibility = Invisibility.new()
+		new_invis.set_duration(invis_turns)
+		add_buff(new_invis)
+	pos = target_pos
+	last_visible_action = "move"
+	last_visible_target_pos = target_pos
+	if EventBus:
+		EventBus.hero_moved_detailed.emit(self, target_pos)
+		var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+		if focused_hero == self:
+			EventBus.hero_moved.emit(target_pos)
+	_check_terrain_effects()
+	_patient_strike_ready = false
+	_followup_strike_ready = false
+
+## Uniform-cost 8-way BFS step distance from the hero over passable tiles
+## (upstream PathFinder.buildDistanceMap used by Dagger.sneakAbility counts
+## diagonal steps as 1). Returns a large value when unreachable.
+func _sneak_step_distance(target_pos: int) -> int:
+	if target_pos == pos:
+		return 0
+	if target_pos < 0 or target_pos >= level.passable.size() \
+			or not level.passable[target_pos]:
+		return 9999
+	var dist: Dictionary = {pos: 0}
+	var queue: Array[int] = [pos]
+	var head: int = 0
+	while head < queue.size():
+		var current: int = queue[head]
+		head += 1
+		for neighbor: int in Pathfinder.get_neighbors(current, ConstantsData.WIDTH, level.passable.size()):
+			if dist.has(neighbor) or not level.passable[neighbor]:
+				continue
+			dist[neighbor] = int(dist[current]) + 1
+			if neighbor == target_pos:
+				return int(dist[neighbor])
+			queue.append(neighbor)
+	return 9999
 
 func _do_search() -> void:
 	if level == null:

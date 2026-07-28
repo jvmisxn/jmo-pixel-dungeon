@@ -315,17 +315,22 @@ func _execute_throw_callback(target_cell: int) -> void:
 	if EventBus and EventBus.has_signal("request_hero_action"):
 		EventBus.request_hero_action.emit({"type": "throw_item", "item": _item, "target_pos": target_cell})
 
-## Duelist weapon ability: select an enemy within weapon reach, then submit
-## the weapon_ability action (upstream MeleeWeapon AC_ABILITY targeting).
+## Duelist weapon ability: select a target within the ability's range, then
+## submit the weapon_ability action (upstream MeleeWeapon AC_ABILITY
+## targeting). Strike abilities target an enemy in reach; sneak targets an
+## empty cell in its blink range.
 func _action_weapon_ability() -> void:
 	var weapon: MeleeWeapon = _item as MeleeWeapon
 	if weapon == null:
 		close_window()
 		return
 	if MessageLog:
-		MessageLog.add("Choose an enemy to strike.")
+		if weapon.ability_kind() == "sneak":
+			MessageLog.add("Choose a place to sneak to.")
+		else:
+			MessageLog.add("Choose an enemy to strike.")
 	if EventBus:
-		EventBus.enter_targeting.emit(weapon, weapon.get_reach(), _execute_weapon_ability_callback)
+		EventBus.enter_targeting.emit(weapon, weapon.ability_target_range(), _execute_weapon_ability_callback)
 	close_window()
 
 func _execute_weapon_ability_callback(target_cell: int) -> void:
