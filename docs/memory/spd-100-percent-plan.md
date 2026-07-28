@@ -142,9 +142,11 @@ and pitfall/chasm landing parity including fallen-item heap drops
    (Dagger/Dirk/AssassinsBlade blink + invisibility,
    `test_weapon_ability_sneak.gd`). 2026-07-28: spike family shipped
    (Spear/Glaive reach-only strike + one-cell knockback,
-   `test_weapon_ability_spike.gd`). Next talent milestone = remaining
-   weapon families (lunge, guard, combo strike, etc.), then the
-   Champion/Monk talents.
+   `test_weapon_ability_spike.gd`). 2026-07-28: Rapier Lunge shipped
+   (dash + boosted strike at reach+1, out-of-FOV waste case,
+   `test_weapon_ability_lunge.gd`). Next talent milestone = remaining
+   weapon families (guard, combo strike, sword dance, defensive stance,
+   etc.), then the Champion/Monk talents.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +

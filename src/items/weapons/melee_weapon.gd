@@ -293,6 +293,12 @@ const SPIKE_BOOST: Dictionary = {
 	"spear": [9, 2.0], "glaive": [12, 2.5],
 }
 
+## Lunge flat damage boost [base, per-level factor] (upstream
+## Rapier.duelistAbility dmgBoost: 5 + round(1.5*lvl)).
+const LUNGE_BOOST: Dictionary = {
+	"rapier": [5, 1.5],
+}
+
 func has_duelist_ability() -> bool:
 	return ability_kind() != ""
 
@@ -306,6 +312,8 @@ func ability_kind() -> String:
 		return "sneak"
 	if SPIKE_BOOST.has(item_id):
 		return "spike"
+	if LUNGE_BOOST.has(item_id):
+		return "lunge"
 	return ""
 
 func ability_name() -> String:
@@ -318,6 +326,8 @@ func ability_name() -> String:
 			return "Sneak"
 		"spike":
 			return "Spike"
+		"lunge":
+			return "Lunge"
 	return ""
 
 ## Targeting range for the ability prompt: sneak blinks up to its family
@@ -325,6 +335,8 @@ func ability_name() -> String:
 func ability_target_range() -> int:
 	if ability_kind() == "sneak":
 		return int(SNEAK_MAX_DIST.get(item_id, 0))
+	if ability_kind() == "lunge":
+		return get_reach() + 1
 	return get_reach()
 
 ## Sneak invisibility duration (upstream Dagger.duelistAbility 2+buffedLvl;
@@ -353,6 +365,10 @@ func ability_damage_boost() -> int:
 			var spike: Array = SPIKE_BOOST.get(item_id, [0, 0.0])
 			return int(spike[0]) \
 					+ int(roundf(float(spike[1]) * float(maxi(0, level))))
+		"lunge":
+			var lunge: Array = LUNGE_BOOST.get(item_id, [0, 0.0])
+			return int(lunge[0]) \
+					+ int(roundf(float(lunge[1]) * float(maxi(0, level))))
 	return 0
 
 ## Upstream MeleeWeapon.beforeAbilityUsed: spend charges from the charger

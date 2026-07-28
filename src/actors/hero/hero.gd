@@ -504,6 +504,9 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	if weapon.ability_kind() == "sneak":
 		_do_sneak_ability(weapon, target_pos, charge_use)
 		return
+	if weapon.ability_kind() == "lunge":
+		_do_lunge_ability(weapon, target_pos, charge_use)
+		return
 	var char_at: Variant = level.find_char_at(target_pos)
 	if not (char_at is Char) or char_at == self \
 			or target_pos >= level.visible.size() or not level.visible[target_pos]:
@@ -563,6 +566,84 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 			_ability_spend = _get_attack_delay()
 			if tracker != null:
 				remove_buff(tracker)
+	_patient_strike_ready = false
+	_followup_strike_ready = false
+
+## Rapier Lunge (upstream Rapier.lungeAbility): dash to the open neighbor
+## cell nearest the target (true distance), then land a guaranteed strike
+## with the flat boost, costing the attack delay. Only works on targets
+## exactly one cell beyond weapon reach; rooted heroes, too-close/too-far
+## targets, and blocked dash cells refuse for free. The Duelist may lunge
+## at a non-visible cell: the dash happens, and if no enemy is attackable
+## afterwards the charge and a move turn are spent without an ability use.
+func _do_lunge_ability(weapon: MeleeWeapon, target_pos: int, charge_use: float) -> void:
+	var char_at: Variant = level.find_char_at(target_pos)
+	var enemy: Char = char_at as Char
+	if target_pos < level.visible.size() and level.visible[target_pos] \
+			and (enemy == null or enemy == self or not enemy.is_alive):
+		if MessageLog:
+			MessageLog.add_warning("You can't target that.")
+		return
+	if has_buff("Rooted"):
+		if MessageLog:
+			MessageLog.add_warning("You can't move while rooted!")
+		return
+	var dist: int = distance_to(target_pos)
+	if dist < 2 or dist - 1 > weapon.get_reach():
+		if MessageLog:
+			MessageLog.add_warning("Your weapon can't reach that target.")
+		return
+	var lunge_cell: int = -1
+	var best_true_dist: float = 1.0e9
+	for neighbor: int in Pathfinder.get_neighbors(pos, ConstantsData.WIDTH, level.passable.size()):
+		if not level.passable[neighbor] or level.find_char_at(neighbor) != null:
+			continue
+		if Ballistica.distance(neighbor, target_pos) > weapon.get_reach():
+			continue
+		var nx: int = ConstantsData.pos_to_x(neighbor) - ConstantsData.pos_to_x(target_pos)
+		var ny: int = ConstantsData.pos_to_y(neighbor) - ConstantsData.pos_to_y(target_pos)
+		var true_dist: float = sqrt(float(nx * nx + ny * ny))
+		if lunge_cell == -1 or true_dist < best_true_dist:
+			lunge_cell = neighbor
+			best_true_dist = true_dist
+	if lunge_cell == -1:
+		if MessageLog:
+			MessageLog.add_warning("Your weapon can't reach that target.")
+		return
+	pos = lunge_cell
+	last_visible_action = "move"
+	last_visible_target_pos = lunge_cell
+	if EventBus:
+		EventBus.hero_moved_detailed.emit(self, lunge_cell)
+		var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+		if focused_hero == self:
+			EventBus.hero_moved.emit(lunge_cell)
+	_check_terrain_effects()
+	if enemy != null and enemy.is_alive and enemy != self \
+			and distance_to(enemy.pos) <= weapon.get_reach():
+		last_visible_action = "attack"
+		last_visible_target_pos = enemy.pos
+		if enemy is Mimic and (enemy as Mimic).disguised:
+			(enemy as Mimic).reveal()
+		weapon.before_ability_used(self, charge_use)
+		attack(enemy, 1.0, float(weapon.ability_damage_boost()), 1.0e9)
+		if has_buff("Invisibility"):
+			var invis: Node = get_buff("Invisibility")
+			if invis is Invisibility:
+				(invis as Invisibility).dispel()
+		_ability_spend = _get_attack_delay()
+	else:
+		# Upstream: spends the charge but otherwise does not count as an
+		# ability use; costs a movement turn.
+		var charger: WeaponCharger = get_buff("WeaponCharger") as WeaponCharger
+		if charger != null:
+			charger.partial_charge -= 1.0
+			while charger.partial_charge < 0.0 and charger.charges > 0:
+				charger.charges -= 1
+				charger.partial_charge += 1.0
+		if MessageLog:
+			MessageLog.add_warning("Your lunge found no target.")
+		_ability_spend = 1.0 / get_speed()
 	_patient_strike_ready = false
 	_followup_strike_ready = false
 
