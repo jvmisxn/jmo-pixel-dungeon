@@ -3,6 +3,22 @@
 ## 2026-07-28
 
 - Tags: duelist, weapon-abilities, source-fidelity, tests
+- Defensive Stance ability shipped (upstream Quarterstaff.duelistAbility +
+  Quarterstaff.DefensiveStance FlavourBuff, current master): Quarterstaff
+  exposes a self-targeted "Defensive Stance" Duelist ability — spend one
+  charge (instant, no time cost, upstream hero.next()) to prolong the new
+  `DefensiveStance` buff for 3+lvl turns (one fewer than the displayed
+  4+lvl because casting is instant). While active the hero's evasion is
+  tripled via the `evasion_modifier` hook (upstream Hero.defenseSkill
+  `evasion *= 3`). Re-casts prolong to the max remaining duration.
+  Self-target routing added next to Guard/Sword Dance in `wnd_item.gd`.
+  New `test_weapon_ability_defensive_stance.gd`; the stale "Quarterstaff
+  has no ported ability yet" check in the cleave test now points at
+  Greataxe. Suite green (5227 checks). [ENGINE]: in-game Quarterstaff
+  check wanted (buff icon, evasion feel vs upstream). Remaining
+  ability-less roster: flail, runic_blade, greataxe.
+
+- Tags: duelist, weapon-abilities, source-fidelity, tests
 - Sword Dance ability shipped (upstream Scimitar.duelistAbility +
   Scimitar.SwordDance FlavourBuff, current master): Scimitar exposes a
   self-targeted "Sword Dance" Duelist ability — spend one charge

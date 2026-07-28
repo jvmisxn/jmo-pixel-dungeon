@@ -312,6 +312,13 @@ const SWORD_DANCE_DURATION: Dictionary = {
 	"scimitar": 3,
 }
 
+## Defensive Stance base prolong turns (upstream Quarterstaff.duelistAbility
+## prolongs DefensiveStance for 3+buffedLvl; one fewer than the displayed
+## 4+lvl because using the ability is instant).
+const DEFENSIVE_STANCE_DURATION: Dictionary = {
+	"quarterstaff": 3,
+}
+
 ## Fist-family Combo Strike per-recent-hit damage boost (upstream
 ## Sai.comboStrikeAbility boostPerHit: Gloves 3+buffedLvl, Sai 4+buffedLvl;
 ## Gauntlet is not in this port yet).
@@ -340,6 +347,8 @@ func ability_kind() -> String:
 		return "combo_strike"
 	if SWORD_DANCE_DURATION.has(item_id):
 		return "sword_dance"
+	if DEFENSIVE_STANCE_DURATION.has(item_id):
+		return "defensive_stance"
 	return ""
 
 func ability_name() -> String:
@@ -360,6 +369,8 @@ func ability_name() -> String:
 			return "Combo Strike"
 		"sword_dance":
 			return "Sword Dance"
+		"defensive_stance":
+			return "Defensive Stance"
 	return ""
 
 ## Targeting range for the ability prompt: sneak blinks up to its family
@@ -385,6 +396,11 @@ func guard_duration() -> int:
 ## the ability itself is instant).
 func sword_dance_turns() -> int:
 	return int(SWORD_DANCE_DURATION.get(item_id, 0)) + maxi(0, level)
+
+## Defensive Stance prolong turns (upstream Quarterstaff prolongs
+## 3+buffedLvl since the ability itself is instant).
+func defensive_stance_turns() -> int:
+	return int(DEFENSIVE_STANCE_DURATION.get(item_id, 0)) + maxi(0, level)
 
 ## Charge cost (upstream baseChargeUse): cleave is free while the
 ## CleaveTracker window from an ability kill is open.
