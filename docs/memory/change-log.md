@@ -2,6 +2,21 @@
 
 ## 2026-07-28
 
+- Tags: duelist, weapon-abilities, source-fidelity, tests
+- Heavy Blow weapon-ability family shipped (upstream Mace.heavyBlowAbility,
+  current master): Cudgel/HandAxe/Mace/BattleAxe/WarHammer now expose a
+  "Heavy Blow" Duelist ability through the existing `weapon_ability` path.
+  Guaranteed hit with flat boost base 3/4/5/5/6 + round(1.5*level) — but
+  upstream master gates the bonus: an aware (non-surprised) mob takes only
+  a normal unboosted hit. A surviving target is Dazed (5 turns); the strike
+  always costs attack delay (kills grant no free-recast window — that is
+  cleave-only). `MeleeWeapon.ability_kind()` now routes families; Greataxe
+  deliberately excluded (distinct upstream ability, unported). New
+  `test_weapon_ability_heavy_blow.gd`; cleave test's "mace has no ability"
+  probe moved to rapier. Full suite green (5083 checks).
+  [ENGINE]: in-game Duelist mace/axe check wanted (button, daze visual,
+  surprise-only bonus feel).
+
 - Tags: duelist, talents, weapon-abilities, source-fidelity, tests
 - Duelist weapon-ability execution path shipped, with sword-family Cleave as
   the first ability (upstream MeleeWeapon AC_ABILITY + Sword.cleaveAbility):

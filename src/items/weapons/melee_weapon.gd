@@ -272,12 +272,32 @@ const CLEAVE_BASE_BOOST: Dictionary = {
 	"longsword": 6, "greatsword": 7,
 }
 
+## Blunt/axe-family Heavy Blow flat damage boost before level scaling
+## (upstream Cudgel 3, HandAxe 4, Mace 5, BattleAxe 5, WarHammer 6, each
+## +1.5*lvl rounded; boost is dmgBoost passed to Mace.heavyBlowAbility).
+## Greataxe has its own distinct ability upstream and is not in this family.
+const HEAVY_BLOW_BASE_BOOST: Dictionary = {
+	"cudgel": 3, "hand_axe": 4, "mace": 5,
+	"battle_axe": 5, "war_hammer": 6,
+}
+
 func has_duelist_ability() -> bool:
-	return CLEAVE_BASE_BOOST.has(item_id)
+	return ability_kind() != ""
+
+## Which ported ability family this weapon belongs to ("" = none yet).
+func ability_kind() -> String:
+	if CLEAVE_BASE_BOOST.has(item_id):
+		return "cleave"
+	if HEAVY_BLOW_BASE_BOOST.has(item_id):
+		return "heavy_blow"
+	return ""
 
 func ability_name() -> String:
-	if CLEAVE_BASE_BOOST.has(item_id):
-		return "Cleave"
+	match ability_kind():
+		"cleave":
+			return "Cleave"
+		"heavy_blow":
+			return "Heavy Blow"
 	return ""
 
 ## Charge cost (upstream baseChargeUse): cleave is free while the
@@ -288,9 +308,16 @@ func ability_charge_use(hero: Variant) -> float:
 		return 0.0
 	return 1.0
 
-## Flat ability damage bonus (cleave dmgBoost = family base + weapon level).
+## Flat ability damage bonus (cleave dmgBoost = family base + weapon level;
+## heavy blow dmgBoost = family base + round(1.5 * weapon level)).
 func ability_damage_boost() -> int:
-	return int(CLEAVE_BASE_BOOST.get(item_id, 0)) + maxi(0, level)
+	match ability_kind():
+		"cleave":
+			return int(CLEAVE_BASE_BOOST.get(item_id, 0)) + maxi(0, level)
+		"heavy_blow":
+			return int(HEAVY_BLOW_BASE_BOOST.get(item_id, 0)) \
+					+ int(roundf(1.5 * float(maxi(0, level))))
+	return 0
 
 ## Upstream MeleeWeapon.beforeAbilityUsed: spend charges from the charger
 ## pool, then the Aggressive Barrier talent shields 1+2*points when the
