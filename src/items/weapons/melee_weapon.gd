@@ -305,6 +305,13 @@ const GUARD_DURATION: Dictionary = {
 	"round_shield": 5, "greatshield": 3,
 }
 
+## Sword Dance stance base prolong turns (upstream Scimitar.duelistAbility
+## prolongs SwordDance for 3+buffedLvl; one fewer than the displayed 4+lvl
+## because using the ability is instant).
+const SWORD_DANCE_DURATION: Dictionary = {
+	"scimitar": 3,
+}
+
 ## Fist-family Combo Strike per-recent-hit damage boost (upstream
 ## Sai.comboStrikeAbility boostPerHit: Gloves 3+buffedLvl, Sai 4+buffedLvl;
 ## Gauntlet is not in this port yet).
@@ -331,6 +338,8 @@ func ability_kind() -> String:
 		return "guard"
 	if COMBO_STRIKE_BOOST.has(item_id):
 		return "combo_strike"
+	if SWORD_DANCE_DURATION.has(item_id):
+		return "sword_dance"
 	return ""
 
 func ability_name() -> String:
@@ -349,6 +358,8 @@ func ability_name() -> String:
 			return "Guard"
 		"combo_strike":
 			return "Combo Strike"
+		"sword_dance":
+			return "Sword Dance"
 	return ""
 
 ## Targeting range for the ability prompt: sneak blinks up to its family
@@ -369,6 +380,11 @@ func sneak_invis_turns() -> int:
 ## 3+buffedLvl turns of GuardTracker).
 func guard_duration() -> int:
 	return int(GUARD_DURATION.get(item_id, 0)) + maxi(0, level)
+
+## Sword Dance prolong turns (upstream Scimitar prolongs 3+buffedLvl since
+## the ability itself is instant).
+func sword_dance_turns() -> int:
+	return int(SWORD_DANCE_DURATION.get(item_id, 0)) + maxi(0, level)
 
 ## Charge cost (upstream baseChargeUse): cleave is free while the
 ## CleaveTracker window from an ability kill is open.

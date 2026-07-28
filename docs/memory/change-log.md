@@ -3,6 +3,23 @@
 ## 2026-07-28
 
 - Tags: duelist, weapon-abilities, source-fidelity, tests
+- Sword Dance ability shipped (upstream Scimitar.duelistAbility +
+  Scimitar.SwordDance FlavourBuff, current master): Scimitar exposes a
+  self-targeted "Sword Dance" Duelist ability — spend one charge
+  (instant, no time cost, upstream hero.next()) to prolong the new
+  `SwordDance` buff for 3+lvl turns (one fewer than the displayed 4+lvl
+  because casting is instant). While dancing the hero has 1.5x accuracy
+  (`modify_accuracy`) and +0.6 to the attack-speed multiplier: the
+  `modify_attack_delay` hook scales by f/(f+0.6) where f is the Ring of
+  Furor multiplier (1.0 without), so the combined result matches
+  upstream base/(furor+0.6) in any buff-hook order. Re-casts prolong to
+  the max remaining duration. Self-target routing added next to Guard in
+  `wnd_item.gd`. New `test_weapon_ability_dance.gd`; suite green
+  (5210 checks). [ENGINE]: in-game Scimitar check wanted (buff icon,
+  visible attack pacing while dancing). Remaining ability-less roster:
+  quarterstaff, flail, runic_blade, greataxe.
+
+- Tags: duelist, weapon-abilities, source-fidelity, tests
 - Combo Strike weapon-ability family shipped (upstream
   Sai.comboStrikeAbility + Sai.ComboStrikeTracker, current master):
   every Duelist hit on an enemy (melee or thrown, via `Hero.on_attack_hit`)
