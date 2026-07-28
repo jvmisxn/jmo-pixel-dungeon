@@ -2,6 +2,21 @@
 
 ## 2026-07-27
 
+- Tags: buffs, combat, source-fidelity, audit:S06, tests
+- Fire/Frost Imbue are now real in combat (they previously only ever attached
+  via Warden firebloom/icecap trample and their `proc()` was dead code; the
+  FireImbue proc would also have crashed on the missing `Burning.reignite()`).
+  Upstream parity per FireImbue.java/FrostImbue.java + Char.attack:521-522:
+  `Char.attack` calls both imbue `proc()`s right after `take_damage`
+  (any char with the buff, not just the hero); FireImbue proc = 50% chance
+  `Burning.reignite()` (new method, resets `left` to full 8); FrostImbue
+  proc = 3 turns of Chill (was an unwired 2); both durations 30 → upstream 50
+  (Warden trample boon `BASE_DURATION * 0.3` is now upstream's 15 turns);
+  `immunities()` (Fire→Burning, Frost→Chill+Frozen) + attachTo-parity dispel
+  of the matching debuffs on attach; FireImbue `on_turn` scorches GRASS under
+  the owner to EMBERS (upstream act()). `test_imbue_procs.gd`; closes both
+  audit:S06 imbue backlog items.
+
 - Tags: perf, fov, visibility, coordinators, audit:S25, tests, source-fidelity
 - Closed the audit:S25 P1 per-mob repaint gap: `on_mob_action` ran
   `update_fov` + `fog_of_war.update_visibility()` + full
