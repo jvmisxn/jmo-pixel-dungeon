@@ -2,6 +2,18 @@
 
 ## 2026-07-27
 
+- Tags: fog, sprites, visibility, audit:S25, tests
+- Fixed this-turn ground sprites flashing through fog: item/plant/armed-bomb
+  sprites spawned with default `visible = true` and `refresh_after_turn` ran
+  `_update_entity_visibility()` before the sprite-refresh calls, so a sprite
+  spawned in an unexplored cell rendered un-gated for one turn. Two guards:
+  new `SceneVisualCoordinator.spawned_sprite_visible` gates `visible` at all
+  three spawn sites by the same visible-or-visited rule the visibility pass
+  uses, and `SceneFeedbackCoordinator.refresh_after_turn` now spawns ground
+  sprites before the entity-visibility pass. New
+  `test_fog_spawn_sprite_gating.gd` (stub scene; spawn gating + call-order
+  regression) registered in `run_tests.gd`. Full suite green (4975 checks).
+
 - Tags: input, dead-code, cleanup, audit:S23
 - Deleted the ~187 lines of dead, unreachable input code in
   `game_scene.gd`: `_handle_cell_click`, `_handle_key_input`,

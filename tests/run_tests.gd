@@ -117,6 +117,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_generated_level_doors.gd",
 	"res://tests/cases/test_secret_room_placement.gd",
 	"res://tests/cases/test_mob_action_visibility_coalesce.gd",
+	"res://tests/cases/test_fog_spawn_sprite_gating.gd",
 	"res://tests/cases/test_tunnel_gated_breach.gd",
 	"res://tests/cases/test_mimic_loot.gd",
 	"res://tests/cases/test_fury_damage.gd",
