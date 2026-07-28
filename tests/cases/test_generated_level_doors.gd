@@ -89,10 +89,15 @@ func run(t: Object) -> void:
 				continue
 			var gated: bool = (room is CrystalVaultRoom or room is VaultRoom
 				or room is ArmoryRoom or room.type == Room.Type.SECRET)
-			if gated and room.in_bounds():
-				# Tunnel carving must never open extra wall cells on a
-				# gated room's border (audit:S08 breach fix). Out-of-bounds
-				# rooms are a separate placement bug and skipped here.
+			if gated:
+				# Every gated room that survives into level.rooms is now
+				# guaranteed placed and in bounds (LoopBuilder discards failed
+				# placements — audit:S08 secret-room fix), so no out-of-bounds
+				# skip is needed. Tunnel carving must never open extra wall
+				# cells on a gated room's border (audit:S08 breach fix).
+				t.check(room.in_bounds(),
+					"depth %d gated room is in bounds L=%d T=%d R=%d B=%d"
+						% [depth, room.left, room.top, room.right, room.bottom])
 				var breaches: Array[int] = _border_breaches(level, room)
 				t.check(breaches.is_empty(),
 					"depth %d gated room border intact (breaches: %s)" % [depth, str(breaches)])
@@ -102,12 +107,13 @@ func run(t: Object) -> void:
 			elif room is VaultRoom or room is ArmoryRoom:
 				t.check(_border_has_terrain(level, room, ConstantsData.Terrain.LOCKED_DOOR),
 					"depth %d vault/armory is sealed by a locked door" % depth)
-			elif room.type == Room.Type.SECRET and room.connected.size() > 0:
-				# Only connected secret rooms are asserted sealed: a secret
-				# room can still generate stranded/isolated — tracked as an
-				# open audit:S08 backlog item.
+			elif room.type == Room.Type.SECRET:
+				# Every placed secret room must be reachable behind a secret
+				# door — a tunnel-mouth secret door counts even when the room
+				# was attached as a neighbor (connected stays empty). Isolated
+				# secret rooms were the audit:S08 placement bug, now fixed.
 				t.check(_border_has_terrain(level, room, ConstantsData.Terrain.SECRET_DOOR),
-					"depth %d connected secret room is hidden behind a secret door" % depth)
+					"depth %d secret room is hidden behind a secret door" % depth)
 
 		_free_mobs(level)
 
