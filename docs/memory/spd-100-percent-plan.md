@@ -146,9 +146,11 @@ and pitfall/chasm landing parity including fallen-item heap drops
    (dash + boosted strike at reach+1, out-of-FOV waste case,
    `test_weapon_ability_lunge.gd`). 2026-07-28: Guard family shipped
    (RoundShield/Greatshield GuardTracker stance,
-   `test_weapon_ability_guard.gd`). Next talent milestone = remaining
-   weapon families (combo strike, sword dance, defensive stance, greataxe,
-   etc.), then the Champion/Monk talents.
+   `test_weapon_ability_guard.gd`). 2026-07-28: Combo Strike family
+   shipped (Gloves/Sai, ComboStrikeTracker fed by every Duelist hit,
+   `test_weapon_ability_combo.gd`; Gauntlet not in roster). Next talent
+   milestone = remaining weapon families (sword dance, defensive stance,
+   greataxe, etc.), then the Champion/Monk talents.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +

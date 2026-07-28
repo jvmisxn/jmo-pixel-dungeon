@@ -305,6 +305,13 @@ const GUARD_DURATION: Dictionary = {
 	"round_shield": 5, "greatshield": 3,
 }
 
+## Fist-family Combo Strike per-recent-hit damage boost (upstream
+## Sai.comboStrikeAbility boostPerHit: Gloves 3+buffedLvl, Sai 4+buffedLvl;
+## Gauntlet is not in this port yet).
+const COMBO_STRIKE_BOOST: Dictionary = {
+	"gloves": 3, "sai": 4,
+}
+
 func has_duelist_ability() -> bool:
 	return ability_kind() != ""
 
@@ -322,6 +329,8 @@ func ability_kind() -> String:
 		return "lunge"
 	if GUARD_DURATION.has(item_id):
 		return "guard"
+	if COMBO_STRIKE_BOOST.has(item_id):
+		return "combo_strike"
 	return ""
 
 func ability_name() -> String:
@@ -338,6 +347,8 @@ func ability_name() -> String:
 			return "Lunge"
 		"guard":
 			return "Guard"
+		"combo_strike":
+			return "Combo Strike"
 	return ""
 
 ## Targeting range for the ability prompt: sneak blinks up to its family
@@ -384,6 +395,8 @@ func ability_damage_boost() -> int:
 			var lunge: Array = LUNGE_BOOST.get(item_id, [0, 0.0])
 			return int(lunge[0]) \
 					+ int(roundf(float(lunge[1]) * float(maxi(0, level))))
+		"combo_strike":
+			return int(COMBO_STRIKE_BOOST.get(item_id, 0)) + maxi(0, level)
 	return 0
 
 ## Upstream MeleeWeapon.beforeAbilityUsed: spend charges from the charger
