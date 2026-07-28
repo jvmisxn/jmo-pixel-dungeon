@@ -98,7 +98,30 @@ func build(rooms_list: Array) -> bool:
 	# Fill connections between adjacent rooms that need tunnels
 	_place_connection_rooms(connection_rooms, loop, placed)
 
+	# Discard any room that was never successfully placed so the painter
+	# never renders it at stale/out-of-bounds coordinates. A branch/secret/
+	# connection room whose placement failed keeps whatever bounds the last
+	# _position_on_side() attempt left behind — which can be out of bounds
+	# (e.g. left=-5), flush against the map edge, or in-bounds but isolated
+	# with no door — and paint_level() paints every entry in level.rooms.
+	# Upstream (RegularBuilder.placeRoom) likewise discards failed branch
+	# placements rather than force-placing them; generating zero secret rooms
+	# on a floor is an acceptable graceful fallback.
+	_retain_placed_rooms(rooms_list, placed)
+
 	return true
+
+## Remove from [rooms_list] (the array the level will paint) any room that was
+## not successfully placed into [placed]. Mutates rooms_list in place.
+func _retain_placed_rooms(rooms_list: Array, placed: Array[Room]) -> void:
+	var placed_set: Dictionary = {}
+	for pr: Room in placed:
+		placed_set[pr] = true
+	var i: int = rooms_list.size() - 1
+	while i >= 0:
+		if not placed_set.has(rooms_list[i]):
+			rooms_list.remove_at(i)
+		i -= 1
 
 # ---------------------------------------------------------------------------
 # Loop Placement

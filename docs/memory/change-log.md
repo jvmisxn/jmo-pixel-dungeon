@@ -2,6 +2,49 @@
 
 ## 2026-07-27
 
+- Tags: level-gen, secret-rooms, loop-builder, audit:S08, tests, source-fidelity
+- Fixed the secret-room placement gap (audit:S08 P2): secret rooms could
+  generate out of bounds (seed 1015 depth 3/4: `left=-5`), flush against the
+  map edge (range scan seed 1011: `left=0`), or in-bounds-but-isolated with
+  zero connections and no border opening (seed 1071 depths 3/4/6:
+  `conns=0`, unreachable loot). Root cause: `LoopBuilder._place_branch_room`
+  can fail to place a branch/secret/connection room, but the room object kept
+  whatever bounds the last `_position_on_side()` attempt left behind (often
+  out of bounds), and `StandardPainter.paint_level` paints *every* entry in
+  `level.rooms` regardless of placement success — so failed rooms were painted
+  at stale coordinates. Fix keeps the port's gap+tunnel placement model but
+  adds `LoopBuilder._retain_placed_rooms()`, called at the end of a successful
+  `build()`, which discards from the room list any room not in the `placed`
+  set (loop rooms + successfully-placed specials/secrets/connections). This
+  mirrors upstream RegularBuilder.placeRoom's discard-on-failure contract
+  (upstream attaches branch rooms by angle to a parent, validates the fit, and
+  drops the room on failure); generating zero secret rooms on a floor is an
+  acceptable graceful fallback, as upstream also fails gracefully. A placed
+  secret room is always a tunnel neighbor of a placed parent, so
+  `_carve_tunnels`/`_place_tunnel_door` always opens it with a SECRET_DOOR
+  (gated doors are placed unconditionally), guaranteeing reachability even
+  though `connected` stays empty for tunnel-attached rooms. New
+  `test_secret_room_placement.gd` (registered; 21 checks): explicit known-bad
+  seeds 1015/1016/1071 x depths 2/3/4/6 plus a 150-seed range scan
+  (1000–1149, depths 2/3/4/6, 140 secret rooms validated) asserting every
+  surviving secret room is in bounds, off the map edge, and has >=1 border
+  door. Removed the skip-workarounds in `test_generated_level_doors.gd`: the
+  gated-room `and room.in_bounds()` guard (now asserts in-bounds directly) and
+  the "only connected secret rooms" restriction (now asserts every placed
+  secret room is behind a secret door). Verified the new test fails 9 checks
+  on the pre-fix build (reproducing left=-5 OOB and conns=0 isolation) and
+  passes after. Verification: `git diff --check` clean; gdtoolkit parser clean
+  on all touched files; gdlint advisory-only pre-existing findings
+  (loop_builder long-line at the untouched `_place_connection_rooms`
+  signature, test file class-definition-order); full Godot headless suite
+  4903 checks, 0 failures. Remaining divergences (out of scope, keep the
+  slice bounded): the port still uses gap-2 placement + L-tunnels rather than
+  upstream's shared-wall direct attachment, so secret rooms connect via a
+  tunnel mouth rather than a direct shared-edge door; the separate audit:S08
+  `_place_connection_rooms` geometry weakness (only tries adjacency to room
+  `a`, shared `conn_idx`, force-marked neighbors) is untouched and remains a
+  backlog item.
+
 - Tags: polish, sprites, combat-feedback, detection, tests
 - Added the requested enemy/combat feedback slice: sewer rats/fetid rats now
   idle-hop while standing still; hostile mobs emit `mob_alerted` when they
