@@ -3,6 +3,25 @@
 ## 2026-07-28
 
 - Tags: duelist, weapon-abilities, source-fidelity, tests
+- Runic Slash ability shipped (upstream RunicBlade.duelistAbility +
+  RunicSlashTracker + Weapon.Enchantment.genericProcChanceMultiplier,
+  current master): Runic Blade exposes a targeted "Runic Slash" Duelist
+  ability — a guaranteed hit (INFINITE_ACCURACY) with NO bonus damage
+  that instead boosts enchantment activation power. The strike attaches
+  the new `RunicSlashTracker` buff (boost = 3 + 0.5*lvl, the displayed
+  300+50*lvl % enchant power); `WeaponEnchantment.proc_chance_multiplier`
+  now consumes the tracker (adds boost, detaches), mirroring upstream's
+  detach-on-consume, and the hero removes any unconsumed tracker right
+  after the strike. Always costs the attack delay; kills open no cleave
+  window. Dispatch via `RUNIC_SLASH_BOOST` + `runic_slash_boost()` in
+  `melee_weapon.gd`; strike path + cleanup in `hero.gd` (small
+  hand-edits, fragile file). New `test_weapon_ability_runic_slash.gd`
+  (ability data, multiplier consume/reset, strike cost + cleanup, kill,
+  no-charge refusal). Suite green (5249 checks). [ENGINE]: in-game check
+  wanted with an enchanted Runic Blade (proc feel vs upstream).
+  Remaining ability-less roster: flail, greataxe.
+
+- Tags: duelist, weapon-abilities, source-fidelity, tests
 - Defensive Stance ability shipped (upstream Quarterstaff.duelistAbility +
   Quarterstaff.DefensiveStance FlavourBuff, current master): Quarterstaff
   exposes a self-targeted "Defensive Stance" Duelist ability — spend one
