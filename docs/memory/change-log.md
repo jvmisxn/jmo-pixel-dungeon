@@ -2,6 +2,18 @@
 
 ## 2026-07-27
 
+- Tags: input, targeting, quickslot, audit:S23, source-fidelity, tests
+- Quickslotted throwables now work: tapping a quickslotted missile weapon or
+  the spirit bow enters throw targeting with auto-aim (last valid target,
+  else nearest visible enemy) instead of falling through to `use_item` —
+  base `Item.execute` is a no-op, so the old path burned a hero turn doing
+  nothing. Mirrors upstream `QuickSlotButton.useTargeting`/`autoAim`; the
+  wand quickslot branch already used `enter_targeting_auto`, throwables now
+  share it. Ranges match `WndItem` (shoot 8, throw 4 + tier*2). New static
+  `HUD.quickslot_uses_throw_targeting`/`quickslot_throw_range` +
+  `test_quickslot_throw_targeting.gd`. Backlog S23 auto-aim item closed.
+  Full suite green (5032 checks).
+
 - Tags: stats, persistence, source-fidelity, tests
 - "Deepest Floor" in `WndHeroInfo` is now recorded: `_on_depth_changed()`
   sets `stats["deepest_floor"]` when depth exceeds the stored max (upstream
