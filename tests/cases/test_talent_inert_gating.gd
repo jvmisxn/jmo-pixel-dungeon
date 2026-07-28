@@ -20,7 +20,7 @@ func _test_registry_flags(t: Object) -> void:
 	var iron_will: TalentData.TalentInfo = TalentData.get_talent(ConstantsData.HeroClass.WARRIOR, "warrior_iron_will")
 	t.check(iron_will != null and iron_will.implemented, "Iron Will is flagged implemented")
 	var duelist_barrier: TalentData.TalentInfo = TalentData.get_talent(ConstantsData.HeroClass.DUELIST, "duelist_aggressive_barrier")
-	t.check(duelist_barrier != null and not duelist_barrier.implemented, "Aggressive Barrier is flagged unimplemented")
+	t.check(duelist_barrier != null and duelist_barrier.implemented, "Aggressive Barrier is flagged implemented")
 	var implemented_subclass_talents: Array[String] = [
 		"berserker_endless_rage",
 		"berserker_deathless_fury",
@@ -39,12 +39,13 @@ func _test_registry_flags(t: Object) -> void:
 func _test_cannot_upgrade_inert_talent(t: Object) -> void:
 	var hero := Hero.new()
 	hero.init_class(ConstantsData.HeroClass.DUELIST)
+	hero.hero_subclass = ConstantsData.HeroSubclass.CHAMPION
 	hero.hero_level = 13
-	t.check(not hero.can_upgrade_talent("duelist_aggressive_barrier"), "Inert talent cannot be upgraded even with points available")
+	t.check(not hero.can_upgrade_talent("champion_dual_mastery"), "Inert talent cannot be upgraded even with points available")
 	var before: int = hero.total_talent_points_available()
-	t.check(not hero.upgrade_talent("duelist_aggressive_barrier"), "upgrade_talent refuses inert talents")
+	t.check(not hero.upgrade_talent("champion_dual_mastery"), "upgrade_talent refuses inert talents")
 	t.check(hero.total_talent_points_available() == before, "No point is consumed by a refused inert upgrade")
-	t.check(hero.get_talent_level("duelist_aggressive_barrier") == 0, "Inert talent level stays at 0")
+	t.check(hero.get_talent_level("champion_dual_mastery") == 0, "Inert talent level stays at 0")
 	hero.free()
 
 func _test_implemented_talent_still_upgrades(t: Object) -> void:

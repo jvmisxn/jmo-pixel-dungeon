@@ -46,6 +46,10 @@ var _followup_strike_ready: bool = false
 ## Set by _do_interact when an Ally Warp swap ran: upstream warps are instant,
 ## so the interact action costs no time that turn.
 var _interact_was_free: bool = false
+## Time cost of the current weapon-ability action: 0 when refused or when the
+## strike killed (upstream cleave kills are instant via hero.next()), else the
+## attack delay. Consumed by the spend match after _do_weapon_ability.
+var _ability_spend: float = 0.0
 
 ## Resting state — when true, hero automatically waits each turn until full HP
 ## or interrupted by a visible enemy or damage. Matches original Hero.java.
@@ -283,6 +287,8 @@ func execute_action() -> void:
 				action.get("sniper_special", false))
 		"zap_wand":
 			_do_zap_wand(action.get("item"), action.get("target_pos", -1))
+		"weapon_ability":
+			_do_weapon_ability(action.get("item"), action.get("target_pos", -1))
 		"wait":
 			_do_wait()
 		"use_item":
@@ -322,6 +328,11 @@ func execute_action() -> void:
 				thrown_bow.sniper_special_distance = 0
 		"zap_wand":
 			spend_turn(_get_non_movement_action_delay())
+		"weapon_ability":
+			# Refused abilities and kills are free (upstream hero.next()).
+			if _ability_spend > 0.0:
+				spend_turn(_ability_spend)
+			_ability_spend = 0.0
 		"interact":
 			# Ally Warp swaps are instant (upstream warps spend no time).
 			if not _interact_was_free:
@@ -463,6 +474,64 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1, blink_po
 		if invis is Invisibility:
 			(invis as Invisibility).dispel()
 	_pending_surprise_attack = false
+	_patient_strike_ready = false
+	_followup_strike_ready = false
+
+## Duelist weapon ability (upstream MeleeWeapon.execute AC_ABILITY guards +
+## Sword.cleaveAbility): refusals cost no time (_ability_spend stays 0), a
+## landed strike is a guaranteed hit (upstream INFINITE_ACCURACY) with the
+## weapon's flat ability damage boost. A kill makes the ability instant and
+## opens the CleaveTracker free-recast window unless one was already open;
+## a non-kill strike costs the attack delay and closes any open window.
+func _do_weapon_ability(item: Variant, target_pos: int) -> void:
+	_ability_spend = 0.0
+	if not (item is MeleeWeapon) or belongings == null or level == null or target_pos < 0:
+		return
+	var weapon: MeleeWeapon = item as MeleeWeapon
+	if belongings.weapon != weapon or hero_class != ConstantsData.HeroClass.DUELIST \
+			or not weapon.has_duelist_ability():
+		return
+	if str_val < weapon.get_str_requirement():
+		if MessageLog:
+			MessageLog.add_warning("You are too weak to use your weapon's ability effectively.")
+		return
+	var charger: WeaponCharger = get_buff("WeaponCharger") as WeaponCharger
+	var charge_use: float = weapon.ability_charge_use(self)
+	if charger == null or float(charger.charges) + charger.partial_charge < charge_use:
+		if MessageLog:
+			MessageLog.add_warning("Your weapon doesn't have enough charge for that ability.")
+		return
+	var char_at: Variant = level.find_char_at(target_pos)
+	if not (char_at is Char) or char_at == self \
+			or target_pos >= level.visible.size() or not level.visible[target_pos]:
+		if MessageLog:
+			MessageLog.add_warning("You can't target that.")
+		return
+	var enemy: Char = char_at as Char
+	if not enemy.is_alive or distance_to(enemy.pos) > weapon.get_reach():
+		if MessageLog:
+			MessageLog.add_warning("Your weapon can't reach that target.")
+		return
+	last_visible_action = "attack"
+	last_visible_target_pos = enemy.pos
+	if enemy is Mimic and (enemy as Mimic).disguised:
+		(enemy as Mimic).reveal()
+	weapon.before_ability_used(self, charge_use)
+	attack(enemy, 1.0, float(weapon.ability_damage_boost()), 1.0e9)
+	if has_buff("Invisibility"):
+		var invis: Node = get_buff("Invisibility")
+		if invis is Invisibility:
+			(invis as Invisibility).dispel()
+	var tracker: Buff = get_buff("CleaveTracker")
+	if not enemy.is_alive:
+		if tracker != null:
+			remove_buff(tracker)
+		else:
+			add_buff(CleaveTracker.new())
+	else:
+		_ability_spend = _get_attack_delay()
+		if tracker != null:
+			remove_buff(tracker)
 	_patient_strike_ready = false
 	_followup_strike_ready = false
 

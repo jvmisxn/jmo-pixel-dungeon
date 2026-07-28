@@ -258,6 +258,61 @@ static func create(weapon_id: String) -> MeleeWeapon:
 	return w
 
 # ---------------------------------------------------------------------------
+# Duelist weapon abilities
+# Original: MeleeWeapon AC_ABILITY plumbing + per-weapon duelistAbility
+# overrides. Ported per ability family; weapons without an entry have no
+# ability yet.
+# ---------------------------------------------------------------------------
+
+## Sword-family Cleave flat damage boost before level scaling (upstream
+## WornShortsword 3+lvl, Shortsword 4+lvl, Sword 5+lvl, Longsword 6+lvl,
+## Greatsword 7+lvl; boost is dmgBoost passed to Sword.cleaveAbility).
+const CLEAVE_BASE_BOOST: Dictionary = {
+	"worn_shortsword": 3, "shortsword": 4, "sword": 5,
+	"longsword": 6, "greatsword": 7,
+}
+
+func has_duelist_ability() -> bool:
+	return CLEAVE_BASE_BOOST.has(item_id)
+
+func ability_name() -> String:
+	if CLEAVE_BASE_BOOST.has(item_id):
+		return "Cleave"
+	return ""
+
+## Charge cost (upstream baseChargeUse): cleave is free while the
+## CleaveTracker window from an ability kill is open.
+func ability_charge_use(hero: Variant) -> float:
+	if CLEAVE_BASE_BOOST.has(item_id) and hero != null \
+			and hero.has_method("has_buff") and hero.has_buff("CleaveTracker"):
+		return 0.0
+	return 1.0
+
+## Flat ability damage bonus (cleave dmgBoost = family base + weapon level).
+func ability_damage_boost() -> int:
+	return int(CLEAVE_BASE_BOOST.get(item_id, 0)) + maxi(0, level)
+
+## Upstream MeleeWeapon.beforeAbilityUsed: spend charges from the charger
+## pool, then the Aggressive Barrier talent shields 1+2*points when the
+## ability is used at or below half HP.
+func before_ability_used(hero: Variant, charge_use: float) -> void:
+	if hero == null or not hero.has_method("get_buff"):
+		return
+	var charger: Variant = hero.get_buff("WeaponCharger")
+	if charger is WeaponCharger:
+		charger.partial_charge -= charge_use
+		while charger.partial_charge < 0.0 and charger.charges > 0:
+			charger.charges -= 1
+			charger.partial_charge += 1.0
+	var barrier_points: int = 0
+	if hero.has_method("get_talent_level"):
+		barrier_points = hero.get_talent_level("duelist_aggressive_barrier")
+	if barrier_points > 0 and hero.hp * 2 <= hero.hp_max:
+		var barrier: Barrier = hero.add_buff(Barrier.new()) as Barrier
+		if barrier != null:
+			barrier.set_shield(maxi(barrier.get_shielding(), 1 + 2 * barrier_points))
+
+# ---------------------------------------------------------------------------
 # Serialization
 # ---------------------------------------------------------------------------
 

@@ -101,7 +101,7 @@ static func _class_talents(hero_class: int) -> Array[TalentInfo]:
 			return [
 				_make("duelist_adventurers_intuition", "Adventurer's Intuition", "Weapons and armor can be identified on pickup.", 2, 1),
 				_make("duelist_patient_strike", "Patient Strike", "Waiting primes your next melee attack to deal increased damage.", 2, 1),
-				_make_inert("duelist_aggressive_barrier", "Aggressive Barrier", "Supports offensive pressure with defensive conversion.", 2, 2),
+				_make("duelist_aggressive_barrier", "Aggressive Barrier", "When the Duelist uses a weapon ability at 50% health or lower, she gains a shield that blocks 3/5 damage.", 2, 2),
 				_make("duelist_weapon_recharging", "Weapon Recharging", "The Duelist gains one weapon charge every 15 turns at +1, or every 10 turns at +2, when under the effect of recharging buffs.", 2, 2),
 			]
 	return []
