@@ -3,6 +3,23 @@
 ## 2026-07-28
 
 - Tags: duelist, weapon-abilities, source-fidelity, tests
+- Combo Strike weapon-ability family shipped (upstream
+  Sai.comboStrikeAbility + Sai.ComboStrikeTracker, current master):
+  every Duelist hit on an enemy (melee or thrown, via `Hero.on_attack_hit`)
+  feeds a new `ComboStrikeTracker` buff — hit counter with a 5-turn window
+  reset on each hit, hidden from the buff bar unless a combo weapon is
+  worn, "%d hit combo!" announced from 2 hits, hits persisted in the save.
+  Gloves/Sai expose the "Combo Strike" ability: consumes the tracker and
+  strikes with +per-hit boost × recent hits (Gloves 3+lvl, Sai 4+lvl per
+  hit), guaranteed hit, always costs attack delay, no free-recast window;
+  zero recent hits still strikes with no bonus. The strike's own hit then
+  starts a fresh 1-hit combo (upstream order: detach, then attack).
+  Gauntlet is not in the port's weapon roster, so the family is
+  Gloves+Sai only. New `test_weapon_ability_combo.gd`; suite green
+  (5192 checks). [ENGINE]: in-game Duelist gloves check wanted (combo
+  buff icon appears/hides with weapon swap, combo message pacing).
+
+- Tags: duelist, weapon-abilities, source-fidelity, tests
 - Guard weapon-ability family shipped (upstream RoundShield.guardAbility,
   current master): RoundShield/Greatshield expose a self-targeted "Guard"
   Duelist ability — spend one charge and one turn to gain the new

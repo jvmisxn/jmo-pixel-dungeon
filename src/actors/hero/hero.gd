@@ -539,6 +539,16 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	if ability_kind == "heavy_blow" and enemy is Mob \
 			and not (enemy as Mob).is_surprised_by(self):
 		dmg_boost = 0
+	# Combo strike's flat boost is per recent hit and consumes the tracker
+	# (upstream Sai.comboStrikeAbility); zero recent hits means no bonus.
+	# The strike itself then feeds a fresh tracker hit via on_attack_hit.
+	if ability_kind == "combo_strike":
+		var combo: ComboStrikeTracker = get_buff("ComboStrikeTracker") as ComboStrikeTracker
+		var recent_hits: int = 0
+		if combo != null:
+			recent_hits = combo.hits
+			remove_buff(combo)
+		dmg_boost *= recent_hits
 	var enemy_pos_before: int = enemy.pos
 	attack(enemy, 1.0, float(dmg_boost), 1.0e9)
 	if has_buff("Invisibility"):
@@ -557,6 +567,10 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 		# delay; kills open no free-recast window.
 		if enemy.is_alive and enemy.pos == enemy_pos_before:
 			KnockBack.throw_char(enemy, pos, 1, level)
+		_ability_spend = _get_attack_delay()
+	elif ability_kind == "combo_strike":
+		# Upstream Sai.comboStrikeAbility always spends the attack delay;
+		# kills open no free-recast window.
 		_ability_spend = _get_attack_delay()
 	else:
 		var tracker: Buff = get_buff("CleaveTracker")
@@ -1229,6 +1243,16 @@ func _get_auto_ranged_item(target_pos: int) -> Variant:
 
 ## Emit damage signal so game_scene shows floating damage number on the mob.
 func on_attack_hit(target_char: Char, damage: int) -> void:
+	# Duelist combo counter (upstream Hero.attack/onAttackComplete: every
+	# hit on an enemy feeds Sai.ComboStrikeTracker).
+	if hero_class == ConstantsData.HeroClass.DUELIST and target_char != null \
+			and not target_char.is_hero \
+			and not (target_char is Mob and (target_char as Mob).is_ally):
+		var combo: ComboStrikeTracker = get_buff("ComboStrikeTracker") as ComboStrikeTracker
+		if combo == null:
+			combo = add_buff(ComboStrikeTracker.new()) as ComboStrikeTracker
+		if combo != null:
+			combo.add_hit()
 	if EventBus and target_char != null:
 		if EventBus.has_signal("mob_damaged_detailed"):
 			EventBus.mob_damaged_detailed.emit(target_char.pos, damage, self)
