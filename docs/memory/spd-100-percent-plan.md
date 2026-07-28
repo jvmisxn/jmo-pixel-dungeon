@@ -127,7 +127,12 @@ and pitfall/chasm landing parity including fallen-item heap drops
 (crystal door, empty well, skeleton loot/key, `test_pit_room_contents.gd`,
 2026-07-24).
 
-1. Talent system foundation.
+1. Talent system foundation — 2026-07-27 audit: all registered
+   class/subclass talent ids in `talent_data.gd` are wired into live
+   gameplay except the `_make_inert` slots (Duelist
+   aggressive_barrier/weapon_recharging, Champion, Monk), which are blocked
+   on the unported Duelist weapon-ability/charge system. Next talent
+   milestone = port that charge system, then those remaining talents.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +
