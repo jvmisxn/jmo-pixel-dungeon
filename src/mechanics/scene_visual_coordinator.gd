@@ -58,12 +58,14 @@ static func spawned_sprite_visible(scene: Variant, pos: int) -> bool:
 static func refresh_item_sprites(scene: Variant) -> void:
 	if scene == null or scene._current_level == null:
 		return
-	var valid_positions: Dictionary[int, bool] = {}
+	var top_items: Dictionary[int, Variant] = {}
 	for heap: Dictionary in scene._current_level.heaps:
-		valid_positions[heap.get("pos", -1)] = true
+		var heap_pos: int = heap.get("pos", -1)
+		if heap_pos >= 0 and not top_items.has(heap_pos):
+			top_items[heap_pos] = heap.get("item")
 	var to_remove: Array[int] = []
 	for pos: int in scene._item_sprites.keys():
-		if valid_positions.has(pos):
+		if top_items.has(pos):
 			continue
 		var sprite: Variant = scene._item_sprites[pos]
 		if is_instance_valid(sprite):
@@ -71,12 +73,20 @@ static func refresh_item_sprites(scene: Variant) -> void:
 		to_remove.append(pos)
 	for pos: int in to_remove:
 		scene._item_sprites.erase(pos)
-	for heap: Dictionary in scene._current_level.heaps:
-		var pos: int = heap.get("pos", -1)
-		if pos < 0 or scene._item_sprites.has(pos):
+	for pos: int in top_items.keys():
+		var item: Variant = top_items[pos]
+		var item_id: int = item.get_instance_id() if item is Object else 0
+		if scene._item_sprites.has(pos):
+			# Upstream Heap.updateImage(): re-view the sprite when the heap's
+			# top item changes, e.g. one of several stacked drops is picked up.
+			var existing: Variant = scene._item_sprites[pos]
+			if is_instance_valid(existing) and int(existing.get_meta("heap_item_id", 0)) != item_id:
+				existing.setup_from_item(item)
+				existing.set_meta("heap_item_id", item_id)
 			continue
 		var sprite: Variant = scene._instantiate_script("res://src/sprites/item_sprite.gd")
-		sprite.setup_from_item(heap.get("item"))
+		sprite.setup_from_item(item)
+		sprite.set_meta("heap_item_id", item_id)
 		sprite.place_at(pos)
 		sprite.visible = spawned_sprite_visible(scene, pos)
 		sprite.play_drop()
