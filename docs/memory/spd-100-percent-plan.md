@@ -136,8 +136,11 @@ and pitfall/chasm landing parity including fallen-item heap drops
    duelist_weapon_recharging, `test_weapon_charger.gd`). 2026-07-28: the
    ability execution path + sword-family Cleave shipped and
    duelist_aggressive_barrier is live (`test_weapon_ability_cleave.gd`).
-   Next talent milestone = abilities for the remaining weapon families
-   (heavy blow, sneak, lunge, etc.), then the Champion/Monk talents.
+   2026-07-28: heavy-blow family shipped (Cudgel/HandAxe/Mace/BattleAxe/
+   WarHammer, `test_weapon_ability_heavy_blow.gd`; Greataxe has a distinct
+   upstream ability, still unported). Next talent milestone = remaining
+   weapon families (sneak, lunge, guard, spike, etc.), then the
+   Champion/Monk talents.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +

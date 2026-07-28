@@ -516,22 +516,36 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	last_visible_target_pos = enemy.pos
 	if enemy is Mimic and (enemy as Mimic).disguised:
 		(enemy as Mimic).reveal()
+	var ability_kind: String = weapon.ability_kind()
 	weapon.before_ability_used(self, charge_use)
-	attack(enemy, 1.0, float(weapon.ability_damage_boost()), 1.0e9)
+	var dmg_boost: int = weapon.ability_damage_boost()
+	# Heavy blow's bonus damage only applies against surprised targets
+	# (upstream Mace.heavyBlowAbility zeroes dmgBoost when the mob is aware).
+	if ability_kind == "heavy_blow" and enemy is Mob \
+			and not (enemy as Mob).is_surprised_by(self):
+		dmg_boost = 0
+	attack(enemy, 1.0, float(dmg_boost), 1.0e9)
 	if has_buff("Invisibility"):
 		var invis: Node = get_buff("Invisibility")
 		if invis is Invisibility:
 			(invis as Invisibility).dispel()
-	var tracker: Buff = get_buff("CleaveTracker")
-	if not enemy.is_alive:
-		if tracker != null:
-			remove_buff(tracker)
-		else:
-			add_buff(CleaveTracker.new())
-	else:
+	if ability_kind == "heavy_blow":
+		# Upstream heavy blow always costs the attack delay and dazes a
+		# surviving target; kills have no follow-up window.
+		if enemy.is_alive:
+			enemy.add_buff(Daze.new())
 		_ability_spend = _get_attack_delay()
-		if tracker != null:
-			remove_buff(tracker)
+	else:
+		var tracker: Buff = get_buff("CleaveTracker")
+		if not enemy.is_alive:
+			if tracker != null:
+				remove_buff(tracker)
+			else:
+				add_buff(CleaveTracker.new())
+		else:
+			_ability_spend = _get_attack_delay()
+			if tracker != null:
+				remove_buff(tracker)
 	_patient_strike_ready = false
 	_followup_strike_ready = false
 
