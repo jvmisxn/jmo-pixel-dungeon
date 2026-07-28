@@ -2,6 +2,17 @@
 
 ## 2026-07-27
 
+- Tags: transitions, victory, amulet, audit:S24, source-fidelity, tests
+- Depth-1 ascent now matches upstream Hero.actAscend: with the Amulet of
+  Yendor in any party member's backpack (`party_has_amulet`, co-op
+  adaptation of upstream's single-hero check) the run ends in victory via
+  `RunTransitionCoordinator.transition_to_victory` (our VictoryScene =
+  upstream win SurfaceScene, incl. online run-end broadcast); without it
+  the port now shows upstream's "You can't leave yet, the Amulet of Yendor
+  must be retrieved first!" instead of the invented "way to the surface is
+  sealed" text. New `test_amulet_surface_ascend.gd` registered in
+  `run_tests.gd`. Full suite green (4971 checks).
+
 - Tags: fog, sprites, visibility, audit:S25, tests
 - Fixed this-turn ground sprites flashing through fog: item/plant/armed-bomb
   sprites spawned with default `visible = true` and `refresh_after_turn` ran
