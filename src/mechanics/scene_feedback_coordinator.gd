@@ -1,12 +1,17 @@
 class_name SceneFeedbackCoordinator
 extends RefCounted
 
+## Meta key on the scene marking that an off-view mob action deferred its
+## FOV/visibility refresh; flushed once per party round (audit:S25).
+const MOB_VISIBILITY_DIRTY_META := "mob_visibility_dirty"
+
 static func refresh_after_turn(scene: Variant) -> void:
 	if scene == null:
 		return
 	var local_hero: Variant = scene._get_focused_hero()
 	if scene._current_level == null or local_hero == null:
 		return
+	scene.set_meta(MOB_VISIBILITY_DIRTY_META, false)
 	scene._ensure_mob_sprites()
 	var view_distance: int = local_hero.get_view_distance() if local_hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
 	scene._current_level.update_fov(local_hero.pos, view_distance)
@@ -28,8 +33,10 @@ static func on_mob_action(scene: Variant, actor: Node) -> void:
 		return
 	var actor_id: int = actor.get("actor_id") if actor.get("actor_id") != null else -1
 	var sprite: Variant = scene._mob_sprites.get(actor_id) if actor_id >= 0 else null
+	var mob_pos: int = int(actor.get("pos")) if actor.get("pos") != null else -1
+	var prev_pos: int = -1
 	if sprite and is_instance_valid(sprite):
-		var mob_pos: int = actor.get("pos") if actor.get("pos") != null else -1
+		prev_pos = int(sprite.cell_pos)
 		var action_name: String = str(actor.get("last_visible_action"))
 		var action_target_pos: int = int(actor.get("last_visible_target_pos")) if actor.get("last_visible_target_pos") != null else -1
 		if mob_pos >= 0 and mob_pos != sprite.cell_pos:
@@ -40,12 +47,39 @@ static func on_mob_action(scene: Variant, actor: Node) -> void:
 			sprite.update_hp_bar(actor.hp, actor.ht)
 	var local_hero: Variant = scene._get_focused_hero()
 	if scene._current_level and local_hero:
-		var view_distance: int = local_hero.get_view_distance() if local_hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
-		scene._current_level.update_fov(local_hero.pos, view_distance)
-		scene.fog_of_war.update_visibility()
-		scene._update_entity_visibility()
-		scene._interrupt_rest_if_needed()
+		# audit:S25 — SPD observes FOV once per hero turn (Dungeon.observe),
+		# not per mob action. Refresh immediately only when the acting mob can
+		# affect what the player sees; defer everything else to one coalesced
+		# refresh at round end (see on_round_completed).
+		if _mob_action_affects_view(scene._current_level, local_hero, mob_pos, prev_pos):
+			_refresh_visibility(scene, local_hero)
+			scene.set_meta(MOB_VISIBILITY_DIRTY_META, false)
+		else:
+			scene.set_meta(MOB_VISIBILITY_DIRTY_META, true)
 	scene._queue_online_snapshot_sync(true)
+
+## True when a mob acting at/from these cells can change what the hero sees:
+## either cell is currently visible, or lies near the hero where mind-vision
+## style reveals (Heightened Senses, Arcane Vision overlays) reach past FOV.
+static func _mob_action_affects_view(level: Variant, local_hero: Variant, mob_pos: int, prev_pos: int) -> bool:
+	var view_distance: int = local_hero.get_view_distance() if local_hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
+	for p: int in [mob_pos, prev_pos]:
+		if p < 0:
+			continue
+		if p < level.visible.size() and level.visible[p]:
+			return true
+		if level.has_method("distance") and level.distance(local_hero.pos, p) <= view_distance + 1:
+			return true
+	return false
+
+## The FOV/fog/entity-visibility refresh shared by immediate (in-view mob
+## action) and coalesced (round-end flush) paths.
+static func _refresh_visibility(scene: Variant, local_hero: Variant) -> void:
+	var view_distance: int = local_hero.get_view_distance() if local_hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
+	scene._current_level.update_fov(local_hero.pos, view_distance)
+	scene.fog_of_war.update_visibility()
+	scene._update_entity_visibility()
+	scene._interrupt_rest_if_needed()
 
 static func on_mob_defeated(scene: Variant, mob_pos: int, mob_name: String, mob_id: String) -> void:
 	if scene == null:
@@ -144,6 +178,11 @@ static func on_hero_attack_missed(scene: Variant, mob_pos: int) -> void:
 static func on_round_completed(scene: Variant, round_number: int) -> void:
 	if scene == null or scene._current_level == null:
 		return
+	if scene.has_meta(MOB_VISIBILITY_DIRTY_META) and scene.get_meta(MOB_VISIBILITY_DIRTY_META):
+		scene.set_meta(MOB_VISIBILITY_DIRTY_META, false)
+		var local_hero: Variant = scene._get_focused_hero()
+		if local_hero:
+			_refresh_visibility(scene, local_hero)
 	if scene._current_level.has_method("tick_pending_bombs"):
 		var detonated: bool = scene._current_level.tick_pending_bombs()
 		if detonated:
