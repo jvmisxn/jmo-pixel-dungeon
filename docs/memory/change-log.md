@@ -2,6 +2,19 @@
 
 ## 2026-07-27
 
+- Tags: input, dead-code, cleanup, audit:S23
+- Deleted the ~187 lines of dead, unreachable input code in
+  `game_scene.gd`: `_handle_cell_click`, `_handle_key_input`,
+  `_move_direction`, and `_attack_adjacent_enemy` all delegated to
+  `InputCoordinator` then `return`ed, leaving stale drifted bodies (the dead
+  copy still split `KEY_SPACE`/`KEY_PERIOD` after the coordinator merged
+  them). Each wrapper is now just its delegate call. Careful hand-edit on a
+  `TRUNCATED_FILES.txt` file; full headless suite green (4950 checks).
+- Backlog reconciliation: both audit:S37 P1 items were stale — `BuffIcon`
+  is live in `status_pane._update_buffs` and `hud._refresh_mobile_buffs`
+  (tappable, atlas icons, flash state; since `caaa505`), and `UIUtils`
+  now has callers across toolbar/hud/buff_icon/info windows. Marked DONE.
+
 - Tags: scrolls, items, source-fidelity, audit:S15, tests
 - `ScrollTransmutation` no-HUD fallback now actually transmutes: it routes
   the first eligible backpack item through the static
