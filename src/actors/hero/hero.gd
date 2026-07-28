@@ -507,6 +507,9 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	if weapon.ability_kind() == "sword_dance":
 		_do_sword_dance_ability(weapon, charge_use)
 		return
+	if weapon.ability_kind() == "defensive_stance":
+		_do_defensive_stance_ability(weapon, charge_use)
+		return
 	if weapon.ability_kind() == "sneak":
 		_do_sneak_ability(weapon, target_pos, charge_use)
 		return
@@ -702,6 +705,24 @@ func _do_sword_dance_ability(weapon: MeleeWeapon, charge_use: float) -> void:
 		add_buff(dance)
 	if MessageLog:
 		MessageLog.add("You begin a sword dance!")
+	_patient_strike_ready = false
+	_followup_strike_ready = false
+
+## Quarterstaff Defensive Stance (upstream Quarterstaff.duelistAbility):
+## prolong the DefensiveStance buff for 3+lvl turns (one fewer than the
+## displayed 4+lvl because the ability is instant), tripling evasion while
+## active. Using the ability spends no time (upstream hero.next()).
+func _do_defensive_stance_ability(weapon: MeleeWeapon, charge_use: float) -> void:
+	weapon.before_ability_used(self, charge_use)
+	var existing: Variant = get_buff("DefensiveStance")
+	if existing is DefensiveStance:
+		(existing as DefensiveStance).postpone(float(weapon.defensive_stance_turns()))
+	else:
+		var stance: DefensiveStance = DefensiveStance.new()
+		stance.set_duration(float(weapon.defensive_stance_turns()))
+		add_buff(stance)
+	if MessageLog:
+		MessageLog.add("You shift into a defensive stance.")
 	_patient_strike_ready = false
 	_followup_strike_ready = false
 
