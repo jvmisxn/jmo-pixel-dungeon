@@ -56,8 +56,8 @@ func _test_ability_data(t: Object) -> void:
 	var worn := MeleeWeapon.create("worn_shortsword")
 	t.check(worn.ability_damage_boost() == 3, "Worn shortsword boost is 3")
 	t.check(MeleeWeapon.create("greatsword").ability_damage_boost() == 7, "Greatsword boost is 7")
-	var rapier := MeleeWeapon.create("rapier")
-	t.check(not rapier.has_duelist_ability(), "Rapier has no ported ability yet")
+	var quarterstaff := MeleeWeapon.create("quarterstaff")
+	t.check(not quarterstaff.has_duelist_ability(), "Quarterstaff has no ported ability yet")
 
 func _test_charge_use_and_free_window(t: Object) -> void:
 	var level := _make_level()

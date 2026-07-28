@@ -3,6 +3,23 @@
 ## 2026-07-28
 
 - Tags: duelist, weapon-abilities, source-fidelity, tests
+- Lunge weapon ability shipped (upstream Rapier.lungeAbility, current
+  master): Rapier exposes a "Lunge" Duelist ability — target a cell exactly
+  one beyond weapon reach, dash to the open neighbor cell with the smallest
+  true (Euclidean) distance to the target, then land a guaranteed hit with
+  flat boost 5+round(1.5*lvl), costing attack delay. Adjacent/too-far,
+  rooted, and no-dash-cell refusals are free. Upstream's out-of-FOV waste
+  case is ported: lunging at a non-visible cell dashes anyway and, with no
+  attackable enemy after the dash, spends the charge plus a move turn
+  without counting as an ability use. Dash lands on the tile normally
+  (`_check_terrain_effects`). `ability_target_range()` returns reach+1 so
+  targeting matches. Stale cleave-test assertion ("Rapier has no ported
+  ability yet") moved to Quarterstaff. New `test_weapon_ability_lunge.gd`;
+  suite green (5150 checks).
+  [ENGINE]: in-game Duelist rapier check wanted (dash visual, distance-2
+  targeting feel, lunge onto a trap/door tile).
+
+- Tags: duelist, weapon-abilities, source-fidelity, tests
 - Spike weapon-ability family shipped (upstream Spear.spikeAbility, current
   master): Spear/Glaive expose a "Spike" Duelist ability — guaranteed hit
   with flat boost Spear 9+2*lvl / Glaive 12+round(2.5*lvl), only usable at
