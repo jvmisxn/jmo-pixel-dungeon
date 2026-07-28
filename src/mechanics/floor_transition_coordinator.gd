@@ -92,8 +92,16 @@ static func handle_ascend(scene: Variant) -> void:
 		scene._awaiting_hero_input = true
 		return
 	if GameManager.depth <= 1:
+		# Upstream Hero.actAscend depth-1 gate: with the Amulet of Yendor the
+		# run ends in victory (Dungeon.win + surface); without it the hero
+		# cannot leave (hero.properties "leave" text).
+		if party_has_amulet(hero):
+			if MessageLog:
+				MessageLog.add_positive("You ascend into the sunlight, the Amulet of Yendor in hand!")
+			RunTransitionCoordinator.transition_to_victory(scene)
+			return
 		if MessageLog:
-			MessageLog.add_warning("The way to the surface is sealed.")
+			MessageLog.add_warning("You can't leave yet, the Amulet of Yendor must be retrieved first!")
 		scene._awaiting_hero_input = true
 		return
 	if MessageLog:
@@ -137,6 +145,26 @@ static func handle_fall(scene: Variant, hero_node: Variant) -> void:
 		"fall_actor_id": fall_actor_id,
 		"fall_into_pit": fall_into_pit,
 	})
+
+## Any active party hero (or the acting hero as fallback) carrying the
+## Amulet of Yendor unlocks the depth-1 victory ascent.
+static func party_has_amulet(fallback_hero: Variant) -> bool:
+	if GameManager != null and GameManager.has_method("get_active_heroes"):
+		for party_hero: Variant in GameManager.get_active_heroes():
+			if _hero_has_amulet(party_hero):
+				return true
+	return _hero_has_amulet(fallback_hero)
+
+static func _hero_has_amulet(hero: Variant) -> bool:
+	if hero == null:
+		return false
+	var belongings: Variant = hero.get("belongings") if hero is Object else null
+	var backpack: Variant = belongings.get("backpack") if belongings != null else null
+	if backpack is Array:
+		for item: Variant in backpack:
+			if item != null and ConstantsData.get_prop(item, "item_id", "") == "amulet_of_yendor":
+				return true
+	return false
 
 static func _consume_skeleton_key_for_boss_exit(scene: Variant, hero: Variant) -> bool:
 	if GameManager == null or not _is_skeleton_key_depth(GameManager.depth):
