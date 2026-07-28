@@ -70,8 +70,13 @@ static func handle_cell_click(scene: Variant, cell: int) -> void:
 			var terrain: int = scene._current_level.terrain_at(cell)
 			if terrain == ConstantsData.Terrain.DOOR or terrain == ConstantsData.Terrain.LOCKED_DOOR or terrain == ConstantsData.Terrain.CRYSTAL_DOOR:
 				scene._submit_hero_action({"type": "interact", "target_pos": cell})
-			elif terrain == ConstantsData.Terrain.CHASM and not Chasm.can_cross(hero):
-				_confirm_chasm_jump(scene, cell)
+			elif terrain == ConstantsData.Terrain.CHASM:
+				# Upstream: flying/levitating chars treat the chasm (AVOID) as
+				# walkable and glide over; grounded heroes get the jump prompt.
+				if Chasm.can_cross(hero):
+					scene._submit_hero_action({"type": "move", "target_pos": cell})
+				else:
+					_confirm_chasm_jump(scene, cell)
 			elif not scene._current_level.passable[cell]:
 				scene._submit_hero_action({"type": "search"})
 			else:

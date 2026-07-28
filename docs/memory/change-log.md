@@ -2,6 +2,27 @@
 
 ## 2026-07-27
 
+- Tags: chasm, buffs, movement, source-fidelity, audit:S09, tests
+- Levitating/flying chars can now cross chasms (the last voluntary-movement
+  S09 gap). Upstream: chasm is AVOID terrain — `Char.flying` makes avoid
+  cells walkable, `Level.occupyCell` skips `Chasm.heroFall` while flying, and
+  `Levitation.detach()` re-runs `occupyCell` so a char whose levitation ends
+  over a chasm falls in. Port: `Char.move_to` now permits an impassable
+  target cell when it is CHASM and `Chasm.can_cross(self)` (flying flag or
+  Levitation buff); `InputCoordinator.handle_cell_click` submits a normal
+  move for an adjacent chasm tap while `can_cross` instead of the jump
+  prompt (the float-over message in `Hero._check_terrain_effects` already
+  existed); new `Levitation.on_detach` drops the char if it is standing on a
+  chasm and has no other flight source — hero descends via the shared
+  `hero_fell` path, mob dies via `Chasm.mob_fall` (buffs are unindexed
+  before on_detach, so `can_cross` correctly reads post-detach state).
+  Known remaining gap: auto-walk pathfinding still treats chasm as
+  impassable even while flying, so crossing is adjacent-step only.
+  Fragile-file edit small: `char.gd` 4-line guard in `move_to`.
+  `test_chasm_levitation.gd` (9 checks: grounded refusal, levitation/flying
+  crossing, no fall while floating, detach-over-chasm hero fall, safe floor
+  detach, mob detach death).
+
 - Tags: chasm, input, source-fidelity, audit:S09, tests
 - Voluntary walk-in chasm entry with upstream confirm prompt (the S09
   remainder: chasm was fully impassable to voluntary movement). Upstream
