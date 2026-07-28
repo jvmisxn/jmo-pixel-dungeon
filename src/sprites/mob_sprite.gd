@@ -7,8 +7,6 @@ extends CharSprite
 
 const FADE_TIME: float = 3.0
 const FALL_TIME: float = 1.0
-const RAT_IDLE_HOP_HEIGHT: float = 2.0
-const RAT_IDLE_HOP_RATE: float = 1.8
 
 # --- Mob Visual Data ---
 # Maps mob_id -> { body, accent, eye, shape }
@@ -182,7 +180,6 @@ static var _MOB_SHEETS: Dictionary = {
 # --- State ---
 var mob_id: String = "rat"
 var _death_fading: bool = false
-var _idle_hop_time: float = 0.0
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -213,10 +210,6 @@ func setup_for_mob(p_mob_id: String) -> void:
 
 	# Fallback: procedural generation
 	refresh_texture()
-
-func _process(delta: float) -> void:
-	super._process(delta)
-	_update_rat_idle_hop(delta)
 
 # ---------------------------------------------------------------------------
 # Override — Procedural Drawing
@@ -308,19 +301,6 @@ func _configure_mob_sheet_animations() -> void:
 		_:
 			# Keep unmapped sheets static until their individual SPD frame maps are ported.
 			set_sheet_animation(AnimState.IDLE, [0], 1.0, true)
-
-func _update_rat_idle_hop(delta: float) -> void:
-	if _sprite == null:
-		return
-	var base_y: float = -TILE_SIZE * perspective_raise + GROUNDING_OFFSET_Y
-	if not ["rat", "fetid_rat"].has(mob_id) or _anim_state != AnimState.IDLE or is_animating:
-		_sprite.position.y = base_y
-		_idle_hop_time = 0.0
-		return
-	_idle_hop_time += delta
-	var phase: float = fmod(_idle_hop_time * RAT_IDLE_HOP_RATE, 1.0)
-	var hop: float = sin(phase * PI)
-	_sprite.position.y = base_y - hop * RAT_IDLE_HOP_HEIGHT
 
 func fall() -> void:
 	_death_fading = true

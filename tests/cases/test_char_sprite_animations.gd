@@ -3,7 +3,7 @@ extends RefCounted
 func run(t: Object) -> void:
 	_test_hero_sheet_animation_frames_advance(t)
 	_test_rat_sheet_animation_frames_advance(t)
-	_test_rat_idle_hop_offsets_sprite(t)
+	_test_rat_idle_jump_uses_sheet_frame(t)
 	_test_alert_emote_expires(t)
 	_test_damage_number_type_metadata(t)
 	_test_sewer_mob_sheet_animation_frames_advance(t)
@@ -46,7 +46,7 @@ func _test_rat_sheet_animation_frames_advance(t: Object) -> void:
 	sprite.free()
 
 
-func _test_rat_idle_hop_offsets_sprite(t: Object) -> void:
+func _test_rat_idle_jump_uses_sheet_frame(t: Object) -> void:
 	var sprite := MobSprite.new()
 	t.root.add_child(sprite)
 	sprite._ready()
@@ -56,14 +56,14 @@ func _test_rat_idle_hop_offsets_sprite(t: Object) -> void:
 	var body: Sprite2D = sprite.get("_sprite") as Sprite2D
 	var start_y: float = body.position.y
 
-	sprite._process(0.14)
-	t.check(body.position.y < start_y,
-		"Rat idle animation hops upward while idle")
-
-	sprite.move_to(ConstantsData.xy_to_pos(2, 1), 0.2)
-	sprite._process(0.01)
 	t.check(is_equal_approx(body.position.y, start_y),
-		"Rat idle hop resets while the rat is moving")
+		"Rat idle animation starts without moving the sprite body")
+	sprite._process(1.6)
+	var texture: AtlasTexture = body.texture as AtlasTexture
+	t.check(texture != null and int(texture.region.position.x) == 16,
+		"Rat idle animation uses the sprite-sheet jump frame")
+	t.check(is_equal_approx(body.position.y, start_y),
+		"Rat idle jump uses sheet pixels, not a manual y-offset")
 
 	sprite.free()
 
