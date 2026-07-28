@@ -3,6 +3,19 @@
 ## 2026-07-28
 
 - Tags: duelist, weapon-abilities, source-fidelity, tests
+- Spike weapon-ability family shipped (upstream Spear.spikeAbility, current
+  master): Spear/Glaive expose a "Spike" Duelist ability — guaranteed hit
+  with flat boost Spear 9+2*lvl / Glaive 12+round(2.5*lvl), only usable at
+  reach (adjacent targets are refused at no cost, per upstream's
+  `adjacent()` guard), a surviving un-moved target is knocked back one cell
+  via `KnockBack.throw_char` (upstream WandOfBlastWave.throwChar trajectory
+  simplified to the port's shared push helper), and the strike always costs
+  attack delay (kills open no free-recast window). New
+  `test_weapon_ability_spike.gd`; suite green (5128 checks).
+  [ENGINE]: in-game Duelist spear/glaive check wanted (reach-2 targeting,
+  knockback visual, push-into-chasm interaction).
+
+- Tags: duelist, weapon-abilities, source-fidelity, tests
 - Sneak weapon-ability family shipped (upstream Dagger.sneakAbility, current
   master): Dagger/Dirk/AssassinsBlade expose a "Sneak" Duelist ability —
   blink to an empty, visible, passable cell within range 5/4/3 (uniform

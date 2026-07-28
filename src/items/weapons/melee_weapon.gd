@@ -287,6 +287,12 @@ const SNEAK_MAX_DIST: Dictionary = {
 	"dagger": 5, "dirk": 4, "assassins_blade": 3,
 }
 
+## Polearm-family Spike flat damage boost [base, per-level factor] (upstream
+## Spear.spikeAbility dmgBoost: Spear 9+round(2*lvl), Glaive 12+round(2.5*lvl)).
+const SPIKE_BOOST: Dictionary = {
+	"spear": [9, 2.0], "glaive": [12, 2.5],
+}
+
 func has_duelist_ability() -> bool:
 	return ability_kind() != ""
 
@@ -298,6 +304,8 @@ func ability_kind() -> String:
 		return "heavy_blow"
 	if SNEAK_MAX_DIST.has(item_id):
 		return "sneak"
+	if SPIKE_BOOST.has(item_id):
+		return "spike"
 	return ""
 
 func ability_name() -> String:
@@ -308,6 +316,8 @@ func ability_name() -> String:
 			return "Heavy Blow"
 		"sneak":
 			return "Sneak"
+		"spike":
+			return "Spike"
 	return ""
 
 ## Targeting range for the ability prompt: sneak blinks up to its family
@@ -339,6 +349,10 @@ func ability_damage_boost() -> int:
 		"heavy_blow":
 			return int(HEAVY_BLOW_BASE_BOOST.get(item_id, 0)) \
 					+ int(roundf(1.5 * float(maxi(0, level))))
+		"spike":
+			var spike: Array = SPIKE_BOOST.get(item_id, [0, 0.0])
+			return int(spike[0]) \
+					+ int(roundf(float(spike[1]) * float(maxi(0, level))))
 	return 0
 
 ## Upstream MeleeWeapon.beforeAbilityUsed: spend charges from the charger
