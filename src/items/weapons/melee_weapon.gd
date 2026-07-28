@@ -326,6 +326,14 @@ const COMBO_STRIKE_BOOST: Dictionary = {
 	"gloves": 3, "sai": 4,
 }
 
+## Runic Slash enchant proc-chance boost [base, per-level factor] (upstream
+## RunicBlade.duelistAbility RunicSlashTracker boost = 3 + 0.5*buffedLvl,
+## i.e. the displayed 300+50*lvl % enchant power; the strike deals no bonus
+## damage).
+const RUNIC_SLASH_BOOST: Dictionary = {
+	"runic_blade": [3.0, 0.5],
+}
+
 func has_duelist_ability() -> bool:
 	return ability_kind() != ""
 
@@ -345,6 +353,8 @@ func ability_kind() -> String:
 		return "guard"
 	if COMBO_STRIKE_BOOST.has(item_id):
 		return "combo_strike"
+	if RUNIC_SLASH_BOOST.has(item_id):
+		return "runic_slash"
 	if SWORD_DANCE_DURATION.has(item_id):
 		return "sword_dance"
 	if DEFENSIVE_STANCE_DURATION.has(item_id):
@@ -367,6 +377,8 @@ func ability_name() -> String:
 			return "Guard"
 		"combo_strike":
 			return "Combo Strike"
+		"runic_slash":
+			return "Runic Slash"
 		"sword_dance":
 			return "Sword Dance"
 		"defensive_stance":
@@ -401,6 +413,12 @@ func sword_dance_turns() -> int:
 ## 3+buffedLvl since the ability itself is instant).
 func defensive_stance_turns() -> int:
 	return int(DEFENSIVE_STANCE_DURATION.get(item_id, 0)) + maxi(0, level)
+
+## Runic Slash enchant proc-chance boost (upstream RunicBlade tracker
+## boost = 3 + 0.5*buffedLvl).
+func runic_slash_boost() -> float:
+	var slash: Array = RUNIC_SLASH_BOOST.get(item_id, [0.0, 0.0])
+	return float(slash[0]) + float(slash[1]) * float(maxi(0, level))
 
 ## Charge cost (upstream baseChargeUse): cleave is free while the
 ## CleaveTracker window from an ability kill is open.

@@ -555,6 +555,13 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 			recent_hits = combo.hits
 			remove_buff(combo)
 		dmg_boost *= recent_hits
+	# Runic slash boosts the enchant proc chance for this one strike
+	# (upstream RunicBlade.duelistAbility attaches RunicSlashTracker with
+	# a 3 + 0.5*lvl bonus; the proc roll or post-strike cleanup consumes it).
+	if ability_kind == "runic_slash":
+		var slash: RunicSlashTracker = add_buff(RunicSlashTracker.new()) as RunicSlashTracker
+		if slash != null:
+			slash.boost = weapon.runic_slash_boost()
 	var enemy_pos_before: int = enemy.pos
 	attack(enemy, 1.0, float(dmg_boost), 1.0e9)
 	if has_buff("Invisibility"):
@@ -577,6 +584,14 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	elif ability_kind == "combo_strike":
 		# Upstream Sai.comboStrikeAbility always spends the attack delay;
 		# kills open no free-recast window.
+		_ability_spend = _get_attack_delay()
+	elif ability_kind == "runic_slash":
+		# Upstream RunicBlade detaches any unconsumed tracker after the
+		# strike and always spends the attack delay; kills open no
+		# free-recast window.
+		var slash_left: Buff = get_buff("RunicSlashTracker")
+		if slash_left != null:
+			remove_buff(slash_left)
 		_ability_spend = _get_attack_delay()
 	else:
 		var tracker: Buff = get_buff("CleaveTracker")

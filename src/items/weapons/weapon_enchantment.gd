@@ -28,14 +28,20 @@ static func _emit_proc(ench_id: String, attacker: Variant, defender: Variant) ->
 # ---------------------------------------------------------------------------
 
 ## Upstream Weapon.Enchantment.genericProcChanceMultiplier(): a Berserker with
-## the Enraged Catalyst talent boosts enchant activation chance by rage.
-## (Arcana/RunicBlade/Smite sources are not ported yet.)
+## the Enraged Catalyst talent boosts enchant activation chance by rage, and
+## the Duelist's Runic Slash tracker adds its boost then detaches.
+## (Arcana/Smite sources are not ported yet.)
 static func proc_chance_multiplier(attacker: Variant) -> float:
 	var multi: float = 1.0
 	if attacker is Object and attacker.has_method("get_buff"):
 		var rage: Variant = attacker.get_buff("BerserkerRage")
 		if rage != null and rage.has_method("enchant_proc_bonus"):
 			multi += rage.enchant_proc_bonus()
+		var slash: Variant = attacker.get_buff("RunicSlashTracker")
+		if slash is RunicSlashTracker:
+			multi += (slash as RunicSlashTracker).boost
+			if attacker.has_method("remove_buff"):
+				attacker.remove_buff(slash)
 	return multi
 
 ## Called when the enchanted weapon hits. Returns modified damage.

@@ -152,8 +152,11 @@ and pitfall/chasm landing parity including fallen-item heap drops
    Sword Dance shipped (Scimitar instant stance, 1.5x accuracy + 0.6
    attack-speed bonus, `test_weapon_ability_dance.gd`). 2026-07-28:
    Defensive Stance shipped (Quarterstaff instant stance, 3x evasion,
-   `test_weapon_ability_defensive_stance.gd`). Next talent milestone =
-   remaining weapon families (flail, runic_blade, greataxe), then the
+   `test_weapon_ability_defensive_stance.gd`). 2026-07-28: Runic Slash
+   shipped (Runic Blade guaranteed hit, +3+0.5*lvl enchant proc-chance
+   multiplier via consumed RunicSlashTracker,
+   `test_weapon_ability_runic_slash.gd`). Next talent milestone =
+   remaining weapon families (flail, greataxe), then the
    Champion/Monk talents.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
