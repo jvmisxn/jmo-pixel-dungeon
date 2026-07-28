@@ -18,13 +18,15 @@ static func refresh_after_turn(scene: Variant) -> void:
 	scene.fog_of_war.update_visibility()
 	scene.tile_map.render_changed()
 	scene.tile_map.update_tile_visibility()
+	# Spawn/remove ground sprites before the visibility pass so newly spawned
+	# sprites are fog-gated in the same refresh instead of next turn (audit:S25).
+	scene._refresh_item_sprites()
+	scene._refresh_plant_sprites()
+	scene._refresh_armed_bomb_sprites()
 	scene._update_entity_visibility()
 	var hero_world: Vector2 = scene.tile_map.cell_to_world(local_hero.pos)
 	scene.game_camera.set_target(hero_world)
 	scene._cleanup_dead_mobs()
-	scene._refresh_item_sprites()
-	scene._refresh_plant_sprites()
-	scene._refresh_armed_bomb_sprites()
 	scene._interrupt_rest_if_needed()
 	scene._sync_online_snapshot()
 

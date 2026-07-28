@@ -43,6 +43,18 @@ static func cleanup_dead_mobs(scene: Variant) -> void:
 	for key: Variant in to_remove:
 		scene._mob_sprites.erase(key)
 
+## Initial fog gating for a newly spawned ground sprite. Matches the
+## update_entity_visibility rule (currently visible or previously seen) so
+## sprites spawned mid-refresh never flash through unexplored fog for a
+## turn (audit:S25).
+static func spawned_sprite_visible(scene: Variant, pos: int) -> bool:
+	if scene == null or scene._current_level == null:
+		return false
+	if pos < 0 or pos >= scene._current_level.visible.size():
+		return false
+	return scene._current_level.visible[pos] or scene._current_level.visited[pos]
+
+
 static func refresh_item_sprites(scene: Variant) -> void:
 	if scene == null or scene._current_level == null:
 		return
@@ -66,6 +78,7 @@ static func refresh_item_sprites(scene: Variant) -> void:
 		var sprite: Variant = scene._instantiate_script("res://src/sprites/item_sprite.gd")
 		sprite.setup_from_item(heap.get("item"))
 		sprite.place_at(pos)
+		sprite.visible = spawned_sprite_visible(scene, pos)
 		sprite.play_drop()
 		scene._entity_layer.add_child(sprite)
 		scene._item_sprites[pos] = sprite
@@ -98,6 +111,7 @@ static func refresh_armed_bomb_sprites(scene: Variant) -> void:
 		else:
 			sprite.setup_manual(ConstantsData.ItemCategory.MISC, Color(0.8, 0.3, 0.2))
 		sprite.place_at(bomb_pos)
+		sprite.visible = spawned_sprite_visible(scene, bomb_pos)
 		sprite.play_drop()
 		scene._entity_layer.add_child(sprite)
 		scene._armed_bomb_sprites[bomb_pos] = sprite
@@ -130,6 +144,7 @@ static func refresh_plant_sprites(scene: Variant) -> void:
 		var plant_key: String = str(plant.get("plant_id")) if plant != null and plant.get("plant_id") != null else ""
 		sprite.setup_for_plant(plant_key)
 		sprite.place_at(plant_pos)
+		sprite.visible = spawned_sprite_visible(scene, plant_pos)
 		scene._entity_layer.add_child(sprite)
 		scene._plant_sprites[plant_pos] = sprite
 
