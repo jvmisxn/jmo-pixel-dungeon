@@ -1,5 +1,29 @@
 # Change Log
 
+## 2026-07-29
+
+- Tags: duelist, weapon-abilities, source-fidelity, tests
+- Flail Spin ability shipped (upstream Flail.duelistAbility +
+  Flail.SpinAbilityTracker + accuracyFactor/damageRoll release, current
+  master): Flail exposes a self-targeted "Spin" Duelist ability — wind up
+  the flail, stacking up to 3 spins on a 3-turn `SpinAbilityTracker`
+  (every cast re-prolongs it). First spin costs one charge; re-spins
+  while the tracker is active are free (upstream baseChargeUse 0). Each
+  cast spends one turn (upstream spendAndNext(TICK)); a fourth spin
+  refuses for free with a warning. The next flail attack releases the
+  spins via a new `Hero.attack` override: guaranteed hit (1e9 acc_multi)
+  with +spins*(8+2*lvl) bonus damage, tracker consumed up front so
+  infinite-evasion defenders still spend the spins (upstream detaches in
+  accuracyFactor). Dispatch via `SPIN_BOOST` + `spin_boost_per_spin()` in
+  `melee_weapon.gd`; `_do_spin_ability` + attack override in `hero.gd`
+  (small hand-edits, fragile file). New `test_weapon_ability_spin.gd`
+  (ability data, stacking + free re-spins + prolong, fourth-spin refusal,
+  release consume vs awake high-evasion mob, no-charge refusal). Suite
+  green (5270 checks). [ENGINE]: in-game feel check wanted (spin → big
+  hit). Follow-up gap logged: upstream flail cannot surprise-attack
+  (Hero.canSurpriseAttack) — not yet ported. Remaining ability-less
+  roster: greataxe only.
+
 ## 2026-07-28
 
 - Tags: duelist, weapon-abilities, source-fidelity, tests

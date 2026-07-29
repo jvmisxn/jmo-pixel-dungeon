@@ -510,6 +510,9 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	if weapon.ability_kind() == "defensive_stance":
 		_do_defensive_stance_ability(weapon, charge_use)
 		return
+	if weapon.ability_kind() == "spin":
+		_do_spin_ability(weapon, charge_use)
+		return
 	if weapon.ability_kind() == "sneak":
 		_do_sneak_ability(weapon, target_pos, charge_use)
 		return
@@ -738,6 +741,29 @@ func _do_defensive_stance_ability(weapon: MeleeWeapon, charge_use: float) -> voi
 		add_buff(stance)
 	if MessageLog:
 		MessageLog.add("You shift into a defensive stance.")
+	_patient_strike_ready = false
+	_followup_strike_ready = false
+
+## Flail Spin (upstream Flail.duelistAbility): wind up the flail, stacking
+## up to 3 spins on a 3-turn SpinAbilityTracker that every cast re-prolongs.
+## The first spin costs a charge; re-spins while the tracker is active are
+## free (baseChargeUse 0). Winding up spends one turn; a fourth spin
+## refuses for free. The next flail attack releases the spins (see attack).
+func _do_spin_ability(weapon: MeleeWeapon, charge_use: float) -> void:
+	var spin: SpinAbilityTracker = get_buff("SpinAbilityTracker") as SpinAbilityTracker
+	if spin != null and spin.spins >= 3:
+		if MessageLog:
+			MessageLog.add_warning("Your flail is already at full spin!")
+		return
+	weapon.before_ability_used(self, charge_use)
+	if spin == null:
+		spin = add_buff(SpinAbilityTracker.new()) as SpinAbilityTracker
+	if spin != null:
+		spin.spins += 1
+		spin.postpone(3.0)
+		if MessageLog:
+			MessageLog.add("You spin your flail faster!")
+	_ability_spend = 1.0
 	_patient_strike_ready = false
 	_followup_strike_ready = false
 
@@ -2196,6 +2222,21 @@ func _get_non_movement_action_delay() -> float:
 # ---------------------------------------------------------------------------
 # Damage / Heal Overrides (emit HUD update signals)
 # ---------------------------------------------------------------------------
+
+## Flail Spin release (upstream Flail.accuracyFactor + damageRoll): while a
+## SpinAbilityTracker is stacked, the next flail attack is a guaranteed hit
+## with +spins*(8+2*lvl) bonus damage. The tracker is consumed up front, so
+## a defender with infinite evasion still spends the spins (upstream
+## detaches in accuracyFactor before the roll resolves).
+func attack(target: Char, dmg_multi: float = 1.0, dmg_bonus: float = 0.0, acc_multi: float = 1.0) -> bool:
+	var spin: SpinAbilityTracker = get_buff("SpinAbilityTracker") as SpinAbilityTracker
+	if spin != null and belongings != null and belongings.weapon is MeleeWeapon \
+			and (belongings.weapon as MeleeWeapon).ability_kind() == "spin":
+		var weapon: MeleeWeapon = belongings.weapon as MeleeWeapon
+		dmg_bonus += float(spin.spins * weapon.spin_boost_per_spin())
+		acc_multi = 1.0e9
+		remove_buff(spin)
+	return super.attack(target, dmg_multi, dmg_bonus, acc_multi)
 
 ## Override damage_roll to use equipped weapon's damage calculation.
 ## Original SPD: Hero.damageRoll() delegates to weapon.damageRoll(this).
