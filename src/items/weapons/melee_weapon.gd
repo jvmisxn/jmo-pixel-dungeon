@@ -326,6 +326,12 @@ const COMBO_STRIKE_BOOST: Dictionary = {
 	"gloves": 3, "sai": 4,
 }
 
+## Flail Spin per-spin release damage boost [base, per-level factor]
+## (upstream Flail.accuracyFactor spinBoost = spins * (8 + 2*buffedLvl)).
+const SPIN_BOOST: Dictionary = {
+	"flail": [8, 2],
+}
+
 ## Runic Slash enchant proc-chance boost [base, per-level factor] (upstream
 ## RunicBlade.duelistAbility RunicSlashTracker boost = 3 + 0.5*buffedLvl,
 ## i.e. the displayed 300+50*lvl % enchant power; the strike deals no bonus
@@ -355,6 +361,8 @@ func ability_kind() -> String:
 		return "combo_strike"
 	if RUNIC_SLASH_BOOST.has(item_id):
 		return "runic_slash"
+	if SPIN_BOOST.has(item_id):
+		return "spin"
 	if SWORD_DANCE_DURATION.has(item_id):
 		return "sword_dance"
 	if DEFENSIVE_STANCE_DURATION.has(item_id):
@@ -379,6 +387,8 @@ func ability_name() -> String:
 			return "Combo Strike"
 		"runic_slash":
 			return "Runic Slash"
+		"spin":
+			return "Spin"
 		"sword_dance":
 			return "Sword Dance"
 		"defensive_stance":
@@ -414,6 +424,12 @@ func sword_dance_turns() -> int:
 func defensive_stance_turns() -> int:
 	return int(DEFENSIVE_STANCE_DURATION.get(item_id, 0)) + maxi(0, level)
 
+## Flail Spin per-spin release damage (upstream 8 + 2*buffedLvl; the
+## release adds this per stacked spin).
+func spin_boost_per_spin() -> int:
+	var spin: Array = SPIN_BOOST.get(item_id, [0, 0])
+	return int(spin[0]) + int(spin[1]) * maxi(0, level)
+
 ## Runic Slash enchant proc-chance boost (upstream RunicBlade tracker
 ## boost = 3 + 0.5*buffedLvl).
 func runic_slash_boost() -> float:
@@ -421,10 +437,14 @@ func runic_slash_boost() -> float:
 	return float(slash[0]) + float(slash[1]) * float(maxi(0, level))
 
 ## Charge cost (upstream baseChargeUse): cleave is free while the
-## CleaveTracker window from an ability kill is open.
+## CleaveTracker window from an ability kill is open; re-spinning a flail
+## while the SpinAbilityTracker is active is free (upstream Flail).
 func ability_charge_use(hero: Variant) -> float:
 	if CLEAVE_BASE_BOOST.has(item_id) and hero != null \
 			and hero.has_method("has_buff") and hero.has_buff("CleaveTracker"):
+		return 0.0
+	if SPIN_BOOST.has(item_id) and hero != null \
+			and hero.has_method("has_buff") and hero.has_buff("SpinAbilityTracker"):
 		return 0.0
 	return 1.0
 

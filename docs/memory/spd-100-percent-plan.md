@@ -155,9 +155,11 @@ and pitfall/chasm landing parity including fallen-item heap drops
    `test_weapon_ability_defensive_stance.gd`). 2026-07-28: Runic Slash
    shipped (Runic Blade guaranteed hit, +3+0.5*lvl enchant proc-chance
    multiplier via consumed RunicSlashTracker,
-   `test_weapon_ability_runic_slash.gd`). Next talent milestone =
-   remaining weapon families (flail, greataxe), then the
-   Champion/Monk talents.
+   `test_weapon_ability_runic_slash.gd`). 2026-07-29: Flail Spin shipped
+   (stacking 3-spin tracker, free re-spins, guaranteed-hit release with
+   +spins*(8+2*lvl), `test_weapon_ability_spin.gd`; flail
+   no-surprise-attack gap logged in backlog). Next talent milestone =
+   Greataxe (last ability-less weapon), then the Champion/Monk talents.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +
