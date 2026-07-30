@@ -206,8 +206,11 @@ and pitfall/chasm landing parity including fallen-item heap drops
    `test_weapon_ability_offhand.gd`); remaining: swap ActionIndicator,
    then combined_lethality (last inert Champion talent). 2026-07-30:
    Combined Lethality LIVE (differing-weapon execute at 0.4*points/3 HP,
-   `test_combined_lethality.gd`) — zero inert talents remain; only the
-   swap ActionIndicator is left for Champion parity.
+   `test_combined_lethality.gd`) — zero inert talents remain. 2026-07-30:
+   instant swap shipped (`Belongings.swap_weapons` free action + tappable
+   Champion WeaponCharger icon as the ActionIndicator stand-in,
+   `test_champion_weapon_swap.gd`) — Champion dual-wield parity is
+   COMPLETE and this talent-foundation item is closed.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +
