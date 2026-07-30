@@ -182,10 +182,12 @@ static func _apply_warden(hero: Hero) -> void:
 	var barkskin: WardenBarkskin = WardenBarkskin.new()
 	hero.add_buff(barkskin)
 
-static func _apply_champion(hero: Hero) -> void:
-	# Champion gets dual-wield passive
-	var dual: ChampionDualWield = ChampionDualWield.new()
-	hero.add_buff(dual)
+static func _apply_champion(_hero: Hero) -> void:
+	# Upstream parity: the Champion has no passive buff. Dual-wielding lives in
+	# Belongings.second_wep (equip a second melee weapon via its item window);
+	# attacks always use the primary weapon. The legacy alternating
+	# ChampionDualWield buff now only migrates old saves.
+	pass
 
 static func _apply_monk(hero: Hero) -> void:
 	# Monk gets flurry tracker

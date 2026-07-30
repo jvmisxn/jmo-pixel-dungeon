@@ -125,6 +125,11 @@ func _add_action_buttons(container: HFlowContainer) -> void:
 			_add_button(container, "Unequip", _action_unequip)
 		else:
 			_add_button(container, "Equip", _action_equip)
+			# Champion off-hand slot (upstream KindOfWeapon.execute shows a
+			# primary/secondary WndOptions prompt; here it is a second button).
+			if _item is MeleeWeapon and _hero != null \
+					and _hero.hero_subclass == ConstantsData.HeroSubclass.CHAMPION:
+				_add_button(container, "Equip 2nd", _action_equip_second)
 
 	# Use / Drink / Read / Eat based on category
 	var cat: int = ConstantsData.get_prop(_item, "category", -1)
@@ -191,6 +196,15 @@ func _action_equip() -> void:
 	close_window()
 
 
+func _action_equip_second() -> void:
+	if not _hero or not _hero.belongings or not _item:
+		close_window()
+		return
+	if EventBus and EventBus.has_signal("request_hero_action"):
+		EventBus.request_hero_action.emit({"type": "equip_item", "item": _item, "slot": "second_wep"})
+	close_window()
+
+
 func _action_unequip() -> void:
 	if not _hero or not _hero.belongings or not _item:
 		close_window()
@@ -211,6 +225,8 @@ func _action_unequip() -> void:
 	var slot: String = ""
 	if _hero.belongings.weapon == _item:
 		slot = "weapon"
+	elif _hero.belongings.second_wep == _item:
+		slot = "second_wep"
 	elif _hero.belongings.spirit_bow == _item:
 		slot = "spirit_bow"
 	elif _hero.belongings.armor == _item:

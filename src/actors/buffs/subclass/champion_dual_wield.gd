@@ -1,78 +1,44 @@
 class_name ChampionDualWield
 extends Buff
-## Champion (Duelist) subclass passive. Enables dual-wielding melee weapons.
-## Alternates attacks between primary and secondary weapon.
+## LEGACY MIGRATION SHIM. The old Champion passive alternated damage between a
+## primary weapon and a secondary weapon stored inside this buff. Upstream has
+## no such passive: the Champion keeps a stowed second weapon in
+## Belongings.secondWep, always attacks with the primary, and swaps/uses
+## abilities from either weapon. This class only survives so old saves that
+## still carry the buff can migrate their stored off-hand weapon into
+## Belongings.second_wep, then the buff removes itself.
 
-## The secondary weapon equipped in the ring slot.
+## Off-hand weapon carried by the legacy buff (restored from old saves).
 var secondary_weapon: Variant = null
-## Which weapon attacks next: true = primary, false = secondary.
-var primary_next: bool = true
 
 func _init() -> void:
 	buff_id = "ChampionDualWield"
-	buff_name = "Dual Wield"
+	buff_name = "Dual Wield (legacy)"
 	duration = -1.0
-	icon_color = Color(0.9, 0.6, 0.2)
+	show_in_ui = false
 
-## Equip a secondary weapon. Returns true if successful.
-func equip_secondary(weapon: Variant) -> bool:
-	if weapon == null:
-		return false
-	secondary_weapon = weapon
-	if MessageLog:
-		var wname: String = weapon.get("item_name") if weapon.get("item_name") else "weapon"
-		MessageLog.add("You wield the %s in your off-hand." % wname)
-	return true
+func on_attach() -> void:
+	_migrate_secondary()
+	if target != null and target.has_method("remove_buff"):
+		target.call_deferred("remove_buff", self)
 
-func unequip_secondary() -> Variant:
-	var old: Variant = secondary_weapon
+## Move the buff-held off-hand weapon into the real second_wep slot
+## (or the backpack if that slot is already taken).
+func _migrate_secondary() -> void:
+	if secondary_weapon == null or target == null:
+		return
+	var belongings: Variant = target.get("belongings")
+	if belongings == null:
+		secondary_weapon = null
+		return
+	if belongings.second_wep == null:
+		belongings.equip_second_wep(secondary_weapon)
+	else:
+		belongings.add_item(secondary_weapon)
 	secondary_weapon = null
-	return old
-
-func on_damage_dealt(_amount: int, _target: Node) -> void:
-	# Alternate weapons
-	primary_next = not primary_next
-
-## Get damage range for the current attacking weapon.
-func get_current_weapon_damage() -> Array[int]:
-	if primary_next or secondary_weapon == null:
-		return []  # Use primary (normal path)
-	# Use secondary weapon damage
-	if secondary_weapon.has_method("get_damage_range"):
-		return secondary_weapon.get_damage_range()
-	return []
-
-func modify_damage(dmg: int) -> int:
-	# If secondary weapon is active and has damage, use its range instead
-	if not primary_next and secondary_weapon != null:
-		var sec_range: Array[int] = get_current_weapon_damage()
-		if sec_range.size() >= 2:
-			return randi_range(sec_range[0], sec_range[1])
-	return dmg
-
-func modify_armor(armor: int) -> int:
-	# Both weapons contribute to defense (secondary adds 25% of its tier as armor)
-	if secondary_weapon and secondary_weapon.get("tier"):
-		armor += secondary_weapon.tier
-	return armor
-
-func description() -> String:
-	if secondary_weapon:
-		var wname: String = secondary_weapon.get("item_name") if secondary_weapon.get("item_name") else "?"
-		var which: String = "primary" if primary_next else "secondary"
-		return "Dual Wield (%s next, off-hand: %s)" % [which, wname]
-	return "Dual Wield (no off-hand penalty when using two weapons)."
-
-func serialize() -> Dictionary:
-	var data: Dictionary = super.serialize()
-	data["primary_next"] = primary_next
-	if secondary_weapon != null and secondary_weapon.has_method("serialize"):
-		data["secondary_weapon"] = secondary_weapon.serialize()
-	return data
 
 func deserialize(data: Dictionary) -> void:
 	super.deserialize(data)
-	primary_next = bool(data.get("primary_next", primary_next))
 	secondary_weapon = null
 	var weapon_data: Variant = data.get("secondary_weapon", null)
 	if not (weapon_data is Dictionary):

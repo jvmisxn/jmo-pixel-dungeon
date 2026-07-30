@@ -47,6 +47,10 @@ func _build_content() -> Control:
 
 	var slot_names: Array[String] = ["weapon", "spirit_bow", "armor", "artifact", "ring_left", "ring_right", "misc"]
 	var slot_labels: Array[String] = ["Weapon", "Bow", "Armor", "Artifact", "Ring L", "Ring R", "Misc"]
+	# Champion off-hand weapon slot (upstream InventoryPane shows secondWep).
+	if _hero and _hero.hero_subclass == ConstantsData.HeroSubclass.CHAMPION:
+		slot_names.insert(1, "second_wep")
+		slot_labels.insert(1, "Off-hand")
 	var equip_slot_size: float = _inventory_equip_slot_size()
 	for i: int in range(slot_names.size()):
 		var equip_slot: ItemSlot = ItemSlot.new()
@@ -115,6 +119,7 @@ func _get_equipped_item(slot_name: String) -> Variant:
 		return null
 	match slot_name:
 		"weapon": return _hero.belongings.weapon
+		"second_wep": return _hero.belongings.second_wep
 		"spirit_bow": return _hero.belongings.spirit_bow
 		"armor": return _hero.belongings.armor
 		"artifact": return _hero.belongings.artifact
@@ -250,6 +255,7 @@ func _on_equip_slot_pressed(slot_name: String) -> void:
 	var item: Variant = null
 	match slot_name:
 		"weapon": item = _hero.belongings.weapon
+		"second_wep": item = _hero.belongings.second_wep
 		"spirit_bow": item = _hero.belongings.spirit_bow
 		"armor": item = _hero.belongings.armor
 		"artifact": item = _hero.belongings.artifact

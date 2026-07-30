@@ -398,7 +398,7 @@ func get_equipped_spirit_bow() -> Item:
 ## Return all items (backpack + equipped). Useful for NPC quests scanning inventory.
 func get_items() -> Array[Item]:
 	var result: Array[Item] = _all_backpack_items()
-	for slot in [weapon, armor, artifact, misc, spirit_bow, ring_left, ring_right]:
+	for slot in [weapon, second_wep, armor, artifact, misc, spirit_bow, ring_left, ring_right]:
 		if slot != null:
 			result.append(slot)
 	return result
