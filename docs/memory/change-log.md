@@ -1,5 +1,40 @@
 # Change Log
 
+## 2026-07-30 (missile-tier-roster-parity)
+
+- Tags: items, source-fidelity, tests
+- Missile tier rosters now match upstream Generator MIS_T1-T5 exactly:
+  T1 stone/knife/spike (+prob-0 dart), T2 fishing spear/club/shuriken,
+  T3 throwing spear/kunai/bolas, T4 javelin/tomahawk/heavy boomerang,
+  T5 trident/throwing hammer/force_cudgel (adaptation filling the
+  ForceCube slot). All tier decks weigh 3 per slot; MIS_DECK_2/1 consts
+  removed. Plain boomerang has no upstream slot: out of every deck,
+  item kept creatable for old saves.
+- Four upstream missiles added: throwing_spike (t1, 12 uses),
+  fishing_spear (t2), throwing_spear (t3), throwing_hammer (t5, 12 uses).
+- Upstream tiers restored on moved items: club 1→2, kunai/bolas 2→3,
+  javelin/tomahawk 3→4, trident 4→5; base_uses aligned (stone/knife 5,
+  club 12, kunai 8, javelin/trident 10).
+- Missile damage formula parity (upstream MissileWeapon.min/max):
+  missiles now roll 2t+lvl .. 5t+t*lvl instead of reusing the melee
+  formula, with upstream per-item overrides (knife 6t max + 2lvl scaling;
+  shuriken/kunai/club/hammer 4t max; bolas flat min 2(t-1), max 3t+(t-1)lvl;
+  tomahawk 1.5t min, 4t+(t-1)lvl max; heavy boomerang 4t+(t-1)lvl max).
+  Invented damage_multiplier/str_req_bonus adaptations on stone/club/
+  shuriken removed (shuriken keeps its 0.8 delay as the documented
+  stand-in for the unported instant-first-throw tracker).
+- `MissileWeapon.get_str_requirement` = same-tier melee minus 1 (upstream
+  MissileWeapon.STRReq).
+- Bolas cripple now 5 turns (upstream Cripple.DURATION/2, was 3).
+- Not ported (logged in backlog): fishing spear piranha bonus (needs a
+  damage-modifying proc hook in fragile hero.gd), kunai sneak-attack min
+  boost, tomahawk bleed proc, shuriken instant throw, club/hammer instant
+  pickup.
+- Tests: `test_missile_tier_parity.gd` (rosters, tiers, level-0 ranges,
+  scaling spot-checks, STR-1, boomerang retired); updated
+  tier-decks/differentiation/sharpshooting/quickslot-range tests off the
+  old tiers/melee formula.
+
 ## 2026-07-30 (wandmaker-deck-undo-drop)
 
 - Tags: items, npcs, source-fidelity, tests

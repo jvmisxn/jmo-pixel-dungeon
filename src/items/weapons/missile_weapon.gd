@@ -94,7 +94,8 @@ func apply_special_effect(target: Variant) -> void:
 				if script:
 					var cripple: Variant = script.new()
 					if cripple.has_method("set_duration"):
-						cripple.set_duration(3)
+						# Upstream Bolas.proc: Cripple.DURATION/2 = 5 turns.
+						cripple.set_duration(5)
 					target.add_buff(cripple)
 				if MessageLog:
 					MessageLog.add("The bolas entangle the enemy!")
@@ -112,6 +113,36 @@ func apply_special_effect(target: Variant) -> void:
 # ---------------------------------------------------------------------------
 # Damage
 # ---------------------------------------------------------------------------
+
+## Upstream MissileWeapon.min/max: min = 2*tier + lvl, max = 5*tier + tier*lvl
+## (melee weapons use tier + lvl / 5*(tier+1) + lvl*(tier+1) instead). Items
+## with upstream min/max overrides adjust below by id.
+func _damage_range_for_level(lvl: int) -> Array[int]:
+	var base_min: int = 2 * tier + lvl
+	var base_max: int = 5 * tier + tier * lvl
+	match item_id:
+		"throwing_knife":
+			base_max = 6 * tier + (2 * lvl if tier == 1 else tier * lvl)
+		"shuriken", "kunai", "throwing_club", "throwing_hammer":
+			base_max = 4 * tier + tier * lvl
+		"bolas":
+			base_min = 2 * (tier - 1)
+			base_max = 3 * tier + (tier - 1) * lvl
+		"tomahawk":
+			base_min = roundi(1.5 * tier) + lvl
+			base_max = roundi(4.0 * tier) + (tier - 1) * lvl
+		"heavy_boomerang":
+			base_max = 4 * tier + (tier - 1) * lvl
+
+	var dmg_multi: float = _augment_damage_multiplier() * damage_multiplier
+	var final_min: int = maxi(1, roundi(base_min * dmg_multi))
+	var final_max: int = maxi(final_min, roundi(base_max * dmg_multi))
+	return [final_min, final_max]
+
+## Upstream MissileWeapon.STRReq: one less STR than a melee weapon of the
+## same tier.
+func get_str_requirement() -> int:
+	return maxi(1, super.get_str_requirement() - 1)
 
 ## Missile damage adds the equipped Ring of Sharpshooting's level bonus, matching
 ## upstream SPD where MissileWeapon.min()/max() use buffedLvl() +
@@ -169,11 +200,11 @@ func speed_factor(hero: Char) -> float:
 ## All valid missile weapon IDs.
 static var ALL_IDS: Array[String] = [
 	"dart", "curare_dart", "paralytic_dart",
-	"throwing_knife", "throwing_club", "throwing_stone",
-	"shuriken", "kunai", "bolas",
-	"javelin", "tomahawk", "boomerang",
-	"trident", "heavy_boomerang",
-	"force_cudgel",
+	"throwing_knife", "throwing_stone", "throwing_spike",
+	"fishing_spear", "throwing_club", "shuriken",
+	"throwing_spear", "kunai", "bolas",
+	"javelin", "tomahawk", "heavy_boomerang", "boomerang",
+	"trident", "throwing_hammer", "force_cudgel",
 ]
 
 ## Create a fully configured missile weapon by ID.
@@ -207,80 +238,78 @@ static func create(weapon_id: String) -> MissileWeapon:
 			w.item_name = "Throwing Knife"
 			w.description = "A small balanced knife designed for throwing. Cheap and disposable."
 			w.tier = 1
-			w.base_uses = 10
+			w.base_uses = 5
 			w.icon_color = Color(0.6, 0.6, 0.65)
-		"throwing_club":
-			w.item_name = "Throwing Club"
-			w.description = "A weighted wooden club that can be hurled short distances."
-			w.tier = 1
-			w.base_uses = 10
-			# Heavy thrown: slower and harder-hitting than a light dart.
-			w.delay_factor = 1.15
-			w.damage_multiplier = 1.2
-			w.str_req_bonus = 1
-			w.icon_color = Color(0.5, 0.35, 0.15)
 		"throwing_stone":
 			w.item_name = "Throwing Stone"
 			w.description = "A smooth, heavy stone. Primitive but always available."
 			w.tier = 1
-			w.base_uses = 10
-			# Dense but crude: a modest damage boost over a dart.
-			w.damage_multiplier = 1.1
+			w.base_uses = 5
 			w.icon_color = Color(0.5, 0.5, 0.5)
+		"throwing_spike":
+			w.item_name = "Throwing Spike"
+			w.description = "A sturdy metal spike, weighted for throwing. Simple and durable."
+			w.tier = 1
+			w.base_uses = 12
+			w.icon_color = Color(0.55, 0.55, 0.6)
 
 		# ===== TIER 2 =====
+		"fishing_spear":
+			w.item_name = "Fishing Spear"
+			w.description = "A short spear with a barbed tip, made for spearing fish."
+			w.tier = 2
+			w.base_uses = 10
+			w.icon_color = Color(0.55, 0.45, 0.35)
+		"throwing_club":
+			w.item_name = "Throwing Club"
+			w.description = "A weighted wooden club that can be hurled short distances."
+			w.tier = 2
+			w.base_uses = 12
+			w.icon_color = Color(0.5, 0.35, 0.15)
 		"shuriken":
 			w.item_name = "Shuriken"
 			w.description = "A razor-sharp throwing star. Cuts deep but wears down quickly."
 			w.tier = 2
 			w.base_uses = 5
-			# Light and fast: quick to throw, less damage per hit.
+			# Adaptation: quick throw stands in for upstream's instant
+			# first-throw-per-turn (ShurikenInstantTracker, unported).
 			w.delay_factor = 0.8
-			w.damage_multiplier = 0.9
-			w.str_req_bonus = -1
 			w.icon_color = Color(0.7, 0.7, 0.75)
+
+		# ===== TIER 3 =====
+		"throwing_spear":
+			w.item_name = "Throwing Spear"
+			w.description = "A sturdy spear balanced for throwing at distant prey."
+			w.tier = 3
+			w.base_uses = 10
+			w.icon_color = Color(0.6, 0.5, 0.3)
 		"kunai":
 			w.item_name = "Kunai"
 			w.description = "A pointed throwing blade favored by assassins."
-			w.tier = 2
-			w.base_uses = 5
+			w.tier = 3
+			w.base_uses = 8
 			w.icon_color = Color(0.35, 0.35, 0.4)
 		"bolas":
 			w.item_name = "Bolas"
 			w.description = "Weighted balls connected by cord. Entangles enemies on hit."
-			w.tier = 2
+			w.tier = 3
 			w.base_uses = 5
 			w.special_effect = "slow"
 			w.icon_color = Color(0.55, 0.45, 0.3)
 
-		# ===== TIER 3 =====
+		# ===== TIER 4 =====
 		"javelin":
 			w.item_name = "Javelin"
 			w.description = "A long throwing spear. Excellent range and penetration."
-			w.tier = 3
-			w.base_uses = 5
+			w.tier = 4
+			w.base_uses = 10
 			w.icon_color = Color(0.6, 0.55, 0.35)
 		"tomahawk":
 			w.item_name = "Tomahawk"
 			w.description = "A throwing axe that tumbles through the air with lethal force."
-			w.tier = 3
-			w.base_uses = 5
-			w.icon_color = Color(0.45, 0.35, 0.2)
-		"boomerang":
-			w.item_name = "Boomerang"
-			w.description = "A curved throwing weapon that returns to the wielder after striking."
-			w.tier = 3
-			w.base_uses = 5
-			w.returns = true
-			w.icon_color = Color(0.55, 0.5, 0.3)
-
-		# ===== TIER 4 =====
-		"trident":
-			w.item_name = "Trident"
-			w.description = "A heavy three-pronged spear. Powerful at range."
 			w.tier = 4
 			w.base_uses = 5
-			w.icon_color = Color(0.4, 0.6, 0.7)
+			w.icon_color = Color(0.45, 0.35, 0.2)
 		"heavy_boomerang":
 			w.item_name = "Heavy Boomerang"
 			w.description = "A reinforced boomerang made of dense metal. Hits hard and returns."
@@ -288,9 +317,31 @@ static func create(weapon_id: String) -> MissileWeapon:
 			w.base_uses = 5
 			w.returns = true
 			w.icon_color = Color(0.5, 0.45, 0.35)
+		"boomerang":
+			# Port adaptation kept for old saves; no longer in the random
+			# drop decks (upstream has no plain boomerang).
+			w.item_name = "Boomerang"
+			w.description = "A curved throwing weapon that returns to the wielder after striking."
+			w.tier = 3
+			w.base_uses = 5
+			w.returns = true
+			w.icon_color = Color(0.55, 0.5, 0.3)
 
 		# ===== TIER 5 =====
+		"trident":
+			w.item_name = "Trident"
+			w.description = "A heavy three-pronged spear. Powerful at range."
+			w.tier = 5
+			w.base_uses = 10
+			w.icon_color = Color(0.4, 0.6, 0.7)
+		"throwing_hammer":
+			w.item_name = "Throwing Hammer"
+			w.description = "A brutally heavy hammer built to be hurled. Durable and devastating."
+			w.tier = 5
+			w.base_uses = 12
+			w.icon_color = Color(0.45, 0.45, 0.5)
 		"force_cudgel":
+			# Roster adaptation filling upstream's ForceCube tier-5 slot.
 			w.item_name = "Force Cudgel"
 			w.description = "A massive thrown club imbued with kinetic energy. Devastating impact."
 			w.tier = 5
