@@ -180,6 +180,7 @@ static func create_mob(mob_id: String) -> Mob:
 		# Special mobs
 		"piranha": return Piranha.new()
 		"mimic": return Mimic.new()
+		"crystal_mimic": return CrystalMimic.new()
 		"animated_statue": return AnimatedStatue.new()
 		"golden_statue": return GoldenStatue.new()
 		"wraith": return Wraith.new()

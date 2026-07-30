@@ -64,6 +64,7 @@ static var MOB_VISUALS: Dictionary = {
 	# --- Special ---
 	"piranha": { "body": Color(0.2, 0.4, 0.7), "accent": Color(0.3, 0.5, 0.8), "eye": Color(0.9, 0.2, 0.1), "shape": "small" },
 	"mimic": { "body": Color(0.5, 0.35, 0.2), "accent": Color(0.6, 0.4, 0.2), "eye": Color(0.9, 0.9, 0.1), "shape": "large" },
+	"crystal_mimic": { "body": Color(0.55, 0.75, 0.9), "accent": Color(0.7, 0.85, 1.0), "eye": Color(0.2, 0.4, 0.9), "shape": "large" },
 	"wraith": { "body": Color(0.2, 0.2, 0.3), "accent": Color(0.3, 0.3, 0.4), "eye": Color(0.9, 0.9, 0.9), "shape": "humanoid" },
 	"rose_ghost": { "body": Color(0.8, 0.75, 0.9), "accent": Color(0.95, 0.8, 0.9), "eye": Color(0.6, 0.6, 1.0), "shape": "humanoid" },
 	"bee": { "body": Color(0.9, 0.7, 0.1), "accent": Color(0.2, 0.2, 0.2), "eye": Color(0.1, 0.1, 0.1), "shape": "flying" },
@@ -160,6 +161,7 @@ static var _MOB_SHEETS: Dictionary = {
 	"burning_fist":    { "path": "yog_fists.png",      "fw": 32, "fh": 32, "row": 2 },
 	# --- Special ---
 	"mimic":           { "path": "mimic.png",          "fw": 16, "fh": 16 },
+	"crystal_mimic":   { "path": "mimic.png",          "fw": 16, "fh": 16, "row": 2 },
 	"piranha":         { "path": "piranha.png",        "fw": 16, "fh": 16 },
 	"wraith":          { "path": "wraith.png",         "fw": 12, "fh": 14 },
 	"rose_ghost":      { "path": "ghost.png",          "fw": 12, "fh": 14 },
