@@ -64,9 +64,16 @@ func _open_info_window() -> void:
 
 
 ## Builds the info window for the attached buff (null if no buff).
+## Monk Energy opens the ability picker instead of plain buff info (port
+## stand-in for the upstream ActionIndicator button; upstream
+## WndMonkAbilities is the same tap-to-pick flow).
 func make_info_window() -> WndBase:
 	if buff_ref == null:
 		return null
+	if buff_ref is MonkEnergy and buff_ref.get("target") is Hero:
+		var monk_wnd: WndMonkAbilities = WndMonkAbilities.new()
+		monk_wnd.setup(buff_ref.get("target") as Hero)
+		return monk_wnd
 	var wnd: WndInfoBuff = WndInfoBuff.new()
 	wnd.setup(buff_ref)
 	return wnd
