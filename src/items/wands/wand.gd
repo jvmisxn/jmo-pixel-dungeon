@@ -114,7 +114,17 @@ func zap(hero: Char, target_pos: int) -> void:
 	spend_charge()
 	# Original: Wand cell selector calls Invisibility.dispel() before onZap.
 	Invisibility.dispel_for(hero)
+	var collision: int = path[path.size() - 1]
+	var hit_char: bool = false
+	var pre_level: Variant = hero.get("level")
+	if pre_level != null and pre_level.has_method("find_char_at"):
+		hit_char = pre_level.find_char_at(collision) != null
 	on_zap(hero, path)
+	# Original: wand onZap implementations call Dungeon.level.pressCell on the
+	# bolt's collision cell when no character is there, so bolts spring traps,
+	# trample grass, and trigger plants. Centralized here instead of per-wand.
+	if not hit_char and pre_level != null and pre_level.has_method("press_cell"):
+		pre_level.press_cell(collision)
 	_scroll_empower_use(hero)
 	_lingering_magic_proc(hero)
 	_arcane_vision_proc(hero, path)
