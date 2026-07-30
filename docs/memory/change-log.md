@@ -1,5 +1,31 @@
 # Change Log
 
+## 2026-07-30 (mimic-parity)
+
+- Tags: mobs, loot, source-fidelity, tests
+- Mimic stat/loot contract rewritten to upstream `Mimic.java`: new
+  `set_mimic_level(depth)` per setLevel/adjustStats — HP/HT `(1+level)*6`,
+  defenseSkill `2+level/2`, attackSkill `6+level`, damage `1+level..2+2*level`,
+  drRoll bonus `0..1+level/2` (modeled as `armor_value`), EXP 0 (mimics grant
+  no experience), DEMONIC property. Invented tier-based `scale_to_depth`
+  formulas removed; `mimic_level` serialized so stats stay correct after load.
+- `generate_prize(depth)` ported from upstream `generatePrize`: every spawned
+  mimic now adds one extra reward (equal 1/5 chance of gold / missile / armor /
+  melee weapon / ring) on top of the heap item it replaced;
+  `RegularLevel._spawn_mimic_with_item` calls it (one-line edit, fragile file).
+  Invented guaranteed extra-gold death drop removed — `_on_death` now drops
+  exactly the stored items, matching `rollToDropLoot`.
+- Kept port adaptations: item-heap disguise (vs upstream chest-tile mimic,
+  wired through game_scene/online codec/discovery catalog) and reveal-on-attack
+  (no hero "open chest" interact path exists, so upstream's NEUTRAL surprise
+  bite with fixed `2+2*level` damage + INFINITE_ACCURACY is not yet portable —
+  noted for a future interact slice, prerequisite for CrystalMimic's flee/steal
+  behavior).
+- `test_mimic_loot.gd` expanded to the new contract (stats at depth 12, EXP 0,
+  DEMONIC, heap item + prize stored, serialize round-trip, full death drops).
+  `git diff --check` clean; gdparse unavailable locally; full headless suite
+  passed (6852 checks, 0 failures).
+
 ## 2026-07-30 (senior-monk)
 
 - Tags: mobs, spawning, sprites, buffs, source-fidelity, tests
