@@ -169,7 +169,8 @@ func attack(target: Char, dmg_multi: float = 1.0, dmg_bonus: float = 0.0, acc_mu
 	else:
 		# Miss
 		on_attack_miss(target)
-		for b: Node in target._buffs:
+		# Iterate a copy: a buff may detach itself on a parried hit (Focus).
+		for b: Node in target._buffs.duplicate():
 			if b.has_method("on_damage_taken"):
 				b.on_damage_taken(0, self)
 		return false
@@ -180,15 +181,18 @@ static func hit(attacker: Char, defender: Char, acc_multi: float = 1.0) -> bool:
 	var acu_stat: float = float(attacker.accuracy())
 	var def_stat: float = float(defender.evasion())
 
+	# Infinite evasion (Guard/Focus stances) beats everything, including
+	# surprise attacks — upstream Char.hit checks INFINITE_EVASION before
+	# INFINITE_ACCURACY and notes it wins the tie.
+	if def_stat >= 1000000.0:
+		return false
+
 	# Guaranteed hit when the defender is surprised: an invisible attacker, or
 	# (for mobs) one the defender cannot see/detect — sleeping, unaware, stealth.
 	# Mirrors SPD, where a surprised defender has 0 effective evasion.
 	if attacker.can_surprise_attack() and defender.is_surprised_by(attacker):
 		return true
 
-	# Infinite evasion beats infinite accuracy
-	if def_stat >= 1000000.0:
-		return false
 	if acu_stat >= 1000000.0:
 		return true
 

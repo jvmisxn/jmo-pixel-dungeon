@@ -485,7 +485,7 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1, blink_po
 ## weapon's flat ability damage boost. A kill makes the ability instant and
 ## opens the CleaveTracker free-recast window unless one was already open;
 ## a non-kill strike costs the attack delay and closes any open window.
-## Monk subclass ability fueled by MonkEnergy. Currently ported: Flurry.
+## Monk subclass ability fueled by MonkEnergy. Currently ported: Flurry, Focus.
 ## Upstream MonkEnergy.MonkAbility.Flurry.doAbility: two unarmed strikes at
 ## 1.5x damage with infinite accuracy, instant (hero.next()), once per turn
 ## via FlurryCooldownTracker, costing 1 energy.
@@ -493,9 +493,12 @@ func _do_monk_ability(kind: String, target_pos: int) -> void:
 	_ability_spend = 0.0
 	if hero_subclass != ConstantsData.HeroSubclass.MONK or level == null:
 		return
+	var energy: MonkEnergy = get_buff("MonkEnergy") as MonkEnergy
+	if kind == "focus":
+		_do_focus_ability(energy)
+		return
 	if kind != "flurry":
 		return
-	var energy: MonkEnergy = get_buff("MonkEnergy") as MonkEnergy
 	if energy == null or energy.energy < 1.0:
 		if MessageLog:
 			MessageLog.add_warning("You don't have enough energy for that ability.")
@@ -536,6 +539,24 @@ func _do_monk_ability(kind: String, target_pos: int) -> void:
 		if invis is Invisibility:
 			(invis as Invisibility).dispel()
 	# Flurry is instant (upstream hero.next()); _ability_spend stays 0.
+
+## Monk Focus (upstream MonkEnergy.MonkAbility.Focus): 2 energy, no target,
+## applies FocusBuff which parries the next incoming attack. Costs 1 turn,
+## or is instant while abilities are empowered (energy near cap, boosted by
+## Monastic Vigor). Refused for free if already focused or short on energy.
+func _do_focus_ability(energy: MonkEnergy) -> void:
+	if energy == null or energy.energy < 2.0:
+		if MessageLog:
+			MessageLog.add_warning("You don't have enough energy for that ability.")
+		return
+	if has_buff("FocusBuff"):
+		if MessageLog:
+			MessageLog.add_warning("You are already focused.")
+		return
+	add_buff(FocusBuff.new())
+	if not energy.abilities_empowered():
+		_ability_spend = 1.0
+	energy.ability_used(2.0)
 
 func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	_ability_spend = 0.0
