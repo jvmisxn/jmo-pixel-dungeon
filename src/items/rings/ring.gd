@@ -53,6 +53,184 @@ static func sharpshooting_level_bonus(ch: Variant) -> int:
 	return 0
 
 # ---------------------------------------------------------------------------
+# Ring of Wealth bonus-drop deck (upstream RingOfWealth.tryForBonusDrop)
+# ---------------------------------------------------------------------------
+
+## Total Wealth bonus for a character: sum of bonus() across every worn
+## wealth ring (upstream getBuffedBonus over all Wealth buffs).
+static func wealth_bonus(ch: Variant) -> int:
+	if ch == null or not ch.has_method("get_buffs"):
+		return 0
+	var total: int = 0
+	for buff_node: Node in ch.get_buffs():
+		if buff_node.get("buff_id") == "RingOfWealth" and buff_node.get("ring") != null:
+			total += buff_node.ring.bonus()
+	return total
+
+## Equipment-drop bonus with upstream's second-ring cap: the strongest ring
+## counts fully, any other wealth ring contributes at most +2 (prevents
+## farming an upgraded wealth ring with another upgraded wealth ring).
+static func _wealth_equip_bonus(ch: Variant) -> int:
+	var equip_bonus: int = 0
+	if ch == null or not ch.has_method("get_buffs"):
+		return 0
+	for buff_node: Node in ch.get_buffs():
+		if buff_node.get("buff_id") != "RingOfWealth" or buff_node.get("ring") == null:
+			continue
+		var lvl: int = buff_node.ring.bonus()
+		if lvl > equip_bonus:
+			equip_bonus = lvl + mini(equip_bonus, 2)
+		else:
+			equip_bonus += mini(lvl, 2)
+	return equip_bonus
+
+## Upstream RingOfWealth.tryForBonusDrop: every qualifying kill counts the
+## tries deck down; at zero it pays out a bonus drop (consumable, or
+## equipment when the equip deck is exhausted) and refills. Returns the
+## items to drop (usually empty). Trackers persist on the hero.
+static func wealth_try_for_bonus_drop(ch: Variant, tries: int) -> Array:
+	var drops: Array = []
+	var bonus: int = wealth_bonus(ch)
+	if bonus <= 0:
+		return drops
+	var tries_buff: WealthTriesTracker = ch.get_buff("WealthTriesTracker")
+	if tries_buff == null:
+		tries_buff = WealthTriesTracker.new()
+		tries_buff.count = float(Balance.normal_int_range(0, 20))
+		ch.add_buff(tries_buff)
+	var equip_buff: WealthEquipTracker = ch.get_buff("WealthEquipTracker")
+	if equip_buff == null:
+		equip_buff = WealthEquipTracker.new()
+		equip_buff.count = float(Balance.normal_int_range(5, 10))
+		ch.add_buff(equip_buff)
+	tries_buff.count -= float(tries)
+	while tries_buff.count <= 0.0:
+		var drop: Item
+		if equip_buff.count <= 0.0:
+			drop = wealth_gen_equipment_drop(_wealth_equip_bonus(ch) - 1)
+			equip_buff.count += float(Balance.normal_int_range(5, 10))
+		else:
+			drop = wealth_gen_consumable_drop(bonus - 1)
+			equip_buff.count -= 1.0
+		if drop != null:
+			drops.append(drop)
+		tries_buff.count += float(Balance.normal_int_range(0, 20))
+	return drops
+
+## Upstream genConsumableDrop tier roll: 60%-4%/lvl low, 30%+2%/lvl mid,
+## 10%+2%/lvl high.
+static func wealth_gen_consumable_drop(bonus_level: int) -> Item:
+	var roll: float = randf()
+	if roll < 0.6 - 0.04 * float(bonus_level):
+		return _wealth_low_consumable()
+	if roll < 0.9 - 0.02 * float(bonus_level):
+		return _wealth_mid_consumable()
+	return _wealth_high_consumable()
+
+## Upstream genLowValueConsumable: half gold pile / stone / potion / scroll.
+static func _wealth_low_consumable() -> Item:
+	match randi_range(0, 3):
+		0:
+			var depth: int = GameManager.depth if GameManager != null else 1
+			var gold: Item = Generator.random_gold(depth)
+			@warning_ignore("integer_division")
+			gold.quantity = maxi(1, gold.quantity / 2)
+			return gold
+		1:
+			return Generator.random_stone()
+		2:
+			return Generator.random_potion()
+		_:
+			return Generator.random_scroll()
+
+## Upstream genMidValueConsumable. Port adaptations for unported items:
+## exotic potions/scrolls fall back to regular potions/scrolls, the
+## UnstableBrew/UnstableSpell slot rolls a 50/50 potion-or-scroll, and the
+## Honeypot slot drops a pasty.
+static func _wealth_mid_consumable() -> Item:
+	match randi_range(0, 5):
+		0:
+			var low: Item = _wealth_low_consumable()
+			low.quantity = low.quantity * 2
+			return low
+		1:
+			return Generator.random_potion()
+		2:
+			return Generator.random_scroll()
+		3:
+			return Generator.random_potion() if randi_range(0, 1) == 0 \
+				else Generator.random_scroll()
+		4:
+			return Generator.create_item("bomb")
+		_:
+			return Generator.create_item("pasty")
+
+## Upstream genHighValueConsumable: doubled mid drop / Stone of Enchantment /
+## Potion of Experience / Scroll of Transmutation. The Exotic Crystals
+## trinket branch is exact-parity absent: with no trinket its exotic chance
+## is 0, so upstream also always drops experience/transmutation.
+static func _wealth_high_consumable() -> Item:
+	match randi_range(0, 3):
+		0:
+			var mid: Item = _wealth_mid_consumable()
+			mid.quantity = mid.quantity * 2
+			return mid
+		1:
+			# Stone.create directly: Generator.create_item("enchantment")
+			# resolves to the scroll (scroll ids are checked before stones).
+			return Stone.create("enchantment")
+		2:
+			return Generator.create_item("experience")
+		_:
+			return Generator.create_item("transmutation")
+
+## Upstream genEquipmentDrop: weapon (x2 weight) / armor / ring / artifact
+## rolled from the floorset shifted up one floor per equip-bonus level, with
+## a level-scaled chance of a good enchant/glyph, curses always stripped
+## (cursed=false, cursed_known=true), and a minimum item level of
+## (bonus_level+1)/2.
+static func wealth_gen_equipment_drop(bonus_level: int) -> Item:
+	var depth: int = GameManager.depth if GameManager != null else 1
+	var gen_depth: int = depth + maxi(bonus_level, 0)
+	var result: Item
+	match randi_range(0, 4):
+		0, 1:
+			var w: Item = Generator.random_weapon(gen_depth)
+			if w is Weapon:
+				var weapon: Weapon = w as Weapon
+				var has_good: bool = weapon.enchantment != null \
+					and not weapon.enchantment.is_curse
+				if not has_good and randi_range(0, 9) < bonus_level:
+					weapon.enchant(WeaponEnchantment.random())
+				elif weapon.enchantment != null and weapon.enchantment.is_curse:
+					weapon.clear_enchantment()
+			result = w
+		2:
+			var a: Item = Generator.random_armor(gen_depth)
+			if a is Armor:
+				var armor: Armor = a as Armor
+				if not armor.has_good_glyph() and randi_range(0, 9) < bonus_level:
+					armor.inscribe(ArmorGlyph.random())
+				elif armor.glyph != null and armor.glyph.is_curse:
+					armor.inscribe(null)
+			result = a
+		3:
+			result = Generator.random_ring()
+		_:
+			result = Generator.random_artifact()
+	if result == null:
+		result = Generator.random_ring()
+	if result != null and result.is_upgradeable():
+		@warning_ignore("integer_division")
+		var min_level: int = (bonus_level + 1) / 2
+		if result.level < min_level:
+			result.level = min_level
+	if result != null:
+		result.cursed = false
+		result.cursed_known = true
+	return result
+
+# ---------------------------------------------------------------------------
 # Equip / Unequip
 # ---------------------------------------------------------------------------
 
