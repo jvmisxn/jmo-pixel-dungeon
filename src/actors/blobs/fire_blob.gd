@@ -22,6 +22,8 @@ func _apply_effects() -> void:
 	for cell: int in active_cells:
 		if density[cell] <= min_density:
 			continue
+		# Upstream Fire.evolve burns any heap in a burning cell.
+		Heap.burn_at(level, cell)
 		if level.has_method("get_terrain"):
 			var terrain: int = level.get_terrain(cell)
 			match terrain:
