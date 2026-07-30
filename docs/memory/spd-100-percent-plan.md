@@ -171,9 +171,11 @@ and pitfall/chasm landing parity including fallen-item heap drops
    combined_energy inert pending monk abilities. 2026-07-29: Flurry
    shipped (`_do_monk_ability` + UnarmedAbilityTracker weapon bypass +
    cap deferral, `test_monk_flurry_ability.gd`) but not yet
-   player-reachable. Next talent milestone = monk ability picker UI
-   (upstream WndMonkAbilities/ActionIndicator) + Focus/Dash/Dragon
-   Kick/Meditate, or Champion dual-wield parity.
+   player-reachable. 2026-07-29: Focus shipped (FocusBuff parry stance,
+   infinite-evasion-beats-surprise Char.hit ordering fix,
+   `test_monk_focus_ability.gd`). Next talent milestone = monk ability
+   picker UI (upstream WndMonkAbilities/ActionIndicator) +
+   Dash/Dragon Kick/Meditate, or Champion dual-wield parity.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +
