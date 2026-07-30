@@ -692,6 +692,52 @@ func trigger_trap(pos: int, victim: Variant) -> void:
 	if GameManager:
 		GameManager.record_stat("traps_triggered")
 
+## Press a cell as if physical force landed on it (upstream Level.pressCell):
+## wand bolts stopping on an empty cell, falling objects, etc. A `hard` press
+## (the default) also springs hidden traps and tears webs; upstream soft
+## presses come from character steps, which this port routes through the
+## actors' own terrain handling instead. Adaptations: no time-freeze delayed
+## press (Timekeeper's Hourglass is unported) and wells here are
+## interact-driven, so the upstream WellWater branch is skipped.
+func press_cell(cell: int, hard: bool = true) -> void:
+	if cell < 0 or cell >= LEN:
+		return
+	match map[cell]:
+		ConstantsData.Terrain.SECRET_TRAP:
+			if hard:
+				var hidden: Variant = traps.get(cell)
+				if hidden != null and MessageLog:
+					MessageLog.add_warning(
+						"An unseen %s was hidden there!" % hidden.get("trap_name"))
+				trigger_trap(cell, null)
+		ConstantsData.Terrain.TRAP:
+			trigger_trap(cell, null)
+		ConstantsData.Terrain.HIGH_GRASS, ConstantsData.Terrain.FURROWED_GRASS:
+			_trample_grass_cell(cell)
+	var plant: Variant = plants.get(cell)
+	if plant != null and plant.has_method("activate"):
+		plant.activate(null, self)
+	if hard:
+		for blob_entry: Dictionary in blobs:
+			var blob: Variant = blob_entry.get("blob")
+			if blob != null and blob.get("blob_id") == "web" \
+					and blob.has_method("clear_cell"):
+				blob.clear_cell(cell)
+
+## Trample grass with no treading character (upstream HighGrass.trample
+## null-char branch): high grass flattens to plain grass with the baseline dew
+## roll; furrowed grass flattens with no drops. Huntress trample bonuses only
+## apply to hero steps (hero.gd).
+func _trample_grass_cell(cell: int) -> void:
+	var was_high: bool = map[cell] == ConstantsData.Terrain.HIGH_GRASS
+	set_terrain(cell, ConstantsData.Terrain.GRASS)
+	if EventBus:
+		EventBus.hero_trampled_grass.emit(cell)
+	if was_high and randf() < 0.18:
+		var dew: Variant = Generator.create_item("dewdrop")
+		if dew != null:
+			drop_item(cell, dew)
+
 ## Unlock the exit (boss levels — open all locked doors blocking the exit path).
 func unlock_exit() -> void:
 	# Scan the entire level for LOCKED_DOORs and open them all.

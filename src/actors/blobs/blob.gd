@@ -55,6 +55,13 @@ func seed(cell: int, amount: float) -> void:
 	if cell not in active_cells:
 		active_cells.append(cell)
 
+## Remove all of this blob's volume at a single cell (upstream Blob.clear).
+func clear_cell(cell: int) -> void:
+	if not ConstantsData.is_valid_pos(cell):
+		return
+	density[cell] = 0.0
+	active_cells.erase(cell)
+
 ## Run one simulation step (apply effects -> volume-conserving diffusion) WITHOUT
 ## touching the turn scheduler. Blobs are not registered as TurnManager actors;
 ## instead `Level.advance_blobs()` runs one step per TICK of shared game-time
