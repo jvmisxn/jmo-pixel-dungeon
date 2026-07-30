@@ -45,7 +45,7 @@ const MAX_HERO_LEVEL: int = 30
 ##   Prison (depth 6-10):  5-6 XP   (skeleton=5, thief=5, guard=6, necromancer=6)
 ##   Caves  (depth 11-15): 7-8 XP   (bat=7, brute=8, shaman=7, spinner=7, dm200=8)
 ##   City   (depth 16-20): 10-11 XP (warlock=10, monk=10, golem=11, elemental=10)
-##   Halls  (depth 21-26): 12-14 XP (succubus=12, eye=14, scorpio=13, ripper=12)
+##   Halls  (depth 21-26): 12-14 XP (succubus=12, eye=14, scorpio=14, ripper=12)
 ## Source: individual mob .gd files
 
 ## Mob max_level (hero level at which mob gives 0 XP):

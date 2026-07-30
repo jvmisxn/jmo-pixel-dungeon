@@ -50,6 +50,7 @@ static var MOB_VISUALS: Dictionary = {
 	"succubus": { "body": Color(0.6, 0.3, 0.4), "accent": Color(0.7, 0.2, 0.4), "eye": Color(0.9, 0.1, 0.5), "shape": "humanoid" },
 	"eye": { "body": Color(0.5, 0.2, 0.3), "accent": Color(0.6, 0.3, 0.4), "eye": Color(0.9, 0.9, 0.1), "shape": "flying" },
 	"scorpio": { "body": Color(0.4, 0.2, 0.2), "accent": Color(0.5, 0.25, 0.2), "eye": Color(0.9, 0.3, 0.1), "shape": "beast" },
+	"acidic": { "body": Color(0.25, 0.45, 0.15), "accent": Color(0.4, 0.6, 0.2), "eye": Color(0.9, 0.9, 0.2), "shape": "beast" },
 	"ripper": { "body": Color(0.3, 0.15, 0.2), "accent": Color(0.4, 0.2, 0.25), "eye": Color(0.9, 0.1, 0.1), "shape": "beast" },
 	# --- Bosses ---
 	"goo": { "body": Color(0.2, 0.3, 0.2), "accent": Color(0.3, 0.5, 0.2), "eye": Color(0.9, 0.9, 0.1), "shape": "blob" },
@@ -143,7 +144,10 @@ static var _MOB_SHEETS: Dictionary = {
 	# --- Halls ---
 	"succubus":        { "path": "succubus.png",       "fw": 12, "fh": 15 },
 	"eye":             { "path": "eye.png",            "fw": 16, "fh": 18 },
-	"scorpio":         { "path": "scorpio.png",        "fw": 18, "fh": 17 },
+	# Upstream ScorpioSprite/AcidicSprite: 17x17 frames (fw 18 was stale);
+	# acidic frames offset by 15 = row 1.
+	"scorpio":         { "path": "scorpio.png",        "fw": 17, "fh": 17 },
+	"acidic":          { "path": "scorpio.png",        "fw": 17, "fh": 17, "row": 1 },
 	"ripper":          { "path": "ripper.png",         "fw": 16, "fh": 16 },
 	# --- Bosses ---
 	"goo":             { "path": "goo.png",            "fw": 16, "fh": 14 },
@@ -312,6 +316,14 @@ func _configure_mob_sheet_animations() -> void:
 			set_sheet_animation(AnimState.ATTACK, [3, 4, 3, 4], 12.0, false)
 			set_sheet_animation(AnimState.ZAP, [5, 6, 5], 10.0, false)
 			set_sheet_animation(AnimState.DIE, [1, 7, 8, 8, 9, 10], 15.0, false)
+		"scorpio", "acidic":
+			# Matches upstream ScorpioSprite / AcidicSprite (same relative
+			# frames; acidic uses sheet row 1 = upstream offset 15).
+			set_sheet_animation(AnimState.IDLE, [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 2, 1, 2], 12.0, true)
+			set_sheet_animation(AnimState.MOVE, [5, 5, 6, 6], 8.0, true)
+			set_sheet_animation(AnimState.ATTACK, [0, 3, 4], 15.0, false)
+			set_sheet_animation(AnimState.ZAP, [0, 3, 4], 15.0, false)
+			set_sheet_animation(AnimState.DIE, [0, 7, 8, 9, 10], 12.0, false)
 		"slime", "caustic_slime":
 			# Matches upstream SlimeSprite / CausticSlimeSprite (same frames,
 			# caustic uses sheet row 1).
