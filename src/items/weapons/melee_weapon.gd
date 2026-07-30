@@ -536,6 +536,26 @@ func before_ability_used(hero: Variant, charge_use: float) -> void:
 				tracker = hero.add_buff(VariedChargeTracker.new())
 			if tracker is VariedChargeTracker:
 				(tracker as VariedChargeTracker).weapon_id = item_id
+	# Combined Energy (upstream MeleeWeapon.afterAbilityUsed): a weapon
+	# ability arms the shared 5-turn tracker, or completes a pending monk
+	# ability for the 1-energy refund.
+	var combined_points: int = 0
+	if hero.has_method("get_talent_level"):
+		combined_points = hero.get_talent_level("monk_combined_energy")
+	if combined_points > 0 and hero.has_method("add_buff"):
+		var ce_tracker: Variant = hero.get_buff("CombinedEnergyAbilityTracker")
+		if ce_tracker is CombinedEnergyAbilityTracker \
+				and (ce_tracker as CombinedEnergyAbilityTracker).monk_abil_used:
+			(ce_tracker as CombinedEnergyAbilityTracker).wep_abil_used = true
+			var energy_buff: Variant = hero.get_buff("MonkEnergy")
+			if energy_buff is MonkEnergy:
+				(energy_buff as MonkEnergy).process_combined_energy(ce_tracker)
+		else:
+			if not (ce_tracker is CombinedEnergyAbilityTracker):
+				ce_tracker = hero.add_buff(CombinedEnergyAbilityTracker.new())
+			if ce_tracker is CombinedEnergyAbilityTracker:
+				(ce_tracker as CombinedEnergyAbilityTracker).wep_abil_used = true
+				(ce_tracker as CombinedEnergyAbilityTracker).postpone(5.0)
 
 # ---------------------------------------------------------------------------
 # Serialization

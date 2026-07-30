@@ -2,6 +2,34 @@
 
 ## 2026-07-29
 
+- Tags: duelist, monk, talents, buffs, source-fidelity, tests
+- Monk tier-3 talents Monastic Vigor + Combined Energy are now LIVE — the
+  Monk talent set is fully wired. Monastic Vigor only needed un-inerting:
+  `MonkEnergy.abilities_empowered()` already matched upstream
+  (`energy/cap >= 1.2 - 0.2*points`, i.e. 100%/80%/60% thresholds).
+  Combined Energy (upstream `Talent.COMBINED_ENERGY` +
+  `CombinedEnergyAbilityTracker`): new
+  `src/actors/buffs/subclass/combined_energy_ability_tracker.gd` (hidden
+  5-turn tracker, monk/wep flags serialized);
+  `MonkEnergy.ability_used` now runs `_check_combined_energy` — a monk
+  ability costing `>= 5 - points` arms the tracker or, if a weapon
+  ability is pending, triggers `process_combined_energy` (refund 1
+  energy, capped, tracker consumed); the weapon side lives in
+  `MeleeWeapon.before_ability_used` next to Varied Charge (this port's
+  afterAbilityUsed stand-in). Fixed the Combined Energy talent
+  description (upstream code qualifies 4/3/2+ cost at +1/+2/+3, not
+  5/4/3). `test_talent_inert_gating.gd` updated (monk slots now
+  implemented; inert check moved to `champion_twin_upgrades`).
+  `test_combined_energy.gd` (16 checks, registered): implemented flags,
+  Monastic Vigor thresholds at +0..+3, monk→weapon and weapon→monk
+  refunds, cheap-ability non-qualification at +1, no-talent no-op,
+  tracker serialize roundtrip. `git diff --check` clean; gdparse
+  unavailable locally, `--import` clean; full headless suite passed
+  (5492 checks, 0 failures). `[ENGINE]` caveat: needs a real Monk
+  playtest alongside the ability picker. Remaining monk-adjacent gap:
+  Champion dual-wield parity (twin_upgrades/combined_lethality still
+  inert).
+
 - Tags: duelist, monk, abilities, ui, windows, tests
 - Monk ability picker UI shipped (upstream `WndMonkAbilities`) — all five
   monk abilities are now player-reachable. New
