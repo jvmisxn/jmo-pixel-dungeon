@@ -289,6 +289,8 @@ func execute_action() -> void:
 			_do_zap_wand(action.get("item"), action.get("target_pos", -1))
 		"weapon_ability":
 			_do_weapon_ability(action.get("item"), action.get("target_pos", -1))
+		"monk_ability":
+			_do_monk_ability(str(action.get("kind", "")), action.get("target_pos", -1))
 		"wait":
 			_do_wait()
 		"use_item":
@@ -328,7 +330,7 @@ func execute_action() -> void:
 				thrown_bow.sniper_special_distance = 0
 		"zap_wand":
 			spend_turn(_get_non_movement_action_delay())
-		"weapon_ability":
+		"weapon_ability", "monk_ability":
 			# Refused abilities and kills are free (upstream hero.next()).
 			if _ability_spend > 0.0:
 				spend_turn(_ability_spend)
@@ -483,6 +485,58 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1, blink_po
 ## weapon's flat ability damage boost. A kill makes the ability instant and
 ## opens the CleaveTracker free-recast window unless one was already open;
 ## a non-kill strike costs the attack delay and closes any open window.
+## Monk subclass ability fueled by MonkEnergy. Currently ported: Flurry.
+## Upstream MonkEnergy.MonkAbility.Flurry.doAbility: two unarmed strikes at
+## 1.5x damage with infinite accuracy, instant (hero.next()), once per turn
+## via FlurryCooldownTracker, costing 1 energy.
+func _do_monk_ability(kind: String, target_pos: int) -> void:
+	_ability_spend = 0.0
+	if hero_subclass != ConstantsData.HeroSubclass.MONK or level == null:
+		return
+	if kind != "flurry":
+		return
+	var energy: MonkEnergy = get_buff("MonkEnergy") as MonkEnergy
+	if energy == null or energy.energy < 1.0:
+		if MessageLog:
+			MessageLog.add_warning("You don't have enough energy for that ability.")
+		return
+	if has_buff("FlurryCooldownTracker"):
+		if MessageLog:
+			MessageLog.add_warning("You can only use flurry once per turn.")
+		return
+	if target_pos < 0 or target_pos >= level.visible.size() or not level.visible[target_pos]:
+		if MessageLog:
+			MessageLog.add_warning("You can't target that.")
+		return
+	var char_at: Variant = level.find_char_at(target_pos)
+	if not (char_at is Char) or char_at == self:
+		if MessageLog:
+			MessageLog.add_warning("You can't target that.")
+		return
+	var enemy: Char = char_at as Char
+	if not enemy.is_alive or distance_to(enemy.pos) > 1:
+		if MessageLog:
+			MessageLog.add_warning("That target is out of reach.")
+		return
+	last_visible_action = "attack"
+	last_visible_target_pos = enemy.pos
+	if enemy is Mimic and (enemy as Mimic).disguised:
+		(enemy as Mimic).reveal()
+	var tracker: UnarmedAbilityTracker = \
+			add_buff(UnarmedAbilityTracker.new()) as UnarmedAbilityTracker
+	attack(enemy, 1.5, 0.0, 1.0e9)
+	if enemy.is_alive:
+		attack(enemy, 1.5, 0.0, 1.0e9)
+	if tracker != null:
+		remove_buff(tracker)
+	energy.ability_used(1.0)
+	add_buff(FlurryCooldownTracker.new())
+	if has_buff("Invisibility"):
+		var invis: Node = get_buff("Invisibility")
+		if invis is Invisibility:
+			(invis as Invisibility).dispel()
+	# Flurry is instant (upstream hero.next()); _ability_spend stays 0.
+
 func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	_ability_spend = 0.0
 	if not (item is MeleeWeapon) or belongings == null or level == null or target_pos < 0:
@@ -1972,7 +2026,9 @@ func attack_proc(target_char: Char, damage: int) -> int:
 		result += randi_range(lingering_level, 2)
 		remove_buff_by_id("LingeringMagicTracker")
 
-	if belongings != null:
+	# Unarmed monk abilities bypass the weapon, so its enchantment never
+	# procs (upstream: wep is null for the whole unarmed strike).
+	if belongings != null and not has_buff("UnarmedAbilityTracker"):
 		var weapon: Variant = belongings.get_equipped_weapon()
 		if weapon != null and weapon.has_method("proc_enchantment"):
 			result = weapon.proc_enchantment(self, target_char, result)
@@ -2269,6 +2325,15 @@ func attack(target: Char, dmg_multi: float = 1.0, dmg_bonus: float = 0.0, acc_mu
 ## Override damage_roll to use equipped weapon's damage calculation.
 ## Original SPD: Hero.damageRoll() delegates to weapon.damageRoll(this).
 func damage_roll() -> int:
+	# Monk unarmed abilities ignore the equipped weapon and roll unarmed
+	# damage (upstream Hero.damageRoll nulls wep while
+	# MonkAbility.UnarmedAbilityTracker is attached; unarmed max = STR-8).
+	if has_buff("UnarmedAbilityTracker"):
+		var unarmed: int = randi_range(1, maxi(1, str_val - 8))
+		for ub: Node in _buffs:
+			if ub.has_method("modify_damage"):
+				unarmed = ub.modify_damage(unarmed)
+		return maxi(0, unarmed)
 	if belongings:
 		var weapon: Variant = belongings.get_equipped_weapon()
 		if weapon and weapon.has_method("damage_roll"):

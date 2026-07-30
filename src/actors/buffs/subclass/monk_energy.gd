@@ -2,14 +2,14 @@ class_name MonkEnergy
 extends Buff
 ## Monk (Duelist) subclass energy pool. Original: MonkEnergy.
 ## Energy builds when enemies die (5 boss / 3 miniboss / 0.5 for weak
-## swarm enemies / 1 otherwise) and will fuel monk abilities (Flurry,
-## Focus, Dash, Dragon Kick, Meditate — to be ported on top of this buff).
+## swarm enemies / 1 otherwise) and fuels monk abilities. Ported so far:
+## Flurry (Hero._do_monk_ability); Focus, Dash, Dragon Kick and Meditate
+## still pending.
 ##
 ## Port adaptations: the mob roster has no MINIBOSS property yet, so the
 ## miniboss bonus checks `_properties` defensively; the half-energy list is
 ## keyed by mob_id (upstream: Ghoul/RipperDemon/YogDzewa.Larva/Wraith
-## classes). Upstream's UnarmedAbilityTracker cap deferral applies once
-## abilities exist.
+## classes).
 
 ## Weak swarm-style enemies that only give half energy (upstream: Ghoul,
 ## RipperDemon, YogDzewa.Larva, Wraith).
@@ -52,7 +52,11 @@ func gain_energy(enemy: Node) -> float:
 
 	energy_gain *= _unencumbered_spirit_multi()
 
-	energy = minf(energy + energy_gain, float(energy_cap()))
+	energy += energy_gain
+	# Kills mid unarmed-ability don't cap yet; ability_used clamps after
+	# spending (upstream: UnarmedAbilityTracker check in gainEnergy).
+	if not (target.has_method("has_buff") and target.has_buff("UnarmedAbilityTracker")):
+		energy = minf(energy, float(energy_cap()))
 	return energy_gain
 
 ## Unencumbered Spirit talent: low-tier armor and weapon each add

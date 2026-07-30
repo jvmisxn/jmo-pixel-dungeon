@@ -168,9 +168,12 @@ and pitfall/chasm landing parity including fallen-item heap drops
    MonkEnergy pool shipped (kill-driven energy gain, regen gate, cap,
    serialization, `test_monk_energy.gd`); Monk talents reshaped to
    upstream ids with unencumbered_spirit LIVE, monastic_vigor +
-   combined_energy inert pending monk abilities. Next talent milestone =
-   Monk abilities (Flurry/Focus/Dash/Dragon Kick/Meditate on top of
-   `MonkEnergy.ability_used`) or Champion dual-wield parity.
+   combined_energy inert pending monk abilities. 2026-07-29: Flurry
+   shipped (`_do_monk_ability` + UnarmedAbilityTracker weapon bypass +
+   cap deferral, `test_monk_flurry_ability.gd`) but not yet
+   player-reachable. Next talent milestone = monk ability picker UI
+   (upstream WndMonkAbilities/ActionIndicator) + Focus/Dash/Dragon
+   Kick/Meditate, or Champion dual-wield parity.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +
