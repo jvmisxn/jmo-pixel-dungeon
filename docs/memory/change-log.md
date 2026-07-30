@@ -1,5 +1,22 @@
 # Change Log
 
+## 2026-07-30 (item-catalog-load-coerce)
+
+- Tags: save-load-safety, persistence, tests
+- `ItemCatalog._load` no longer `assign()`s the untyped `get_var()` dict
+  straight into the typed `Dictionary[String, bool]` — routed through a new
+  `_coerce_string_bool_dict` mirroring DiscoveryCatalog, so a stale/corrupt
+  `item_catalog.dat` (non-String keys, non-bool values) can no longer raise a
+  Godot 4.4+ type-mismatch on load and wipe global identification.
+- Coercion uses an explicit `_is_truthy` helper because `bool(Variant)` is a
+  hard runtime error for String values in Godot 4 (caught by the headless
+  test on first run — the naive `bool()` version aborted the load mid-loop).
+- Falsy entries are dropped (membership via `has()` is the known-check
+  contract); truthy non-bool values coerce to `true`.
+- Test: `test_item_catalog_load_coerce.gd` (clean pass-through, hostile
+  shapes, non-Dictionary payloads, `is_item_known` integration). Backlog
+  audit:S29 item marked DONE.
+
 ## 2026-07-30 (mimic-parity)
 
 - Tags: mobs, loot, source-fidelity, tests

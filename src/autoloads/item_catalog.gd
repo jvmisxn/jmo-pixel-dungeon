@@ -107,4 +107,30 @@ func _load() -> void:
 	var data: Variant = file.get_var(true)
 	file.close()
 	if data is Dictionary:
-		_identified_items.assign(data.get("identified_items", {}))
+		_identified_items = _coerce_string_bool_dict(data.get("identified_items", {}))
+
+## Coerce an untyped loaded dict into the typed contract. Assigning raw
+## `get_var()` data into `Dictionary[String, bool]` can raise a runtime type
+## error on Godot 4.4+ and wipe global identification; mirror the
+## DiscoveryCatalog coercion instead.
+func _coerce_string_bool_dict(source: Variant) -> Dictionary[String, bool]:
+	var result: Dictionary[String, bool] = {}
+	if not source is Dictionary:
+		return result
+	for key: Variant in source.keys():
+		if _is_truthy(source.get(key, false)):
+			result[str(key)] = true
+	return result
+
+## Explicit truthiness: `bool(Variant)` is a hard runtime error for
+## non-numeric types (e.g. String) in Godot 4, which would abort the load.
+func _is_truthy(value: Variant) -> bool:
+	if value is bool:
+		return value
+	if value is int:
+		return value != 0
+	if value is float:
+		return value != 0.0
+	if value is String:
+		return not (value as String).is_empty()
+	return false
