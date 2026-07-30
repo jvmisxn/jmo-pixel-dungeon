@@ -164,6 +164,13 @@ func _apply_tomahawk_bleed(attacker: Variant, defender: Variant) -> void:
 # Damage
 # ---------------------------------------------------------------------------
 
+## Upstream Kunai.damageRoll: 60% toward max instead of min..max on a
+## surprise attack.
+func surprise_toward_max() -> float:
+	if item_id == "kunai":
+		return 0.6
+	return 0.0
+
 ## Upstream MissileWeapon.min/max: min = 2*tier + lvl, max = 5*tier + tier*lvl
 ## (melee weapons use tier + lvl / 5*(tier+1) + lvl*(tier+1) instead). Items
 ## with upstream min/max overrides adjust below by id.

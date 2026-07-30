@@ -1385,6 +1385,12 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 		on_attack_miss(target)
 		return false
 
+	# Surprise state for the thrown roll (upstream Kunai.damageRoll checks
+	# surprisedBy at roll time; canSurpriseAttack uses the thrown weapon).
+	var missile_can_surprise: bool = true
+	if item.has_method("can_surprise_attack"):
+		missile_can_surprise = item.can_surprise_attack(self)
+	_pending_surprise_attack = missile_can_surprise and target.is_surprised_by(self)
 	var damage: int = 1
 	if item.has_method("damage_roll"):
 		damage = item.damage_roll(self)
@@ -1411,6 +1417,7 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 		_apply_snipers_mark(item, target)
 	if EventBus and item is MissileWeapon and not (item is SpiritBow):
 		EventBus.game_event.emit("thrown_weapon_hit", {"target_pos": target.pos})
+	_pending_surprise_attack = false
 	return true
 
 ## Upstream Hero.attackProc (SNIPER): hitting an enemy with a thrown missile

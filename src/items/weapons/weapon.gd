@@ -73,10 +73,23 @@ func _damage_range_for_level(lvl: int) -> Array[int]:
 func damage_roll(owner: Variant = null) -> int:
 	return _roll_from_range(get_damage_range(), owner)
 
+## Fraction of the min->max damage span the roll's minimum shifts toward max
+## when the wielder lands a surprise attack (upstream Dagger/Dirk/
+## AssassinsBlade/Kunai damageRoll overrides). 0.0 = no boost.
+func surprise_toward_max() -> float:
+	return 0.0
+
 ## Roll a NormalIntRange damage value from a [min, max] range plus the
 ## wielder's excess-STR bonus. Shared by melee and missile damage paths.
+## Sneak-blade weapons roll min + span*surprise_toward_max() .. max instead
+## when the owner's current attack is a surprise attack.
 func _roll_from_range(dmg_range: Array[int], owner: Variant) -> int:
-	var dmg: int = Balance.normal_int_range(dmg_range[0], dmg_range[1])
+	var roll_min: int = dmg_range[0]
+	var boost: float = surprise_toward_max()
+	if boost > 0.0 and owner != null \
+			and owner.get("_pending_surprise_attack") == true:
+		roll_min += roundi(float(dmg_range[1] - roll_min) * boost)
+	var dmg: int = Balance.normal_int_range(roll_min, dmg_range[1])
 
 	# Excess STR bonus: NormalIntRange(0, excessSTR) added to damage
 	if owner != null and owner.get("str_val") != null:
