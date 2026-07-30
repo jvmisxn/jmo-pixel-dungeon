@@ -57,11 +57,13 @@ const WEAPONS_T5: Array[String] = [
 ]
 
 ## Missile / thrown weapons per tier (T1 lives in MIS_T1_DECK_TABLE with its
-## prob-0 dart slot).
-const MISSILES_T2: Array[String] = ["shuriken", "kunai", "bolas"]
-const MISSILES_T3: Array[String] = ["javelin", "tomahawk", "boomerang"]
-const MISSILES_T4: Array[String] = ["trident", "heavy_boomerang"]
-const MISSILES_T5: Array[String] = ["force_cudgel"]
+## prob-0 dart slot). Upstream MIS_T2-T5 rosters; force_cudgel fills the
+## ForceCube T5 slot, plain boomerang has no upstream slot (item kept for
+## old saves only).
+const MISSILES_T2: Array[String] = ["fishing_spear", "throwing_club", "shuriken"]
+const MISSILES_T3: Array[String] = ["throwing_spear", "kunai", "bolas"]
+const MISSILES_T4: Array[String] = ["javelin", "tomahawk", "heavy_boomerang"]
+const MISSILES_T5: Array[String] = ["trident", "throwing_hammer", "force_cudgel"]
 
 ## Armor per tier.
 const ARMORS_T1: Array[String] = ["cloth_armor"]
@@ -207,22 +209,20 @@ const FOOD_DECK: Array[float] = [4, 1, 0]
 ## Per-tier equipment decks (upstream WEP_T*/MIS_T* defaultProbs): melee slots
 ## weigh 2 each with a prob-0 Mage's Staff slot in T1 (never random, Mage
 ## starting gear only); missile slots weigh 3 each with a prob-0 Dart slot in
-## T1 (crossbow ammo/alchemy only). Unported upstream entries (Sickle,
-## Pickaxe, Whip, Crossbow, Katana, Gauntlet, WarScythe, ThrowingSpike,
-## FishingSpear, ThrowingSpear, ThrowingHammer) have no slot; boomerang and
-## force_cudgel keep their roster-adaptation slots.
+## T1 (crossbow ammo/alchemy only). Unported upstream melee entries (Sickle,
+## Pickaxe, Whip, Crossbow, Katana, Gauntlet, WarScythe) have no slot;
+## missile rosters now match upstream MIS_T1-T5 exactly, with force_cudgel
+## in the ForceCube slot.
 const WEP_T1_DECK_TABLE: Array[String] = [
 	"worn_shortsword", "cudgel", "gloves", "rapier", "dagger", "mages_staff",
 ]
 const WEP_T1_DECK: Array[float] = [2, 2, 2, 2, 2, 0]
 const WEP_DECK_5: Array[float] = [2, 2, 2, 2, 2]
 const MIS_T1_DECK_TABLE: Array[String] = [
-	"throwing_stone", "throwing_knife", "throwing_club", "dart",
+	"throwing_stone", "throwing_knife", "throwing_spike", "dart",
 ]
 const MIS_T1_DECK: Array[float] = [3, 3, 3, 0]
 const MIS_DECK_3: Array[float] = [3, 3, 3]
-const MIS_DECK_2: Array[float] = [3, 3]
-const MIS_DECK_1: Array[float] = [3]
 
 ## Deck definitions: category -> {table, deck1, deck2 (optional)}.
 ## Dual-deck categories flip decks on every refill (upstream using2ndProbs).
@@ -241,8 +241,8 @@ static var _deck_defs: Dictionary = {
 	"mis_t1": {"table": MIS_T1_DECK_TABLE, "deck1": MIS_T1_DECK},
 	"mis_t2": {"table": MISSILES_T2, "deck1": MIS_DECK_3},
 	"mis_t3": {"table": MISSILES_T3, "deck1": MIS_DECK_3},
-	"mis_t4": {"table": MISSILES_T4, "deck1": MIS_DECK_2},
-	"mis_t5": {"table": MISSILES_T5, "deck1": MIS_DECK_1},
+	"mis_t4": {"table": MISSILES_T4, "deck1": MIS_DECK_3},
+	"mis_t5": {"table": MISSILES_T5, "deck1": MIS_DECK_3},
 }
 
 ## Live deck state (persisted with the run).

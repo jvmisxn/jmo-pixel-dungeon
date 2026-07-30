@@ -29,13 +29,14 @@ func _make_ring(level: int) -> Ring:
 	ring.cursed = false
 	return ring
 
-## A tier-1 dart at level 0 rolls in [1, 10]. With a +3 Sharpshooting ring the
-## missile's effective level becomes 3, giving [4, 16]. STR is set to the dart's
-## requirement so the excess-STR bonus does not blur the comparison.
+## A tier-1 dart at level 0 rolls in [2, 5] (upstream MissileWeapon 2t..5t).
+## With a +3 Sharpshooting ring the missile's effective level becomes 3,
+## giving [5, 8]. STR is set to the dart's requirement so the excess-STR
+## bonus does not blur the comparison.
 func _check_missile_damage_scales_with_ring(t: Object) -> void:
 	seed(778811)
 	var hero: Hero = _make_hero()
-	hero.str_val = 10  # dart STR req at level 0 -> no excess-STR bonus
+	hero.str_val = 9  # dart STR req at level 0 -> no excess-STR bonus
 
 	var dart: MissileWeapon = MissileWeapon.create("dart")
 	dart.level = 0
@@ -47,7 +48,7 @@ func _check_missile_damage_scales_with_ring(t: Object) -> void:
 		var dmg: int = dart.damage_roll(hero)
 		base_min = mini(base_min, dmg)
 		base_max = maxi(base_max, dmg)
-	t.check(base_max <= 10, "unringed dart never exceeds its level-0 max (10)")
+	t.check(base_max <= 5, "unringed dart never exceeds its level-0 max (5)")
 
 	# Equip a +3 Sharpshooting ring.
 	hero.belongings.equip_ring(_make_ring(3), true)
@@ -58,8 +59,8 @@ func _check_missile_damage_scales_with_ring(t: Object) -> void:
 		ring_min = mini(ring_min, dmg)
 		ring_max = maxi(ring_max, dmg)
 
-	t.check(ring_min >= 4, "sharpshot dart never rolls below the raised level-3 min (4)")
-	t.check(ring_max > 10, "sharpshot dart reaches beyond the level-0 max, up to 16")
+	t.check(ring_min >= 5, "sharpshot dart never rolls below the raised level-3 min (5)")
+	t.check(ring_max > 5, "sharpshot dart reaches beyond the level-0 max, up to 8")
 	hero.free()
 
 ## Melee damage must be identical with or without the ring: the bonus no longer

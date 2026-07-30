@@ -39,8 +39,8 @@ func run(t: Object) -> void:
 		"tier-1 missile throw range is 4 + tier * 2 = 6 (matches WndItem)"
 	)
 	t.check(
-		HUD.quickslot_throw_range(trident) == 12,
-		"tier-4 missile throw range is 4 + tier * 2 = 12 (matches WndItem)"
+		HUD.quickslot_throw_range(trident) == 14,
+		"tier-5 missile throw range is 4 + tier * 2 = 14 (matches WndItem)"
 	)
 	t.check(
 		HUD.quickslot_throw_range(bow) == 8,

@@ -113,17 +113,15 @@ func _check_legacy_save_uses_factory_profile(t: Object) -> void:
 		"legacy cudgel load keeps the factory heavy damage multiplier")
 	t.check(loaded.str_req_bonus == 1, "legacy cudgel load keeps the factory STR bonus")
 
-## Missile weapons share the base differentiation fields; a heavy thrown club
-## must out-damage and out-slow a plain dart of the same tier.
+## Missile weapons share the base differentiation fields; the tier-2 throwing
+## club must out-damage a tier-1 dart and need more STR (upstream tiers).
 func _check_missile_same_tier_differs(t: Object) -> void:
 	var dart: MissileWeapon = MissileWeapon.create("dart")
 	var club: MissileWeapon = MissileWeapon.create("throwing_club")
 	t.check(club.get_damage_range()[1] > dart.get_damage_range()[1],
-		"heavy throwing club out-damages a tier-1 dart")
-	t.check(club.speed_factor(null) > dart.speed_factor(null),
-		"heavy throwing club is slower to throw than a dart")
+		"tier-2 throwing club out-damages a tier-1 dart")
 	t.check(club.get_str_requirement() > dart.get_str_requirement(),
-		"heavy throwing club needs more STR than a dart")
+		"tier-2 throwing club needs more STR than a dart")
 
 func _distinct_count(values: Array) -> int:
 	var seen: Array = []

@@ -6,7 +6,7 @@ extends RefCounted
 ##   - a wep_t4 deck cycle deals each tier-4 weapon exactly twice
 ##   - a mis_t1 deck cycle deals each tier-1 missile exactly 3 times and
 ##     never the prob-0 dart slot
-##   - the single-slot mis_t5 deck only ever deals force_cudgel
+##   - a mis_t5 deck cycle deals each tier-5 missile exactly 3 times
 ##   - tier deck state survives a serialize/restore round trip mid-deck
 ##   - random_weapon returns only known melee ids (deck-backed public path)
 
@@ -62,7 +62,7 @@ func _test_wep_t4_cycle(t: Object) -> void:
 func _test_mis_t1_cycle(t: Object) -> void:
 	Generator.full_reset()
 	var expected: Array[String] = [
-		"throwing_stone", "throwing_knife", "throwing_club",
+		"throwing_stone", "throwing_knife", "throwing_spike",
 	]
 	var counts: Dictionary = _draw_counts("mis_t1", 9)
 	t.check(_is_uniform(counts, expected, 3),
@@ -73,9 +73,9 @@ func _test_mis_t1_cycle(t: Object) -> void:
 
 func _test_mis_t5_single(t: Object) -> void:
 	Generator.full_reset()
-	var counts: Dictionary = _draw_counts("mis_t5", 4)
-	t.check(counts.size() == 1 and counts.get("force_cudgel", 0) == 4,
-		"mis_t5 deck only deals force_cudgel, including across a refill")
+	var counts: Dictionary = _draw_counts("mis_t5", 9)
+	t.check(_is_uniform(counts, Generator.MISSILES_T5, 3),
+		"mis_t5 deck deals each tier-5 missile exactly 3 times per cycle")
 
 
 func _test_serialize_round_trip(t: Object) -> void:
