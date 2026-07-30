@@ -318,6 +318,7 @@ class ScrollUpgrade extends Scroll:
 		item_name = "Scroll of Upgrade"
 		description = "A scroll of arcane power that enhances an item, raising its level by +1."
 		icon_color = Color(1.0, 0.85, 0.3)
+		unique = true
 
 	func read_scroll(hero: Char) -> void:
 		if hero == null or hero.belongings == null:
@@ -762,7 +763,17 @@ class ScrollTransmutation extends Scroll:
 					ConstantsData.ItemCategory.WAND, ConstantsData.ItemCategory.RING,
 					ConstantsData.ItemCategory.ARTIFACT,
 					ConstantsData.ItemCategory.POTION, ConstantsData.ItemCategory.SCROLL]:
-				if not item.unique and item != self:
+				# Upstream: unique only blocks artifacts (+ port's mastery
+				# potion, upstream's non-Potion TengusMask); unique
+				# potions/scrolls (PoS/SoU) stay transmutable.
+				var unique_blocked: bool = item.unique and (
+					item.item_id == "mastery"
+					or item.category not in [
+						ConstantsData.ItemCategory.POTION,
+						ConstantsData.ItemCategory.SCROLL,
+					]
+				)
+				if not unique_blocked and item != self:
 					transmutable.append(item)
 
 		if transmutable.size() > 0:

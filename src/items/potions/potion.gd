@@ -367,6 +367,7 @@ class PotionStrength extends Potion:
 		item_name = "Potion of Strength"
 		description = "A thick, golden liquid that permanently increases strength by 1."
 		icon_color = Color(0.9, 0.7, 0.1)
+		unique = true
 
 	func drink(hero: Char) -> void:
 		if hero == null:
