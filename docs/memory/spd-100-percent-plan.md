@@ -186,9 +186,11 @@ and pitfall/chasm landing parity including fallen-item heap drops
    (`wnd_monk_abilities.gd` per upstream WndMonkAbilities, opened by
    tapping the Monk Energy buff icon as the ActionIndicator stand-in,
    `test_wnd_monk_abilities.gd`) — all five abilities are now
-   player-reachable, pending Monk playtest. Next talent milestone =
-   monastic_vigor/combined_energy talent wiring, or Champion dual-wield
-   parity.
+   player-reachable, pending Monk playtest. 2026-07-29: Monastic Vigor +
+   Combined Energy wired live (`CombinedEnergyAbilityTracker`,
+   `test_combined_energy.gd`) — the Monk talent set is complete. Next
+   talent milestone = Champion dual-wield parity
+   (twin_upgrades/combined_lethality).
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +

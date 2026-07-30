@@ -87,10 +87,38 @@ func _gear_bonus(gear: Variant, points: int) -> float:
 		return 0.5
 	return 0.0
 
-## Spend energy on a monk ability. Upstream: MonkEnergy.abilityUsed
-## (Combined Energy talent hook lands with the abilities themselves).
+## Spend energy on a monk ability. Upstream: MonkEnergy.abilityUsed.
 func ability_used(cost: float) -> void:
 	energy = clampf(energy - cost, 0.0, float(energy_cap()))
+	_check_combined_energy(cost)
+
+## Combined Energy talent, monk-ability side (upstream abilityUsed): a
+## qualifying ability (cost >= 5 - points) either arms the 5-turn tracker
+## or, when a weapon ability is already tracked, refunds 1 energy now.
+func _check_combined_energy(cost: float) -> void:
+	if target == null or not target.has_method("get_talent_level"):
+		return
+	var points: int = target.get_talent_level("monk_combined_energy")
+	if points <= 0 or cost < 5.0 - float(points):
+		return
+	var tracker: Variant = target.get_buff("CombinedEnergyAbilityTracker")
+	if tracker is CombinedEnergyAbilityTracker \
+			and (tracker as CombinedEnergyAbilityTracker).wep_abil_used:
+		(tracker as CombinedEnergyAbilityTracker).monk_abil_used = true
+		process_combined_energy(tracker)
+	else:
+		if not (tracker is CombinedEnergyAbilityTracker):
+			tracker = target.add_buff(CombinedEnergyAbilityTracker.new())
+		if tracker is CombinedEnergyAbilityTracker:
+			(tracker as CombinedEnergyAbilityTracker).monk_abil_used = true
+			(tracker as CombinedEnergyAbilityTracker).postpone(5.0)
+
+## Refund 1 energy and consume the tracker. Upstream:
+## MonkEnergy.processCombinedEnergy.
+func process_combined_energy(tracker: Buff) -> void:
+	energy = minf(energy + 1.0, float(energy_cap()))
+	if target != null and target.has_method("remove_buff") and tracker != null:
+		target.remove_buff(tracker)
 
 ## Whether abilities are empowered by the Monastic Vigor talent:
 ## 100%/80%/60% of cap at +1/+2/+3. Upstream: abilitiesEmpowered.
