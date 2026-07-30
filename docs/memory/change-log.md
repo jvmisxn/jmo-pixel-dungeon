@@ -2,6 +2,25 @@
 
 ## 2026-07-29
 
+- Tags: duelist, monk, abilities, combat, source-fidelity, tests
+- Monk Focus ability shipped (upstream `MonkEnergy.MonkAbility.Focus`):
+  `_do_monk_ability` kind "focus" — costs 2 energy, no target, applies
+  `FocusBuff` (`focus_buff.gd`), spends 1 turn or is instant when
+  `abilities_empowered()` (energy >= 1.2x cap, Monastic Vigor lowers the
+  bar). `FocusBuff` grants infinite evasion via `evasion_modifier` (same
+  mechanism as GuardTracker) and is consumed by the first parried attack
+  through the miss-path `on_damage_taken(0)` notify (upstream
+  Hero.defenseVerb detach); it defers to an active GuardTracker so guard
+  blocks don't eat focus. Refusals (short energy, already focused,
+  non-Monk) are free. Two `char.gd` fidelity fixes rode along: (1)
+  `Char.hit` now checks infinite evasion BEFORE the surprise-attack
+  auto-hit (upstream INFINITE_EVASION beats INFINITE_ACCURACY — Guard
+  previously lost to surprise attacks too); (2) the miss-path buff
+  notify loop iterates a duplicate so a buff can self-detach. Test:
+  `test_monk_focus_ability.gd` (5 cases, incl. focus-beats-surprise).
+  Like Flurry, NOT yet player-reachable pending the monk ability picker
+  UI. Remaining monk abilities: Dash, Dragon Kick, Meditate.
+
 - Tags: duelist, monk, abilities, source-fidelity, tests
 - Monk Flurry ability shipped (upstream `MonkEnergy.MonkAbility.Flurry`):
   new `monk_ability` hero action (`_do_monk_ability` in `hero.gd`,
