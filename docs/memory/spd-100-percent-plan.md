@@ -178,9 +178,14 @@ and pitfall/chasm landing parity including fallen-item heap drops
    `test_monk_dash_ability.gd`). 2026-07-29: Dragon Kick shipped
    (4-energy 6x/9x guaranteed unarmed strike, 6-cell knockback +
    min(6,dist) paralysis, empowered adjacent sweep,
-   `test_monk_dragon_kick_ability.gd`). Next talent milestone = Meditate
-   (last monk ability) + monk ability picker UI (upstream
-   WndMonkAbilities/ActionIndicator), or Champion dual-wield parity.
+   `test_monk_dragon_kick_ability.gd`). 2026-07-29: Meditate shipped
+   (5 energy + 5 turns, debuff cleanse, post-meditation Recharging 8,
+   empowered heal-over-time via new generic Healing buff + 20% damage
+   MeditateResistance, `test_monk_meditate_ability.gd`) — all five monk
+   abilities are ported but none are player-reachable yet. Next talent
+   milestone = monk ability picker UI (upstream
+   WndMonkAbilities/ActionIndicator), then monastic_vigor/combined_energy
+   talent wiring, or Champion dual-wield parity.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +
