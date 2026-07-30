@@ -64,7 +64,6 @@ func _test_monk_stats(t: Object) -> void:
 		and monk.loot_table[0]["item_id"] == "ration"
 		and is_equal_approx(float(monk.loot_table[0]["chance"]), 0.083),
 		"Monk loot: ration @ 0.083")
-	monk.free()
 
 
 func _test_senior_stats(t: Object) -> void:
@@ -82,7 +81,6 @@ func _test_senior_stats(t: Object) -> void:
 		"Senior always drops a pasty")
 	t.check(senior.description.contains("mastered the art"),
 		"Senior has its upstream description")
-	senior.free()
 
 
 func _test_focus_gain_while_hunting(t: Object) -> void:
@@ -114,8 +112,6 @@ func _test_focus_gain_while_hunting(t: Object) -> void:
 	monk2.act()
 	t.check(not monk2.has_buff("MonkFocus"),
 		"Hunting monk on cooldown does not gain Focus")
-	hero.free()
-	level.free()
 
 
 func _test_focus_infinite_evasion(t: Object) -> void:
@@ -130,8 +126,6 @@ func _test_focus_infinite_evasion(t: Object) -> void:
 		if Char.hit(rat, monk):
 			hit_any = true
 	t.check(not hit_any, "No attack lands on a focused monk (50 rolls)")
-	rat.free()
-	monk.free()
 
 
 func _test_focus_gated_by_paralysis_and_sleep(t: Object) -> void:
@@ -147,7 +141,6 @@ func _test_focus_gated_by_paralysis_and_sleep(t: Object) -> void:
 	monk.state = Mob.AIState.HUNTING
 	t.check(monk.evasion() >= 1000000,
 		"Awake unparalysed monk regains infinite evasion")
-	monk.free()
 
 
 func _test_parry_consumes_focus(t: Object) -> void:
@@ -160,7 +153,6 @@ func _test_parry_consumes_focus(t: Object) -> void:
 	t.check(not monk.has_buff("MonkFocus"), "Parry consumes the Focus buff")
 	t.check(monk.focus_cooldown >= 6.0 and monk.focus_cooldown <= 7.0,
 		"Parry starts a 6-7 turn focus cooldown (got %f)" % monk.focus_cooldown)
-	monk.free()
 
 
 func _test_travel_focus_bonus(t: Object) -> void:
@@ -171,7 +163,6 @@ func _test_travel_focus_bonus(t: Object) -> void:
 	monk.on_move(0, 1)
 	t.check(is_equal_approx(monk.focus_cooldown, 4.33),
 		"Moving burns an extra 0.67 focus cooldown")
-	monk.free()
 	var senior := SeniorMonk.new()
 	t.check(is_equal_approx(senior._travel_focus_bonus(), 2.33),
 		"Senior travel focus bonus 2.33 (0.67 + 1.66)")
@@ -179,14 +170,12 @@ func _test_travel_focus_bonus(t: Object) -> void:
 	senior.on_move(0, 1)
 	t.check(is_equal_approx(senior.focus_cooldown, 2.67),
 		"Senior moving burns 2.33 focus cooldown")
-	senior.free()
 	# Spending a turn burns cooldown by the time spent.
 	var monk2 := MonkMob.new()
 	monk2.focus_cooldown = 3.0
 	monk2.spend_turn(1.0)
 	t.check(is_equal_approx(monk2.focus_cooldown, 2.0),
 		"Spending a turn burns 1.0 focus cooldown")
-	monk2.free()
 
 
 func _test_serialization(t: Object) -> void:
@@ -200,5 +189,3 @@ func _test_serialization(t: Object) -> void:
 	t.check(is_equal_approx(loaded.focus_cooldown, 4.5),
 		"Round-trip preserves focus_cooldown")
 	t.check(loaded.has_buff("MonkFocus"), "Round-trip preserves Focus buff")
-	senior.free()
-	loaded.free()
