@@ -1,5 +1,29 @@
 # Change Log
 
+## 2026-07-30 (later still)
+
+- Tags: progression, subclass, ui, tengu, source-fidelity, tests
+- Subclass acquisition parity is LIVE (upstream `TengusMask` +
+  `WndChooseSubclass`, adapted to the port's Potion of Mastery item).
+  Before this slice subclassing was effectively unreachable: the mastery
+  potion had no in-game grant path (absent from the weighted random pools
+  and never dropped), and even a hand-spawned one silently auto-picked
+  `subclasses[0]` while bypassing `SubclassAbilities.apply_subclass`, so
+  passive perks were never granted. Now: `PotionMastery.execute` override
+  (no turn/consume up front) opens new `wnd_choose_subclass.gd` listing
+  both subclasses with `get_subclass_info` descriptions/perks + "Not yet"
+  cancel; choosing routes through `apply_subclass` (perks + GameManager
+  sync + "You have become a %s!"), identifies + consumes the potion —
+  cancel keeps it (upstream mask semantics). Turn cost comes from
+  `Hero.execute_action`'s use_item branch. Tengu `_on_death` now drops
+  the mastery potion (upstream `Tengu.die` mask drop; fragile
+  `tengu.gd` touched with a small hand-edit, parser-verified via import).
+  `test_subclass_choice.gd` (window opens / no auto-pick / cancel keeps
+  potion / choose applies BerserkerRage + consumes + identifies /
+  already-subclassed refusal / Tengu drop). Co-op adaptation note: one
+  potion per run, first drinker in the party chooses — matches the single
+  upstream mask. [ENGINE]: window layout wants a quick in-game look.
+
 ## 2026-07-30 (later)
 
 - Tags: duelist, champion, belongings, ui, source-fidelity, tests
