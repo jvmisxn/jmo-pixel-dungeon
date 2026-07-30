@@ -58,9 +58,25 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _open_info_window() -> void:
+	if _try_champion_swap():
+		return
 	var wnd: WndBase = make_info_window()
 	if wnd != null and EventBus:
 		EventBus.show_window.emit(wnd)
+
+
+## Champion swap stand-in for the upstream ActionIndicator (upstream
+## MeleeWeapon.Charger.doAction): tapping the Weapon Charger icon swaps the
+## primary and off-hand weapons instantly, no turn spent.
+func _try_champion_swap() -> bool:
+	if not (buff_ref is WeaponCharger):
+		return false
+	var hero: Variant = buff_ref.get("target")
+	if not (hero is Hero) or int(hero.hero_subclass) != ConstantsData.HeroSubclass.CHAMPION:
+		return false
+	if EventBus:
+		EventBus.request_hero_action.emit({"type": "swap_weapons"})
+	return true
 
 
 ## Builds the info window for the attached buff (null if no buff).

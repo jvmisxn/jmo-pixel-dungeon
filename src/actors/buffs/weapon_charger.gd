@@ -27,6 +27,10 @@ func _init() -> void:
 func on_turn() -> void:
 	if target == null or not target.is_alive:
 		return
+	# Champion swap stand-in for the upstream ActionIndicator: the charger
+	# surfaces as a tappable buff icon only while the hero is a Champion
+	# (upstream Charger.act sets ActionIndicator for CHAMPION only).
+	show_in_ui = _subclass() == ConstantsData.HeroSubclass.CHAMPION
 	var cap: int = charge_cap()
 	if charges < cap:
 		if _regen_on():
@@ -101,3 +105,4 @@ func deserialize(data: Dictionary) -> void:
 	super.deserialize(data)
 	charges = int(data.get("charges", charges))
 	partial_charge = float(data.get("partial_charge", partial_charge))
+	show_in_ui = _subclass() == ConstantsData.HeroSubclass.CHAMPION

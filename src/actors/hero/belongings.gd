@@ -179,6 +179,21 @@ func equip_second_wep(new_weapon: Item) -> Item:
 		old.on_unequip(owner)
 	return old
 
+## Champion instant weapon swap (upstream MeleeWeapon.Charger.doAction):
+## exchanges the primary and off-hand weapons for free. Refused for
+## non-Champion owners and, per upstream, with an empty off-hand while the
+## backpack is full. Returns true when the swap happened.
+func swap_weapons() -> bool:
+	if owner == null or int(ConstantsData.get_prop(owner, "hero_subclass",
+			ConstantsData.HeroSubclass.NONE)) != ConstantsData.HeroSubclass.CHAMPION:
+		return false
+	if second_wep == null and not has_space():
+		return false
+	var temp: Item = weapon
+	weapon = second_wep
+	second_wep = temp
+	return true
+
 ## Equip armor. Returns the previously equipped armor (or null).
 func equip_armor(new_armor: Item) -> Item:
 	var old: Item = armor

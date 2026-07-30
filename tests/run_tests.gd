@@ -267,6 +267,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_twin_upgrades.gd",
 	"res://tests/cases/test_weapon_ability_offhand.gd",
 	"res://tests/cases/test_combined_lethality.gd",
+	"res://tests/cases/test_champion_weapon_swap.gd",
 ]
 
 var _checks: int = 0

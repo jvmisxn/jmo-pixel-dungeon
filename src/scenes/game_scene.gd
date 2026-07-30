@@ -1525,6 +1525,17 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 			if EventBus:
 				EventBus.item_equipped.emit(ConstantsData.get_prop(item_to_equip, "item_name", ""), str(category))
 			return true
+		"swap_weapons":
+			# Champion instant swap (upstream MeleeWeapon.Charger.doAction):
+			# free action, unlock sound, no turn spent.
+			if belongings == null or not belongings.has_method("swap_weapons"):
+				return true
+			if belongings.swap_weapons():
+				if AudioManager:
+					AudioManager.play_sfx("unlock")
+			elif belongings.second_wep == null and not belongings.has_space():
+				_deliver_hero_message(hero_node, "You can't do that with a full inventory.", "warning")
+			return true
 		"unequip_item":
 			var slot_name: String = str(action.get("slot", ""))
 			if belongings == null or slot_name.is_empty():
