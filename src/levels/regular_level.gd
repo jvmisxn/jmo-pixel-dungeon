@@ -192,6 +192,8 @@ func _spawn_mimic_with_item(item_pos: int, item: Item, p_depth: int) -> Mimic:
 	mimic.scale_to_depth(p_depth)
 	if item != null:
 		mimic.stored_items.append(item)
+	# Upstream Mimic.spawnAt always adds a generated prize on top of the heap item.
+	mimic.generate_prize(p_depth)
 	add_mob(mimic)
 	return mimic
 
