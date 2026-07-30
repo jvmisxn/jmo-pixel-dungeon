@@ -2,6 +2,25 @@
 
 ## 2026-07-29
 
+- Tags: duelist, monk, abilities, source-fidelity, tests
+- Monk Flurry ability shipped (upstream `MonkEnergy.MonkAbility.Flurry`):
+  new `monk_ability` hero action (`_do_monk_ability` in `hero.gd`,
+  currently kind "flurry" only) — costs 1 energy, targets an adjacent
+  visible enemy, lands two guaranteed unarmed strikes at 1.5x damage
+  (acc 1e9), is instant (`_ability_spend` stays 0, shared spend arm with
+  `weapon_ability`), and is limited to once per turn via
+  `FlurryCooldownTracker` (port: 1-turn buff standing in for upstream's
+  0f FlavourBuff). `UnarmedAbilityTracker` (hidden buff) makes
+  `damage_roll()` bypass the equipped weapon for `1..max(1, STR-8)`
+  unarmed damage, skips weapon enchant procs in `attack_proc`, and
+  defers the MonkEnergy cap for kills mid-ability (`gain_energy` no
+  longer clamps while it's attached; `ability_used` clamps after).
+  Refusals (no energy, cooldown, out of reach, non-Monk) cost nothing.
+  Test: `test_monk_flurry_ability.gd` (5 cases). NOT yet player-reachable:
+  the WndMonkAbilities-style picker UI (upstream ActionIndicator tap) is
+  the next slice, along with Focus/Dash/Dragon Kick/Meditate and the
+  Monastic Vigor empowered variants (FlurryEmpowerTracker not ported yet).
+
 - Tags: duelist, monk, talents, source-fidelity, tests
 - Monk energy pool shipped (upstream MonkEnergy + the Mob.destroy gain
   hook): while the hero's subclass is Monk, every enemy death grants
