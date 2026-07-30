@@ -204,7 +204,10 @@ and pitfall/chasm landing parity including fallen-item heap drops
    shipped (transient `Belongings.ability_weapon` override routing attack
    math through the off-hand during its ability strike,
    `test_weapon_ability_offhand.gd`); remaining: swap ActionIndicator,
-   then combined_lethality (last inert Champion talent).
+   then combined_lethality (last inert Champion talent). 2026-07-30:
+   Combined Lethality LIVE (differing-weapon execute at 0.4*points/3 HP,
+   `test_combined_lethality.gd`) — zero inert talents remain; only the
+   swap ActionIndicator is left for Champion parity.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +
