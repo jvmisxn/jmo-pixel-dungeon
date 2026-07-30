@@ -504,6 +504,9 @@ func _do_monk_ability(kind: String, target_pos: int) -> void:
 	if kind == "dragon_kick":
 		_do_dragon_kick_ability(energy, target_pos)
 		return
+	if kind == "meditate":
+		_do_meditate_ability(energy)
+		return
 	if kind != "flurry":
 		return
 	if energy == null or energy.energy < 1.0:
@@ -685,6 +688,34 @@ func _dragon_kick_knock(victim: Char) -> void:
 		para.duration = float(moved)
 		para.time_left = para.duration
 		victim.add_buff(para)
+
+## Monk Meditate (upstream MonkEnergy.MonkAbility.Meditate): 5 energy, no
+## target. Cleanses all negative buffs (upstream skips AllyBuff and
+## LostInventory; the local Corruption port is POSITIVE-typed, so the
+## buff_type filter matches), then spends 5 turns meditating. When the
+## meditation ends the hero's wands recharge rapidly for 8 turns
+## (MeditateTracker.on_detach). While abilities are empowered the hero also
+## gradually heals round(missing HP / 5) and takes only 20% damage until
+## the meditation ends (MeditateResistance). Refusals are free.
+func _do_meditate_ability(energy: MonkEnergy) -> void:
+	if energy == null or energy.energy < 5.0:
+		if MessageLog:
+			MessageLog.add_warning("You don't have enough energy for that ability.")
+		return
+	for b: Node in get_buffs().duplicate():
+		if b is Buff and (b as Buff).buff_type == Buff.BuffType.NEGATIVE:
+			remove_buff(b)
+	add_buff(MeditateTracker.new())
+	if energy.abilities_empowered():
+		var to_heal: int = roundi(float(hp_max - hp) / 5.0)
+		if to_heal > 0:
+			var healing: Healing = add_buff(Healing.new()) as Healing
+			if healing != null:
+				healing.set_heal(to_heal, 0.0, 1)
+		add_buff(MeditateResistance.new())
+	energy.ability_used(5.0)
+	# Upstream spends 5 constant ticks (5x wait actions).
+	_ability_spend = 5.0
 
 func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	_ability_spend = 0.0
@@ -2337,6 +2368,11 @@ func take_damage(amount: int, source: Variant = null) -> int:
 			amount = roundi(float(amount) / 4.0)
 		elif iron_stomach >= 2:
 			amount = 0
+	# Empowered Meditate resistance: 20% damage taken (upstream applies the
+	# 0.2x in both Char.attack and Hero.damage; one choke point here covers
+	# melee and non-Char sources alike).
+	if amount > 0 and has_buff("MeditateResistance"):
+		amount = roundi(float(amount) * 0.2)
 	var hp_before: int = hp
 	var actual: int = super.take_damage(amount, source)
 	if actual > 0:

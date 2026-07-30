@@ -2,6 +2,28 @@
 
 ## 2026-07-29
 
+- Tags: duelist, monk, abilities, buffs, source-fidelity, tests
+- Monk Meditate ability shipped (upstream
+  `MonkEnergy.MonkAbility.Meditate`) — all five monk abilities are now
+  ported. `_do_monk_ability` kind "meditate": costs 5 energy + 5 turns
+  (`_ability_spend = 5.0`, upstream 5x spendConstant), cleanses every
+  NEGATIVE-typed buff (upstream skips AllyBuff/LostInventory; local
+  Corruption is POSITIVE-typed so the filter matches; Hunger is not a
+  debuff locally), attaches a 5-turn `MeditateTracker` whose on_detach
+  grants 8 turns of `Recharging` (upstream's delayed actor at
+  cooldown-1; the ArtifactRecharge half is skipped — no local
+  artifact-charge-over-time buff). While `abilities_empowered()`: new
+  generic `Healing` buff (upstream Healing: round(pct*left)+flat per
+  turn, min 1, detach at 0) seeded with round(missing HP/5) at 1/turn,
+  plus 5-turn `MeditateResistance` — `Hero.take_damage` reduces damage
+  to 20% at one choke point (upstream applies 0.2x in both Char.attack
+  and Hero.damage). Refusals are free. Test:
+  `test_monk_meditate_ability.gd` (5 cases, 16 checks). Still NOT
+  player-reachable pending the monk ability picker UI (upstream
+  WndMonkAbilities/ActionIndicator) — that is now the last piece of the
+  monk kit, and `monastic_vigor`/`combined_energy` talent wiring can
+  follow it.
+
 - Tags: duelist, monk, abilities, combat, source-fidelity, tests
 - Monk Dragon Kick ability shipped (upstream
   `MonkEnergy.MonkAbility.DragonKick`): `_do_monk_ability` kind
