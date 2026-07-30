@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-07-30 (later)
+
+- Tags: duelist, champion, belongings, ui, source-fidelity, tests
+- Champion instant weapon swap is LIVE (upstream `MeleeWeapon.Charger`
+  ActionIndicator `doAction`): `Belongings.swap_weapons()` exchanges the
+  primary and off-hand weapons for free — Champion-only, and refused with
+  an empty off-hand while the backpack is full (upstream `swap_full`,
+  message "You can't do that with a full inventory."). Routed as a new
+  `swap_weapons` inventory action in `game_scene.gd`
+  `_apply_inventory_action_for_hero` (instant, no turn spent, unlock sfx,
+  co-op-safe via the existing `request_hero_action` path). UI stand-in for
+  the upstream ActionIndicator: `WeaponCharger.show_in_ui` flips on for
+  Champions (on_turn + deserialize), and tapping the charger's buff icon
+  (`buff_icon.gd _try_champion_swap`) emits the swap action — same pattern
+  as the Monk Energy ability picker. Fragile files `belongings.gd` and
+  `game_scene.gd` touched with small hand-edits, parser-verified.
+  `test_champion_weapon_swap.gd` (14 checks: non-Champion/ownerless
+  refusal, exchange + re-swap, stow into empty off-hand, full-backpack
+  refusal vs allowed two-weapon swap, Champion-only icon surfacing).
+  This closes the Champion dual-wield parity item — the full Champion
+  kit (slot, equip UI, combat/ability paths, talents, swap) is ported.
+  [ENGINE] flag: swap icon tap + sfx need a Champion playtest.
+
 ## 2026-07-30
 
 - Tags: duelist, champion, talents, weapons, source-fidelity, tests
