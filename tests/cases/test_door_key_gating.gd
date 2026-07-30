@@ -13,11 +13,11 @@ class FakeOpener:
 		used.append(key_type)
 		keys[key_type] = maxi(0, int(keys.get(key_type, 0)) - 1)
 
-func _make_level(door_pos: int) -> Level:
+func _make_level(door_pos: int, door_terrain: int = ConstantsData.Terrain.LOCKED_DOOR) -> Level:
 	var level := Level.new()
 	level.map.resize(ConstantsData.LENGTH)
 	level.map.fill(ConstantsData.Terrain.EMPTY)
-	level.map[door_pos] = ConstantsData.Terrain.LOCKED_DOOR
+	level.map[door_pos] = door_terrain
 	level.build_flag_maps()
 	return level
 
@@ -54,4 +54,40 @@ func run(t: Object) -> void:
 	t.check(
 		iron_opener.used == ["iron"] and int(iron_opener.keys["iron"]) == 0,
 		"iron-key attempt consumes exactly one iron key"
+	)
+
+	var sealed_opener := FakeOpener.new()
+	sealed_opener.keys["iron"] = 1
+	var sealed_level: Level = _make_level(door_pos, ConstantsData.Terrain.CRYSTAL_DOOR)
+	t.check(
+		not Door.open(sealed_level, door_pos, sealed_opener),
+		"crystal doors do not open with iron keys"
+	)
+	t.check(
+		sealed_level.terrain_at(door_pos) == ConstantsData.Terrain.CRYSTAL_DOOR,
+		"iron-key attempt leaves the crystal door sealed"
+	)
+	t.check(
+		sealed_opener.used.is_empty() and int(sealed_opener.keys["iron"]) == 1,
+		"iron-key attempt on a crystal door consumes nothing"
+	)
+
+	var crystal_opener := FakeOpener.new()
+	crystal_opener.keys["crystal"] = 1
+	var crystal_level: Level = _make_level(door_pos, ConstantsData.Terrain.CRYSTAL_DOOR)
+	t.check(
+		Door.open(crystal_level, door_pos, crystal_opener),
+		"crystal doors open with crystal keys"
+	)
+	t.check(
+		crystal_level.terrain_at(door_pos) == ConstantsData.Terrain.EMPTY,
+		"crystal doors shatter to empty floor, not an open door (upstream Hero.actUnlock)"
+	)
+	t.check(
+		crystal_level.is_passable(door_pos),
+		"shattered crystal door cell is passable"
+	)
+	t.check(
+		crystal_opener.used == ["crystal"] and int(crystal_opener.keys["crystal"]) == 0,
+		"crystal-key attempt consumes exactly one crystal key"
 	)

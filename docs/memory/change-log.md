@@ -2,6 +2,24 @@
 
 ## 2026-07-29
 
+- Tags: levels, doors, source-fidelity, online, tests
+- Crystal door shatter parity shipped (upstream Hero.actUnlock, current
+  master): unlocking a CRYSTAL_DOOR with a crystal key now sets the cell
+  to `Terrain.EMPTY` (door shatters away permanently) instead of
+  `OPEN_DOOR`. `EnvironmentFeedbackCoordinator.on_door_opened` reads the
+  resulting terrain to pick the sfx (teleport for shatter, matching the
+  upstream sound, else door_open) and includes `terrain` in the online
+  `door_opened` world event; `OnlineEventCodec.handle_door_opened_world_event`
+  applies the event terrain (defaulting to OPEN_DOOR for older events),
+  and the `game_scene.gd` snapshot-diff feedback branch now matches
+  CRYSTAL_DOOR→EMPTY (careful hand edit, fragile file). Upstream's
+  DISCOVER particle burst on shatter is not ported (no Speck emitter
+  equivalent wired here). Tests: crystal cases added to
+  `test_door_key_gating.gd` (iron key rejected/nothing consumed, crystal
+  key shatters to EMPTY + passable + key consumed).
+
+## 2026-07-29
+
 - Tags: combat, duelist, source-fidelity, tests
 - Flail surprise-attack parity shipped (upstream Hero.canSurpriseAttack):
   `MeleeWeapon.can_surprise_attack` override blocks surprise attacks for
