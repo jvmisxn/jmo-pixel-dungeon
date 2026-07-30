@@ -312,6 +312,22 @@ static func _deck_draw(cat: String) -> String:
 	return (_deck_defs[cat]["table"] as Array)[idx]
 
 
+## Shuffle a generated item back into its deck (upstream Generator.undoDrop):
+## reverts the deck decrement for a draw that ended up unused, e.g. a
+## duplicate wandmaker reward reroll. Does not preserve draw order; ids
+## outside the deck categories are a no-op.
+static func undo_drop(item_id: String) -> void:
+	var normalized: String = ITEM_ID_ALIASES.get(item_id, item_id)
+	for cat: String in _deck_defs:
+		var idx: int = (_deck_defs[cat]["table"] as Array).find(normalized)
+		if idx == -1:
+			continue
+		if not _item_probs.has(cat):
+			_reset_item_deck(cat)
+		var probs: Array = _item_probs[cat]
+		probs[idx] = float(probs[idx]) + 1.0
+
+
 ## Pick a category from the depleting 35-item category deck, swapping decks
 ## when it empties (upstream Generator.random()).
 static func _pick_category() -> String:

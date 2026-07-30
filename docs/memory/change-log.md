@@ -1,5 +1,26 @@
 # Change Log
 
+## 2026-07-30 (wandmaker-deck-undo-drop)
+
+- Tags: items, npcs, source-fidelity, tests
+- `Generator.undo_drop(item_id)` ported (upstream Generator.undoDrop):
+  shuffles an unused generated item back into its deck slot (+1), alias-aware,
+  no-op for non-deck ids.
+- Wandmaker reward wands now draw from the Generator wand deck (upstream
+  Wandmaker.Quest.spawn) instead of the invented flat `WAND_POOL`: second
+  draws duplicating the first are rerolled with the dupes shuffled back via
+  `undo_drop`; each reward is uncursed then `upgrade()`d once on top of its
+  `random()` roll (so always ≥ +1). Port adaptation kept: both rewards are
+  identified up front so the reward window shows real names (upstream
+  identifies only the chosen one).
+- Source check: upstream exotic conversion rolls in `Generator.random` are
+  gated on the ExoticCrystals trinket (`consumableExoticChance()` is 0 at
+  trinket level -1); the port has no trinkets, so that tier-deck backlog
+  sub-item is N/A, not a gap.
+- Test: `test_wandmaker_deck_rewards.gd` (undo_drop slot restore + no-op,
+  distinct/uncursed/upgraded/identified rewards, net deck cost exactly 2
+  across 20 generations).
+
 ## 2026-07-30 (wep-mis-tier-decks)
 
 - Tags: items, source-fidelity, persistence, tests
