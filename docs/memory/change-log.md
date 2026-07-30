@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-07-30 (press-cell)
+
+- Tags: levels, wands, traps, plants, blobs, source-fidelity, tests
+- `Level.press_cell(cell, hard)` ported (upstream `Level.pressCell`):
+  physical force landing on a cell springs traps (hidden ones only on a
+  hard press, with the upstream "unseen trap" warning), tramples
+  high/furrowed grass via new `_trample_grass_cell` (null-char
+  `HighGrass.trample` branch — flattens to plain grass, baseline 0.18 dew
+  roll on high grass only), triggers plants (already null-safe), and on
+  hard presses tears webs via new `Blob.clear_cell` (upstream
+  `Blob.clear`). Adaptations: no time-freeze delayed press (Timekeeper's
+  Hourglass unported), wells skipped (interact-driven in the port), and
+  character steps keep routing through the actors' own terrain handling
+  (upstream soft presses). `Wand.zap` now presses the bolt's collision
+  cell when no character is there — centralized after `on_zap` instead of
+  upstream's per-wand `onZap` `pressCell` calls — so wand bolts can spring
+  traps and trigger plants at range. Note MAGIC_BOLT flies through the
+  aimed cell to the first char/wall (matches upstream), so the pressed
+  cell is the true collision cell, not the aimed cell.
+  `test_press_cell.gd` (visible/hidden trap, hard-vs-soft, grass, plant,
+  web, wand-bolt press). Backlog S14/S20 press item marked PARTIAL
+  (wand-proc-on-hit + item-fall presses remain).
+
 ## 2026-07-30 (ghoul)
 
 - Tags: mobs, city, spawn-tables, source-fidelity, tests
