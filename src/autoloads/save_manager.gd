@@ -29,7 +29,9 @@ const SETTINGS_PATH: String = "user://settings.dat"
 #     is derived from hero_level and talent_levels (upstream point buckets).
 #     Old saves' stale key is ignored on read, so migration is a version stamp
 #     only.
-const SAVE_VERSION: int = 6
+# v7: Belongings gains the optional "second_wep" slot (Champion off-hand
+#     weapon). Absent key reads as empty, so migration is a version stamp only.
+const SAVE_VERSION: int = 7
 
 func _notification(what: int) -> void:
 	match what:
@@ -273,6 +275,11 @@ func _migrate_save(save: Dictionary, from_version: int) -> Dictionary:
 				# derived per-tier buckets; stale key is ignored on read, so no
 				# data rewrite is needed.
 				version = 6
+			6:
+				# v6 -> v7: belongings gain the optional "second_wep" slot
+				# (Champion off-hand weapon; absent key reads as empty), so no
+				# data rewrite is needed.
+				version = 7
 			_:
 				push_warning("SaveManager: No migration step registered for save version %d." % version)
 				version += 1

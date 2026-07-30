@@ -190,7 +190,11 @@ and pitfall/chasm landing parity including fallen-item heap drops
    Combined Energy wired live (`CombinedEnergyAbilityTracker`,
    `test_combined_energy.gd`) — the Monk talent set is complete. Next
    talent milestone = Champion dual-wield parity
-   (twin_upgrades/combined_lethality).
+   (twin_upgrades/combined_lethality). 2026-07-29: dual-wield foundation
+   shipped (`Belongings.second_wep` slot + serialization, SAVE_VERSION 7,
+   `test_belongings_second_wep.gd`); remaining: Champion equip prompt,
+   attacking-weapon/combat path + swap action, legacy `ChampionDualWield`
+   buff replacement, then twin_upgrades/combined_lethality go live.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +

@@ -1,5 +1,25 @@
 # Change Log
 
+## 2026-07-29 (later)
+
+- Tags: duelist, champion, belongings, persistence, source-fidelity, tests
+- Champion dual-wield foundation: `Belongings.second_wep` slot (upstream
+  `Belongings.secondWep`) with `equip_second_wep()` mirroring
+  `KindOfWeapon.equipSecondary` semantics (returns displaced weapon, fires
+  on_equip/on_unequip), an `unequip("second_wep")` case, coverage in
+  `uncurse_equipped`, and serialize/deserialize via the shared slot arrays.
+  SAVE_VERSION 6 -> 7 (additive key, version-stamp-only migration step) in
+  `save_manager.gd`. Both files are fragile — small hand-edits only, verified
+  by the full headless suite. `test_belongings_second_wep.gd` (17 checks:
+  equip/swap/displace, off-hand-only unequip, uncurse, round-trip identity
+  incl. upgrade level, old-save-missing-key reads empty). NOT yet
+  player-reachable: no Champion equip prompt, no `attacking_weapon()` /
+  combat integration, no swap ActionIndicator, and the legacy invented
+  `ChampionDualWield` buff (inert in practice — its equip path has no
+  caller) still exists and should be replaced by upstream semantics in the
+  follow-up slices. twin_upgrades/combined_lethality stay inert until the
+  attack path lands.
+
 ## 2026-07-29
 
 - Tags: duelist, monk, talents, buffs, source-fidelity, tests
