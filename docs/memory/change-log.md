@@ -2,6 +2,26 @@
 
 ## 2026-07-29
 
+- Tags: duelist, monk, talents, source-fidelity, tests
+- Monk energy pool shipped (upstream MonkEnergy + the Mob.destroy gain
+  hook): while the hero's subclass is Monk, every enemy death grants
+  energy — 5 boss / 3 miniboss (`_properties` has "MINIBOSS"; no roster
+  mob sets it yet) / 0.5 weak swarm (ghoul/ripper/larva/wraith by
+  mob_id) / 1 default — gated on regen being active (locked boss
+  floors) and capped at `max(10, 5 + lvl/2)`. Buff is attached in
+  `_apply_monk` and lazily by `mob._monk_energy_on_kill` so old Monk
+  saves pick it up on their next kill; energy serializes with the buff.
+  Monk talent slots reshaped to upstream ids: `monk_unencumbered_spirit`
+  LIVE (+50%/75%/100% energy for tier 3/2/1-or-lower armor and weapon,
+  each counted separately), `monk_monastic_vigor` + `monk_combined_energy`
+  registered inert (need monk abilities; `abilities_empowered()` helper
+  already reads Monastic Vigor points). Monk abilities themselves
+  (Flurry/Focus/Dash/Dragon Kick/Meditate + WndMonkAbilities UI) are the
+  next slice on top of `ability_used()`. Test: `test_monk_energy.gd`;
+  `test_talent_inert_gating.gd` updated for the new ids.
+
+## 2026-07-29
+
 - Tags: levels, doors, source-fidelity, online, tests
 - Crystal door shatter parity shipped (upstream Hero.actUnlock, current
   master): unlocking a CRYSTAL_DOOR with a crystal key now sets the cell
