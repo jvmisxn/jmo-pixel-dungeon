@@ -8,27 +8,27 @@ extends RefCounted
 ## This is the single factory entry point for the entire item system.
 
 # ---------------------------------------------------------------------------
-# Category Weights (Shattered PD Generator.Category distribution)
+# Category Decks (upstream Generator.Category firstProb/secondProb)
 # ---------------------------------------------------------------------------
 
-## Weights for random_item category selection. Higher = more common.
-## Upstream Generator.Category's two 35-item decks averaged and doubled to
-## stay integer (deck 1 has ring + extra armor, deck 2 has artifact + extra
-## thrown weapon). Upstream WEAPON(2) and MISSILE(1.5) are folded into one
-## WEAPON weight; random_item splits it 50/50 melee vs missile.
-## FOOD is 0 upstream (each floor drops one guaranteed food item instead),
-## so it is absent here, as is the port-only MISC fallback.
-const CATEGORY_WEIGHTS: Dictionary = {
-	ConstantsData.ItemCategory.GOLD:     20,
-	ConstantsData.ItemCategory.POTION:   16,
-	ConstantsData.ItemCategory.SCROLL:   16,
-	ConstantsData.ItemCategory.WEAPON:   7,
-	ConstantsData.ItemCategory.ARMOR:    3,
-	ConstantsData.ItemCategory.WAND:     2,
-	ConstantsData.ItemCategory.SEED:     2,
-	ConstantsData.ItemCategory.STONE:    2,
-	ConstantsData.ItemCategory.RING:     1,
-	ConstantsData.ItemCategory.ARTIFACT: 1,
+## Upstream runs two alternating 35-item category decks: each random_item pick
+## decrements the chosen category and when the deck empties the run swaps to
+## the other deck. Deck 1 has a ring + an extra armor; deck 2 has an artifact
+## + an extra thrown weapon. FOOD is 0 upstream (each floor drops one
+## guaranteed food item instead) so it is absent here.
+const CATEGORY_ORDER: Array[String] = [
+	"weapon", "armor", "missile", "wand", "ring", "artifact",
+	"potion", "seed", "scroll", "stone", "gold",
+]
+const CATEGORY_FIRST_PROBS: Dictionary = {
+	"weapon": 2, "armor": 2, "missile": 1, "wand": 1, "ring": 1,
+	"artifact": 0, "potion": 8, "seed": 1, "scroll": 8, "stone": 1,
+	"gold": 10,
+}
+const CATEGORY_SECOND_PROBS: Dictionary = {
+	"weapon": 2, "armor": 1, "missile": 2, "wand": 1, "ring": 0,
+	"artifact": 1, "potion": 8, "seed": 1, "scroll": 8, "stone": 1,
+	"gold": 10,
 }
 
 # ---------------------------------------------------------------------------
@@ -70,33 +70,35 @@ const ARMORS_T3: Array[String] = ["mail_armor"]
 const ARMORS_T4: Array[String] = ["scale_armor"]
 const ARMORS_T5: Array[String] = ["plate_armor"]
 
-## Potions — short IDs matching Potion.create().
-## NOTE: "strength" and "experience" are excluded from random drops (prob 0 in original).
-## They are placed deliberately by level generation, not randomly generated.
+## Potions — short IDs matching Potion.create(), upstream class order.
+## NOTE: "strength" is excluded from random drops (prob 0 upstream; placed via
+## the Dungeon.posNeeded() limited-drop quota instead).
 const POTIONS: Array[String] = [
-	"healing", "mind_vision", "frost", "liquid_flame",
-	"toxic_gas", "paralytic_gas", "levitation", "invisibility",
-	"purity", "haste",
+	"healing", "mind_vision", "frost", "liquid_flame", "toxic_gas",
+	"haste", "invisibility", "levitation", "paralytic_gas", "purity",
+	"experience",
 ]
 
-## Potion weights matching original defaultProbs (excluding strength=0 and experience=0).
-## healing:3, mind_vision:2, frost:1, liquid_flame:2, toxic_gas:1,
-## paralytic_gas:1, levitation:1, invisibility:1, purity:1, haste:1
-const POTION_WEIGHTS: Array[int] = [3, 2, 1, 2, 1, 1, 1, 1, 1, 1]
+## Upstream POTION defaultProbs / defaultProbs2 (strength slot dropped):
+## the two decks alternate as each empties; deck 2 trades the experience
+## potion + a liquid flame for an extra frost and toxic gas.
+const POTION_DECK_1: Array[float] = [3, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1]
+const POTION_DECK_2: Array[float] = [3, 2, 2, 1, 2, 1, 1, 1, 1, 1, 0]
 
-## Scrolls — short IDs matching Scroll.create().
-## NOTE: "upgrade" is excluded from random drops (prob 0 in original).
-## It is placed deliberately by level generation (3 per chapter).
+## Scrolls — short IDs matching Scroll.create(), upstream class order.
+## NOTE: "upgrade" is excluded from random drops (prob 0 upstream; placed via
+## the Dungeon.souNeeded() limited-drop quota, 3 per chapter).
 const SCROLLS: Array[String] = [
-	"identify", "remove_curse", "magic_mapping",
-	"teleportation", "lullaby", "rage", "terror", "mirror_image",
-	"retribution", "transmutation", "recharging",
+	"identify", "remove_curse", "mirror_image", "recharging",
+	"teleportation", "lullaby", "magic_mapping", "rage",
+	"retribution", "terror", "transmutation",
 ]
 
-## Scroll weights matching original defaultProbs (excluding upgrade=0).
-## identify:3, remove_curse:2, magic_mapping:1, teleportation:1, lullaby:1,
-## rage:1, terror:1, mirror_image:1, retribution:1, transmutation:1, recharging:2
-const SCROLL_WEIGHTS: Array[int] = [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2]
+## Upstream SCROLL defaultProbs / defaultProbs2 (upgrade slot dropped):
+## deck 2 trades transmutation + a recharging for an extra mirror image
+## and teleportation.
+const SCROLL_DECK_1: Array[float] = [3, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1]
+const SCROLL_DECK_2: Array[float] = [3, 2, 2, 1, 2, 1, 1, 1, 1, 1, 0]
 
 ## Rings — full IDs matching Ring.create().
 const RINGS: Array[String] = [
@@ -123,19 +125,30 @@ const ARTIFACTS: Array[String] = [
 	"timekeeper_hourglass", "unstable_spellbook", "alchemists_toolkit",
 ]
 
-## Seeds.
+## Seeds — upstream class order (dreamfoil stands in for Mageroyal).
 const SEEDS: Array[String] = [
-	"seed_of_firebloom", "seed_of_icecap", "seed_of_sorrowmoss",
-	"seed_of_stormvine", "seed_of_sungrass", "seed_of_earthroot",
-	"seed_of_fadeleaf", "seed_of_rotberry", "seed_of_blindweed",
-	"seed_of_dreamfoil", "seed_of_starflower", "seed_of_swiftthistle",
+	"seed_of_rotberry", "seed_of_sungrass", "seed_of_fadeleaf",
+	"seed_of_icecap", "seed_of_firebloom", "seed_of_sorrowmoss",
+	"seed_of_swiftthistle", "seed_of_blindweed", "seed_of_stormvine",
+	"seed_of_earthroot", "seed_of_dreamfoil", "seed_of_starflower",
 ]
 
-## Stones — short IDs matching Stone.create().
+## Upstream SEED defaultProbs: rotberry never random (quest item),
+## starflower rare. Seeds mostly drop from grass, not levelgen, so upstream
+## draws them from these static defaults rather than a depleting deck.
+const SEED_DEFAULT_PROBS: Array[float] = [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1]
+
+## Stones — short IDs matching Stone.create(), upstream class order.
+## Disarming fills upstream's StoneOfDetectMagic slot (unported);
+## StoneOfAggression is unported and skipped.
 const STONES: Array[String] = [
-	"enchantment", "augmentation", "intuition", "blast", "blink",
-	"clairvoyance", "deepened_sleep", "disarming", "fear", "flock", "shock",
+	"enchantment", "intuition", "disarming", "flock", "shock", "blink",
+	"deepened_sleep", "clairvoyance", "blast", "fear", "augmentation",
 ]
+
+## Upstream STONE defaultProbs: enchantment + augmentation never random
+## (guaranteed floor drop / shop stock respectively).
+const STONE_DECK: Array[float] = [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0]
 
 ## Food — short IDs matching Food.create().
 const FOODS: Array[String] = [
@@ -179,6 +192,155 @@ const FLOOR_SET_TIER_PROBS: Array = [
 	[0, 0, 20, 40, 40],   # Floor set 3 (depths 16-20): mostly T4
 	[0, 0, 0, 20, 80],    # Floor set 4 (depths 21+): mostly T5
 ]
+
+# ---------------------------------------------------------------------------
+# Item Deck System (upstream Generator probs/defaultProbs)
+# ---------------------------------------------------------------------------
+
+## Single-deck categories: every draw decrements the item's slot; when the
+## deck empties it refills. WAND/RING are flat 3s; FOOD is 4 rations to
+## 1 pasty (mystery meat only comes from mob drops, prob 0).
+const WAND_DECK: Array[float] = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+const RING_DECK: Array[float] = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+const FOOD_DECK: Array[float] = [4, 1, 0]
+
+## Deck definitions: category -> {table, deck1, deck2 (optional)}.
+## Dual-deck categories flip decks on every refill (upstream using2ndProbs).
+static var _deck_defs: Dictionary = {
+	"potion": {"table": POTIONS, "deck1": POTION_DECK_1, "deck2": POTION_DECK_2},
+	"scroll": {"table": SCROLLS, "deck1": SCROLL_DECK_1, "deck2": SCROLL_DECK_2},
+	"wand": {"table": WANDS, "deck1": WAND_DECK},
+	"ring": {"table": RINGS, "deck1": RING_DECK},
+	"stone": {"table": STONES, "deck1": STONE_DECK},
+	"food": {"table": FOODS, "deck1": FOOD_DECK},
+}
+
+## Live deck state (persisted with the run).
+static var _using_first_cat_deck: bool = true
+static var _category_probs: Dictionary = {}
+static var _item_probs: Dictionary = {}
+static var _using_second_deck: Dictionary = {}
+
+## New-run reset (upstream Generator.fullReset): random starting category
+## deck, random starting potion/scroll deck, artifacts cleared.
+static func full_reset() -> void:
+	reset_artifacts()
+	_using_first_cat_deck = randi() % 2 == 0
+	_general_reset()
+	for cat: String in _deck_defs:
+		_using_second_deck[cat] = _deck_defs[cat].has("deck2") and randi() % 2 == 0
+		_reset_item_deck(cat)
+
+
+## Refill the category deck from whichever 35-item deck is active
+## (upstream Generator.generalReset).
+static func _general_reset() -> void:
+	for cat_name: String in CATEGORY_ORDER:
+		var probs: Dictionary = CATEGORY_FIRST_PROBS if _using_first_cat_deck \
+			else CATEGORY_SECOND_PROBS
+		_category_probs[cat_name] = float(probs[cat_name])
+
+
+## Refill one item deck, flipping to the alternate deck when the category
+## has two (upstream Generator.reset(cat)).
+static func _reset_item_deck(cat: String) -> void:
+	var def: Dictionary = _deck_defs[cat]
+	if def.has("deck2"):
+		_using_second_deck[cat] = not _using_second_deck.get(cat, false)
+		var deck: Array = def["deck2"] if _using_second_deck[cat] else def["deck1"]
+		_item_probs[cat] = deck.duplicate()
+	else:
+		_item_probs[cat] = (def["deck1"] as Array).duplicate()
+
+
+## Weighted index pick; -1 when all weights are spent (upstream Random.chances).
+static func _chances(probs: Array) -> int:
+	var total: float = 0.0
+	for p: Variant in probs:
+		total += float(p)
+	if total <= 0.0:
+		return -1
+	var roll: float = randf() * total
+	for i: int in range(probs.size()):
+		roll -= float(probs[i])
+		if roll < 0.0:
+			return i
+	return probs.size() - 1
+
+
+## Draw an item id from a category's depleting deck, refilling when empty
+## (upstream Generator.random(Category) default branch).
+static func _deck_draw(cat: String) -> String:
+	if not _item_probs.has(cat):
+		_reset_item_deck(cat)
+	var idx: int = _chances(_item_probs[cat])
+	if idx == -1:
+		_reset_item_deck(cat)
+		idx = _chances(_item_probs[cat])
+	var probs: Array = _item_probs[cat]
+	probs[idx] = float(probs[idx]) - 1.0
+	return (_deck_defs[cat]["table"] as Array)[idx]
+
+
+## Pick a category from the depleting 35-item category deck, swapping decks
+## when it empties (upstream Generator.random()).
+static func _pick_category() -> String:
+	if _category_probs.is_empty():
+		_general_reset()
+	var probs: Array[float] = []
+	for cat_name: String in CATEGORY_ORDER:
+		probs.append(float(_category_probs.get(cat_name, 0.0)))
+	var idx: int = _chances(probs)
+	if idx == -1:
+		_using_first_cat_deck = not _using_first_cat_deck
+		_general_reset()
+		for i: int in range(CATEGORY_ORDER.size()):
+			probs[i] = float(_category_probs[CATEGORY_ORDER[i]])
+		idx = _chances(probs)
+	var chosen: String = CATEGORY_ORDER[idx]
+	_category_probs[chosen] = float(_category_probs[chosen]) - 1.0
+	return chosen
+
+
+## Persist deck state so save/load keeps drop consistency
+## (upstream Generator.storeInBundle).
+static func serialize_decks() -> Dictionary:
+	var item_probs_out: Dictionary = {}
+	for cat: String in _item_probs:
+		item_probs_out[cat] = (_item_probs[cat] as Array).duplicate()
+	return {
+		"using_first_cat_deck": _using_first_cat_deck,
+		"category_probs": _category_probs.duplicate(),
+		"item_probs": item_probs_out,
+		"using_second_deck": _using_second_deck.duplicate(),
+	}
+
+
+## Restore deck state; anything missing or malformed falls back to a fresh
+## refill (upstream Generator.restoreFromBundle tolerance).
+static func restore_decks(data: Dictionary) -> void:
+	_using_first_cat_deck = bool(data.get("using_first_cat_deck", true))
+	_general_reset()
+	var saved_cats: Variant = data.get("category_probs", {})
+	if saved_cats is Dictionary:
+		for cat_name: Variant in saved_cats:
+			if _category_probs.has(cat_name):
+				_category_probs[cat_name] = float(saved_cats[cat_name])
+	var saved_flags: Variant = data.get("using_second_deck", {})
+	var saved_items: Variant = data.get("item_probs", {})
+	for cat: String in _deck_defs:
+		if saved_flags is Dictionary and _deck_defs[cat].has("deck2"):
+			_using_second_deck[cat] = bool((saved_flags as Dictionary).get(cat, false))
+		var probs: Variant = (saved_items as Dictionary).get(cat, null) \
+			if saved_items is Dictionary else null
+		if probs is Array and (probs as Array).size() == (_deck_defs[cat]["table"] as Array).size():
+			var restored: Array = []
+			for p: Variant in probs:
+				restored.append(float(p))
+			_item_probs[cat] = restored
+		else:
+			_item_probs.erase(cat)
+			_reset_item_deck(cat)
 
 # ---------------------------------------------------------------------------
 # Artifact Uniqueness Tracking
@@ -436,55 +598,32 @@ static func _make_stackable_misc_item(id: String, display_name: String, desc: St
 # Random Generation — Public API
 # ---------------------------------------------------------------------------
 
-## Weighted random category selection using CATEGORY_WEIGHTS.
-static func _weighted_category() -> ConstantsData.ItemCategory:
-	var total_weight: float = 0.0
-	for w: int in CATEGORY_WEIGHTS.values():
-		total_weight += w
-	var roll: float = randf() * total_weight
-	for cat: ConstantsData.ItemCategory in CATEGORY_WEIGHTS:
-		roll -= CATEGORY_WEIGHTS[cat]
-		if roll <= 0.0:
-			return cat
-	# Fallback (should not reach here)
-	return ConstantsData.ItemCategory.GOLD
-
-## Generate a random item appropriate for the given dungeon depth.
+## Generate a random item appropriate for the given dungeon depth, drawing
+## the category from the depleting two-deck system (upstream Generator.random).
 static func random_item(depth: int) -> Item:
-	var category: ConstantsData.ItemCategory = _weighted_category()
-	match category:
-		ConstantsData.ItemCategory.GOLD:
+	match _pick_category():
+		"gold":
 			return random_gold(depth)
-		ConstantsData.ItemCategory.POTION:
+		"potion":
 			return random_potion()
-		ConstantsData.ItemCategory.SCROLL:
+		"scroll":
 			return random_scroll()
-		ConstantsData.ItemCategory.FOOD:
-			return random_food()
-		ConstantsData.ItemCategory.WEAPON:
-			# 50/50 melee vs missile
-			if randf() < 0.5:
-				return random_weapon(depth)
-			else:
-				return random_missile(depth)
-		ConstantsData.ItemCategory.ARMOR:
+		"weapon":
+			return random_weapon(depth)
+		"missile":
+			return random_missile(depth)
+		"armor":
 			return random_armor(depth)
-		ConstantsData.ItemCategory.STONE:
+		"stone":
 			return random_stone()
-		ConstantsData.ItemCategory.SEED:
+		"seed":
 			return random_seed()
-		ConstantsData.ItemCategory.RING:
+		"ring":
 			return random_ring()
-		ConstantsData.ItemCategory.WAND:
+		"wand":
 			return random_wand()
-		ConstantsData.ItemCategory.ARTIFACT:
+		"artifact":
 			return random_artifact()
-		ConstantsData.ItemCategory.MISC:
-			# Misc falls back to a random stone or seed
-			if randf() < 0.5:
-				return random_stone()
-			else:
-				return random_seed()
 	return random_gold(depth)
 
 ## Generate a random melee weapon whose tier is based on depth.
@@ -511,26 +650,26 @@ static func random_armor(depth: int) -> Item:
 		armor.random()
 	return armor
 
-## Generate a random potion using weighted probabilities matching original.
+## Generate a random potion from the alternating potion decks.
 static func random_potion() -> Item:
-	return _weighted_random_from_table(POTIONS, POTION_WEIGHTS)
+	return create_item(_deck_draw("potion"))
 
-## Generate a random scroll using weighted probabilities matching original.
+## Generate a random scroll from the alternating scroll decks.
 static func random_scroll() -> Item:
-	return _weighted_random_from_table(SCROLLS, SCROLL_WEIGHTS)
+	return create_item(_deck_draw("scroll"))
 
-## Generate a random ring with random upgrade/curse.
+## Generate a random ring (deck draw) with random upgrade/curse.
 static func random_ring() -> Item:
-	var ring: Item = _random_from_table(RINGS)
+	var ring: Item = create_item(_deck_draw("ring"))
 	if ring is Ring and ring.has_method("random"):
 		ring.random()
 	return ring
 
-## Generate a random wand with random upgrade/curse.
+## Generate a random wand (deck draw) with random upgrade/curse.
 ## Uses Wand.random() if available, matching original distribution:
 ## +0: 66.67% (2/3), +1: 26.67% (4/15), +2: 6.67% (1/15). 30% cursed.
 static func random_wand() -> Item:
-	var wand: Item = _random_from_table(WANDS)
+	var wand: Item = create_item(_deck_draw("wand"))
 	if wand is Wand and wand.has_method("random"):
 		wand.random()
 	else:
@@ -559,16 +698,11 @@ static func random_artifact() -> Item:
 	_generated_artifacts.append(chosen)
 	return create_item(chosen)
 
-## Generate a random food item.
+## Generate a random food item from the food deck (upstream FOOD probs 4/1/0:
+## each 5-draw cycle is exactly 4 rations + 1 pasty; mystery meat only comes
+## from mob drops).
 static func random_food() -> Item:
-	# Weighted: rations are more common than pasty, mystery meat is rare
-	var roll: float = randf()
-	if roll < 0.65:
-		return create_item("ration")
-	elif roll < 0.90:
-		return create_item("pasty")
-	else:
-		return create_item("mystery_meat")
+	return create_item(_deck_draw("food"))
 
 ## Generate a random missile weapon whose tier is based on depth.
 ## Uses floorSetTierProbs for tier selection.
@@ -577,13 +711,23 @@ static func random_missile(depth: int) -> Item:
 	var table: Array[String] = _missile_table_for_tier(tier)
 	return _random_from_table(table)
 
-## Generate a random stone.
+## Generate a random stone from the stone deck (enchantment/augmentation
+## never drop randomly).
 static func random_stone() -> Item:
-	return _random_from_table(STONES)
+	return create_item(_deck_draw("stone"))
 
-## Generate a random seed.
+## Generate a random seed. Upstream deliberately uses the static defaults
+## here (not a deck) because most seeds come from grass, so levelgen draws
+## stay consistent; rotberry (quest item) never drops randomly.
 static func random_seed() -> Item:
-	return _random_from_table(SEEDS)
+	return create_item(random_seed_id())
+
+## Weighted seed id from SEED_DEFAULT_PROBS — shared with grass trampling.
+static func random_seed_id() -> String:
+	var idx: int = _chances(SEED_DEFAULT_PROBS)
+	if idx == -1:
+		idx = 1
+	return SEEDS[idx]
 
 ## Generate a random gold pile scaled to depth.
 static func random_gold(depth: int) -> Gold:
@@ -648,20 +792,6 @@ static func _random_from_table(table: Array[String]) -> Item:
 		return Item.new()
 	var idx: int = randi_range(0, table.size() - 1)
 	return create_item(table[idx])
-
-## Pick a weighted random item from a table using parallel weight array.
-static func _weighted_random_from_table(table: Array[String], weights: Array[int]) -> Item:
-	if table.is_empty():
-		return Item.new()
-	var total: int = 0
-	for w: int in weights:
-		total += w
-	var roll: int = randi() % maxi(total, 1)
-	for i: int in range(mini(table.size(), weights.size())):
-		roll -= weights[i]
-		if roll < 0:
-			return create_item(table[i])
-	return create_item(table[0])
 
 # ---------------------------------------------------------------------------
 # SPD items.png Sprite Sheet Indices (from ItemSpriteSheet.java)

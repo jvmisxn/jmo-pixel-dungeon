@@ -1,43 +1,48 @@
 extends RefCounted
 ## Generator category-deck parity against Shattered Pixel Dungeon's
-## Generator.Category: the random-drop table matches upstream's two 35-item
-## decks averaged (GOLD 10, POTION 8, SCROLL 8, WEAPON 2 + MISSILE 1.5,
-## ARMOR 1.5, WAND 1, SEED 1, STONE 1, RING 0.5, ARTIFACT 0.5, FOOD 0),
-## and RegularLevel.item_count rolls 3/4/5 items at 60/30/10 (+2 on LARGE).
+## Generator.Category: two alternating 35-item category decks (deck 1 has a
+## ring + extra armor, deck 2 has an artifact + extra thrown weapon; FOOD is
+## 0 in both — each floor drops one guaranteed food item instead), and
+## RegularLevel.item_count rolls 3/4/5 items at 60/30/10 (+2 on LARGE).
 
 
 func run(t: Object) -> void:
-	# --- Table shape: FOOD and MISC are no longer random categories ---
-	t.check(not Generator.CATEGORY_WEIGHTS.has(ConstantsData.ItemCategory.FOOD),
-		"FOOD has weight 0 upstream so it is absent from the random table")
-	t.check(not Generator.CATEGORY_WEIGHTS.has(ConstantsData.ItemCategory.MISC),
-		"port-only MISC fallback is absent from the random table")
+	# --- Table shape: FOOD and the port-only MISC never drop randomly ---
+	t.check(not Generator.CATEGORY_FIRST_PROBS.has("food"),
+		"FOOD has prob 0 upstream so it is absent from both category decks")
+	t.check(not Generator.CATEGORY_FIRST_PROBS.has("misc"),
+		"port-only MISC fallback is absent from the category decks")
 
-	# --- Weights match upstream averaged decks doubled (total 70) ---
-	var expected: Dictionary = {
-		ConstantsData.ItemCategory.GOLD: 20,
-		ConstantsData.ItemCategory.POTION: 16,
-		ConstantsData.ItemCategory.SCROLL: 16,
-		ConstantsData.ItemCategory.WEAPON: 7,
-		ConstantsData.ItemCategory.ARMOR: 3,
-		ConstantsData.ItemCategory.WAND: 2,
-		ConstantsData.ItemCategory.SEED: 2,
-		ConstantsData.ItemCategory.STONE: 2,
-		ConstantsData.ItemCategory.RING: 1,
-		ConstantsData.ItemCategory.ARTIFACT: 1,
+	# --- Deck contents match upstream firstProb/secondProb exactly ---
+	var expected_first: Dictionary = {
+		"weapon": 2, "armor": 2, "missile": 1, "wand": 1, "ring": 1,
+		"artifact": 0, "potion": 8, "seed": 1, "scroll": 8, "stone": 1,
+		"gold": 10,
 	}
-	t.check(Generator.CATEGORY_WEIGHTS.size() == expected.size(),
-		"random table has exactly the upstream categories")
-	var total: int = 0
-	for cat: ConstantsData.ItemCategory in expected:
-		var w: int = Generator.CATEGORY_WEIGHTS.get(cat, -1)
-		t.check(w == expected[cat],
-			"category %d weight %d matches upstream ratio" % [cat, expected[cat]])
-		total += w
-	t.check(total == 70, "weights sum to the doubled 35-item deck size")
+	var expected_second: Dictionary = {
+		"weapon": 2, "armor": 1, "missile": 2, "wand": 1, "ring": 0,
+		"artifact": 1, "potion": 8, "seed": 1, "scroll": 8, "stone": 1,
+		"gold": 10,
+	}
+	var total_first: int = 0
+	var total_second: int = 0
+	for cat: String in expected_first:
+		t.check(Generator.CATEGORY_FIRST_PROBS.get(cat, -1) == expected_first[cat],
+			"deck 1 %s prob matches upstream firstProb" % cat)
+		t.check(Generator.CATEGORY_SECOND_PROBS.get(cat, -1) == expected_second[cat],
+			"deck 2 %s prob matches upstream secondProb" % cat)
+		total_first += expected_first[cat]
+		total_second += expected_second[cat]
+	t.check(Generator.CATEGORY_FIRST_PROBS.size() == expected_first.size(),
+		"deck 1 has exactly the upstream categories")
+	t.check(Generator.CATEGORY_SECOND_PROBS.size() == expected_second.size(),
+		"deck 2 has exactly the upstream categories")
+	t.check(total_first == 35 and total_second == 35,
+		"both category decks are 35-item decks")
 
-	# --- random_item never yields food from the weighted table ---
+	# --- random_item never yields food from the category decks ---
 	seed(12345)
+	Generator.full_reset()
 	var got_gold: bool = false
 	for i: int in range(200):
 		var item: Item = Generator.random_item(3)
@@ -48,7 +53,7 @@ func run(t: Object) -> void:
 			"random_item roll %d is not food (guaranteed floor drop covers food)" % i)
 		if item is Gold:
 			got_gold = true
-	t.check(got_gold, "gold still drops from the random table (upstream 10/35)")
+	t.check(got_gold, "gold still drops from the category decks (upstream 10/35)")
 
 	# --- item_count distribution: 3/4/5 at 60/30/10, LARGE +2 ---
 	var level := RegularLevel.new()

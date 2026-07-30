@@ -31,7 +31,7 @@ const SETTINGS_PATH: String = "user://settings.dat"
 #     only.
 # v7: Belongings gains the optional "second_wep" slot (Champion off-hand
 #     weapon). Absent key reads as empty, so migration is a version stamp only.
-const SAVE_VERSION: int = 7
+const SAVE_VERSION: int = 8
 
 func _notification(what: int) -> void:
 	match what:
@@ -280,6 +280,11 @@ func _migrate_save(save: Dictionary, from_version: int) -> Dictionary:
 				# (Champion off-hand weapon; absent key reads as empty), so no
 				# data rewrite is needed.
 				version = 7
+			7:
+				# v7 -> v8: run state gains optional "generator_decks" (drop
+				# deck probabilities; absent key restores fresh decks), so no
+				# data rewrite is needed.
+				version = 8
 			_:
 				push_warning("SaveManager: No migration step registered for save version %d." % version)
 				version += 1
