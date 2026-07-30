@@ -1,5 +1,32 @@
 # Change Log
 
+## 2026-07-30 (crystal-vault-contents)
+
+- Tags: levels, rooms, items, source-fidelity, tests
+- `CrystalVaultRoom.paint` rewritten to upstream `CrystalVaultRoom.java`:
+  fixed 7x7, iron-LOCKED entrance (was an unkeyed CRYSTAL_DOOR paint with no
+  contents), EMPTY_SP ring + EMPTY core, two prizes from a shuffled
+  wand/ring/artifact category rotation dropped as `crystal_chest` heaps on
+  opposite CIRCLE8 neighbours of the centre (never adjacent to the door),
+  each on a PEDESTAL; base 1/10 roll replaces the second chest with a
+  CrystalMimic swallowing that prize (trinket multipliers not ported) — the
+  2026-07-30 CrystalMimic port is now actually spawnable.
+- New `Level.items_to_spawn` (upstream `itemsToSpawn`, generation-only, never
+  serialized): the room queues a crystal key + iron key; `RegularLevel`
+  drains the queue after item placement via
+  `_drop_spawn_item_in_standard_room` — drops restricted to passable STANDARD
+  room interiors so a key can never land behind the lock it opens (upstream
+  `randomDropCell`), with `_drop_guaranteed_item` fallback.
+- `StandardPainter._tunnel_door_terrain` now locks crystal-vault tunnel
+  mouths with LOCKED_DOOR (crystal terrain belongs to the chests, not the
+  entrance); door tests updated to the upstream expectation.
+- Crystal-chest open gating in `GameScene._check_item_pickup`: a
+  `crystal_chest` heap stays sealed (with a message) until a crystal key is
+  spent, then converts to a plain heap and picks up normally.
+- Test: `test_crystal_vault_contents.gd` (30-paint randomized trial covering
+  chest typing, prize categories, pedestal/CIRCLE8/opposite-slot geometry,
+  door adjacency ban, mimic swallow, key queue, locked entrance).
+
 ## 2026-07-30 (mimic-surprise-bite)
 
 - Tags: mobs, combat, source-fidelity, tests
