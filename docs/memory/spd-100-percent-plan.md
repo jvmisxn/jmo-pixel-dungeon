@@ -112,7 +112,7 @@ The remaining gap is not one missing item category. The high-value work is conce
 4. Add story/floor-intro windows.
 5. Add exotic potions and scrolls plus alchemy recipes.
 6. Add Lloyd's Beacon.
-7. Add missing mobs and variants such as Ghoul/Gnoll Geomancer/crystal mimic behavior where upstream requires them. (2026-07-30: Ghoul DONE — pair spawn + GhoulLifeLink revive + upstream city spawn rotation, `test_ghoul.gd`; rare variants Albino/CausticSlime/ArmoredBrute/Senior/Acidic and crystal mimic still missing.)
+7. Add missing mobs and variants such as Ghoul/Gnoll Geomancer/crystal mimic behavior where upstream requires them. (2026-07-30: Ghoul DONE — pair spawn + GhoulLifeLink revive + upstream city spawn rotation, `test_ghoul.gd`; rare variants Albino/CausticSlime/ArmoredBrute/Senior/Acidic and crystal mimic still missing.) (2026-07-30: rare-alt swap mechanism DONE — MobFactory.apply_rare_alt 1/50 per upstream MobSpawner.RARE_ALTS, Albino shipped, bandit/dm201 moved to swap-only, test_rare_mob_alts.gd; remaining variants join the map as ported.)
 8. Add missing foods and Blandfruit/cooking chain.
 9. Add armor curse glyphs.
 10. Complete Blacksmith parity: pickaxe/mining, quest variants, boss/encounter paths, favor system, and reward choices.

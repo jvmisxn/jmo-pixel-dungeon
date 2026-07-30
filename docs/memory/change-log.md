@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-07-30 (rare-mob-alts)
+
+- Tags: mobs, spawning, sprites, source-fidelity, tests
+- Rare-variant swap ported (upstream `MobSpawner.swapMobAlts` +
+  `RARE_ALTS`): every mob rolled by `MobFactory.create_random_mob` has a
+  1/50 chance to become its rare alt via `MobFactory.apply_rare_alt`
+  (injectable roll for tests). Ported map so far: rat->albino,
+  thief->bandit, dm200->dm201; missing alts (GnollExile, HermitCrab,
+  CausticSlime, SpectralNecromancer, ArmoredBrute, Senior,
+  ChaosElemental, Acidic) join the map as they land. RatSkull
+  exoticChanceMultiplier not ported (artifact missing).
+- Bandit and DM-201 removed from the prison/caves weighted tables — they
+  are rare-swap-only in upstream, never standard rotation entries.
+- New `Albino` rat (upstream `Albino.java`): HP/HT 12, EXP 2, guaranteed
+  mystery meat, 1/2 chance on damaging hits to apply Bleeding at
+  NormalFloat(2,3) via existing `Bleeding.set_level`.
+- Sprite-row fix: upstream `rat.png` rows are 0=rat, 1=albino,
+  2=fetid rat; the port had fetid_rat on row 1 (the albino art).
+  fetid_rat moved to row 2, albino added on row 1 with white
+  procedural-fallback visuals.
+- `test_rare_mob_alts.gd`: swap thresholds/unmapped ids, no direct
+  bandit/dm201 table entries at any depth, Albino stats/loot/bleed.
+
 ## 2026-07-30 (frost-chill)
 
 - Tags: wands, buffs, source-fidelity, tests

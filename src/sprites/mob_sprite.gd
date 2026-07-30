@@ -14,6 +14,7 @@ const FALL_TIME: float = 1.0
 static var MOB_VISUALS: Dictionary = {
 	# --- Sewers ---
 	"rat": { "body": Color(0.5, 0.4, 0.3), "accent": Color(0.6, 0.5, 0.35), "eye": Color(0.9, 0.2, 0.2), "shape": "small" },
+	"albino": { "body": Color(0.95, 0.95, 0.92), "accent": Color(0.85, 0.82, 0.8), "eye": Color(0.9, 0.2, 0.2), "shape": "small" },
 	"fetid_rat": { "body": Color(0.4, 0.45, 0.3), "accent": Color(0.5, 0.55, 0.3), "eye": Color(0.7, 0.9, 0.1), "shape": "small" },
 	"gnoll": { "body": Color(0.55, 0.45, 0.3), "accent": Color(0.4, 0.35, 0.25), "eye": Color(0.8, 0.6, 0.1), "shape": "humanoid" },
 	"gnoll_trickster": { "body": Color(0.55, 0.45, 0.3), "accent": Color(0.5, 0.4, 0.3), "eye": Color(0.9, 0.7, 0.1), "shape": "humanoid" },
@@ -100,7 +101,9 @@ static var MOB_VISUALS: Dictionary = {
 static var _MOB_SHEETS: Dictionary = {
 	# --- Sewers ---
 	"rat":             { "path": "rat.png",            "fw": 16, "fh": 15 },
-	"fetid_rat":       { "path": "rat.png",            "fw": 16, "fh": 15, "row": 1 },
+	# Upstream rat.png rows: 0 = rat, 1 = albino, 2 = fetid rat.
+	"albino":          { "path": "rat.png",            "fw": 16, "fh": 15, "row": 1 },
+	"fetid_rat":       { "path": "rat.png",            "fw": 16, "fh": 15, "row": 2 },
 	"gnoll":           { "path": "gnoll.png",          "fw": 12, "fh": 15 },
 	"gnoll_trickster": { "path": "gnoll.png",          "fw": 12, "fh": 15, "row": 1 },
 	"crab":            { "path": "crab.png",           "fw": 16, "fh": 16 },
@@ -246,7 +249,7 @@ func die() -> void:
 
 func _configure_mob_sheet_animations() -> void:
 	match mob_id:
-		"rat", "fetid_rat":
+		"rat", "albino", "fetid_rat":
 			# Matches upstream RatSprite.
 			set_sheet_animation(AnimState.IDLE, [0, 0, 0, 1], 2.0, true)
 			set_sheet_animation(AnimState.MOVE, [6, 7, 8, 9, 10], 10.0, true)

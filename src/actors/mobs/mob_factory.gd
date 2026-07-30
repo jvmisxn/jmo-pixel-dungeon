@@ -6,6 +6,29 @@ extends RefCounted
 ## Mob spawn table entry: {mob_class: String, weight: float}
 ## Weight determines relative spawn probability.
 
+## Upstream MobSpawner.RARE_ALTS: each spawned standard mob has a 1/50
+## chance to be swapped for its rare variant. Only ported variants are
+## listed; missing upstream alts (GnollExile, HermitCrab, CausticSlime,
+## SpectralNecromancer, ArmoredBrute, Senior, ChaosElemental, Acidic)
+## join this map as they land.
+const RARE_ALT_CHANCE: float = 1.0 / 50.0
+const RARE_ALTS: Dictionary = {
+	"rat": "albino",
+	"thief": "bandit",
+	"dm200": "dm201",
+}
+
+
+## Apply the upstream 1/50 rare-variant swap to a rolled mob id.
+## `roll` in [0, 1) is injectable for tests; negative means roll here.
+static func apply_rare_alt(mob_id: String, roll: float = -1.0) -> String:
+	if roll < 0.0:
+		roll = randf()
+	if roll < RARE_ALT_CHANCE and RARE_ALTS.has(mob_id):
+		return RARE_ALTS[mob_id]
+	return mob_id
+
+
 static func get_mob_table(depth: int) -> Array[Dictionary]:
 	var region: int = ConstantsData.region_for_depth(depth)
 	match region:
@@ -46,7 +69,6 @@ static func _prison_table(depth: int) -> Array[Dictionary]:
 	table.append({"mob_id": "thief", "weight": 2.0})
 	if depth >= 7:
 		table.append({"mob_id": "guard", "weight": 2.0})
-		table.append({"mob_id": "bandit", "weight": 1.0})
 	if depth >= 8:
 		table.append({"mob_id": "necromancer", "weight": 1.5})
 	return table
@@ -62,8 +84,6 @@ static func _caves_table(depth: int) -> Array[Dictionary]:
 		table.append({"mob_id": "spinner", "weight": 1.5})
 	if depth >= 13:
 		table.append({"mob_id": "dm200", "weight": 1.5})
-	if depth >= 14:
-		table.append({"mob_id": "dm201", "weight": 0.8})
 	return table
 
 ## Upstream MobSpawner city rotation. Ghoul entries use half the rotation
@@ -116,6 +136,7 @@ static func create_mob(mob_id: String) -> Mob:
 	match mob_id:
 		# Sewer mobs
 		"rat": return Rat.new()
+		"albino": return Albino.new()
 		"fetid_rat": return FetidRat.new()
 		"gnoll": return Gnoll.new()
 		"crab": return Crab.new()
@@ -190,7 +211,7 @@ static func create_random_mob(depth: int) -> Mob:
 	for entry: Dictionary in table:
 		cumulative += entry["weight"]
 		if roll <= cumulative:
-			var selected: Mob = create_mob(entry["mob_id"])
+			var selected: Mob = create_mob(apply_rare_alt(entry["mob_id"]))
 			return selected if selected != null else Rat.new()
 
 	var fallback: Mob = create_mob(table[0]["mob_id"])
