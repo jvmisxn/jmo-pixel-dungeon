@@ -764,22 +764,22 @@ class PotionMastery extends Potion:
 		icon_color = Color(0.8, 0.4, 0.9)
 		unique = true
 
-	func drink(hero: Char) -> void:
-		if hero == null:
+	## Upstream TengusMask.execute(AC_WEAR): opens WndChooseSubclass instead
+	## of acting immediately. Nothing is spent or consumed until a subclass
+	## is chosen in the window; cancelling keeps the potion.
+	func execute(hero: Char) -> void:
+		if hero == null or not (hero is Hero):
 			return
-		# Allow the hero to choose a subclass (if none chosen yet)
 		if hero.hero_subclass != ConstantsData.HeroSubclass.NONE:
 			if MessageLog:
 				MessageLog.add_warning("You have already chosen your specialization.")
 			return
-		# Get available subclasses for this hero class
 		var subclasses: Array = ConstantsData.subclasses_for(hero.hero_class)
-		if subclasses.size() == 0:
+		if subclasses.is_empty() or subclasses[0] == ConstantsData.HeroSubclass.NONE:
 			if MessageLog:
 				MessageLog.add_warning("No specializations available.")
 			return
-		# Auto-select the first subclass for now (UI will present choice later)
-		var chosen_subclass: int = subclasses[0]
-		hero.hero_subclass = chosen_subclass
-		if MessageLog:
-			MessageLog.add_positive("You have mastered a new skill!")
+		var wnd: WndChooseSubclass = WndChooseSubclass.new()
+		wnd.setup(hero as Hero, self)
+		if EventBus:
+			EventBus.show_window.emit(wnd)

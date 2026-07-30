@@ -98,6 +98,12 @@ func _on_death(source: Variant) -> void:
 		MessageLog.add_positive("Tengu is defeated! The prison gates open.")
 	if level and level.has_method("unseal"):
 		level.unseal()
+	# Upstream Tengu.die drops Tengu's Mask; this port's subclass item is
+	# the Potion of Mastery.
+	if level and level.has_method("drop_item") and Generator:
+		var mastery: Variant = Generator.create_item("mastery")
+		if mastery != null:
+			level.drop_item(pos, mastery)
 	super._on_death(source)
 
 func serialize() -> Dictionary:
