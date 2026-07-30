@@ -485,7 +485,7 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1, blink_po
 ## weapon's flat ability damage boost. A kill makes the ability instant and
 ## opens the CleaveTracker free-recast window unless one was already open;
 ## a non-kill strike costs the attack delay and closes any open window.
-## Monk subclass ability fueled by MonkEnergy. Currently ported: Flurry, Focus.
+## Monk subclass ability fueled by MonkEnergy. Ported: Flurry, Focus, Dash.
 ## Upstream MonkEnergy.MonkAbility.Flurry.doAbility: two unarmed strikes at
 ## 1.5x damage with infinite accuracy, instant (hero.next()), once per turn
 ## via FlurryCooldownTracker, costing 1 energy.
@@ -496,6 +496,9 @@ func _do_monk_ability(kind: String, target_pos: int) -> void:
 	var energy: MonkEnergy = get_buff("MonkEnergy") as MonkEnergy
 	if kind == "focus":
 		_do_focus_ability(energy)
+		return
+	if kind == "dash":
+		_do_dash_ability(energy, target_pos)
 		return
 	if kind != "flurry":
 		return
@@ -557,6 +560,60 @@ func _do_focus_ability(energy: MonkEnergy) -> void:
 	if not energy.abilities_empowered():
 		_ability_spend = 1.0
 	energy.ability_used(2.0)
+
+## Monk Dash (upstream MonkEnergy.MonkAbility.Dash): 3 energy, dash to an
+## empty cell within range 4 (8 while abilities are empowered) along a clear
+## projectile line. Instant (hero.next() upstream, so _ability_spend stays
+## 0); rooted heroes, out-of-range, occupied, or blocked cells refuse free.
+func _do_dash_ability(energy: MonkEnergy, target_pos: int) -> void:
+	if energy == null or energy.energy < 3.0:
+		if MessageLog:
+			MessageLog.add_warning("You don't have enough energy for that ability.")
+		return
+	if target_pos < 0 or target_pos >= level.passable.size():
+		return
+	if has_buff("Rooted"):
+		if MessageLog:
+			MessageLog.add_warning("You can't move while rooted!")
+		return
+	var dash_range: int = 4
+	if energy.abilities_empowered():
+		dash_range += 4
+	if distance_to(target_pos) > dash_range:
+		if MessageLog:
+			MessageLog.add_warning("That location is too far away.")
+		return
+	if level.find_char_at(target_pos) != null:
+		if MessageLog:
+			MessageLog.add_warning("You can't dash into an occupied cell.")
+		return
+	var occupied: Array[bool] = []
+	occupied.resize(level.passable.size())
+	occupied.fill(false)
+	for hero_ref: Char in level.get_heroes():
+		if hero_ref != null and hero_ref != self and hero_ref.is_alive:
+			occupied[hero_ref.pos] = true
+	for mob_ref: Node in level.mobs:
+		if mob_ref is Char and mob_ref != self and (mob_ref as Char).is_alive:
+			occupied[(mob_ref as Char).pos] = true
+	var dash: Ballistica = Ballistica.new()
+	dash.cast(pos, target_pos, level.passable, Ballistica.PROJECTILE, occupied,
+		ConstantsData.WIDTH)
+	if dash.collision_pos != target_pos or not level.passable[target_pos]:
+		if MessageLog:
+			MessageLog.add_warning("You can't dash there.")
+		return
+	pos = target_pos
+	last_visible_action = "move"
+	last_visible_target_pos = target_pos
+	if EventBus:
+		EventBus.hero_moved_detailed.emit(self, target_pos)
+		var focused_hero: Variant = GameManager.get_local_hero() if GameManager and GameManager.has_method("get_local_hero") else (GameManager.hero if GameManager else null)
+		if focused_hero == self:
+			EventBus.hero_moved.emit(target_pos)
+	_check_terrain_effects()
+	energy.ability_used(3.0)
+	# Dash is instant (upstream hero.next()); _ability_spend stays 0.
 
 func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	_ability_spend = 0.0
