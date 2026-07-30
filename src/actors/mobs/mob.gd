@@ -548,6 +548,12 @@ func _drop_loot(killer: Variant = null) -> void:
 			var item: Variant = Generator.create_item(item_id) if Generator else null
 			if item != null and level.has_method("drop_item"):
 				level.drop_item(pos, item)
+	# Ring of Wealth bonus-drop deck (upstream Mob.die -> tryForBonusDrop):
+	# only kills credited to a hero count the deck down.
+	if killer is Char and (killer as Char).is_hero:
+		for bonus_item: Variant in Ring.wealth_try_for_bonus_drop(killer, 1):
+			if bonus_item != null and level.has_method("drop_item"):
+				level.drop_item(pos, bonus_item)
 
 ## Loot drop-chance multiplier (upstream Mob.lootChance): an Assassin killing
 ## from Preparation with Bounty Hunter adds 2/4/8/16% per preparation level,

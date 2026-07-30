@@ -1,5 +1,38 @@
 # Change Log
 
+## 2026-07-30 (wealth-bonus-deck)
+
+- Tags: rings, loot, buffs, source-fidelity, tests
+- Ring of Wealth bonus-drop deck ported (upstream
+  `RingOfWealth.tryForBonusDrop`): new persistent counter buffs
+  `WealthTriesTracker` (seed/refill `NormalIntRange(0,20)`) and
+  `WealthEquipTracker` (seed/refill `NormalIntRange(5,10)`), both
+  `revive_persists`, in their own files so `_deserialize_buffs`'
+  top-level-script restore works. Static deck lives on `Ring`:
+  `wealth_try_for_bonus_drop(ch, tries)` counts down per qualifying kill and
+  pays out consumables, or equipment when the equip deck hits zero.
+- `Mob._drop_loot` calls the deck for hero kills and drops payouts at the
+  mob's cell (upstream Mob.die gate; small hand-edit, mob.gd is fragile).
+- Consumable tiers per upstream `genConsumableDrop`: low = half gold pile /
+  stone / potion / scroll; high = doubled mid / Stone of Enchantment
+  (`Stone.create` direct — `create_item("enchantment")` resolves to the
+  scroll) / Potion of Experience / Scroll of Transmutation (Exotic Crystals
+  trinket absent = 0% exotic chance upstream too, so this branch is exact).
+  Documented mid-tier adaptations for unported items: exotic potion/scroll
+  slots fall back to regular potion/scroll, the UnstableBrew/UnstableSpell
+  slot rolls 50/50 potion-or-scroll, the Honeypot slot drops a pasty.
+- Equipment drops per `genEquipmentDrop`: weapon x2 weight / armor / ring /
+  artifact from `depth + equip_bonus` floorset, level-scaled good
+  enchant/glyph chance, curse enchant/glyph stripped, min item level
+  `(bonus+1)/2`, always `cursed=false, cursed_known=true`. A second worn
+  wealth ring is capped at +2 for equip bonus (upstream anti-farming rule).
+- Flare payout visual not ported (no Flare effect system).
+- `test_ring_of_wealth_deck.gd` (deck seeding, consumable/equipment payout
+  + refill, min level, generator non-null, two-ring cap, tracker serialize
+  round-trip); trackers added to `test_buff_descriptions.gd` internal list.
+- Backlog reconcile in same slice: S31 "client re-sanitizes host run
+  config" marked DONE (fixed in `5dcd46e`, entry was stale).
+
 ## 2026-07-30 (crystal-vault-contents)
 
 - Tags: levels, rooms, items, source-fidelity, tests
