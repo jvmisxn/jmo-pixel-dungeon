@@ -560,49 +560,47 @@ class WandOfFrost extends Wand:
 		item_name = "Wand of Frost"
 		description = "This wand fires a freezing bolt that chills targets " \
 			+ "on impact, slowing their movement and attack speed. " \
-			+ "Already-chilled targets may be frozen solid."
+			+ "Chilled targets take reduced damage from further frost bolts, " \
+			+ "and frozen targets are unaffected entirely."
 		icon_color = Color(0.5, 0.8, 1.0)
 
 	func get_damage(lvl: int) -> Array[int]:
-		return [2 + lvl, 8 + 2 * lvl] as Array[int]
+		# SPD WandOfFrost: min = 2 + lvl, max = 8 + 5 * lvl.
+		return [2 + lvl, 8 + 5 * lvl] as Array[int]
 
 	func on_zap(hero: Char, path: Array[int]) -> void:
 		if path.is_empty():
 			return
 		var target_pos: int = path[path.size() - 1]
-		var dmg: int = roll_zap_damage(hero)
 		var lvl: Variant = hero.get("level") if hero != null else null
 		if lvl == null or not lvl.has_method("find_char_at"):
 			return
-		# Hit the primary target
 		var target_char: Variant = lvl.find_char_at(target_pos)
 		if target_char != null and target_char.has_method("take_damage"):
+			# SPD: a frozen target cannot be affected by the bolt at all.
+			if target_char.has_method("has_buff") and target_char.has_buff("Frozen"):
+				return
+			var dmg: int = roll_zap_damage(hero)
+			# SPD: 6.67% less damage per turn of chill remaining, max 10 turns
+			# (damage * 0.9333^chillturns, bottoming out near 50%).
+			var existing: Variant = target_char.get_buff("Chill") \
+					if target_char.has_method("get_buff") else null
+			if existing != null:
+				var chill_turns: float = minf(10.0, float(existing.left))
+				dmg = int(roundf(float(dmg) * pow(0.9333, chill_turns)))
 			target_char.take_damage(dmg, hero)
-			# Apply chill (use Cripple as cold-slow approximation)
-			if target_char.has_method("add_buff"):
-				# Capture the chilled state BEFORE applying this hit's Cripple —
-				# SPD only freezes a target that was already chilled (Frost.freeze).
-				var was_chilled: bool = target_char.has_method("has_buff") \
-						and target_char.has_buff("Cripple")
-				var chill: Cripple = Cripple.new()
-				chill.set_duration(5.0 + float(level) * 2.0)
-				target_char.add_buff(chill)
-				# If it was already crippled before this bolt, freeze (paralyze).
-				if was_chilled:
-					var freeze: Paralysis = Paralysis.new()
-					freeze.set_duration(3.0 + float(level))
-					target_char.add_buff(freeze)
 			if MessageLog:
-				MessageLog.add("The frost bolt freezes for %d damage!" % dmg)
-		# Freeze water tiles in area (adjacent cells)
-		for dir: int in ConstantsData.DIRS_8:
-			var adj: int = target_pos + dir
-			if not ConstantsData.is_valid_pos(adj):
-				continue
-			if lvl.has_method("get_terrain") and lvl.has_method("set_terrain"):
-				if lvl.get_terrain(adj) == ConstantsData.Terrain.WATER:
-					# Frozen water becomes empty (ice)
-					lvl.set_terrain(adj, ConstantsData.Terrain.EMPTY)
+				MessageLog.add("The frost bolt hits for %d damage!" % dmg)
+			# SPD: survivors are chilled 2+lvl turns, or 4+lvl when in water.
+			if target_char.has_method("add_buff") and bool(target_char.get("is_alive")):
+				var turns: float = 2.0 + float(level)
+				if lvl.has_method("get_terrain") \
+						and lvl.get_terrain(int(target_char.get("pos"))) \
+						== ConstantsData.Terrain.WATER:
+					turns = 4.0 + float(level)
+				var chill: Chill = Chill.new()
+				chill.extend(turns)
+				target_char.add_buff(chill)
 
 # ---------------------------------------------------------------------------
 # Wand of Lightning — chain lightning between targets
