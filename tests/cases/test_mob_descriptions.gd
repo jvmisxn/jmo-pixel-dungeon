@@ -7,7 +7,7 @@ const FACTORY_IDS: Array[String] = [
 	"rat", "albino", "fetid_rat", "gnoll", "crab", "great_crab", "snake",
 	"slime", "caustic_slime", "swarm", "gnoll_trickster",
 	"skeleton", "thief", "guard", "necromancer", "bandit",
-	"bat", "brute", "shaman", "spinner", "dm100", "dm200", "dm201",
+	"bat", "brute", "armored_brute", "shaman", "spinner", "dm100", "dm200", "dm201",
 	"warlock", "monk", "golem", "elemental",
 	"succubus", "eye", "scorpio", "ripper",
 	"piranha", "mimic", "animated_statue", "golden_statue", "wraith", "bee",
@@ -17,6 +17,7 @@ const FACTORY_IDS: Array[String] = [
 ## mob_id -> distinctive upstream phrase from actors.properties (SPD source).
 const UPSTREAM_PHRASES: Dictionary = {
 	"rat": "Marsupial rats are aggressive but rather weak denizens",
+	"armored_brute": "powerful armor to show their status",
 	"snake": "capable of quickly slithering around blows",
 	"skeleton": "disintegrate in an explosion of bones",
 	"bat": "replenish their health with each successful attack",

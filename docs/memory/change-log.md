@@ -1,5 +1,32 @@
 # Change Log
 
+## 2026-07-30 (armored-brute)
+
+- Tags: mobs, spawning, sprites, source-fidelity, tests
+- Armored Brute ported (upstream `ArmoredBrute.java`): extends Brute,
+  `drRoll = super + 4` (4-12 total), rage shield `HT/2 + 1` via new
+  overridable `Brute._rage_shield()` hook (base stays `HT/2 + 4`), and a
+  guaranteed armor drop — `create_loot()` rolls 1/4 plate armor else
+  scale armor, both `random()`d; the `_drop_loot` override keeps the
+  `_loot_chance_multiplier` (Bounty Hunter / Ring of Wealth) parity
+  path. `brute -> armored_brute` added to `MobFactory.RARE_ALTS` (1/50
+  swap-only, never a table entry).
+- Rage reuses the `BruteRage` buff id (upstream `ArmoredRage extends
+  BruteRage`), so the 15-40 enraged damage roll applies. Upstream's
+  slower ArmoredRage shield decay (1 per 3 turns vs 4/turn) has no port
+  equivalent because the port's rage shield doesn't decay at all —
+  pre-existing divergence, noted, not new.
+- Sprite: `brute.png` is 256x32 = two 12x16 rows; armored uses row 1
+  (upstream `ShieldedSprite` frame offset 21). Real BruteSprite/
+  ShieldedSprite frame maps added for both brutes (idle 0,0,0,1,0,0,1,1;
+  run 4-7; attack 2,3; die 8-10 — identical relative frames per row);
+  the brute was previously a static frame.
+- `test_armored_brute.gd` (swap, no-table-entry, stats/desc, DR floor
+  +4 over base, rage shields for both variants, loot mix, serialize
+  round-trip); registered in `run_tests.gd` (the case list is explicit —
+  a new file alone only gets the compile check) and
+  `test_mob_descriptions.gd` gained armored_brute.
+
 ## 2026-07-30 (caustic-slime)
 
 - Tags: mobs, spawning, sprites, source-fidelity, tests

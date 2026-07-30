@@ -16,6 +16,7 @@ const RARE_ALTS: Dictionary = {
 	"rat": "albino",
 	"slime": "caustic_slime",
 	"thief": "bandit",
+	"brute": "armored_brute",
 	"dm200": "dm201",
 }
 
@@ -156,6 +157,7 @@ static func create_mob(mob_id: String) -> Mob:
 		# Caves mobs
 		"bat": return Bat.new()
 		"brute": return Brute.new()
+		"armored_brute": return ArmoredBrute.new()
 		"shaman": return Shaman.new()
 		"spinner": return Spinner.new()
 		"dm100": return DM100.new()
