@@ -1,5 +1,30 @@
 # Change Log
 
+## 2026-07-30 (caustic-slime)
+
+- Tags: mobs, spawning, sprites, source-fidelity, tests
+- Caustic Slime ported (upstream `CausticSlime.java`): extends Slime
+  (inherits all stats), `_properties = ["ACIDIC"]`, innate Ooze immunity,
+  and a 1/2 `attack_proc` chance to coat the victim in `Ooze` at
+  `Ooze.DURATION` (20). `slime -> caustic_slime` added to
+  `MobFactory.RARE_ALTS` (1/50 swap-only, never a table entry).
+- Deferred: upstream always drops a GooBlob adjacent to the corpse
+  (`rollToDropLoot`); the port has no alchemy-ingredient items yet, so
+  the drop lands with that Phase 5 item.
+- Name-collision bug fixed: base `Slime.mob_name` was mislabeled
+  "Caustic Slime"; now "Slime" per upstream `actors.mobs.slime.name`.
+- Sprite: upstream `CausticSlimeSprite` reuses `slime.png` with frame
+  offset 9 = sheet row 1 (128x32, 9 frames/row); port maps
+  `caustic_slime` to slime.png row 1 with the SlimeSprite animation
+  frames, plus a dark procedural-fallback palette.
+- `test_caustic_slime.gd` (registered): swap roll, no direct table
+  entries at any depth, inherited stats/ACIDIC/description, base-slime
+  name guard, apply_ooze attach + DURATION, Ooze immunity, factory id.
+  `albino` + `caustic_slime` added to `test_mob_descriptions.gd`.
+- Checks: `git diff --check` clean; gdparse unavailable locally,
+  `--import` clean; full headless suite passed (5861 checks, 0
+  failures).
+
 ## 2026-07-30 (rare-mob-alts)
 
 - Tags: mobs, spawning, sprites, source-fidelity, tests
