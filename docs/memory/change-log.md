@@ -1,5 +1,23 @@
 # Change Log
 
+## 2026-07-30 (frost-thief-water-chill)
+
+- Tags: buffs, source-fidelity, tests
+- Frost (port `Frozen`) closes the last two upstream Frost.java gaps from the
+  heap burn/freeze slice:
+  - attachTo Thief branch: freezing a mob that holds a `stolen_item`
+    (duck-typed — covers both `Thief` and `Bandit`, which does not extend
+    Thief in the port) shatters a stolen non-unique potion at the mob's cell
+    and clears it; a stolen mystery meat becomes a Frozen Carpaccio; unique
+    potions (Potion of Strength) survive per the `!item.unique` filter.
+  - detach water chill: thawing while standing in WATER terrain applies
+    Chill for `Chill.DURATION/2` (5) turns (upstream `Buff.prolong`;
+    port uses `set_level` max-semantics on an existing Chill, which is
+    equivalent here since Frozen removes Chill on attach).
+- `Frozen._is_in_water` uses `target.get("pos")` defensively because older
+  test doubles (FakeHero in `test_unique_flag_parity.gd`) lack `pos`.
+- `test_frozen_thief_water.gd` (10 checks).
+
 ## 2026-07-30 (unique-flag-parity)
 
 - Tags: items, source-fidelity, tests
