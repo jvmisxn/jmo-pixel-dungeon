@@ -55,8 +55,8 @@ func _test_ability_data(t: Object) -> void:
 	t.check(MeleeWeapon.create("hand_axe").ability_damage_boost() == 4, "Hand axe boost is 4")
 	t.check(MeleeWeapon.create("battle_axe").ability_damage_boost() == 5, "Battle axe boost is 5")
 	t.check(MeleeWeapon.create("war_hammer").ability_damage_boost() == 6, "War hammer boost is 6")
-	t.check(not MeleeWeapon.create("greataxe").has_duelist_ability(),
-			"Greataxe is not in the heavy-blow family (distinct upstream ability)")
+	t.check(MeleeWeapon.create("greataxe").ability_kind() == "retribution",
+			"Greataxe is not in the heavy-blow family (distinct Retribution ability)")
 	var mace2 := MeleeWeapon.create("mace")
 	var hero := Hero.new()
 	hero.init_class(ConstantsData.HeroClass.DUELIST)

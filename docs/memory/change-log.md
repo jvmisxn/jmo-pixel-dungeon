@@ -3,6 +3,26 @@
 ## 2026-07-29
 
 - Tags: duelist, weapon-abilities, source-fidelity, tests
+- Greataxe Retribution ability shipped (upstream Greataxe.duelistAbility,
+  current master): Greataxe exposes a targeted "Retribution" Duelist
+  ability, only usable while the hero is below half HP (upstream refuses
+  for free at HP/HT >= 0.5, ported as `hp * 2 >= hp_max` pre-charge-spend
+  in `_do_weapon_ability`). Guaranteed hit (1e9 acc_multi) with flat
+  +(15 + 2*lvl) damage via new `RETRIBUTION_BOOST` +
+  `ability_damage_boost()` case in `melee_weapon.gd`. A kill makes the
+  strike instantaneous (`_ability_spend` stays 0, upstream hero.next());
+  a surviving target costs the attack delay; kills open no cleave
+  free-recast window. hero.gd touched with two small hand-edits (fragile
+  file). New `test_weapon_ability_retribution.gd` (ability data + level
+  scaling, refusal at exactly half HP with no charge/time spent, boosted
+  strike below half HP, instant kill + no window); stale "greataxe has
+  no ability" assertions updated in cleave/heavy-blow tests. Suite green
+  (5284 checks). [ENGINE]: in-game check wanted (ability only offered/
+  usable below half HP, big hit lands). With this, every melee weapon in
+  the roster has its Duelist ability; next talent milestone = Champion/
+  Monk subclass talents.
+
+- Tags: duelist, weapon-abilities, source-fidelity, tests
 - Flail Spin ability shipped (upstream Flail.duelistAbility +
   Flail.SpinAbilityTracker + accuracyFactor/damageRoll release, current
   master): Flail exposes a self-targeted "Spin" Duelist ability — wind up

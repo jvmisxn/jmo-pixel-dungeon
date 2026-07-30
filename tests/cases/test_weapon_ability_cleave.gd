@@ -57,7 +57,8 @@ func _test_ability_data(t: Object) -> void:
 	t.check(worn.ability_damage_boost() == 3, "Worn shortsword boost is 3")
 	t.check(MeleeWeapon.create("greatsword").ability_damage_boost() == 7, "Greatsword boost is 7")
 	var greataxe := MeleeWeapon.create("greataxe")
-	t.check(not greataxe.has_duelist_ability(), "Greataxe has no ported ability yet")
+	t.check(greataxe.ability_kind() == "retribution",
+			"Greataxe is not in the cleave family (distinct Retribution ability)")
 
 func _test_charge_use_and_free_window(t: Object) -> void:
 	var level := _make_level()

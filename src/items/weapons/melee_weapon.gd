@@ -340,6 +340,13 @@ const RUNIC_SLASH_BOOST: Dictionary = {
 	"runic_blade": [3.0, 0.5],
 }
 
+## Greataxe Retribution flat damage boost [base, per-level factor] (upstream
+## Greataxe.duelistAbility dmgBoost = 15 + 2*buffedLvl; only usable while the
+## hero is below half HP).
+const RETRIBUTION_BOOST: Dictionary = {
+	"greataxe": [15, 2],
+}
+
 func has_duelist_ability() -> bool:
 	return ability_kind() != ""
 
@@ -361,6 +368,8 @@ func ability_kind() -> String:
 		return "combo_strike"
 	if RUNIC_SLASH_BOOST.has(item_id):
 		return "runic_slash"
+	if RETRIBUTION_BOOST.has(item_id):
+		return "retribution"
 	if SPIN_BOOST.has(item_id):
 		return "spin"
 	if SWORD_DANCE_DURATION.has(item_id):
@@ -387,6 +396,8 @@ func ability_name() -> String:
 			return "Combo Strike"
 		"runic_slash":
 			return "Runic Slash"
+		"retribution":
+			return "Retribution"
 		"spin":
 			return "Spin"
 		"sword_dance":
@@ -467,6 +478,9 @@ func ability_damage_boost() -> int:
 					+ int(roundf(float(lunge[1]) * float(maxi(0, level))))
 		"combo_strike":
 			return int(COMBO_STRIKE_BOOST.get(item_id, 0)) + maxi(0, level)
+		"retribution":
+			var retribution: Array = RETRIBUTION_BOOST.get(item_id, [0, 0])
+			return int(retribution[0]) + int(retribution[1]) * maxi(0, level)
 	return 0
 
 ## Upstream MeleeWeapon.beforeAbilityUsed: spend charges from the charger
