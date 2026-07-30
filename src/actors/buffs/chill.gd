@@ -3,7 +3,6 @@ extends Buff
 ## Chill debuff: slows the target proportional to remaining duration.
 ## Original: reduces speed by 10% per turn remaining, capping at 50%.
 ## Applied through spend_turn() time scaling, not speed().
-## At 10+ turns of chill, converts to full Frost (Frozen).
 ## Stacks additively — each application extends duration.
 ## Removes Burning on attach (fire and ice cancel each other).
 
@@ -49,15 +48,6 @@ func on_attach() -> void:
 
 func on_turn() -> void:
 	if target == null:
-		return
-
-	# If chill exceeds threshold, upgrade to full Frozen
-	# Use load() to avoid Chill↔Frozen circular parse dependency
-	if left >= 10.0:
-		if target:
-			var frozen: Node = load("res://src/actors/buffs/frozen.gd").new()
-			target.add_buff(frozen)
-			target.remove_buff(self)
 		return
 
 	left -= 1.0

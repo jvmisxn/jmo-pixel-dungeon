@@ -1,5 +1,27 @@
 # Change Log
 
+## 2026-07-30 (frost-chill)
+
+- Tags: wands, buffs, source-fidelity, tests
+- `WandOfFrost.on_zap` rebuilt to upstream `WandOfFrost.onZap`: applies
+  the real `Chill` buff (2+lvl turns dry, 4+lvl in water) instead of the
+  old Cripple stand-in, already-chilled targets take
+  `0.9333^min(10, chill_turns)` reduced damage, Frozen targets are
+  unaffected entirely, and max damage corrected to upstream `8 + 5*lvl`
+  (was `8 + 2*lvl`). The non-parity Paralysis "freeze if pre-chilled"
+  rule and the adjacent water→EMPTY terrain conversion were removed
+  (upstream freezes heaps only — heap.freeze still unported, noted
+  below).
+- `Chill.on_turn` no longer auto-upgrades to Frozen at 10+ turns — a
+  port invention; upstream Chill only slows (speed factor floor 0.5) and
+  never converts. Frozen still comes from FrostTrap/frost bomb/etc.
+- Superseded `test_wand_of_frost.gd` (asserted the Cripple/Paralysis
+  stand-in contract) replaced by `test_wand_of_frost_chill.gd` (5
+  scenarios, incl. chill-stack damage cap and no-Frozen-conversion).
+- Known gap: upstream onZap also freezes the heap at the collision cell
+  and clears Fire/EternalFire blobs there; heap freeze and fire-clear
+  are not yet ported.
+
 ## 2026-07-30 (press-cell)
 
 - Tags: levels, wands, traps, plants, blobs, source-fidelity, tests
