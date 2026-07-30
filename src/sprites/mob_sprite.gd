@@ -33,6 +33,7 @@ static var MOB_VISUALS: Dictionary = {
 	# --- Caves ---
 	"bat": { "body": Color(0.35, 0.25, 0.2), "accent": Color(0.45, 0.3, 0.25), "eye": Color(0.9, 0.5, 0.1), "shape": "flying" },
 	"brute": { "body": Color(0.4, 0.35, 0.3), "accent": Color(0.5, 0.4, 0.3), "eye": Color(0.9, 0.2, 0.1), "shape": "large" },
+	"armored_brute": { "body": Color(0.45, 0.45, 0.5), "accent": Color(0.6, 0.6, 0.65), "eye": Color(0.9, 0.2, 0.1), "shape": "large" },
 	"shaman": { "body": Color(0.3, 0.5, 0.3), "accent": Color(0.4, 0.6, 0.4), "eye": Color(0.2, 0.8, 0.9), "shape": "humanoid" },
 	"spinner": { "body": Color(0.2, 0.25, 0.2), "accent": Color(0.3, 0.35, 0.3), "eye": Color(0.9, 0.1, 0.1), "shape": "beast" },
 	"dm100": { "body": Color(0.45, 0.45, 0.5), "accent": Color(0.55, 0.55, 0.6), "eye": Color(0.9, 0.5, 0.1), "shape": "humanoid" },
@@ -123,6 +124,8 @@ static var _MOB_SHEETS: Dictionary = {
 	# --- Caves ---
 	"bat":             { "path": "bat.png",            "fw": 15, "fh": 15 },
 	"brute":           { "path": "brute.png",          "fw": 12, "fh": 16 },
+	# Upstream ShieldedSprite: brute.png frames offset by 21 = row 1.
+	"armored_brute":   { "path": "brute.png",          "fw": 12, "fh": 16, "row": 1 },
 	"shaman":          { "path": "shaman.png",         "fw": 12, "fh": 14 },
 	"spinner":         { "path": "spinner.png",        "fw": 16, "fh": 16 },
 	"dm100":           { "path": "dm100.png",          "fw": 12, "fh": 14 },
@@ -259,6 +262,14 @@ func _configure_mob_sheet_animations() -> void:
 			set_sheet_animation(AnimState.ATTACK, [2, 3, 4, 5, 0], 15.0, false)
 			set_sheet_animation(AnimState.ZAP, [2, 3, 4, 5, 0], 15.0, false)
 			set_sheet_animation(AnimState.DIE, [11, 12, 13, 14], 10.0, false)
+		"brute", "armored_brute":
+			# Matches upstream BruteSprite / ShieldedSprite (same relative
+			# frames; armored uses sheet row 1 = upstream offset 21).
+			set_sheet_animation(AnimState.IDLE, [0, 0, 0, 1, 0, 0, 1, 1], 2.0, true)
+			set_sheet_animation(AnimState.MOVE, [4, 5, 6, 7], 12.0, true)
+			set_sheet_animation(AnimState.ATTACK, [2, 3], 12.0, false)
+			set_sheet_animation(AnimState.ZAP, [2, 3], 12.0, false)
+			set_sheet_animation(AnimState.DIE, [8, 9, 10], 12.0, false)
 		"gnoll", "gnoll_trickster":
 			# Matches upstream GnollSprite.
 			set_sheet_animation(AnimState.IDLE, [0, 0, 0, 1, 0, 0, 1, 1], 2.0, true)

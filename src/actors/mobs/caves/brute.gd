@@ -46,8 +46,7 @@ func _try_prevent_death(_source: Variant) -> bool:
 		return false
 	has_raged = true
 	# Grant rage shielding
-	@warning_ignore("integer_division")
-	var shield_amount: int = ht / 2 + 4
+	var shield_amount: int = _rage_shield()
 	hp = 1  # Keep alive with 1 HP
 	add_shielding(shield_amount)
 	# Add BruteRage buff (handles shield decay)
@@ -60,6 +59,11 @@ func _try_prevent_death(_source: Variant) -> bool:
 	if MessageLog:
 		MessageLog.add_negative("The brute refuses to die!")
 	return true
+
+## Rage shield amount, overridable by ArmoredBrute (upstream HT/2 + 4).
+func _rage_shield() -> int:
+	@warning_ignore("integer_division")
+	return ht / 2 + 4
 
 func serialize() -> Dictionary:
 	var data: Dictionary = super.serialize()
