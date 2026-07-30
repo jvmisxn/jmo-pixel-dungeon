@@ -31,6 +31,18 @@ func can_surprise_attack(hero: Char) -> bool:
 		return false
 	return super.can_surprise_attack(hero)
 
+## Sneak-blade surprise damage boost (upstream Dagger 75% / Dirk 67% /
+## AssassinsBlade 50% toward max instead of min..max on surprise).
+func surprise_toward_max() -> float:
+	match item_id:
+		"dagger":
+			return 0.75
+		"dirk":
+			return 0.67
+		"assassins_blade":
+			return 0.50
+	return 0.0
+
 # ---------------------------------------------------------------------------
 # Twin Upgrades (Champion)
 # ---------------------------------------------------------------------------

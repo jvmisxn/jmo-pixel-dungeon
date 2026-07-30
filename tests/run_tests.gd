@@ -290,6 +290,7 @@ const CASES: Array[String] = [
 	"res://tests/cases/test_wandmaker_deck_rewards.gd",
 	"res://tests/cases/test_missile_tier_parity.gd",
 	"res://tests/cases/test_missile_item_procs.gd",
+	"res://tests/cases/test_surprise_damage_boost.gd",
 ]
 
 var _checks: int = 0

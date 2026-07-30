@@ -1,5 +1,30 @@
 # Change Log
 
+## 2026-07-30 (sneak-surprise-damage)
+
+- Tags: items, combat, source-fidelity, tests
+- Sneak-blade surprise damage boost (upstream Dagger/Dirk/AssassinsBlade/
+  Kunai damageRoll overrides, verified against master 2026-07-30): on a
+  surprise attack the damage roll becomes min + round(span*factor)..max
+  instead of min..max — dagger 0.75, dirk 0.67, assassins_blade 0.50,
+  kunai 0.60.
+- New `Weapon.surprise_toward_max()` (0.0 base) applied inside
+  `_roll_from_range`, gated on `owner.get("_pending_surprise_attack")`
+  so melee (flag set in hero attack path) and missiles share one path;
+  mobs/statues (no flag) always roll plain. Overrides in melee_weapon.gd
+  and missile_weapon.gd by item_id.
+- Ranged wiring: `_resolve_ranged_attack` now sets
+  `_pending_surprise_attack` before the thrown damage roll using the
+  thrown item's own `can_surprise_attack` (upstream attackingWeapon
+  semantics) + `target.is_surprised_by(self)`, cleared on return.
+- Note: augment scaling folds into the port's pre-scaled damage range
+  (port convention) rather than upstream's post-roll damageFactor.
+- Tests: `test_surprise_damage_boost.gd` (factors, 200-roll boosted
+  floor per weapon, unsurprised + flagless owners still roll plain).
+- Checks: full headless suite 7455/0; `git diff --check` clean; gdparse
+  unavailable locally. hero.gd + weapon.gd fragile-file edits were small
+  hand-edits.
+
 ## 2026-07-30 (missile-item-procs)
 
 - Tags: items, source-fidelity, tests
