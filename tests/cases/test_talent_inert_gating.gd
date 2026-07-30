@@ -64,7 +64,7 @@ func _test_subclass_inert_talents_blocked(t: Object) -> void:
 	var hero := _make_warrior()
 	hero.hero_subclass = ConstantsData.HeroSubclass.CHAMPION
 	t.check(
-		not hero.can_upgrade_talent("champion_twin_upgrades"),
+		not hero.can_upgrade_talent("champion_combined_lethality"),
 		"Inert subclass talent cannot be upgraded"
 	)
 	hero.hero_subclass = ConstantsData.HeroSubclass.GLADIATOR

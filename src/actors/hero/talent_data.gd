@@ -159,7 +159,7 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 		ConstantsData.HeroSubclass.CHAMPION:
 			return [
 				_make("champion_varied_charge", "Varied Charge", "The Champion instantly regains 0.17/0.33/0.5 weapon charges when she uses two different weapon abilities, with no time limit.", 3, 3, hero_subclass),
-				_make_inert("champion_twin_upgrades", "Twin Upgrades", "If one of the Champion's two equipped weapons has a lower level and is 2/1/0 or more tiers lower than the other weapon, it will be boosted to the other weapon's level.", 3, 3, hero_subclass),
+				_make("champion_twin_upgrades", "Twin Upgrades", "If one of the Champion's two equipped weapons has a lower level and is 2/1/0 or more tiers lower than the other weapon, it will be boosted to the other weapon's level.", 3, 3, hero_subclass),
 				_make_inert("champion_combined_lethality", "Combined Lethality", "If the Champion attacks with a melee weapon immediately after using a different weapon's ability, that attack will execute any non-boss enemy left at below 13%/27%/40% HP.", 3, 3, hero_subclass),
 			]
 		ConstantsData.HeroSubclass.MONK:

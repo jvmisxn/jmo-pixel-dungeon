@@ -1,5 +1,23 @@
 # Change Log
 
+## 2026-07-30
+
+- Tags: duelist, champion, talents, weapons, source-fidelity, tests
+- Champion Twin Upgrades talent is LIVE (upstream `MeleeWeapon.buffedLvl` +
+  `Talent.TWIN_UPGRADES`): `MeleeWeapon.buffed_lvl()` now lets an equipped
+  weapon that is 2/1/0+ tiers (by talent points) below the other equipped
+  weapon borrow the other weapon's buffed level when it is higher, with a
+  static re-entrancy guard mirroring upstream `evaluatingTwinUpgrades`.
+  Owner lookup is a party scan (`GameManager.heroes`) for a hero with talent
+  points holding this weapon in either hand — co-op adaptation of upstream's
+  single `Dungeon.hero` read. Talent un-inerted in `talent_data.gd`;
+  `test_talent_inert_gating.gd` now uses `champion_combined_lethality` as
+  its inert example. `test_twin_upgrades.gd` (12 checks: tier-gap scaling
+  per point, no-talent/no-owner no-ops, higher-own-level kept, damage range
+  reflects the borrowed level). Combined Lethality remains the last inert
+  Champion talent, still blocked on the off-hand `abilityWeapon` path; the
+  instant swap ActionIndicator is also still open.
+
 ## 2026-07-29 (later)
 
 - Tags: duelist, champion, belongings, persistence, source-fidelity, tests

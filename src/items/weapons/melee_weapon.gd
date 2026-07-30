@@ -32,6 +32,55 @@ func can_surprise_attack(hero: Char) -> bool:
 	return super.can_surprise_attack(hero)
 
 # ---------------------------------------------------------------------------
+# Twin Upgrades (Champion)
+# ---------------------------------------------------------------------------
+
+## Re-entrancy guard: reading the other weapon's buffed level must not bounce
+## back into this hook (upstream MeleeWeapon.evaluatingTwinUpgrades).
+static var _evaluating_twin_upgrades: bool = false
+
+## Upstream MeleeWeapon.buffedLvl + Talent.TWIN_UPGRADES: while equipped by a
+## Champion with the talent, a weapon whose tier is 2/1/0+ below the other
+## equipped weapon's tier borrows the other weapon's buffed level when higher.
+func buffed_lvl() -> int:
+	var lvl: int = super.buffed_lvl()
+	if MeleeWeapon._evaluating_twin_upgrades:
+		return lvl
+	var hero: Variant = _twin_upgrades_hero()
+	if hero == null:
+		return lvl
+	var other: Variant = hero.belongings.weapon
+	if other == self:
+		other = hero.belongings.second_wep
+	if other is MeleeWeapon:
+		MeleeWeapon._evaluating_twin_upgrades = true
+		var other_lvl: int = (other as MeleeWeapon).buffed_lvl()
+		MeleeWeapon._evaluating_twin_upgrades = false
+		var points: int = hero.get_talent_level("champion_twin_upgrades")
+		if tier + (3 - points) <= (other as MeleeWeapon).tier and other_lvl > lvl:
+			return other_lvl
+	return lvl
+
+## Finds a party hero with Twin Upgrades points who has this weapon equipped
+## in either hand. Co-op adaptation: upstream reads the single Dungeon.hero;
+## this port scans the party.
+func _twin_upgrades_hero() -> Variant:
+	if GameManager == null:
+		return null
+	for h: Variant in GameManager.heroes:
+		if h == null or not is_instance_valid(h):
+			continue
+		var belongings: Variant = h.get("belongings")
+		if belongings == null:
+			continue
+		if belongings.weapon != self and belongings.second_wep != self:
+			continue
+		if h.has_method("get_talent_level") \
+				and h.get_talent_level("champion_twin_upgrades") > 0:
+			return h
+	return null
+
+# ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
 

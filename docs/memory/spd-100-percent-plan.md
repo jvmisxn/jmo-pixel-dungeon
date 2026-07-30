@@ -198,9 +198,11 @@ and pitfall/chasm landing parity including fallen-item heap drops
    shipped (Equip 2nd button, Off-hand inventory slot, second_wep
    equip/unequip routing, migration shim moves old-save buff weapons into
    the slot, primary-only attacks per upstream,
-   `test_champion_dual_wield_migration.gd`); remaining: swap
-   ActionIndicator + off-hand abilityWeapon path, then
-   twin_upgrades/combined_lethality.
+   `test_champion_dual_wield_migration.gd`). 2026-07-30: Twin Upgrades LIVE
+   (buffed_lvl borrow with tier-gap-by-points gate + re-entrancy guard,
+   `test_twin_upgrades.gd`); remaining: swap ActionIndicator + off-hand
+   abilityWeapon path, then combined_lethality (last inert Champion
+   talent).
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +
