@@ -50,6 +50,21 @@ func on_attach() -> void:
 			if freezable.size() > 0:
 				var frozen_item: Variant = freezable[randi() % freezable.size()]
 				freeze_carried_item(hero, frozen_item)
+	elif target.get("stolen_item") != null:
+		# Original (Frost.attachTo Thief branch): a thief's stolen non-unique
+		# potion shatters at the thief's cell, stolen mystery meat becomes a
+		# Frozen Carpaccio. Duck-typed on `stolen_item` so it covers both
+		# Thief and Bandit (the port's Bandit does not extend Thief).
+		var stolen: Variant = target.get("stolen_item")
+		if (
+			stolen.get("category") == ConstantsData.ItemCategory.POTION
+			and stolen.get("unique") != true
+		):
+			if stolen.has_method("shatter") and target.get("level") != null:
+				stolen.shatter(target.get("pos"), target.get("level"))
+			target.set("stolen_item", null)
+		elif stolen.get("item_id") == "mystery_meat":
+			target.set("stolen_item", Food.create("frozen_carpaccio"))
 
 	if MessageLog:
 		MessageLog.add_negative("%s is frozen solid!" % target.name)
@@ -93,6 +108,28 @@ func on_detach() -> void:
 	if target:
 		if target.paralysed > 0:
 			target.paralysed -= 1
+		# Original (Frost.detach): thawing while standing in water chills for
+		# Chill.DURATION/2 turns (Buff.prolong).
+		if _is_in_water() and target.has_method("add_buff"):
+			var existing: Variant = target.get_buff("Chill")
+			if existing != null:
+				existing.set_level(Chill.DURATION / 2.0)
+			else:
+				var chill: Chill = Chill.new()
+				chill.set_level(Chill.DURATION / 2.0)
+				target.add_buff(chill)
+
+func _is_in_water() -> bool:
+	if target == null:
+		return false
+	var pos: Variant = target.get("pos")
+	if not (pos is int) or pos < 0:
+		return false
+	if target.get("level") != null:
+		var lvl: Variant = target.level
+		if lvl and lvl.has_method("get_terrain"):
+			return lvl.get_terrain(pos) == ConstantsData.Terrain.WATER
+	return false
 
 func description() -> String:
 	return "Frozen solid! Cannot move or act."
