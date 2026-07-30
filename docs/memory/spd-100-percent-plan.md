@@ -164,9 +164,13 @@ and pitfall/chasm landing parity including fallen-item heap drops
    weapon in the roster now has its Duelist ability. 2026-07-29:
    Champion talent set reshaped to upstream (varied_charge live with
    `test_varied_charge.gd`; twin_upgrades + combined_lethality registered
-   inert, blocked on dual-wield secondary-weapon parity). Next talent
-   milestone = Monk talents (blocked on MonkEnergy) or Champion
-   dual-wield parity.
+   inert, blocked on dual-wield secondary-weapon parity). 2026-07-29:
+   MonkEnergy pool shipped (kill-driven energy gain, regen gate, cap,
+   serialization, `test_monk_energy.gd`); Monk talents reshaped to
+   upstream ids with unencumbered_spirit LIVE, monastic_vigor +
+   combined_energy inert pending monk abilities. Next talent milestone =
+   Monk abilities (Flurry/Focus/Dash/Dragon Kick/Meditate on top of
+   `MonkEnergy.ability_used`) or Champion dual-wield parity.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +

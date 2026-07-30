@@ -164,8 +164,9 @@ static func _subclass_talents(hero_subclass: int) -> Array[TalentInfo]:
 			]
 		ConstantsData.HeroSubclass.MONK:
 			return [
-				_make_inert("monk_flurry_mastery", "Flurry Mastery", "Supports faster and more damaging unarmed chains.", 3, 3, hero_subclass),
-				_make_inert("monk_centered_breath", "Centered Breath", "Groundwork slot for focus and recovery synergy.", 3, 3, hero_subclass),
+				_make("monk_unencumbered_spirit", "Unencumbered Spirit", "The Monk gains bonus energy while using low-tier gear. At +1/+2/+3, armor of tier 3/2/1 or lower grants +50%/75%/100% energy, and the same bonus applies separately to her melee weapon.", 3, 3, hero_subclass),
+				_make_inert("monk_monastic_vigor", "Monastic Vigor", "The Monk's abilities become empowered while her energy is at 100%/80%/60% or more of its cap.", 3, 3, hero_subclass),
+				_make_inert("monk_combined_energy", "Combined Energy", "Using an expensive monk ability shortly after a weapon ability (or vice versa) refunds 1 energy. Abilities costing 5/4/3+ energy qualify.", 3, 3, hero_subclass),
 			]
 	return []
 

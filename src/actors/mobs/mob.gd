@@ -703,6 +703,22 @@ func _lethal_momentum_on_kill(source: Variant, forced_roll: float = -1.0) -> boo
 	hero.add_buff(LethalMomentumTracker.new())
 	return true
 
+## Monk energy (upstream Mob.destroy): while the hero is a Monk, every enemy
+## death grants MonkEnergy (5 boss / 3 miniboss / 0.5 weak swarm / 1 default,
+## gated on regen being active). The buff is created lazily so pre-existing
+## Monk saves gain it on their next kill (upstream Buff.affect semantics).
+func _monk_energy_on_kill() -> void:
+	var hero: Node = GameManager.hero if GameManager else null
+	if hero == null or not hero.is_alive:
+		return
+	if hero.get("hero_subclass") != ConstantsData.HeroSubclass.MONK:
+		return
+	var energy: MonkEnergy = hero.get_buff("MonkEnergy") as MonkEnergy
+	if energy == null:
+		energy = MonkEnergy.new()
+		hero.add_buff(energy)
+	energy.gain_energy(self)
+
 ## Pick the corpse cell for a raised wraith, or an adjacent free passable cell.
 ## The dying mob still occupies [pos], so it does not block its own corpse cell.
 func _find_minion_spawn_cell() -> int:
@@ -799,6 +815,7 @@ func _on_death(_source: Variant) -> void:
 			pass  # No XP when hero is over-leveled
 		elif hero_ref.has_method("earn_xp"):
 			hero_ref.earn_xp(xp_value)
+	_monk_energy_on_kill()
 	# Emit death signals
 	if EventBus:
 		EventBus.mob_died.emit(self)
