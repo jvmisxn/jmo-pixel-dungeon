@@ -1,5 +1,32 @@
 # Change Log
 
+## 2026-07-30 (wep-mis-tier-decks)
+
+- Tags: items, source-fidelity, persistence, tests
+- Per-tier equipment decks ported (upstream Generator WEP_T*/MIS_T*
+  defaultProbs): `random_weapon`/`random_missile` now draw from depleting
+  per-tier decks that refill on empty, instead of flat uniform picks.
+  - Melee decks weigh 2 per ported weapon; WEP_T1 carries the upstream
+    prob-0 Mage's Staff slot (never random, refills at 0). Unported
+    upstream entries (Sickle, Pickaxe, Whip, Crossbow, Katana, Gauntlet,
+    WarScythe) get no slot.
+  - Missile decks weigh 3 per slot; MIS_T1 carries the upstream prob-0
+    Dart slot. Existing missile tier-roster adaptation kept
+    (throwing_club T1, boomerang T3, force_cudgel-only T5) — logged in
+    the backlog PARTIAL entry.
+  - Wired through the existing `_deck_defs` machinery, so full_reset,
+    refill, serialize_decks/restore_decks all cover the ten new decks
+    automatically; old saves without the keys fall back to fresh decks
+    (no SAVE_VERSION bump needed — optional keys, tolerant restore).
+  - `random_weapon_for_tier` intentionally stays a flat pick: it maps to
+    upstream `randomUsingDefaults` (statue/skeleton gear) which doesn't
+    touch decks, and ported default weights are uniform. Dead
+    `_missile_table_for_tier` + `MISSILES_T1` removed.
+  - `test_generator_tier_decks.gd`: wep_t1/wep_t4 exact 2-per-weapon
+    cycles, mages_staff/dart never dealt across refills, mis_t1 3-per,
+    mis_t5 single-slot, mid-deck serialize/restore multiset equivalence,
+    public random_weapon id sanity.
+
 ## 2026-07-30 (generator-decks)
 
 - Tags: items, source-fidelity, persistence, tests
