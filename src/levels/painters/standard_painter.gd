@@ -118,9 +118,9 @@ static func _place_tunnel_door(level: Level, room: Room, pos: int) -> void:
 static func _tunnel_door_terrain(room: Room) -> int:
 	if room.type == Room.Type.SECRET:
 		return ConstantsData.Terrain.SECRET_DOOR
-	if room is CrystalVaultRoom:
-		return ConstantsData.Terrain.CRYSTAL_DOOR
-	if room is VaultRoom or room is ArmoryRoom:
+	# Upstream CrystalVaultRoom locks its entrance with an IronKey door; the
+	# crystal terrain in that room belongs to the chests, not the entrance.
+	if room is CrystalVaultRoom or room is VaultRoom or room is ArmoryRoom:
 		return ConstantsData.Terrain.LOCKED_DOOR
 	return ConstantsData.Terrain.DOOR
 

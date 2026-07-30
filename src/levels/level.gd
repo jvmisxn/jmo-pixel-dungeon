@@ -64,6 +64,11 @@ var plants: Dictionary[int, RefCounted] = {}
 # --- Room data (set by level generators) ---
 var rooms: Array[Room] = []
 
+## Items queued by room painters to scatter elsewhere on the floor during
+## generation (upstream Level.itemsToSpawn). Drained by the generator in the
+## same build pass; never serialized.
+var items_to_spawn: Array = []
+
 # --- Feeling ---
 enum Feeling { NONE, CHASM, WATER, GRASS, DARK, LARGE, TRAPS, SECRETS }
 var feeling: Feeling = Feeling.NONE

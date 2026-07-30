@@ -2,7 +2,8 @@ extends RefCounted
 ## In-engine verification for the restored door system (audit:S08 P1):
 ## full LevelFactory generation must paint doors at tunnel mouths on
 ## regular levels, and special rooms must keep their gated entrances
-## (LOCKED_DOOR for vault/armory, CRYSTAL_DOOR for crystal vaults).
+## (LOCKED_DOOR for vault/armory/crystal-vault; upstream CrystalVaultRoom
+## uses an IronKey-locked entrance, crystal terrain belongs to its chests).
 ## Complements the synthetic-pair coverage in test_level_generation_doors.gd.
 
 const DOOR_TERRAINS: Array[int] = [
@@ -101,10 +102,7 @@ func run(t: Object) -> void:
 				var breaches: Array[int] = _border_breaches(level, room)
 				t.check(breaches.is_empty(),
 					"depth %d gated room border intact (breaches: %s)" % [depth, str(breaches)])
-			if room is CrystalVaultRoom:
-				t.check(_border_has_terrain(level, room, ConstantsData.Terrain.CRYSTAL_DOOR),
-					"depth %d crystal vault is sealed by a crystal door" % depth)
-			elif room is VaultRoom or room is ArmoryRoom:
+			if room is CrystalVaultRoom or room is VaultRoom or room is ArmoryRoom:
 				t.check(_border_has_terrain(level, room, ConstantsData.Terrain.LOCKED_DOOR),
 					"depth %d vault/armory is sealed by a locked door" % depth)
 			elif room.type == Room.Type.SECRET:

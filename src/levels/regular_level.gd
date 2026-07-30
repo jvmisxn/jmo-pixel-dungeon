@@ -151,6 +151,14 @@ func _build() -> bool:
 				los_blocking[food_pos] = false
 		drop_item(food_pos, Generator.random_food())
 
+	# Drain room-queued spawn items (upstream itemsToSpawn, e.g. the crystal
+	# vault's iron + crystal keys). Restricted to standard rooms so a key can
+	# never land inside the locked room it opens (upstream randomDropCell).
+	for pending: Variant in items_to_spawn:
+		if pending is Item:
+			_drop_spawn_item_in_standard_room(pending)
+	items_to_spawn.clear()
+
 	# Original Level.create(): guaranteed region quotas — 2 potions of
 	# strength and 3 scrolls of upgrade per 5-floor set, gated by
 	# Dungeon.posNeeded()/souNeeded() and tracked by LimitedDrops counters.
@@ -181,6 +189,34 @@ func _drop_guaranteed_item(item: Item) -> void:
 		if item_pos >= 0 and item_pos < LEN:
 			los_blocking[item_pos] = false
 	drop_item(item_pos, item)
+
+
+## Drop a pending spawn item (upstream itemsToSpawn) on a passable cell inside
+## a random STANDARD room, so keys never land behind the locks they open.
+## Falls back to the generic guaranteed-item cell if no standard room fits.
+func _drop_spawn_item_in_standard_room(item: Item) -> void:
+	if item == null:
+		return
+	var standard_rooms: Array[Room] = []
+	for r: Room in rooms:
+		if r != null and r.type == Room.Type.STANDARD:
+			standard_rooms.append(r)
+	standard_rooms.shuffle()
+	for r: Room in standard_rooms:
+		for _attempt: int in range(10):
+			var pos: int = r.random_interior()
+			if pos < 0 or pos >= LEN:
+				continue
+			if not passable[pos] or pos == entrance or pos == exit_pos:
+				continue
+			var terrain: int = map[pos]
+			if (terrain == ConstantsData.Terrain.HIGH_GRASS
+					or terrain == ConstantsData.Terrain.FURROWED_GRASS):
+				map[pos] = ConstantsData.Terrain.GRASS
+				los_blocking[pos] = false
+			drop_item(pos, item)
+			return
+	_drop_guaranteed_item(item)
 
 
 func _spawn_mimic_with_item(item_pos: int, item: Item, p_depth: int) -> Mimic:

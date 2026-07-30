@@ -2046,6 +2046,19 @@ func _check_item_pickup(hero_node: Variant, hero_pos: int) -> void:
 		var item: Variant = heap.get("item")
 		if item == null:
 			continue
+		# Crystal chests (upstream Heap.Type.CRYSTAL_CHEST) stay sealed until
+		# a crystal key from this floor is spent on them.
+		if str(heap.get("type", "heap")) == "crystal_chest":
+			var can_unlock: bool = hero_node.has_method("has_key") \
+				and hero_node.has_key("crystal")
+			if not can_unlock:
+				if MessageLog:
+					MessageLog.add("This chest is locked with a crystal lock.")
+				continue
+			hero_node.use_key("crystal")
+			heap["type"] = "heap"
+			if MessageLog:
+				MessageLog.add("You unlock the crystal chest.")
 		# Auto-pickup gold
 		var is_gold: bool = item is Object and item.get("item_id") == "gold"
 		if is_gold:

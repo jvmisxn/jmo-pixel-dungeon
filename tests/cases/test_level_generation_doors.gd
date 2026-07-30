@@ -53,8 +53,8 @@ func run(t: Object) -> void:
 	var crystal: CrystalVaultRoom = _set_room_bounds(CrystalVaultRoom.new(), 12, 12, 16, 16) as CrystalVaultRoom
 	var crystal_level: Level = _paint_pair(crystal_standard, crystal)
 	t.check(
-		_terrain_at(crystal_level, 12, 14) == ConstantsData.Terrain.CRYSTAL_DOOR,
-		"neighbor tunnels preserve crystal vault doors"
+		_terrain_at(crystal_level, 12, 14) == ConstantsData.Terrain.LOCKED_DOOR,
+		"neighbor tunnels lock crystal vault entrances (upstream IronKey door)"
 	)
 
 	var secret_standard: StandardRoom = _make_standard(20, 5, 24, 9)
