@@ -194,7 +194,13 @@ and pitfall/chasm landing parity including fallen-item heap drops
    shipped (`Belongings.second_wep` slot + serialization, SAVE_VERSION 7,
    `test_belongings_second_wep.gd`); remaining: Champion equip prompt,
    attacking-weapon/combat path + swap action, legacy `ChampionDualWield`
-   buff replacement, then twin_upgrades/combined_lethality go live.
+   buff replacement, then twin_upgrades/combined_lethality go live. 2026-07-30: equip path + legacy buff retirement
+   shipped (Equip 2nd button, Off-hand inventory slot, second_wep
+   equip/unequip routing, migration shim moves old-save buff weapons into
+   the slot, primary-only attacks per upstream,
+   `test_champion_dual_wield_migration.gd`); remaining: swap
+   ActionIndicator + off-hand abilityWeapon path, then
+   twin_upgrades/combined_lethality.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +

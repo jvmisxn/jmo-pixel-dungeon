@@ -1508,6 +1508,8 @@ func _apply_inventory_action_for_hero(hero_node: Variant, action: Dictionary) ->
 				ConstantsData.ItemCategory.WEAPON:
 					if item_to_equip is SpiritBow:
 						old_item = belongings.equip_spirit_bow(item_to_equip)
+					elif str(action.get("slot", "")) == "second_wep":
+						old_item = belongings.equip_second_wep(item_to_equip)
 					else:
 						old_item = belongings.equip_weapon(item_to_equip)
 				ConstantsData.ItemCategory.ARMOR:
