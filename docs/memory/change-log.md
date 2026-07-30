@@ -2,6 +2,16 @@
 
 ## 2026-07-29
 
+- Tags: combat, duelist, source-fidelity, tests
+- Flail surprise-attack parity shipped (upstream Hero.canSurpriseAttack):
+  `MeleeWeapon.can_surprise_attack` override blocks surprise attacks for
+  a wielded flail unless the hero's SpinAbilityTracker is active (the
+  upstream mid-Spin exception); the STR requirement check still applies.
+  Closes the backlog gap found while porting Flail Spin.
+  Test: `test_flail_no_surprise.gd`.
+
+## 2026-07-29
+
 - Tags: duelist, champion, talents, source-fidelity, persistence, tests
 - Champion Varied Charge talent shipped (upstream Talent.VARIED_CHARGE +
   MeleeWeapon.afterAbilityUsed + Talent.VariedChargeTracker, current
