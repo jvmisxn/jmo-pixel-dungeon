@@ -15,6 +15,8 @@
 
 - DONE 2026-07-26 [P2][buffs][source-fidelity] Invisibility dispel on item use: static `Invisibility.dispel_for(ch)` now called from `Scroll.execute` (before the `on_scroll_read` talent hook, so Inscribed Stealth's grant replaces prior invis), `ScrollTransmutation.execute`, `Wand.zap` (both cursed and normal branches; covers Mage's Staff), and the Unstable Spellbook read path. Attack-breaks-invisibility audited: hero melee already dispels in `hero.gd` `_do_attack`; upstream mobs don't dispel on attack, so no mob change needed. `test_invisibility_dispel_on_item_use.gd`.
 
+- [P2][items][source-fidelity] Heap burn/freeze item conversion (upstream Heap.burn/freeze): fire on a floor heap should destroy non-unique scrolls, evaporate dewdrops, cook mystery meat/frozen carpaccio into chargrilled meat, and detonate bombs; freezing should shatter non-unique potions, convert mystery meat to frozen carpaccio, and freeze bomb fuses. Port heaps currently ignore fire/frost entirely. The food side shipped 2026-07-30 (chargrilled_meat item + Frozen-buff inventory conversion, test_mystery_meat_family.gd); this item is the heap wiring (fire blob / Freezing blob -> heap hooks). Also small remaining Frost-buff gaps: Thief-steal freeze branch, water-Chill on detach.
+
 ## Medium Priority
 
 - Decide whether to split framework-level code from Shattered-PD-specific content into separate top-level modules or folders.
