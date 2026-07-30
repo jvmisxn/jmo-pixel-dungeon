@@ -175,9 +175,12 @@ and pitfall/chasm landing parity including fallen-item heap drops
    infinite-evasion-beats-surprise Char.hit ordering fix,
    `test_monk_focus_ability.gd`). 2026-07-29: Dash shipped (3-energy
    instant blink to an empty cell in range 4/8, projectile-line gated,
-   `test_monk_dash_ability.gd`). Next talent milestone = monk ability
-   picker UI (upstream WndMonkAbilities/ActionIndicator) +
-   Dragon Kick/Meditate, or Champion dual-wield parity.
+   `test_monk_dash_ability.gd`). 2026-07-29: Dragon Kick shipped
+   (4-energy 6x/9x guaranteed unarmed strike, 6-cell knockback +
+   min(6,dist) paralysis, empowered adjacent sweep,
+   `test_monk_dragon_kick_ability.gd`). Next talent milestone = Meditate
+   (last monk ability) + monk ability picker UI (upstream
+   WndMonkAbilities/ActionIndicator), or Champion dual-wield parity.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +

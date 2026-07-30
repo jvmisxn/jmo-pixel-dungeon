@@ -485,7 +485,8 @@ func _do_attack(target_or_null: Variant, target_pos_fallback: int = -1, blink_po
 ## weapon's flat ability damage boost. A kill makes the ability instant and
 ## opens the CleaveTracker free-recast window unless one was already open;
 ## a non-kill strike costs the attack delay and closes any open window.
-## Monk subclass ability fueled by MonkEnergy. Ported: Flurry, Focus, Dash.
+## Monk subclass ability fueled by MonkEnergy. Ported: Flurry, Focus, Dash,
+## Dragon Kick.
 ## Upstream MonkEnergy.MonkAbility.Flurry.doAbility: two unarmed strikes at
 ## 1.5x damage with infinite accuracy, instant (hero.next()), once per turn
 ## via FlurryCooldownTracker, costing 1 energy.
@@ -499,6 +500,9 @@ func _do_monk_ability(kind: String, target_pos: int) -> void:
 		return
 	if kind == "dash":
 		_do_dash_ability(energy, target_pos)
+		return
+	if kind == "dragon_kick":
+		_do_dragon_kick_ability(energy, target_pos)
 		return
 	if kind != "flurry":
 		return
@@ -614,6 +618,73 @@ func _do_dash_ability(energy: MonkEnergy, target_pos: int) -> void:
 	_check_terrain_effects()
 	energy.ability_used(3.0)
 	# Dash is instant (upstream hero.next()); _ability_spend stays 0.
+
+## Monk Dragon Kick (upstream MonkEnergy.MonkAbility.DragonKick): 4 energy,
+## one guaranteed unarmed strike at 6x damage (9x while empowered). If the
+## strike didn't move the target it is knocked back 6 cells and paralyzed
+## for min(6, cells moved); while empowered every other adjacent enemy is
+## knocked back the same way. Costs the attack delay; refusals are free.
+func _do_dragon_kick_ability(energy: MonkEnergy, target_pos: int) -> void:
+	if energy == null or energy.energy < 4.0:
+		if MessageLog:
+			MessageLog.add_warning("You don't have enough energy for that ability.")
+		return
+	if target_pos < 0 or target_pos >= level.visible.size() or not level.visible[target_pos]:
+		if MessageLog:
+			MessageLog.add_warning("You can't target that.")
+		return
+	var char_at: Variant = level.find_char_at(target_pos)
+	if not (char_at is Char) or char_at == self:
+		if MessageLog:
+			MessageLog.add_warning("You can't target that.")
+		return
+	var enemy: Char = char_at as Char
+	if not enemy.is_alive or distance_to(enemy.pos) > 1:
+		if MessageLog:
+			MessageLog.add_warning("That target is out of reach.")
+		return
+	last_visible_action = "attack"
+	last_visible_target_pos = enemy.pos
+	if enemy is Mimic and (enemy as Mimic).disguised:
+		(enemy as Mimic).reveal()
+	var empowered: bool = energy.abilities_empowered()
+	var tracker: UnarmedAbilityTracker = \
+			add_buff(UnarmedAbilityTracker.new()) as UnarmedAbilityTracker
+	var old_pos: int = enemy.pos
+	attack(enemy, 9.0 if empowered else 6.0, 0.0, 1.0e9)
+	if is_instance_valid(enemy) and enemy.pos == old_pos:
+		_dragon_kick_knock(enemy)
+	if empowered:
+		for mob_ref: Node in level.mobs:
+			if mob_ref is Mob and mob_ref != enemy and not (mob_ref is NPC) \
+					and not (mob_ref as Mob).is_ally and (mob_ref as Mob).is_alive \
+					and is_adjacent((mob_ref as Mob).pos):
+				_dragon_kick_knock(mob_ref as Char)
+	if tracker != null:
+		remove_buff(tracker)
+	if has_buff("Invisibility"):
+		var invis: Node = get_buff("Invisibility")
+		if invis is Invisibility:
+			(invis as Invisibility).dispel()
+	energy.ability_used(4.0)
+	_ability_spend = _get_attack_delay()
+
+## Push one Dragon Kick victim 6 cells away from the hero, then paralyze it
+## for min(6, cells actually moved) turns (upstream WandOfBlastWave.throwChar
+## + Paralysis of trajectory.dist). Chasm falls are handled by KnockBack.
+func _dragon_kick_knock(victim: Char) -> void:
+	var before: int = victim.pos
+	KnockBack.throw_char(victim, pos, 6, level)
+	if not is_instance_valid(victim) or not victim.is_alive:
+		return
+	var moved: int = mini(6, maxi(
+		absi(ConstantsData.pos_to_x(before) - ConstantsData.pos_to_x(victim.pos)),
+		absi(ConstantsData.pos_to_y(before) - ConstantsData.pos_to_y(victim.pos))))
+	if moved > 0:
+		var para: Paralysis = Paralysis.new()
+		para.duration = float(moved)
+		para.time_left = para.duration
+		victim.add_buff(para)
 
 func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	_ability_spend = 0.0

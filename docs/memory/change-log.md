@@ -2,6 +2,26 @@
 
 ## 2026-07-29
 
+- Tags: duelist, monk, abilities, combat, source-fidelity, tests
+- Monk Dragon Kick ability shipped (upstream
+  `MonkEnergy.MonkAbility.DragonKick`): `_do_monk_ability` kind
+  "dragon_kick" — costs 4 energy for one guaranteed (1e9 accuracy)
+  unarmed strike at 6x damage, 9x while `abilities_empowered()`, via the
+  same `UnarmedAbilityTracker` weapon bypass as Flurry. If the strike
+  left the target on its cell it is knocked back 6 cells away from the
+  hero (`KnockBack.throw_char`, chasm falls handled there) and paralyzed
+  for min(6, cells actually moved) — port sets `Paralysis.duration`
+  directly instead of upstream's Buff.affect duration. Empowered kicks
+  also knock back + paralyze every other adjacent living non-ally,
+  non-NPC mob (no damage to them). Costs the attack delay
+  (`_get_attack_delay`); refusals (short energy, empty cell, out of
+  reach, invisible target cell) are free. Upstream's per-victim
+  Ballistica-past-target trajectory is approximated by the shared
+  directly-away push, same as Spike/Elastic. Test:
+  `test_monk_dragon_kick_ability.gd` (4 cases, 19 checks). Like the
+  other monk abilities, NOT yet player-reachable pending the ability
+  picker UI. Remaining: Meditate, then picker UI.
+
 - Tags: duelist, monk, abilities, movement, source-fidelity, tests
 - Monk Dash ability shipped (upstream `MonkEnergy.MonkAbility.Dash`):
   `_do_monk_ability` kind "dash" — costs 3 energy, targets an empty cell
