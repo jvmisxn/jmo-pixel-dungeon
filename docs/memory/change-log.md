@@ -2,6 +2,35 @@
 
 ## 2026-07-29
 
+- Tags: duelist, champion, talents, source-fidelity, persistence, tests
+- Champion Varied Charge talent shipped (upstream Talent.VARIED_CHARGE +
+  MeleeWeapon.afterAbilityUsed + Talent.VariedChargeTracker, current
+  master): the Champion subclass talent set is now upstream-shaped —
+  `champion_varied_charge` live, plus `champion_twin_upgrades` and
+  `champion_combined_lethality` registered inert with upstream
+  descriptions (both blocked on the homebrew dual-wield secondary-weapon
+  adaptation; old inert `champion_dual_mastery`/`champion_guarded_offense`
+  slots retired with a save migration in `Hero.deserialize`, points kept).
+  New hidden `VariedChargeTracker` buff records the weapon (item_id, the
+  port's class equivalent) that last used a Duelist ability; using a
+  different weapon's ability consumes the tracker and refunds points/6
+  charge via `WeaponCharger.gain_charge`. Logic lives at the end of
+  `MeleeWeapon.before_ability_used`, which every ability path calls
+  exactly once per real ability use (so it doubles as upstream's
+  afterAbilityUsed hook; lunge's blind no-target waste case spends its
+  charge outside it and correctly never counts). Bonus real bug fixed:
+  `Hero.deserialize` assigned a JSON-loaded untyped Dictionary straight
+  to the typed `talent_levels` Dictionary[String, int], which raises and
+  silently keeps the previous run's talents — now copied element-wise
+  (same bug class as the 2026-07-28 game_manager stats fix). New
+  `test_varied_charge.gd` (talent registration, same-weapon no refund,
+  different-weapon refund at +3, re-arm after trigger at +1, no-talent
+  no-tracker, save migration). Suite green (5305 checks). [ENGINE]: buff
+  is hidden and instant, so parity is headless-provable; a quick in-game
+  sanity pass as Champion is still welcome. Next: Monk talent trio
+  (blocked on porting upstream MonkEnergy) or Champion dual-wield parity
+  to unblock twin_upgrades/combined_lethality.
+
 - Tags: duelist, weapon-abilities, source-fidelity, tests
 - Greataxe Retribution ability shipped (upstream Greataxe.duelistAbility,
   current master): Greataxe exposes a targeted "Retribution" Duelist
