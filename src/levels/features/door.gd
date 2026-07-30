@@ -45,7 +45,10 @@ static func open(level: Level, pos: int, opener: Variant = null) -> bool:
 			if opener != null and opener.has_method("has_key"):
 				if opener.has_key("crystal"):
 					opener.use_key("crystal")
-					level.set_terrain(pos, ConstantsData.Terrain.OPEN_DOOR)
+					# Upstream Hero.actUnlock: crystal doors shatter away
+					# entirely (Level.set(doorCell, Terrain.EMPTY)) rather
+					# than becoming an open door.
+					level.set_terrain(pos, ConstantsData.Terrain.EMPTY)
 					if EventBus:
 						EventBus.door_opened.emit(pos)
 					if MessageLog:

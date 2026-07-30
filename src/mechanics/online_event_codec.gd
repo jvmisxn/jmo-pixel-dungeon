@@ -589,7 +589,9 @@ static func handle_door_opened_world_event(event: Dictionary, current_level: Var
 		return true
 	suppress_snapshot_feedback.call(suppressed_snapshot_doors, door_pos)
 	if current_level != null and current_level.has_method("set_terrain"):
-		current_level.set_terrain(door_pos, ConstantsData.Terrain.OPEN_DOOR)
+		# Crystal doors shatter to EMPTY; the host includes the resulting
+		# terrain in the event. Default to OPEN_DOOR for older events.
+		current_level.set_terrain(door_pos, int(event.get("terrain", ConstantsData.Terrain.OPEN_DOOR)))
 	on_door_opened.call(door_pos)
 	if effect_manager != null:
 		effect_manager.show_status(door_pos, "Open", Color(0.82, 0.72, 0.5))

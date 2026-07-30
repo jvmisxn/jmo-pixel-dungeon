@@ -30,10 +30,18 @@ static func on_door_opened(scene: Variant, pos: int) -> void:
 		return
 	if scene.tile_map:
 		scene.tile_map.update_tile_at(pos)
+	# Crystal doors shatter to EMPTY (upstream plays the teleport sound);
+	# ordinary doors open in place.
+	var result_terrain: int = ConstantsData.Terrain.OPEN_DOOR
+	if scene._current_level != null and scene._current_level.has_method("terrain_at"):
+		result_terrain = scene._current_level.terrain_at(pos)
 	if AudioManager:
-		AudioManager.play_sfx("door_open")
+		if result_terrain == ConstantsData.Terrain.EMPTY:
+			AudioManager.play_sfx("teleport")
+		else:
+			AudioManager.play_sfx("door_open")
 	if scene._is_online_host():
-		OnlineEventCodec.emit_world_event(NetworkManager, {"type": "door_opened", "pos": pos})
+		OnlineEventCodec.emit_world_event(NetworkManager, {"type": "door_opened", "pos": pos, "terrain": result_terrain})
 
 static func on_item_used_sfx(item_name: String) -> void:
 	if AudioManager == null:

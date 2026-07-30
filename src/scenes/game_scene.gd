@@ -873,11 +873,11 @@ func _apply_snapshot_world_feedback(previous_level_state: Dictionary) -> void:
 			var current_terrain: int = int(current_map[pos])
 			if previous_terrain == current_terrain:
 				continue
-			if current_terrain == ConstantsData.Terrain.OPEN_DOOR and previous_terrain in [
+			if (current_terrain == ConstantsData.Terrain.OPEN_DOOR and previous_terrain in [
 				ConstantsData.Terrain.DOOR,
 				ConstantsData.Terrain.LOCKED_DOOR,
-				ConstantsData.Terrain.CRYSTAL_DOOR,
-			]:
+			]) or (current_terrain == ConstantsData.Terrain.EMPTY
+					and previous_terrain == ConstantsData.Terrain.CRYSTAL_DOOR):
 				if _suppressed_snapshot_doors.has(pos):
 					_suppressed_snapshot_doors.erase(pos)
 					continue
