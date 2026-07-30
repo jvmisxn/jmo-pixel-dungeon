@@ -1,5 +1,36 @@
 # Change Log
 
+## 2026-07-30 (mystery-meat-family)
+
+- Tags: food, buffs, items, source-fidelity, tests
+- Mystery-meat family parity. `MysteryMeat.effect()` table replaced the
+  port's invented one (heal/poison/burn/paralysis, 4 cases): now upstream's
+  Random.Int(5) — Burning reignite / Rooted x2 duration / Poison HT/5 /
+  Slow / nothing.
+- `FrozenCarpaccio.effect()` likewise: Invisibility (20) / Barkskin HT/4
+  via `conditionally_append` / `Potion.PotionHealing.cure` / heal HT/4 /
+  nothing; removed the invented Haste/MindVision/Levitation table and the
+  non-upstream flat 5 HP heal.
+- New `chargrilled_meat` food (upstream ChargrilledMeat: energy 150, value
+  8, no effect), registered in `Generator._FOOD_IDS` + sprite indices
+  (STEAK 433; also added the missing `frozen_carpaccio` 436).
+- Frost parity fix in `Frozen.on_attach`: the freeze-carried-item branch was
+  a silent no-op on real heroes — it called `get_backpack_items()`, which
+  only the test fake implements; real `Belongings` exposes `backpack`. Now
+  reads the real backpack (fake fallback kept), excludes `unique` items,
+  and freezes ONE unit: potions shatter at the hero's cell, mystery meat
+  converts to a Frozen Carpaccio (collected, dropped if full) instead of
+  being destroyed outright. Split into static `freeze_carried_item()` for
+  deterministic tests.
+- Effect rolls split into `_mystery_effect(hero, roll)` /
+  `_carpaccio_effect(hero, roll)` so tests drive each case.
+- `test_mystery_meat_family.gd` (25 checks); existing `test_frozen.gd`
+  still passes against the new contract.
+- Not done (filed in backlog): `Heap.burn()`/`Heap.freeze()` item
+  conversion (fire chargrilling meat / freezing shattering potions on the
+  floor), Thief-steal freeze branch, Frost detach water-Chill, StewedMeat +
+  alchemy-pot cooking, Blandfruit chain.
+
 ## 2026-07-30 (amok-target-priority)
 
 - Tags: mobs, ai, buffs, source-fidelity, tests

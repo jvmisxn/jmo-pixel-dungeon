@@ -77,75 +77,88 @@ func eat(hero: Char) -> void:
 	_consume_one(hero)
 
 ## Apply a random effect for mystery meat.
+## Original: MysteryMeat.effect() — Random.Int(5); case 4 does nothing.
 func _apply_random_effect(hero: Char) -> void:
-	var roll: int = randi_range(0, 3)
-	match roll:
-		0:
-			# Heal a moderate amount
-			if hero.has_method("heal"):
-				hero.heal(randi_range(5, 10))
-			if MessageLog:
-				MessageLog.add_positive("That tasted alright!")
-		1:
-			# Poison
-			if hero.has_method("add_buff"):
-				var poison: Poison = Poison.new()
-				poison.set_duration(5.0)
-				hero.add_buff(poison)
-			if MessageLog:
-				MessageLog.add_negative("That meat was not fresh at all!")
-		2:
-			# Burn
-			if hero.has_method("add_buff"):
-				var burn: Burning = Burning.new()
-				burn.set_duration(4.0)
-				hero.add_buff(burn)
-			if MessageLog:
-				MessageLog.add_negative("It burns your throat!")
-		3:
-			# Paralyze
-			if hero.has_method("add_buff"):
-				var para: Paralysis = Paralysis.new()
-				para.set_duration(5.0)
-				hero.add_buff(para)
-			if MessageLog:
-				MessageLog.add_negative("You can't move!")
+	_mystery_effect(hero, randi_range(0, 4))
 
-## Apply a random positive buff for frozen carpaccio.
-func _apply_carpaccio_buff(hero: Char) -> void:
+## Effect body with an explicit roll so headless tests can drive each case.
+func _mystery_effect(hero: Char, roll: int) -> void:
 	if hero == null or not hero.has_method("add_buff"):
 		return
-	var roll: int = randi_range(0, 4)
 	match roll:
 		0:
-			var inv: Invisibility = Invisibility.new()
-			inv.set_duration(10.0)
-			hero.add_buff(inv)
+			# Original: Buff.affect(hero, Burning.class).reignite(hero)
+			var burn: Variant = hero.get_buff("Burning") if hero.has_method("get_buff") else null
+			if burn == null:
+				burn = Burning.new()
+				hero.add_buff(burn)
+			if burn.has_method("reignite"):
+				burn.reignite()
+			if MessageLog:
+				MessageLog.add_negative("Oh no, it's hot!")
+		1:
+			# Original: Buff.prolong(hero, Roots.class, Roots.DURATION*2)
+			var roots: Variant = hero.get_buff("Rooted") if hero.has_method("get_buff") else null
+			if roots == null:
+				roots = Rooted.new()
+				hero.add_buff(roots)
+			roots.set_duration(Rooted.BASE_DURATION * 2.0)
+			if MessageLog:
+				MessageLog.add_negative("You can't feel your legs!")
+		2:
+			# Original: Buff.affect(hero, Poison.class).set(hero.HT / 5)
+			var poison: Poison = Poison.new()
+			poison.set_duration(float(hero.ht) / 5.0)
+			hero.add_buff(poison)
+			if MessageLog:
+				MessageLog.add_negative("You are not feeling well.")
+		3:
+			# Original: Buff.prolong(hero, Slow.class, Slow.DURATION)
+			var slow: Variant = hero.get_buff("Slow") if hero.has_method("get_buff") else null
+			if slow == null:
+				slow = Slow.new()
+				hero.add_buff(slow)
+			slow.set_duration(Slow.BASE_DURATION)
+			if MessageLog:
+				MessageLog.add_negative("You are stuffed.")
+		_:
+			# Case 4: no effect.
+			pass
+
+## Apply a random effect for frozen carpaccio.
+## Original: FrozenCarpaccio.effect() — Random.Int(5); case 4 does nothing.
+func _apply_carpaccio_buff(hero: Char) -> void:
+	_carpaccio_effect(hero, randi_range(0, 4))
+
+## Effect body with an explicit roll so headless tests can drive each case.
+func _carpaccio_effect(hero: Char, roll: int) -> void:
+	if hero == null or not hero.has_method("add_buff"):
+		return
+	match roll:
+		0:
+			# Original: Buff.affect(hero, Invisibility.class, Invisibility.DURATION)
+			hero.add_buff(Invisibility.new())
 			if MessageLog:
 				MessageLog.add_positive("You feel your body fade from sight.")
 		1:
-			var haste_buff: Haste = Haste.new()
-			haste_buff.set_duration(10.0)
-			hero.add_buff(haste_buff)
+			# Original: Barkskin.conditionallyAppend(hero, hero.HT / 4, 1)
+			Barkskin.conditionally_append(hero, int(hero.ht / 4.0), 1)
 			if MessageLog:
-				MessageLog.add_positive("You feel invigorated!")
+				MessageLog.add_positive("Your skin hardens.")
 		2:
-			var mind: MindVision = MindVision.new()
-			mind.set_duration(10.0)
-			hero.add_buff(mind)
+			# Original: PotionOfHealing.cure(hero) — debuff cleanse only
+			Potion.PotionHealing.cure(hero)
 			if MessageLog:
-				MessageLog.add_positive("You can sense the minds of others!")
+				MessageLog.add_positive("You feel refreshed.")
 		3:
+			# Original: hero.HP = min(HP + HT/4, HT)
 			if hero.has_method("heal"):
-				hero.heal(randi_range(8, 15))
+				hero.heal(int(hero.ht / 4.0))
 			if MessageLog:
-				MessageLog.add_positive("Warmth fills your body.")
-		4:
-			var levi: Levitation = Levitation.new()
-			levi.set_duration(10.0)
-			hero.add_buff(levi)
-			if MessageLog:
-				MessageLog.add_positive("You feel weightless!")
+				MessageLog.add_positive("You feel better!")
+		_:
+			# Case 4: no effect.
+			pass
 
 ## Remove one quantity from the stack, removing the item if depleted.
 func _consume_one(hero: Char) -> void:
@@ -164,6 +177,12 @@ func value() -> int:
 			return 30 * quantity
 		"meat_pie":
 			return 25 * quantity
+		"mystery_meat":
+			# Original: MysteryMeat.value() = 5 * quantity
+			return 5 * quantity
+		"chargrilled_meat":
+			# Original: ChargrilledMeat.value() = 8 * quantity
+			return 8 * quantity
 		_:
 			return 10 * quantity
 
@@ -233,12 +252,20 @@ static func create(food_id: String) -> Food:
 			food.heal_amount = 0
 			food.icon_color = Color(0.75, 0.5, 0.2)
 
+		"chargrilled_meat":
+			food.item_name = "Chargrilled Meat"
+			food.description = "The meat of a slain monster, chargrilled to remove any nasty effects."
+			# Original: ChargrilledMeat energy = Hunger.HUNGRY/2 = 150
+			food.hunger_satisfy = 150.0
+			food.heal_amount = 0
+			food.icon_color = Color(0.6, 0.35, 0.2)
+
 		"frozen_carpaccio":
 			food.item_name = "Frozen Carpaccio"
-			food.description = "Thinly sliced frozen meat. Heals and grants a random positive effect."
-			# Original: FrozenCarpaccio uses Hunger.HUNGRY/2 = 150
+			food.description = "A slice of frozen raw meat. Eating it may grant a random positive effect."
+			# Original: FrozenCarpaccio energy = Hunger.HUNGRY/2 = 150, no flat heal
 			food.hunger_satisfy = 150.0
-			food.heal_amount = 5
+			food.heal_amount = 0
 			food.random_effect = false  # Uses custom carpaccio logic
 			food.icon_color = Color(0.5, 0.7, 0.9)
 

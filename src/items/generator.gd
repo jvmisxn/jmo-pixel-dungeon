@@ -387,7 +387,7 @@ const _SCROLL_IDS: Array[String] = [
 
 const _FOOD_IDS: Array[String] = [
 	"ration", "pasty", "mystery_meat", "overpriced_ration",
-	"small_ration", "frozen_carpaccio", "meat_pie",
+	"small_ration", "frozen_carpaccio", "meat_pie", "chargrilled_meat",
 ]
 
 ## Seed color lookup.
@@ -838,6 +838,8 @@ const SPRITE_INDICES: Dictionary = {
 	"seed_of_blindweed": 395,
 	# --- Food (row 28) ---
 	"mystery_meat": 432,
+	"chargrilled_meat": 433,
+	"frozen_carpaccio": 436,
 	"ration": 437,
 	"pasty": 438,
 	"meat_pie": 439,
