@@ -551,6 +551,11 @@ func ability_damage_boost() -> int:
 func before_ability_used(hero: Variant, charge_use: float) -> void:
 	if hero == null or not hero.has_method("get_buff"):
 		return
+	# Route attack math through this weapon for the ability strike (upstream
+	# beforeAbilityUsed sets Belongings.abilityWeapon; the hero's weapon-
+	# ability wrapper clears it once the ability resolves).
+	if hero.get("belongings") != null:
+		hero.belongings.ability_weapon = self
 	var charger: Variant = hero.get_buff("WeaponCharger")
 	if charger is WeaponCharger:
 		charger.partial_charge -= charge_use

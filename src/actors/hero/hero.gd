@@ -718,11 +718,22 @@ func _do_meditate_ability(energy: MonkEnergy) -> void:
 	_ability_spend = 5.0
 
 func _do_weapon_ability(item: Variant, target_pos: int) -> void:
+	_weapon_ability_body(item, target_pos)
+	# before_ability_used set the transient attacking-weapon override; every
+	# ability path resolves synchronously above (upstream afterAbilityUsed
+	# nulls Belongings.abilityWeapon).
+	if belongings != null:
+		belongings.ability_weapon = null
+
+func _weapon_ability_body(item: Variant, target_pos: int) -> void:
 	_ability_spend = 0.0
 	if not (item is MeleeWeapon) or belongings == null or level == null or target_pos < 0:
 		return
 	var weapon: MeleeWeapon = item as MeleeWeapon
-	if belongings.weapon != weapon or hero_class != ConstantsData.HeroClass.DUELIST \
+	# The Champion off-hand weapon's ability is usable too (upstream
+	# KindOfWeapon.isEquipped covers wep and secondWep).
+	if (belongings.weapon != weapon and belongings.second_wep != weapon) \
+			or hero_class != ConstantsData.HeroClass.DUELIST \
 			or not weapon.has_duelist_ability():
 		return
 	if str_val < weapon.get_str_requirement():

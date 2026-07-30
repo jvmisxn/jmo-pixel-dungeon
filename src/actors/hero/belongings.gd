@@ -13,6 +13,9 @@ const QUICKSLOT_COUNT: int = 6
 var weapon: Item = null
 ## Champion (Duelist) off-hand weapon slot (upstream Belongings.secondWep).
 var second_wep: Item = null
+## Transient weapon override while a duelist ability strike resolves
+## (upstream Belongings.abilityWeapon; never serialized).
+var ability_weapon: Item = null
 ## Currently equipped armor (Item subclass or null).
 var armor: Item = null
 ## Currently equipped artifact (Item subclass or null).
@@ -379,8 +382,13 @@ func find_item(search_name: String) -> Item:
 				return slot
 	return null
 
-## Return the currently equipped weapon.
+## Return the weapon attack math should use: the ability weapon while a
+## duelist ability strike resolves, else the primary (upstream
+## Belongings.attackingWeapon; Champion off-hand abilities attack with the
+## off-hand weapon, all regular attacks use the primary).
 func get_equipped_weapon() -> Item:
+	if ability_weapon != null:
+		return ability_weapon
 	return weapon
 
 ## Return the currently equipped armor.
