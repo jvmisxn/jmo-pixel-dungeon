@@ -2,6 +2,20 @@
 
 ## 2026-07-29
 
+- Tags: duelist, monk, abilities, movement, source-fidelity, tests
+- Monk Dash ability shipped (upstream `MonkEnergy.MonkAbility.Dash`):
+  `_do_monk_ability` kind "dash" — costs 3 energy, targets an empty cell
+  within Chebyshev range 4 (8 while `abilities_empowered()`), requires a
+  clear PROJECTILE Ballistica line (collision must equal the target,
+  heroes+mobs marked occupied) and a passable target cell, then moves the
+  hero (same move/event/`_check_terrain_effects` block as Rapier Lunge)
+  and is instant (upstream `hero.next()`, `_ability_spend` stays 0).
+  Refusals (short energy, rooted, out-of-range, occupied cell, blocked
+  line/wall cell) are all free. Upstream door-leave/jump-vfx cosmetics
+  not ported. Test: `test_monk_dash_ability.gd` (4 cases, 15 checks).
+  Like Flurry/Focus, NOT yet player-reachable pending the monk ability
+  picker UI. Remaining monk abilities: Dragon Kick, Meditate.
+
 - Tags: duelist, monk, abilities, combat, source-fidelity, tests
 - Monk Focus ability shipped (upstream `MonkEnergy.MonkAbility.Focus`):
   `_do_monk_ability` kind "focus" — costs 2 energy, no target, applies
