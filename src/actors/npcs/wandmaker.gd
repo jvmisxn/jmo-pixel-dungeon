@@ -14,23 +14,6 @@ var wand_choice_a: Variant = null
 var wand_choice_b: Variant = null
 var reward_given: bool = false
 
-# --- Wand Pool ---
-const WAND_POOL: Array = [
-	["wand_of_magic_missile", "Wand of Magic Missile"],
-	["wand_of_fire_bolt", "Wand of Fire Bolt"],
-	["wand_of_frost", "Wand of Frost"],
-	["wand_of_lightning", "Wand of Lightning"],
-	["wand_of_disintegration", "Wand of Disintegration"],
-	["wand_of_corruption", "Wand of Corruption"],
-	["wand_of_blast_wave", "Wand of Blast Wave"],
-	["wand_of_living_earth", "Wand of Living Earth"],
-	["wand_of_prismatic_light", "Wand of Prismatic Light"],
-	["wand_of_transfusion", "Wand of Transfusion"],
-	["wand_of_warding", "Wand of Warding"],
-	["wand_of_regrowth", "Wand of Regrowth"],
-	["wand_of_corrosion", "Wand of Corrosion"],
-]
-
 # ---------------------------------------------------------------------------
 # Initialization
 # ---------------------------------------------------------------------------
@@ -80,25 +63,28 @@ func _pick_requested_seed() -> void:
 			requested_seed_name = "Rotberry Seed"
 
 func _generate_wand_rewards() -> void:
-	# Pick two distinct random wands from the pool
-	var indices: Array[int] = []
-	for i: int in range(WAND_POOL.size()):
-		indices.append(i)
-	indices.shuffle()
+	# Upstream Wandmaker.Quest.spawn: both rewards come from the Generator
+	# wand deck; second draws matching the first are rerolled and shuffled
+	# back in via Generator.undoDrop. Each reward is uncursed then upgraded
+	# once on top of its random() roll.
+	wand_choice_a = _prepare_reward_wand(Generator.random_wand())
+	var second: Variant = Generator.random_wand()
+	var rerolled: Array[String] = []
+	while wand_choice_a != null and second != null \
+			and second.item_id == wand_choice_a.item_id:
+		rerolled.append(second.item_id)
+		second = Generator.random_wand()
+	for undo_id: String in rerolled:
+		Generator.undo_drop(undo_id)
+	wand_choice_b = _prepare_reward_wand(second)
 
-	var pick_a: Array = WAND_POOL[indices[0]]
-	var pick_b: Array = WAND_POOL[indices[1]]
-
-	wand_choice_a = _create_reward_wand(pick_a[0], pick_a[1])
-	wand_choice_b = _create_reward_wand(pick_b[0], pick_b[1])
-
-func _create_reward_wand(wand_id: String, fallback_name: String) -> Variant:
-	var wand: Variant = Generator.create_item(wand_id)
-	if wand == null:
-		wand = Wand.create(wand_id)
+func _prepare_reward_wand(wand: Variant) -> Variant:
 	if wand == null:
 		return null
-	wand.item_name = fallback_name
+	wand.cursed = false
+	wand.upgrade()
+	# Upstream identifies only the chosen reward (WndWandmaker); the port
+	# identifies both up front so the reward window can show real names.
 	if wand.has_method("identify"):
 		wand.identify()
 	else:
