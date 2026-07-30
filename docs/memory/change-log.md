@@ -1,5 +1,27 @@
 # Change Log
 
+## 2026-07-30 (missile-item-procs)
+
+- Tags: items, source-fidelity, tests
+- Per-item missile hit procs (upstream Tomahawk.proc / FishingSpear.proc):
+  new `MissileWeapon.proc_hit(attacker, defender, damage)` hook called from
+  `hero.gd:_resolve_ranged_attack` after DR/Vulnerable and before the
+  sniper shared-enchantment + enchantment procs, mirroring upstream's
+  subclass proc -> super chain (upstream Char.attack calls attackProc
+  after armor/Vulnerable too).
+- Tomahawk: applies Bleeding set to augment-scaled
+  NormalFloat(3 + lvl/2, 6 + lvl), lvl = buffed_lvl() + Ring of
+  Sharpshooting bonus — level-based per current upstream, NOT the old
+  damage*0.6 formula some notes assumed; merges into an existing bleed
+  via set_level (max).
+- Fishing spear: damage floored at half the piranha's current HP
+  (`maxi(damage, floori(hp/2))`), other targets untouched.
+- One-line fragile-file edit in hero.gd (proc_hit call); gdparse clean.
+- Tests: `test_missile_item_procs.gd` (bleed range scaling, buff apply +
+  merge, piranha floor/passthrough, no-proc missiles unchanged).
+- Still open (backlog): kunai sneak damageRoll boost, shuriken instant
+  first throw tracker, club/hammer pickupDelay 0.
+
 ## 2026-07-30 (missile-tier-roster-parity)
 
 - Tags: items, source-fidelity, tests

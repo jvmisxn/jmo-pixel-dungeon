@@ -111,6 +111,56 @@ func apply_special_effect(target: Variant) -> void:
 					MessageLog.add("The dart leaves its target paralyzed!")
 
 # ---------------------------------------------------------------------------
+# Per-Item Hit Procs
+# ---------------------------------------------------------------------------
+
+## Upstream per-item MissileWeapon subclass proc(attacker, defender, damage)
+## overrides (Tomahawk, FishingSpear). Called from the hero ranged path after
+## DR/Vulnerable but before shared-enchantment and enchantment procs, matching
+## upstream's subclass proc -> super chain. Returns the (possibly modified)
+## damage.
+func proc_hit(attacker: Variant, defender: Variant, damage: int) -> int:
+	match item_id:
+		"tomahawk":
+			_apply_tomahawk_bleed(attacker, defender)
+		"fishing_spear":
+			# Upstream FishingSpear.proc: against piranhas the hit deals at
+			# least half the target's current HP.
+			if defender is Piranha:
+				damage = maxi(damage, floori(float(defender.hp) / 2.0))
+	return damage
+
+## Upstream Tomahawk.minBleed/maxBleed: 3 + lvl/2 .. 6 + lvl, where lvl is
+## buffedLvl() plus the Ring of Sharpshooting damage bonus. Augment multiplier
+## is NOT applied here; the proc applies it to the rolled value.
+func tomahawk_bleed_range(owner: Variant = null) -> Array[float]:
+	var lvl: int = buffed_lvl()
+	if owner != null:
+		lvl += Ring.sharpshooting_level_bonus(owner)
+	return [3.0 + lvl / 2.0, 6.0 + float(lvl)]
+
+## Upstream Tomahawk.proc: Bleeding.set(augment.damageFactor(
+## Random.NormalFloat(minBleed, maxBleed))) — level-based, independent of the
+## damage dealt and unaffected by armor.
+func _apply_tomahawk_bleed(attacker: Variant, defender: Variant) -> void:
+	if defender == null or not defender.has_method("add_buff"):
+		return
+	var bleed_range: Array[float] = tomahawk_bleed_range(attacker)
+	# Random.NormalFloat: average of two uniform rolls in [min, max].
+	var roll: float = (
+		randf_range(bleed_range[0], bleed_range[1])
+		+ randf_range(bleed_range[0], bleed_range[1])
+	) / 2.0
+	var amount: float = _augment_damage_multiplier() * roll
+	var bleeding: Bleeding = null
+	if defender.has_method("get_buff"):
+		bleeding = defender.get_buff("Bleeding") as Bleeding
+	if bleeding == null:
+		bleeding = Bleeding.new()
+		defender.add_buff(bleeding)
+	bleeding.set_level(amount)
+
+# ---------------------------------------------------------------------------
 # Damage
 # ---------------------------------------------------------------------------
 

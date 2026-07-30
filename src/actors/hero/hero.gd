@@ -1400,6 +1400,7 @@ func _resolve_ranged_attack(target: Char, item: Variant) -> bool:
 		if target.has_buff("Vulnerable"):
 			effective_damage = int(effective_damage * 1.33)
 		if item is MissileWeapon and not (item is SpiritBow):
+			effective_damage = (item as MissileWeapon).proc_hit(self, target, effective_damage)
 			effective_damage = _shared_enchantment_proc(item, target, effective_damage)
 		if item.has_method("proc_enchantment"):
 			effective_damage = item.proc_enchantment(self, target, effective_damage)
