@@ -161,8 +161,12 @@ and pitfall/chasm landing parity including fallen-item heap drops
    no-surprise-attack gap logged in backlog). 2026-07-29: Greataxe
    Retribution shipped (below-half-HP-only guaranteed hit, +15+2*lvl,
    instant on kill, `test_weapon_ability_retribution.gd`) — every melee
-   weapon in the roster now has its Duelist ability. Next talent
-   milestone = the Champion/Monk subclass talents.
+   weapon in the roster now has its Duelist ability. 2026-07-29:
+   Champion talent set reshaped to upstream (varied_charge live with
+   `test_varied_charge.gd`; twin_upgrades + combined_lethality registered
+   inert, blocked on dual-wield secondary-weapon parity). Next talent
+   milestone = Monk talents (blocked on MonkEnergy) or Champion
+   dual-wield parity.
 2. Examine/info windows — DONE 2026-07-27 (foundation + desc content +
    toolbar/X entry + region tile overrides + heap multi-item chooser +
    tappable buff icons shipped 2026-07-24; styled WndInfoTrap/WndInfoPlant +

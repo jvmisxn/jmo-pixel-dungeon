@@ -502,6 +502,27 @@ func before_ability_used(hero: Variant, charge_use: float) -> void:
 		var barrier: Barrier = hero.add_buff(Barrier.new()) as Barrier
 		if barrier != null:
 			barrier.set_shield(maxi(barrier.get_shielding(), 1 + 2 * barrier_points))
+	# Varied Charge (upstream MeleeWeapon.afterAbilityUsed): every caller
+	# invokes before_ability_used exactly once per real ability use, so the
+	# after-hook talent lives here too. Using an ability with a different
+	# weapon than the tracked one consumes the tracker and refunds points/6
+	# charge; otherwise the tracker records this weapon.
+	var varied_points: int = 0
+	if hero.has_method("get_talent_level"):
+		varied_points = hero.get_talent_level("champion_varied_charge")
+	if varied_points > 0 and hero.has_method("add_buff"):
+		var tracker: Variant = hero.get_buff("VariedChargeTracker")
+		if tracker is VariedChargeTracker \
+				and (tracker as VariedChargeTracker).weapon_id != "" \
+				and (tracker as VariedChargeTracker).weapon_id != item_id:
+			hero.remove_buff(tracker)
+			if charger is WeaponCharger:
+				(charger as WeaponCharger).gain_charge(float(varied_points) / 6.0)
+		else:
+			if not (tracker is VariedChargeTracker):
+				tracker = hero.add_buff(VariedChargeTracker.new())
+			if tracker is VariedChargeTracker:
+				(tracker as VariedChargeTracker).weapon_id = item_id
 
 # ---------------------------------------------------------------------------
 # Serialization

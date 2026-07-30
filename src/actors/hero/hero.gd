@@ -2061,13 +2061,29 @@ func deserialize(data: Dictionary) -> void:
 	xp_to_next = data.get("xp_to_next", ConstantsData.xp_for_level(hero_level))
 	# Pre-v6 saves stored a shared "talent_points_available" pool; availability
 	# is now derived per tier from hero_level and talent_levels, so it is ignored.
-	talent_levels = data.get("talent_levels", {}).duplicate(true)
+	# Copied element-wise: assigning a JSON-loaded untyped Dictionary to the
+	# typed Dictionary[String, int] raises and silently keeps old values.
+	talent_levels.clear()
+	var loaded_talents: Variant = data.get("talent_levels", {})
+	if loaded_talents is Dictionary:
+		for talent_key: Variant in (loaded_talents as Dictionary):
+			talent_levels[str(talent_key)] = int((loaded_talents as Dictionary)[talent_key])
 	# Migrate the retired mage_energizing_upgrade slot (removed upstream) to
 	# its replacement Shield Battery, clamped to the new 2-point cap.
 	if talent_levels.has("mage_energizing_upgrade"):
 		var old_points: int = mini(int(talent_levels["mage_energizing_upgrade"]), 2)
 		talent_levels.erase("mage_energizing_upgrade")
 		talent_levels["mage_shield_battery"] = maxi(old_points, int(talent_levels.get("mage_shield_battery", 0)))
+	# Migrate the retired inert Champion groundwork slots to their upstream
+	# replacements (Varied Charge / Twin Upgrades), keeping spent points.
+	if talent_levels.has("champion_dual_mastery"):
+		var dual_points: int = mini(int(talent_levels["champion_dual_mastery"]), 3)
+		talent_levels.erase("champion_dual_mastery")
+		talent_levels["champion_varied_charge"] = maxi(dual_points, int(talent_levels.get("champion_varied_charge", 0)))
+	if talent_levels.has("champion_guarded_offense"):
+		var guarded_points: int = mini(int(talent_levels["champion_guarded_offense"]), 3)
+		talent_levels.erase("champion_guarded_offense")
+		talent_levels["champion_twin_upgrades"] = maxi(guarded_points, int(talent_levels.get("champion_twin_upgrades", 0)))
 	hero_name = data.get("hero_name", HeroClassData.get_class_name_str(hero_class))
 	owner_peer_id = int(data.get("owner_peer_id", 1))
 	hero_slot_index = int(data.get("hero_slot_index", 0))
