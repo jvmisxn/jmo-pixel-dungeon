@@ -161,6 +161,31 @@ func attack(target: Char, dmg_multi: float = 1.0, dmg_bonus: float = 0.0, acc_mu
 			if MessageLog:
 				MessageLog.add_positive("Assassinated!")
 
+		# Combined Lethality: a melee hit with a different weapon than the one
+		# whose ability armed the tracker executes non-boss hostiles at or
+		# below 0.4*points/3 of max HP, and consumes the tracker either way
+		# (SPD Char.attack CombinedLethalityAbilityTracker block).
+		var cl_buff: Node = get_buff("CombinedLethalityAbilityTracker")
+		if cl_buff != null and is_hero and get("belongings") != null:
+			var cl_wep: Variant = get("belongings").get_equipped_weapon()
+			if cl_wep is MeleeWeapon and cl_buff.get("weapon") != cl_wep:
+				var cl_points: int = 0
+				if has_method("get_talent_level"):
+					cl_points = int(call("get_talent_level", "champion_combined_lethality"))
+				var cl_miniboss: bool = target.get("_properties") is Array \
+						and (target.get("_properties") as Array).has("MINIBOSS")
+				if target.is_alive and not target.is_hero \
+						and not (target is Mob and (target as Mob).is_ally) \
+						and not (target.has_method("is_boss") and target.is_boss()) \
+						and not cl_miniboss \
+						and float(target.hp) / float(maxi(target.hp_max, 1)) \
+								<= 0.4 * float(cl_points) / 3.0:
+					target.hp = 0
+					target.die(self)
+					if MessageLog:
+						MessageLog.add_positive("Executed!")
+				remove_buff(cl_buff)
+
 		# Notify buffs of damage dealt
 		for b: Node in _buffs:
 			if b.has_method("on_damage_dealt"):

@@ -721,9 +721,30 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 	_weapon_ability_body(item, target_pos)
 	# before_ability_used set the transient attacking-weapon override; every
 	# ability path resolves synchronously above (upstream afterAbilityUsed
-	# nulls Belongings.abilityWeapon).
+	# nulls Belongings.abilityWeapon). A still-set override also means the
+	# ability really ran rather than being refused.
+	var ability_ran: bool = belongings != null and belongings.ability_weapon != null
 	if belongings != null:
 		belongings.ability_weapon = null
+	# Combined Lethality arm/consume (upstream MeleeWeapon.afterAbilityUsed):
+	# this runs after the strike, so the Char.attack execute check saw the
+	# tracker armed by the previous ability, not this one.
+	if ability_ran and item is MeleeWeapon \
+			and get_talent_level("champion_combined_lethality") > 0:
+		var cl_tracker: Variant = get_buff("CombinedLethalityAbilityTracker")
+		if cl_tracker is CombinedLethalityAbilityTracker \
+				and (cl_tracker as CombinedLethalityAbilityTracker).weapon != null \
+				and (cl_tracker as CombinedLethalityAbilityTracker).weapon != item:
+			# A different weapon's non-attack ability spent the window without
+			# an executing hit (upstream detach branch).
+			remove_buff(cl_tracker)
+		else:
+			if not (cl_tracker is CombinedLethalityAbilityTracker):
+				cl_tracker = add_buff(CombinedLethalityAbilityTracker.new())
+			if cl_tracker is CombinedLethalityAbilityTracker:
+				(cl_tracker as CombinedLethalityAbilityTracker).weapon = item
+				(cl_tracker as CombinedLethalityAbilityTracker).postpone(
+						maxf(_ability_spend, 1.0))
 
 func _weapon_ability_body(item: Variant, target_pos: int) -> void:
 	_ability_spend = 0.0
