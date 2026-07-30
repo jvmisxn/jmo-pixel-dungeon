@@ -99,6 +99,98 @@ func sale_price() -> int:
 	return top.value() * 5
 
 # ---------------------------------------------------------------------------
+# Fire / Frost interaction (upstream Heap.burn / Heap.freeze)
+# ---------------------------------------------------------------------------
+# The live level stores heaps as `{pos, item, type}` dictionaries in
+# `Level.heaps` (one item each), so these operate on that contract rather than
+# on Heap instances. Only plain floor heaps (`type == "heap"`) react, matching
+# upstream's `type != Type.HEAP` early-out for chests/skeletons/shop stock.
+
+## Upstream Heap.burn: fire destroys non-unique scrolls, evaporates dewdrops,
+## cooks mystery meat and frozen carpaccio into chargrilled meat, and
+## detonates bombs lying on the floor. Returns true when anything changed.
+static func burn_at(lvl: Variant, cell: int) -> bool:
+	if lvl == null or lvl.get("heaps") == null:
+		return false
+	var changed: bool = false
+	for heap: Dictionary in lvl.heaps.duplicate():
+		if int(heap.get("pos", -1)) != cell or String(heap.get("type", "heap")) != "heap":
+			continue
+		var item: Variant = heap.get("item")
+		if item == null:
+			continue
+		if item is Bomb:
+			lvl.heaps.erase(heap)
+			if MessageLog:
+				MessageLog.add_warning("The fire sets off the %s!" % item.item_name)
+			item.detonate(cell, lvl)
+			# Upstream: a destructive explosion replaces the rest of the burn.
+			return true
+		elif (
+			item.get("category") == ConstantsData.ItemCategory.SCROLL
+			and item.get("unique") != true
+			and item.get("item_id") != "upgrade"
+		):
+			# Scroll of Upgrade is flagged `unique` upstream and survives fire.
+			lvl.heaps.erase(heap)
+			changed = true
+		elif item.get("item_id") == "dewdrop":
+			lvl.heaps.erase(heap)
+			changed = true
+		elif item.get("item_id") == "mystery_meat" or item.get("item_id") == "frozen_carpaccio":
+			var cooked: Food = Food.create("chargrilled_meat")
+			cooked.quantity = maxi(1, int(item.get("quantity")) if item.get("quantity") != null else 1)
+			heap["item"] = cooked
+			changed = true
+	return changed
+
+## Upstream Heap.freeze: frost shatters non-unique potions where they lie,
+## converts mystery meat into frozen carpaccio, and snuffs lit bomb fuses.
+## The port tracks armed bombs in `Level.pending_bombs` instead of in heaps,
+## so a frozen fuse returns the bomb to the floor as a plain heap.
+## Returns true when anything changed.
+static func freeze_at(lvl: Variant, cell: int) -> bool:
+	if lvl == null or lvl.get("heaps") == null:
+		return false
+	var changed: bool = false
+	for heap: Dictionary in lvl.heaps.duplicate():
+		if int(heap.get("pos", -1)) != cell or String(heap.get("type", "heap")) != "heap":
+			continue
+		var item: Variant = heap.get("item")
+		if item == null:
+			continue
+		if (
+			item.get("category") == ConstantsData.ItemCategory.POTION
+			and item.get("unique") != true
+			and item.get("item_id") != "strength"
+		):
+			# Potion of Strength is flagged `unique` upstream and survives frost.
+			lvl.heaps.erase(heap)
+			changed = true
+			if MessageLog:
+				MessageLog.add_warning("The cold shatters the %s!" % item.item_name)
+			if item.has_method("shatter"):
+				item.shatter(cell, lvl)
+		elif item.get("item_id") == "mystery_meat":
+			var carpaccio: Food = Food.create("frozen_carpaccio")
+			carpaccio.quantity = maxi(1, int(item.get("quantity")) if item.get("quantity") != null else 1)
+			heap["item"] = carpaccio
+			changed = true
+	if lvl.get("pending_bombs") != null and not lvl.pending_bombs.is_empty():
+		var remaining: Array[Dictionary] = []
+		for entry: Dictionary in lvl.pending_bombs:
+			if int(entry.get("pos", -1)) == cell and entry.get("bomb") != null:
+				changed = true
+				if MessageLog:
+					MessageLog.add("The bomb's fuse fizzles out.")
+				if lvl.has_method("drop_item"):
+					lvl.drop_item(cell, entry.get("bomb"))
+			else:
+				remaining.append(entry)
+		lvl.pending_bombs = remaining
+	return changed
+
+# ---------------------------------------------------------------------------
 # Serialization
 # ---------------------------------------------------------------------------
 

@@ -19,10 +19,11 @@ func _apply_effects() -> void:
 	super._apply_effects()
 	if level == null:
 		return
-	if not level.has_method("get_terrain") or not level.has_method("set_terrain"):
-		return
+	var can_harden: bool = level.has_method("get_terrain") and level.has_method("set_terrain")
 	for cell: int in active_cells:
 		if density[cell] <= min_density:
 			continue
-		if level.get_terrain(cell) == ConstantsData.Terrain.WATER:
+		# Upstream Freezing.evolve freezes any heap in a frozen cell.
+		Heap.freeze_at(level, cell)
+		if can_harden and level.get_terrain(cell) == ConstantsData.Terrain.WATER:
 			level.set_terrain(cell, ConstantsData.Terrain.EMPTY)

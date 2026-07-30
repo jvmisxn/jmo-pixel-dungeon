@@ -1,5 +1,33 @@
 # Change Log
 
+## 2026-07-30 (heap-burn-freeze)
+
+- Tags: items, blobs, source-fidelity, tests
+- Heap fire/frost parity (upstream `Heap.burn`/`Heap.freeze`): new static
+  `Heap.burn_at(level, cell)` / `Heap.freeze_at(level, cell)` operating on
+  the live `Level.heaps` `{pos, item, type}` dictionaries; only plain
+  `"heap"` heaps react (containers/shop stock untouched, upstream
+  `type != Type.HEAP` early-out).
+- Burn: destroys non-unique scrolls, evaporates dewdrops, chargrills
+  mystery meat + frozen carpaccio (quantity preserved), detonates floor
+  bombs (detonation ends that cell's burn pass, upstream
+  explodesDestructively). Freeze: shatters non-unique potions in place,
+  converts mystery meat to frozen carpaccio, snuffs armed fuses — port
+  adaptation: `Level.pending_bombs` entry at the cell is removed and the
+  bomb returns to the floor as a heap (upstream freezes the fuse in-heap).
+- Upstream flags Scroll of Upgrade + Potion of Strength `unique` so
+  fire/frost never destroy guaranteed progression items; the port doesn't
+  set those flags, so both are excluded by item_id with comments.
+  (`Frozen.freeze_carried_item`'s unique-only check shares this gap for
+  carried strength potions — noted in backlog.)
+- Wiring: `FireBlob._apply_effects` calls `burn_at`, `FreezingBlob`
+  calls `freeze_at` for each active cell above `min_density` (upstream
+  Fire.evolve/Freezing.evolve heap hooks); FreezingBlob's terrain guard
+  no longer skips heap freezing on levels without set_terrain.
+- `test_heap_burn_freeze.gd` (25 checks): scroll/dew/meat/bomb burn,
+  container skip, potion shatter + strength survival, meat freeze,
+  armed-fuse snuff round-trip, and blob wiring both directions.
+
 ## 2026-07-30 (mystery-meat-family)
 
 - Tags: food, buffs, items, source-fidelity, tests
