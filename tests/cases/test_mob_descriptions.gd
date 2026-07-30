@@ -4,8 +4,8 @@ extends RefCounted
 ## so the examine-mode WndInfoMob never falls back to placeholder text.
 
 const FACTORY_IDS: Array[String] = [
-	"rat", "fetid_rat", "gnoll", "crab", "great_crab", "snake", "slime",
-	"swarm", "gnoll_trickster",
+	"rat", "albino", "fetid_rat", "gnoll", "crab", "great_crab", "snake",
+	"slime", "caustic_slime", "swarm", "gnoll_trickster",
 	"skeleton", "thief", "guard", "necromancer", "bandit",
 	"bat", "brute", "shaman", "spinner", "dm100", "dm200", "dm201",
 	"warlock", "monk", "golem", "elemental",
