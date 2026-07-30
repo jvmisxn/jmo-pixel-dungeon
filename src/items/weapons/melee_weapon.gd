@@ -19,6 +19,19 @@ func get_reach() -> int:
 	return r
 
 # ---------------------------------------------------------------------------
+# Surprise Attack
+# ---------------------------------------------------------------------------
+
+## Flails swing too wildly to land precise sneak attacks, unless the
+## hero is mid-Spin (upstream Hero.canSurpriseAttack: a Flail blocks
+## surprise attacks except while its SpinAbilityTracker is active).
+func can_surprise_attack(hero: Char) -> bool:
+	if item_id == "flail" and hero != null \
+			and hero.get_buff("SpinAbilityTracker") == null:
+		return false
+	return super.can_surprise_attack(hero)
+
+# ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
 
