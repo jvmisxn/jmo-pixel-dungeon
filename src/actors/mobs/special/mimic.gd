@@ -12,6 +12,10 @@ var fake_item_id: String = "healing"
 var stored_items: Array = []
 ## Upstream Mimic.level (setLevel from depth); drives all stats.
 var mimic_level: int = 0
+## Transient: true while the free interact bite resolves after reveal(), so
+## the neutral-alignment combat bonuses still apply (upstream keeps alignment
+## NEUTRAL through doAttack and only flips to ENEMY in onAttackComplete).
+var _neutral_bite: bool = false
 
 func _init() -> void:
 	super._init()
@@ -66,6 +70,46 @@ func generate_prize(p_depth: int) -> void:
 			4: reward = Generator.random_ring()
 	if reward != null:
 		stored_items.append(reward)
+
+## Upstream Mimic.interact gate: a hidden (neutral) mimic can be "opened" by
+## an adjacent hero. Once revealed it is hostile and never interactable.
+func can_interact(c: Variant) -> bool:
+	if disguised and is_alive and c is Hero and level != null \
+			and c.get("pos") != null:
+		return level.adjacent(pos, int(c.pos))
+	return super.can_interact(c)
+
+## Upstream Mimic.interact: opening the "chest" reveals the mimic and, unless
+## the hero is invisible (or time-frozen upstream — no such buff in this
+## port), it lands a free surprise bite while still neutral: INFINITE_ACCURACY
+## and fixed max damage (2 + 2*level). Alignment flips to ENEMY only after the
+## bite, so damage-based reveals (take_damage) never get this bonus.
+func interact(c: Variant) -> void:
+	if not disguised or not (c is Hero):
+		super.interact(c)
+		return
+	var hero: Char = c as Char
+	if hero.invisible > 0:
+		reveal()
+		return
+	_neutral_bite = true
+	reveal()
+	target = hero
+	attack(hero)
+	_neutral_bite = false
+
+## Upstream attackSkill: INFINITE_ACCURACY while neutral (the interact bite
+## is the only attack a hidden mimic can make; invisible heroes skip it).
+func accuracy() -> int:
+	if disguised or _neutral_bite:
+		return 1000000
+	return super.accuracy()
+
+## Upstream damageRoll: fixed max damage (2 + 2*level) while neutral.
+func damage_roll() -> int:
+	if disguised or _neutral_bite:
+		return 2 + 2 * mimic_level
+	return super.damage_roll()
 
 ## Reveal the mimic — called when hero tries to interact with or step on it.
 func reveal() -> void:
