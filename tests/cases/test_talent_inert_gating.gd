@@ -28,6 +28,7 @@ func _test_registry_flags(t: Object) -> void:
 		"gladiator_cleave",
 		"gladiator_lethal_defense",
 		"gladiator_enhanced_combo",
+		"monk_unencumbered_spirit",
 	]
 	for subclass: int in [ConstantsData.HeroSubclass.BERSERKER, ConstantsData.HeroSubclass.GLADIATOR, ConstantsData.HeroSubclass.MONK]:
 		for talent: TalentData.TalentInfo in TalentData._subclass_talents(subclass):
@@ -61,7 +62,7 @@ func _test_subclass_inert_talents_blocked(t: Object) -> void:
 	var hero := _make_warrior()
 	hero.hero_subclass = ConstantsData.HeroSubclass.MONK
 	t.check(
-		not hero.can_upgrade_talent("monk_flurry_mastery"),
+		not hero.can_upgrade_talent("monk_monastic_vigor"),
 		"Inert subclass talent cannot be upgraded"
 	)
 	hero.hero_subclass = ConstantsData.HeroSubclass.GLADIATOR

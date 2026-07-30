@@ -191,3 +191,7 @@ static func _apply_monk(hero: Hero) -> void:
 	# Monk gets flurry tracker
 	var flurry: MonkFlurry = MonkFlurry.new()
 	hero.add_buff(flurry)
+	# Monk energy pool (upstream MonkEnergy): builds on enemy kills,
+	# fuels monk abilities.
+	var energy: MonkEnergy = MonkEnergy.new()
+	hero.add_buff(energy)
