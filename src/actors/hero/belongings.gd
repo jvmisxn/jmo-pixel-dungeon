@@ -11,6 +11,8 @@ const QUICKSLOT_COUNT: int = 6
 # --- Equipment Slots ---
 ## Currently equipped weapon (Item subclass or null).
 var weapon: Item = null
+## Champion (Duelist) off-hand weapon slot (upstream Belongings.secondWep).
+var second_wep: Item = null
 ## Currently equipped armor (Item subclass or null).
 var armor: Item = null
 ## Currently equipped artifact (Item subclass or null).
@@ -162,6 +164,18 @@ func equip_weapon(new_weapon: Item) -> Item:
 		old.on_unequip(owner)
 	return old
 
+## Equip a weapon into the Champion off-hand slot (upstream
+## KindOfWeapon.equipSecondary). Subclass gating lives with the caller, like
+## upstream's KindOfWeapon.execute. Returns the previously slotted weapon.
+func equip_second_wep(new_weapon: Item) -> Item:
+	var old: Item = second_wep
+	second_wep = new_weapon
+	if new_weapon and new_weapon.has_method("on_equip"):
+		new_weapon.on_equip(owner)
+	if old and old.has_method("on_unequip"):
+		old.on_unequip(owner)
+	return old
+
 ## Equip armor. Returns the previously equipped armor (or null).
 func equip_armor(new_armor: Item) -> Item:
 	var old: Item = armor
@@ -251,6 +265,9 @@ func unequip(slot: String) -> Item:
 		"weapon":
 			item = weapon
 			weapon = null
+		"second_wep":
+			item = second_wep
+			second_wep = null
 		"armor":
 			item = armor
 			armor = null
@@ -282,7 +299,8 @@ func unequip(slot: String) -> Item:
 func uncurse_equipped() -> int:
 	var uncursed_count: int = 0
 	var equipped: Array = [
-		weapon, armor, artifact, misc, spirit_bow, ring_left, ring_right,
+		weapon, second_wep, armor, artifact, misc, spirit_bow,
+		ring_left, ring_right,
 	]
 	for eq: Variant in equipped:
 		if eq == null:
@@ -458,8 +476,8 @@ func serialize() -> Dictionary:
 	data["backpack"] = items_data
 
 	# Serialize equipped items
-	var slot_names: Array[String] = ["weapon", "armor", "artifact", "misc", "spirit_bow", "ring_left", "ring_right"]
-	var slot_values: Array[Item] = [weapon, armor, artifact, misc, spirit_bow, ring_left, ring_right]
+	var slot_names: Array[String] = ["weapon", "second_wep", "armor", "artifact", "misc", "spirit_bow", "ring_left", "ring_right"]
+	var slot_values: Array[Item] = [weapon, second_wep, armor, artifact, misc, spirit_bow, ring_left, ring_right]
 	for i: int in range(slot_names.size()):
 		var slot_item: Item = slot_values[i]
 		if slot_item != null and slot_item.has_method("serialize"):
@@ -490,7 +508,7 @@ func deserialize(data: Dictionary) -> void:
 						backpack.append(item)
 
 	# Restore equipped items — assign directly to avoid triggering gameplay effects
-	var slot_names: Array[String] = ["weapon", "armor", "artifact", "misc", "spirit_bow", "ring_left", "ring_right"]
+	var slot_names: Array[String] = ["weapon", "second_wep", "armor", "artifact", "misc", "spirit_bow", "ring_left", "ring_right"]
 	for slot_name: String in slot_names:
 		var slot_data: Variant = data.get(slot_name, null)
 		if slot_data is Dictionary:
