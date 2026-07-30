@@ -7,7 +7,7 @@ var split_done: bool = false
 func _init() -> void:
 	super._init()
 	mob_id = "slime"
-	mob_name = "Caustic Slime"
+	mob_name = "Slime"
 	description = "Slimes are strange, slightly magical creatures with a rubbery outer body and a liquid core. The city sewers provide them with an ample supply of water and nutrients.\n\nBecause of their elastic outer membrane, it is difficult to deal more than 6 damage to slimes from any one attack."
 	setup(20, 8, 2, 1, 5, 2)
 	xp_value = 3

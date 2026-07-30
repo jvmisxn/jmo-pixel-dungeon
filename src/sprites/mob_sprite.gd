@@ -22,6 +22,7 @@ static var MOB_VISUALS: Dictionary = {
 	"great_crab": { "body": Color(0.7, 0.25, 0.15), "accent": Color(0.8, 0.35, 0.2), "eye": Color(0.1, 0.1, 0.1), "shape": "large" },
 	"snake": { "body": Color(0.3, 0.6, 0.3), "accent": Color(0.4, 0.7, 0.3), "eye": Color(0.9, 0.9, 0.1), "shape": "small" },
 	"slime": { "body": Color(0.3, 0.7, 0.3), "accent": Color(0.2, 0.8, 0.4), "eye": Color(0.9, 0.9, 0.9), "shape": "blob" },
+	"caustic_slime": { "body": Color(0.25, 0.25, 0.2), "accent": Color(0.4, 0.45, 0.1), "eye": Color(0.9, 0.9, 0.9), "shape": "blob" },
 	"swarm": { "body": Color(0.2, 0.2, 0.2), "accent": Color(0.3, 0.3, 0.3), "eye": Color(0.9, 0.5, 0.1), "shape": "flying" },
 	# --- Prison ---
 	"skeleton": { "body": Color(0.85, 0.82, 0.75), "accent": Color(0.7, 0.68, 0.6), "eye": Color(0.9, 0.3, 0.1), "shape": "humanoid" },
@@ -110,6 +111,8 @@ static var _MOB_SHEETS: Dictionary = {
 	"great_crab":      { "path": "crab.png",           "fw": 16, "fh": 16, "row": 2 },
 	"snake":           { "path": "snake.png",          "fw": 12, "fh": 11 },
 	"slime":           { "path": "slime.png",          "fw": 14, "fh": 12 },
+	# Upstream CausticSlimeSprite: slime.png frames offset by 9 = row 1.
+	"caustic_slime":   { "path": "slime.png",          "fw": 14, "fh": 12, "row": 1 },
 	"swarm":           { "path": "swarm.png",          "fw": 16, "fh": 16 },
 	# --- Prison ---
 	"skeleton":        { "path": "skeleton.png",       "fw": 12, "fh": 15 },
@@ -287,8 +290,9 @@ func _configure_mob_sheet_animations() -> void:
 			set_sheet_animation(AnimState.ATTACK, [8, 9, 10, 9, 0], 15.0, false)
 			set_sheet_animation(AnimState.ZAP, [8, 9, 10, 9, 0], 15.0, false)
 			set_sheet_animation(AnimState.DIE, [11, 12, 13], 10.0, false)
-		"slime":
-			# Matches upstream SlimeSprite.
+		"slime", "caustic_slime":
+			# Matches upstream SlimeSprite / CausticSlimeSprite (same frames,
+			# caustic uses sheet row 1).
 			set_sheet_animation(AnimState.IDLE, [0, 1, 1, 0], 3.0, true)
 			set_sheet_animation(AnimState.MOVE, [0, 2, 3, 3, 2, 0], 10.0, true)
 			set_sheet_animation(AnimState.ATTACK, [2, 3, 4, 6, 5], 15.0, false)

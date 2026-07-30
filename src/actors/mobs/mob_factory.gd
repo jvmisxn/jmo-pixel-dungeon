@@ -8,12 +8,13 @@ extends RefCounted
 
 ## Upstream MobSpawner.RARE_ALTS: each spawned standard mob has a 1/50
 ## chance to be swapped for its rare variant. Only ported variants are
-## listed; missing upstream alts (GnollExile, HermitCrab, CausticSlime,
+## listed; missing upstream alts (GnollExile, HermitCrab,
 ## SpectralNecromancer, ArmoredBrute, Senior, ChaosElemental, Acidic)
 ## join this map as they land.
 const RARE_ALT_CHANCE: float = 1.0 / 50.0
 const RARE_ALTS: Dictionary = {
 	"rat": "albino",
+	"slime": "caustic_slime",
 	"thief": "bandit",
 	"dm200": "dm201",
 }
@@ -143,6 +144,7 @@ static func create_mob(mob_id: String) -> Mob:
 		"great_crab": return GreatCrab.new()
 		"snake": return Snake.new()
 		"slime": return Slime.new()
+		"caustic_slime": return CausticSlime.new()
 		"swarm": return Swarm.new()
 		"gnoll_trickster": return GnollTrickster.new()
 		# Prison mobs
