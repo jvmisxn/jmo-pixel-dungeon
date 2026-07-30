@@ -66,14 +66,31 @@ static func _caves_table(depth: int) -> Array[Dictionary]:
 		table.append({"mob_id": "dm201", "weight": 0.8})
 	return table
 
+## Upstream MobSpawner city rotation. Ghoul entries use half the rotation
+## count (upstream Ghoul.spawningWeight is 0.5, since every spawned ghoul
+## creates a partner).
 static func _city_table(depth: int) -> Array[Dictionary]:
 	var table: Array[Dictionary] = []
-	table.append({"mob_id": "warlock", "weight": 2.5})
-	table.append({"mob_id": "monk", "weight": 2.5})
-	if depth >= 17:
-		table.append({"mob_id": "golem", "weight": 2.0})
-	if depth >= 18:
-		table.append({"mob_id": "elemental", "weight": 1.5})
+	if depth <= 16:
+		table.append({"mob_id": "ghoul", "weight": 1.5})
+		table.append({"mob_id": "elemental", "weight": 1.0})
+		table.append({"mob_id": "warlock", "weight": 1.0})
+	elif depth == 17:
+		table.append({"mob_id": "ghoul", "weight": 0.5})
+		table.append({"mob_id": "elemental", "weight": 2.0})
+		table.append({"mob_id": "warlock", "weight": 1.0})
+		table.append({"mob_id": "monk", "weight": 1.0})
+	elif depth == 18:
+		table.append({"mob_id": "ghoul", "weight": 0.5})
+		table.append({"mob_id": "elemental", "weight": 1.0})
+		table.append({"mob_id": "warlock", "weight": 2.0})
+		table.append({"mob_id": "monk", "weight": 2.0})
+		table.append({"mob_id": "golem", "weight": 1.0})
+	else:
+		table.append({"mob_id": "elemental", "weight": 1.0})
+		table.append({"mob_id": "warlock", "weight": 2.0})
+		table.append({"mob_id": "monk", "weight": 2.0})
+		table.append({"mob_id": "golem", "weight": 3.0})
 	return table
 
 static func _halls_table(depth: int) -> Array[Dictionary]:
@@ -122,6 +139,7 @@ static func create_mob(mob_id: String) -> Mob:
 		"dm200": return DM200.new()
 		"dm201": return DM201.new()
 		# City mobs
+		"ghoul": return Ghoul.new()
 		"warlock": return Warlock.new()
 		"monk": return MonkMob.new()
 		"golem": return Golem.new()

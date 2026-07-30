@@ -1,5 +1,33 @@
 # Change Log
 
+## 2026-07-30 (ghoul)
+
+- Tags: mobs, city, spawn-tables, source-fidelity, tests
+- Ghoul is ported (upstream `Ghoul.java`, first missing city mob): spawns a
+  partner ghoul on its first turn (orthogonal free cell, retries each turn,
+  `partner_spawned` on both so pairs never chain), and when downed near
+  another living ghoul it crumples instead of dying — new
+  `ghoul_life_link.gd` (`GhoulLifeLink`) on the nearby host counts down
+  `5*times_downed` host turns then revives the body at HT/10 HP. The link
+  transfers to another nearby ghoul when the host dies or loses the body
+  (no LOS and distance >= 4); with no host left the ghoul dies for real
+  (chasm deaths also skip the link, upstream `Ghoul.die`). Downed ghouls
+  are removed from `level.mobs`/TurnManager (untargetable, non-blocking)
+  and the link serializes the whole downed ghoul like the upstream bundle;
+  each link gets a unique `buff_id` so two downed ghouls can share one host
+  (add_buff would otherwise merge them). Death via `_try_prevent_death`
+  hook — no fragile `mob.gd`/`char.gd` edits. City spawn table in fragile
+  `mob_factory.gd` reshaped to the upstream MobSpawner rotation: depth 16
+  ghoul-heavy (1.5/1/1 ghoul/elemental/warlock), monk from 17, golem from
+  18, ghouls gone at 19-20 (golem 3.0); ghoul weight is half its rotation
+  count per upstream `spawningWeight 0.5`. Port adaptations: stats re-tuned
+  to the port's monk/warlock scale (HP 45 kept), partner-follow AI variants
+  and the crumpled-body sprite not ported. `test_ghoul.gd` (pair spawn +
+  no-chain, down/revive cycle incl. 1/10 HP + times_downed scaling,
+  no-host real death, host-death chain kill, link serialization round-trip,
+  city-table shape). [ENGINE]: downed ghouls vanish visually until revive —
+  needs an in-game look on a city floor.
+
 ## 2026-07-30 (later still)
 
 - Tags: progression, subclass, ui, tengu, source-fidelity, tests
