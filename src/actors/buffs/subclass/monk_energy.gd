@@ -3,7 +3,7 @@ extends Buff
 ## Monk (Duelist) subclass energy pool. Original: MonkEnergy.
 ## Energy builds when enemies die (5 boss / 3 miniboss / 0.5 for weak
 ## swarm enemies / 1 otherwise) and fuels monk abilities. Ported so far:
-## Flurry and Focus (Hero._do_monk_ability); Dash, Dragon Kick and
+## Flurry, Focus and Dash (Hero._do_monk_ability); Dragon Kick and
 ## Meditate still pending.
 ##
 ## Port adaptations: the mob roster has no MINIBOSS property yet, so the
