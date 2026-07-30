@@ -42,6 +42,7 @@ static var MOB_VISUALS: Dictionary = {
 	# --- City ---
 	"warlock": { "body": Color(0.25, 0.2, 0.3), "accent": Color(0.4, 0.2, 0.4), "eye": Color(0.8, 0.2, 0.8), "shape": "humanoid" },
 	"monk": { "body": Color(0.7, 0.5, 0.35), "accent": Color(0.6, 0.4, 0.2), "eye": Color(0.1, 0.5, 0.9), "shape": "humanoid" },
+	"senior": { "body": Color(0.75, 0.55, 0.4), "accent": Color(0.35, 0.55, 0.7), "eye": Color(0.1, 0.5, 0.9), "shape": "humanoid" },
 	"golem": { "body": Color(0.5, 0.45, 0.4), "accent": Color(0.6, 0.55, 0.5), "eye": Color(0.9, 0.6, 0.1), "shape": "large" },
 	"elemental": { "body": Color(0.9, 0.4, 0.1), "accent": Color(1.0, 0.6, 0.1), "eye": Color(1.0, 1.0, 0.5), "shape": "blob" },
 	"sentry": { "body": Color(0.4, 0.6, 0.4), "accent": Color(0.5, 0.8, 0.6), "eye": Color(0.7, 1.0, 0.8), "shape": "flying" },
@@ -134,6 +135,8 @@ static var _MOB_SHEETS: Dictionary = {
 	# --- City ---
 	"warlock":         { "path": "warlock.png",        "fw": 12, "fh": 15 },
 	"monk":            { "path": "monk.png",           "fw": 15, "fh": 14 },
+	# Upstream SeniorSprite: monk.png frames offset by 17 = row 1.
+	"senior":          { "path": "monk.png",           "fw": 15, "fh": 14, "row": 1 },
 	"golem":           { "path": "golem.png",          "fw": 16, "fh": 16 },
 	"elemental":       { "path": "elemental.png",      "fw": 12, "fh": 14 },
 	"sentry":          { "path": "wards.png",          "fw": 16, "fh": 16 },
@@ -301,6 +304,14 @@ func _configure_mob_sheet_animations() -> void:
 			set_sheet_animation(AnimState.ATTACK, [8, 9, 10, 9, 0], 15.0, false)
 			set_sheet_animation(AnimState.ZAP, [8, 9, 10, 9, 0], 15.0, false)
 			set_sheet_animation(AnimState.DIE, [11, 12, 13], 10.0, false)
+		"monk", "senior":
+			# Matches upstream MonkSprite / SeniorSprite (same relative
+			# frames; senior uses sheet row 1 = upstream offset 17-18).
+			set_sheet_animation(AnimState.IDLE, [1, 0, 1, 2], 6.0, true)
+			set_sheet_animation(AnimState.MOVE, [11, 12, 13, 14, 15, 16], 15.0, true)
+			set_sheet_animation(AnimState.ATTACK, [3, 4, 3, 4], 12.0, false)
+			set_sheet_animation(AnimState.ZAP, [5, 6, 5], 10.0, false)
+			set_sheet_animation(AnimState.DIE, [1, 7, 8, 8, 9, 10], 15.0, false)
 		"slime", "caustic_slime":
 			# Matches upstream SlimeSprite / CausticSlimeSprite (same frames,
 			# caustic uses sheet row 1).
