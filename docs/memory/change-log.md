@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-07-30 (mimic-surprise-bite)
+
+- Tags: mobs, combat, source-fidelity, tests
+- Hidden-mimic interact path ported from upstream `Mimic.java`: a disguised
+  mimic now overrides `can_interact` (adjacent hero only), so tapping the fake
+  heap routes through the existing interact action instead of a safe melee
+  attack — "opening" it reveals the mimic and lands a free neutral bite with
+  INFINITE_ACCURACY (accuracy 1000000, same sentinel Char.hit already checks)
+  and fixed max damage `2 + 2*level`, unless the hero is invisible (upstream
+  also exempts Swiftthistle/hourglass time freeze; neither buff exists here —
+  Swiftthistle grants Haste in this port).
+- Alignment modeling: `disguised` doubles as upstream NEUTRAL; a transient
+  `_neutral_bite` flag keeps the accuracy/damage overrides live through the
+  post-reveal attack (upstream flips to ENEMY only in onAttackComplete).
+  Damage-based reveals (`take_damage`) clear `disguised` first, so they never
+  get the bonus — matching upstream `damage()` ordering.
+- Attacking a hidden mimic with melee is no longer possible by tapping (tap =
+  open, as upstream); ranged/AoE reveal-by-damage paths in hero.gd unchanged.
+- Test: `test_mimic_surprise_bite.gd` (interact gate, exact fixed bite through
+  a stripped-armor high-HP hero, invisible-hero exemption, no bonus after
+  damage reveal). CrystalMimic's flee/steal variant is now unblocked (needs
+  this interact path) but not yet ported.
+
 ## 2026-07-30 (item-catalog-load-coerce)
 
 - Tags: save-load-safety, persistence, tests
