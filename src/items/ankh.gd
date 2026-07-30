@@ -155,8 +155,20 @@ func _lose_backpack_items(hero: Char) -> void:
 			level.drop_item(int(hero.pos), item)
 
 ## Items that survive an unblessed revival in the hero's inventory.
+## Upstream keeps only keptThroughLostInventory items; the port also keeps
+## unique non-consumables (keys, quest items, amulet, staff) as an adaptation
+## since it has no journal/key storage. Unique consumables (Scroll of Upgrade,
+## Potion of Strength, mastery potion) drop with the rest, as upstream sends
+## them to the lost backpack.
 func _is_kept(item: Item) -> bool:
-	return item.unique or item.kept_through_lost_inventory()
+	if item.kept_through_lost_inventory():
+		return true
+	if not item.unique:
+		return false
+	return item.category not in [
+		ConstantsData.ItemCategory.POTION,
+		ConstantsData.ItemCategory.SCROLL,
+	]
 
 ## Remove the ankh from the hero's inventory.
 func _remove_self(hero: Char) -> void:

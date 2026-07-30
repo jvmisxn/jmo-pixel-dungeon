@@ -129,9 +129,8 @@ static func burn_at(lvl: Variant, cell: int) -> bool:
 		elif (
 			item.get("category") == ConstantsData.ItemCategory.SCROLL
 			and item.get("unique") != true
-			and item.get("item_id") != "upgrade"
 		):
-			# Scroll of Upgrade is flagged `unique` upstream and survives fire.
+			# Scroll of Upgrade is flagged `unique` (as upstream) and survives fire.
 			lvl.heaps.erase(heap)
 			changed = true
 		elif item.get("item_id") == "dewdrop":
@@ -162,9 +161,8 @@ static func freeze_at(lvl: Variant, cell: int) -> bool:
 		if (
 			item.get("category") == ConstantsData.ItemCategory.POTION
 			and item.get("unique") != true
-			and item.get("item_id") != "strength"
 		):
-			# Potion of Strength is flagged `unique` upstream and survives frost.
+			# Potion of Strength is flagged `unique` (as upstream) and survives frost.
 			lvl.heaps.erase(heap)
 			changed = true
 			if MessageLog:

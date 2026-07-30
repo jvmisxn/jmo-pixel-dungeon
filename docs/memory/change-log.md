@@ -1,5 +1,32 @@
 # Change Log
 
+## 2026-07-30 (unique-flag-parity)
+
+- Tags: items, source-fidelity, tests
+- Scroll of Upgrade + Potion of Strength now carry `unique = true` exactly as
+  upstream (ScrollOfUpgrade.java:51 / PotionOfStrength.java:37), replacing
+  the `item_id` special cases in `Heap.burn_at`/`freeze_at`. This closes the
+  `Frozen.freeze_carried_item` gap: a carried Potion of Strength can no
+  longer shatter (upstream Frost.attachTo filters `!i.unique`;
+  `test_unique_flag_parity.gd`).
+- All `unique` readers audited against upstream before flagging:
+  - Ankh `_is_kept` no longer keeps unique consumables — upstream's revival
+    keep predicate is `keptThroughLostInventory()` only (Hero.java:2610-2620,
+    LostBackpack.java:55); the port keeps unique NON-consumables (keys, quest
+    items, amulet, staff) as an adaptation since it has no journal/key
+    storage, but SoU/PoS/mastery now drop as recoverable heaps like upstream
+    sends them to the lost backpack (`test_ankh_revival.gd` updated).
+  - Transmutation: upstream `usableOnItem` blocks unique ARTIFACTS only —
+    unique potions/scrolls stay transmutable. Both the `WndTransmute` filters
+    (new shared `_unique_blocked`) and the scroll fallback path now allow
+    SoU/PoS while still blocking the mastery potion (upstream TengusMask is
+    not a Potion) and unique artifacts.
+  - Shopkeeper buyback (`unique and not stackable`) unaffected — SoU/PoS are
+    stackable. CrystalMimic prize uncurse and steal filters unaffected
+    (prizes are wand/ring/artifact; stealing unique items was already
+    excluded, which now also correctly covers SoU/PoS as upstream).
+- Full headless suite green locally (7347 checks, 0 failures).
+
 ## 2026-07-30 (heap-burn-freeze)
 
 - Tags: items, blobs, source-fidelity, tests

@@ -85,10 +85,16 @@ func _test_unblessed_keeps_unique_kept_and_bags(t: Object) -> void:
 	hero.belongings.backpack.clear()
 
 	var ankh := Ankh.new()
-	var unique_item: Item = Generator.create_item("healing")
-	unique_item.unique = true
+	var unique_item: Item = Generator.create_item("skeleton_key")
+	t.check(unique_item != null and unique_item.unique, "skeleton key is a unique non-consumable")
 	var kept_item: Item = Generator.create_item("healing")
 	kept_item.kept_though_lost_invent = true
+	# Unique CONSUMABLES are not kept (upstream sends them to the lost
+	# backpack): SoU/PoS carry unique = true but still drop on revival.
+	var sou: Item = Generator.create_item("upgrade")
+	var pos_potion: Item = Generator.create_item("strength")
+	t.check(sou != null and sou.unique, "Scroll of Upgrade is flagged unique")
+	t.check(pos_potion != null and pos_potion.unique, "Potion of Strength is flagged unique")
 	var bag: Item = Generator.create_item("velvet_pouch")
 	t.check(bag is Bag, "test can build a real bag")
 	var bagged: Item = Generator.create_item("healing")
@@ -98,10 +104,15 @@ func _test_unblessed_keeps_unique_kept_and_bags(t: Object) -> void:
 	hero.belongings.backpack.append(ankh)
 	hero.belongings.backpack.append(unique_item)
 	hero.belongings.backpack.append(kept_item)
+	hero.belongings.backpack.append(sou)
+	hero.belongings.backpack.append(pos_potion)
 	hero.belongings.backpack.append(bag)
 
 	t.check(ankh.revive(hero), "unblessed ankh revives the hero")
-	t.check(hero.belongings.has_item(unique_item), "unique item stays with the hero")
+	t.check(hero.belongings.has_item(unique_item), "unique non-consumable stays with the hero")
+	t.check(not hero.belongings.has_item(sou), "unique Scroll of Upgrade drops on revival")
+	t.check(not hero.belongings.has_item(pos_potion), "unique Potion of Strength drops on revival")
+	t.check(sou in _heap_items(level, hero_pos), "dropped SoU is a recoverable heap")
 	t.check(hero.belongings.has_item(kept_item), "kept-through-lost-inventory item stays with the hero")
 	t.check(hero.belongings.has_item(bag), "bags stay with the hero")
 	if bagged != null:

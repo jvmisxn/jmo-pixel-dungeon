@@ -211,8 +211,7 @@ func _get_eligible_items() -> Array:
 		# Skip the scroll being used
 		if item == _scroll_ref:
 			continue
-		# Skip unique items
-		if ConstantsData.get_prop(item, "unique", false):
+		if _unique_blocked(item, cat):
 			continue
 		# Apply current filter
 		if not _category_matches_filter(cat):
@@ -234,7 +233,7 @@ func _get_eligible_items() -> Array:
 		var cat: int = ConstantsData.get_prop(eq, "category", -1)
 		if cat not in transmutable_cats:
 			continue
-		if ConstantsData.get_prop(eq, "unique", false):
+		if _unique_blocked(eq, cat):
 			continue
 		if not _category_matches_filter(cat):
 			continue
@@ -243,6 +242,21 @@ func _get_eligible_items() -> Array:
 			result.append(eq)
 
 	return result
+
+
+## Upstream usableOnItem: unique only blocks artifacts (and the port's
+## mastery potion, upstream's TengusMask, which is not a Potion there).
+## Unique potions/scrolls like Potion of Strength and Scroll of Upgrade
+## stay transmutable.
+static func _unique_blocked(item: Variant, cat: int) -> bool:
+	if not ConstantsData.get_prop(item, "unique", false):
+		return false
+	if ConstantsData.get_prop(item, "item_id", "") == "mastery":
+		return true
+	return cat not in [
+		ConstantsData.ItemCategory.POTION,
+		ConstantsData.ItemCategory.SCROLL,
+	]
 
 
 # ---------------------------------------------------------------------------
