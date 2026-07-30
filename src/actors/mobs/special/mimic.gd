@@ -106,10 +106,16 @@ func accuracy() -> int:
 	return super.accuracy()
 
 ## Upstream damageRoll: fixed max damage (2 + 2*level) while neutral.
+## CrystalMimic overrides _neutral_bonus_damage() to false — it steals
+## instead of biting hard (upstream CrystalMimic.damageRoll).
 func damage_roll() -> int:
-	if disguised or _neutral_bite:
+	if (disguised or _neutral_bite) and _neutral_bonus_damage():
 		return 2 + 2 * mimic_level
 	return super.damage_roll()
+
+
+func _neutral_bonus_damage() -> bool:
+	return true
 
 ## Reveal the mimic — called when hero tries to interact with or step on it.
 func reveal() -> void:
