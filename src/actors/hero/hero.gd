@@ -501,6 +501,12 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 		if MessageLog:
 			MessageLog.add_warning("Your weapon doesn't have enough charge for that ability.")
 		return
+	# Greataxe Retribution is only usable below half HP (upstream
+	# Greataxe.duelistAbility refuses when HP/HT >= 0.5, for free).
+	if weapon.ability_kind() == "retribution" and hp * 2 >= hp_max:
+		if MessageLog:
+			MessageLog.add_warning("You can only use retribution while below half health.")
+		return
 	if weapon.ability_kind() == "guard":
 		_do_guard_ability(weapon, charge_use)
 		return
@@ -596,6 +602,12 @@ func _do_weapon_ability(item: Variant, target_pos: int) -> void:
 		if slash_left != null:
 			remove_buff(slash_left)
 		_ability_spend = _get_attack_delay()
+	elif ability_kind == "retribution":
+		# Upstream Greataxe: the strike is instantaneous if it kills
+		# (hero.next()); a surviving target costs the attack delay. Kills
+		# open no free-recast window.
+		if enemy.is_alive:
+			_ability_spend = _get_attack_delay()
 	else:
 		var tracker: Buff = get_buff("CleaveTracker")
 		if not enemy.is_alive:
