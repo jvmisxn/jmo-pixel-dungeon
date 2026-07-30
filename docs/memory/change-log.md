@@ -1,5 +1,29 @@
 # Change Log
 
+## 2026-07-30 (amok-target-priority)
+
+- Tags: mobs, ai, buffs, source-fidelity, tests
+- Amok target selection ported (upstream `Mob.chooseEnemy` amok branch): new
+  `Mob._amok_target()` prefers visible enemy-aligned mobs first, then ally
+  mobs, then heroes — nearest of the winning pool with random tie-break
+  (chooseClosest). Excludes self, NPCs, disguised mimics, and invisible
+  chars. Previously the amok retarget only ever picked the nearest hero
+  (exactly inverted priority), so Scroll of Rage / cursed-wand Amok never
+  caused the signature mob-vs-mob fights.
+- `_act_hunting` and Spinner's pre-web amok branch route through the helper
+  (small hand-edits; mob.gd + spinner.gd are fragile files).
+- New wandering-state pickup: an amok'd wanderer that sees a mob rolls the
+  upstream `1/(dist/2 + stealth)` detection chance (mobs have no stealth, so
+  close targets are near-certain) and starts hunting it without hero
+  involvement — before this, amok on wandering mobs did nothing until they
+  noticed a hero.
+- Helper reads `level.get("mobs")` defensively (fake levels in tests lack
+  the property) and uses `== true` for the disguised probe (`bool(null)` is
+  a Godot 4 runtime error — same S29 pitfall).
+- `test_amok_targeting.gd`: pool priority (enemy > ally > hero), nearest
+  selection, NPC/disguised-mimic/invisible exclusions, revealed-mimic
+  inclusion, deterministic wandering pickup.
+
 ## 2026-07-30 (wealth-bonus-deck)
 
 - Tags: rings, loot, buffs, source-fidelity, tests

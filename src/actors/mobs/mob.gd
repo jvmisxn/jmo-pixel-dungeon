@@ -172,6 +172,21 @@ func _act_sleeping() -> void:
 		spend_turn()
 
 func _act_wandering() -> void:
+	# Amok wanderers pick fights with visible mobs (upstream chooseEnemy runs
+	# before Wandering.act; the same detection roll applies, but mobs have no
+	# stealth so close targets are near-certain).
+	if has_buff("Amok"):
+		var amok_enemy: Char = _amok_target()
+		if amok_enemy != null and not amok_enemy.is_hero:
+			var mob_dist: float = float(distance_to(amok_enemy.pos))
+			var mob_stealth: float = amok_enemy.stealth() \
+					if amok_enemy.has_method("stealth") else 0.0
+			if randf() < 1.0 / (mob_dist / 2.0 + mob_stealth):
+				_set_state(AIState.HUNTING)
+				target = amok_enemy
+				target_pos = amok_enemy.pos
+				spend_turn()
+				return
 	# Check for heroes — with stealth detection roll matching original
 	# Wandering.detectionChance: 1 / (distance/2 + stealth)
 	var heroes: Array[Char] = _find_visible_heroes()
@@ -211,11 +226,11 @@ func _act_hunting() -> void:
 		spend_turn()
 		return
 
-	# Check amok — attack nearest regardless
+	# Amok retarget — upstream chooseEnemy pool priority (mobs before heroes)
 	if has_buff("Amok"):
-		var nearest: Char = _find_nearest_char()
-		if nearest:
-			target = nearest
+		var amok_enemy: Char = _amok_target()
+		if amok_enemy:
+			target = amok_enemy
 
 	var can_detect_target: bool = _can_detect_char(target)
 
@@ -450,7 +465,42 @@ func _find_nearest_char() -> Char:
 		if d < best_dist:
 			best_dist = d
 			best = h
-	# Could also check other mobs for amok
+	return best
+
+## Upstream Mob.chooseEnemy amok branch: an enraged mob targets visible
+## enemy-aligned mobs first, then ally mobs, then heroes — never itself,
+## NPCs, hidden mimics, or invisible chars. The nearest of the winning pool
+## is chosen, ties broken randomly (chooseClosest).
+func _amok_target() -> Char:
+	var enemy_mobs: Array[Char] = []
+	var ally_mobs: Array[Char] = []
+	var mob_list: Variant = level.get("mobs") if level != null else null
+	if mob_list is Array:
+		for node: Variant in mob_list:
+			if node == self or node is NPC or not (node is Mob):
+				continue
+			if node.get("disguised") == true:
+				continue
+			var mc: Char = node as Char
+			if not _can_detect_char(mc):
+				continue
+			if (node as Mob).is_ally:
+				ally_mobs.append(mc)
+			else:
+				enemy_mobs.append(mc)
+	var pool: Array[Char] = enemy_mobs if not enemy_mobs.is_empty() else ally_mobs
+	if pool.is_empty():
+		# Hero pool last; _find_visible_heroes is already nearest-sorted.
+		var heroes: Array[Char] = _find_visible_heroes()
+		return heroes[0] if not heroes.is_empty() else null
+	pool.shuffle()
+	var best: Char = null
+	var best_dist: int = 999
+	for c: Char in pool:
+		var d: int = distance_to(c.pos)
+		if d < best_dist:
+			best_dist = d
+			best = c
 	return best
 
 ## Convenience: find nearest hero within aggro_range and set as target.

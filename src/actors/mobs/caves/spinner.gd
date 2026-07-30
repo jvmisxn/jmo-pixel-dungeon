@@ -37,9 +37,9 @@ func _act_hunting() -> void:
 	# Original Hunting.act(): the web shot is a pre-step; every shared hunting
 	# guard (flee, Amok retarget, chase/attack, lost-target) runs in the base.
 	if has_buff("Amok"):
-		var nearest: Char = _find_nearest_char()
-		if nearest:
-			target = nearest
+		var amok_enemy: Char = _amok_target()
+		if amok_enemy:
+			target = amok_enemy
 	if _try_shoot_web():
 		return
 	super._act_hunting()
