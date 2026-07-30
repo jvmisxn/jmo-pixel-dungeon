@@ -1,5 +1,39 @@
 # Change Log
 
+## 2026-07-30 (generator-decks)
+
+- Tags: items, source-fidelity, persistence, tests
+- Generator deck system ported (upstream Generator probs/defaultProbs):
+  random drops now come from depleting decks instead of flat weighted rolls.
+  - Category selection: two alternating 35-item decks
+    (`CATEGORY_FIRST_PROBS`/`CATEGORY_SECOND_PROBS`, upstream
+    firstProb/secondProb; deck 1 has ring + extra armor, deck 2 artifact +
+    extra missile), decremented per `random_item` pick, deck swap on empty.
+    Replaces the old averaged `CATEGORY_WEIGHTS` (removed). WEAPON and
+    MISSILE are now separate deck categories (old 50/50 fold removed).
+  - Item decks: POTION + SCROLL use dual alternating decks
+    (defaultProbs/defaultProbs2, flip on each refill); WAND/RING/STONE/FOOD
+    use single refilling decks. POTIONS/SCROLLS/SEEDS/STONES tables
+    reordered to upstream class order; potion "experience" now drops
+    (deck 1 only, per upstream); FOOD deck 4 ration/1 pasty/0 mystery meat
+    replaces the invented 65/25/10 roll; STONES reshaped (disarming fills
+    the unported DetectMagic slot; Aggression unported;
+    enchantment/augmentation prob 0).
+  - Seeds stay non-deck per upstream (grass is the dominant source):
+    `SEED_DEFAULT_PROBS` weighted defaults, rotberry 0 / starflower 1.
+    `Hero` grass trampling now uses `Generator.random_seed_id()` — fixes
+    uniform picks that could drop the quest-only rotberry.
+  - Persistence: `Generator.serialize_decks()/restore_decks()` in
+    GameManager run state (`generator_decks`), `Generator.full_reset()` on
+    new run (random starting decks per upstream fullReset). SAVE_VERSION 8
+    (optional key, no rewrite). Missing/malformed deck data falls back to
+    fresh decks.
+- Not ported (backlogged): per-tier WEP_T*/MIS_T* item decks (tier picks
+  still uniform within FLOOR_SET_TIER_PROBS), exotic conversion rolls,
+  seeded-drop consistency (cat.seed/dropped), undoDrop.
+- `test_generator_decks.gd` (16 checks) + `test_generator_category_weights.gd`
+  rewritten for the deck tables.
+
 ## 2026-07-30 (frost-thief-water-chill)
 
 - Tags: buffs, source-fidelity, tests

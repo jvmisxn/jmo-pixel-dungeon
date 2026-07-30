@@ -138,7 +138,7 @@ func new_game(chosen_class: int = ConstantsData.HeroClass.WARRIOR, seed_value: i
 	held_allies.clear()
 	quest_flags.clear()
 	limited_drops.clear()
-	Generator.reset_artifacts()
+	Generator.full_reset()
 
 	if seed_value < 0:
 		run_seed = randi()
@@ -692,6 +692,7 @@ func serialize_run_state() -> Dictionary:
 		"pending_dropped_items": pending_dropped_items.duplicate(true),
 		"limited_drops": limited_drops.duplicate(true),
 		"generated_artifacts": Generator.serialize_artifacts(),
+		"generator_decks": Generator.serialize_decks(),
 		"item_appearance": ItemAppearance.serialize() if ItemAppearance else {},
 	}
 
@@ -741,6 +742,9 @@ func apply_run_state(data: Dictionary) -> void:
 
 	var saved_artifacts: Variant = data.get("generated_artifacts", [])
 	Generator.restore_artifacts(saved_artifacts if saved_artifacts is Array else [])
+
+	var saved_decks: Variant = data.get("generator_decks", {})
+	Generator.restore_decks(saved_decks if saved_decks is Dictionary else {})
 
 	if ItemAppearance:
 		var appearance_data: Dictionary = data.get("item_appearance", {})

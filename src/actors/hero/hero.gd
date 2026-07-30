@@ -2161,7 +2161,7 @@ func on_trampled_grass() -> void:
 		return
 
 	if seed_chance > 0.0 and randf() < clampf(seed_chance, 0.0, 1.0) and not Generator.SEEDS.is_empty():
-		var seed_id: String = Generator.SEEDS[randi_range(0, Generator.SEEDS.size() - 1)]
+		var seed_id: String = Generator.random_seed_id()
 		var seed_item: Item = Generator.create_item(seed_id)
 		if seed_item != null and level.has_method("drop_item"):
 			level.drop_item(pos, seed_item)
