@@ -56,8 +56,8 @@ const WEAPONS_T5: Array[String] = [
 	"greatsword", "war_hammer", "glaive", "greataxe", "greatshield",
 ]
 
-## Missile / thrown weapons per tier.
-const MISSILES_T1: Array[String] = ["throwing_stone", "throwing_knife", "throwing_club"]
+## Missile / thrown weapons per tier (T1 lives in MIS_T1_DECK_TABLE with its
+## prob-0 dart slot).
 const MISSILES_T2: Array[String] = ["shuriken", "kunai", "bolas"]
 const MISSILES_T3: Array[String] = ["javelin", "tomahawk", "boomerang"]
 const MISSILES_T4: Array[String] = ["trident", "heavy_boomerang"]
@@ -204,6 +204,26 @@ const WAND_DECK: Array[float] = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
 const RING_DECK: Array[float] = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
 const FOOD_DECK: Array[float] = [4, 1, 0]
 
+## Per-tier equipment decks (upstream WEP_T*/MIS_T* defaultProbs): melee slots
+## weigh 2 each with a prob-0 Mage's Staff slot in T1 (never random, Mage
+## starting gear only); missile slots weigh 3 each with a prob-0 Dart slot in
+## T1 (crossbow ammo/alchemy only). Unported upstream entries (Sickle,
+## Pickaxe, Whip, Crossbow, Katana, Gauntlet, WarScythe, ThrowingSpike,
+## FishingSpear, ThrowingSpear, ThrowingHammer) have no slot; boomerang and
+## force_cudgel keep their roster-adaptation slots.
+const WEP_T1_DECK_TABLE: Array[String] = [
+	"worn_shortsword", "cudgel", "gloves", "rapier", "dagger", "mages_staff",
+]
+const WEP_T1_DECK: Array[float] = [2, 2, 2, 2, 2, 0]
+const WEP_DECK_5: Array[float] = [2, 2, 2, 2, 2]
+const MIS_T1_DECK_TABLE: Array[String] = [
+	"throwing_stone", "throwing_knife", "throwing_club", "dart",
+]
+const MIS_T1_DECK: Array[float] = [3, 3, 3, 0]
+const MIS_DECK_3: Array[float] = [3, 3, 3]
+const MIS_DECK_2: Array[float] = [3, 3]
+const MIS_DECK_1: Array[float] = [3]
+
 ## Deck definitions: category -> {table, deck1, deck2 (optional)}.
 ## Dual-deck categories flip decks on every refill (upstream using2ndProbs).
 static var _deck_defs: Dictionary = {
@@ -213,6 +233,16 @@ static var _deck_defs: Dictionary = {
 	"ring": {"table": RINGS, "deck1": RING_DECK},
 	"stone": {"table": STONES, "deck1": STONE_DECK},
 	"food": {"table": FOODS, "deck1": FOOD_DECK},
+	"wep_t1": {"table": WEP_T1_DECK_TABLE, "deck1": WEP_T1_DECK},
+	"wep_t2": {"table": WEAPONS_T2, "deck1": WEP_DECK_5},
+	"wep_t3": {"table": WEAPONS_T3, "deck1": WEP_DECK_5},
+	"wep_t4": {"table": WEAPONS_T4, "deck1": WEP_DECK_5},
+	"wep_t5": {"table": WEAPONS_T5, "deck1": WEP_DECK_5},
+	"mis_t1": {"table": MIS_T1_DECK_TABLE, "deck1": MIS_T1_DECK},
+	"mis_t2": {"table": MISSILES_T2, "deck1": MIS_DECK_3},
+	"mis_t3": {"table": MISSILES_T3, "deck1": MIS_DECK_3},
+	"mis_t4": {"table": MISSILES_T4, "deck1": MIS_DECK_2},
+	"mis_t5": {"table": MISSILES_T5, "deck1": MIS_DECK_1},
 }
 
 ## Live deck state (persisted with the run).
@@ -627,15 +657,18 @@ static func random_item(depth: int) -> Item:
 	return random_gold(depth)
 
 ## Generate a random melee weapon whose tier is based on depth.
-## Uses floorSetTierProbs for tier selection and calls random() for upgrades/curses.
+## Uses floorSetTierProbs for tier selection, draws from the tier's depleting
+## deck (upstream random(WEP_T*)), and calls random() for upgrades/curses.
 static func random_weapon(depth: int) -> Item:
 	var tier: int = _roll_tier_for_depth(depth)
-	var weapon: Item = random_weapon_for_tier(tier)
+	var weapon: Item = create_item(_deck_draw("wep_t%d" % tier))
 	if weapon is Weapon and weapon.has_method("random"):
 		weapon.random()
 	return weapon
 
-## Generate a random melee weapon from a specific tier table.
+## Generate a random melee weapon from a specific tier table without touching
+## the decks (upstream randomUsingDefaults — statue/skeleton gear path; ported
+## default weights are uniform so a flat pick matches).
 static func random_weapon_for_tier(tier: int) -> Item:
 	var table: Array[String] = _weapon_table_for_tier(tier)
 	return _random_from_table(table)
@@ -705,11 +738,11 @@ static func random_food() -> Item:
 	return create_item(_deck_draw("food"))
 
 ## Generate a random missile weapon whose tier is based on depth.
-## Uses floorSetTierProbs for tier selection.
+## Uses floorSetTierProbs for tier selection and draws from the tier's
+## depleting deck (upstream random(MIS_T*)).
 static func random_missile(depth: int) -> Item:
 	var tier: int = _roll_tier_for_depth(depth)
-	var table: Array[String] = _missile_table_for_tier(tier)
-	return _random_from_table(table)
+	return create_item(_deck_draw("mis_t%d" % tier))
 
 ## Generate a random stone from the stone deck (enchantment/augmentation
 ## never drop randomly).
@@ -775,16 +808,6 @@ static func _armor_table_for_tier(tier: int) -> Array[String]:
 		4: return ARMORS_T4
 		5: return ARMORS_T5
 	return ARMORS_T1
-
-## Return the missile weapon table for a given tier.
-static func _missile_table_for_tier(tier: int) -> Array[String]:
-	match tier:
-		1: return MISSILES_T1
-		2: return MISSILES_T2
-		3: return MISSILES_T3
-		4: return MISSILES_T4
-		5: return MISSILES_T5
-	return MISSILES_T1
 
 ## Pick a random item from a string table and create it via create_item().
 static func _random_from_table(table: Array[String]) -> Item:
