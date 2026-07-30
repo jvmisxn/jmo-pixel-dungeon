@@ -2,6 +2,31 @@
 
 ## 2026-07-29
 
+- Tags: duelist, monk, abilities, ui, windows, tests
+- Monk ability picker UI shipped (upstream `WndMonkAbilities`) — all five
+  monk abilities are now player-reachable. New
+  `src/ui/windows/wnd_monk_abilities.gd`: lists Flurry/Focus/Dash/Dragon
+  Kick/Meditate with energy costs and short descriptions; button gating
+  mirrors upstream `MonkAbility.usable()` (energy >= cost, Flurry also
+  gated on `FlurryCooldownTracker`, Focus on active `FocusBuff`); header
+  shows energy/cap plus the empowered state. Untargeted abilities
+  (Focus/Meditate) emit `monk_ability` hero actions directly; targeted
+  ones (Flurry/Dragon Kick at melee reach 1, Dash at 4 or 8 while
+  empowered) go through `EventBus.enter_targeting` with a null item
+  (TargetingCoordinator handles null items safely) and submit on cell
+  select. Entry point is a port adaptation: upstream uses the
+  ActionIndicator button; here `BuffIcon.make_info_window` routes a tap
+  on the Monk Energy buff icon to the picker instead of plain
+  `WndInfoBuff` (all other buffs unchanged). `[ENGINE]` caveat: window
+  layout/tap flow needs a real playtest as Monk.
+  `test_wnd_monk_abilities.gd` (21 checks, registered): usable gating
+  incl. cooldown/stance gates and exact-cost edges, direct focus/meditate
+  action payloads, dash targeting range + deferred submit via the
+  targeting callback, and buff-icon routing for MonkEnergy vs other
+  buffs. `git diff --check` clean; gdparse unavailable locally,
+  `--import` clean; full headless suite passed (5471 checks, 0
+  failures).
+
 - Tags: duelist, monk, abilities, buffs, source-fidelity, tests
 - Monk Meditate ability shipped (upstream
   `MonkEnergy.MonkAbility.Meditate`) — all five monk abilities are now
