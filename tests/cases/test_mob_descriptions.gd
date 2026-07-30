@@ -8,7 +8,7 @@ const FACTORY_IDS: Array[String] = [
 	"slime", "caustic_slime", "swarm", "gnoll_trickster",
 	"skeleton", "thief", "guard", "necromancer", "bandit",
 	"bat", "brute", "armored_brute", "shaman", "spinner", "dm100", "dm200", "dm201",
-	"warlock", "monk", "golem", "elemental",
+	"warlock", "monk", "senior", "golem", "elemental",
 	"succubus", "eye", "scorpio", "ripper",
 	"piranha", "mimic", "animated_statue", "golden_statue", "wraith", "bee",
 	"goo", "tengu", "dm300", "king", "yog",

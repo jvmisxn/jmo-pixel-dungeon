@@ -170,6 +170,9 @@ func on_mob_defeated(_mob_pos: int, mob_name_str: String, mob_id: String = "") -
 	var target_lower: String = quest_mob_id.to_lower()
 	var defeated_id: String = mob_id.to_lower()
 	var defeated_name: String = mob_name_str.to_lower()
+	# Senior monks count as monks (upstream checks `instanceof Monk`).
+	if target_lower == "monk" and defeated_id == "senior":
+		defeated_id = "monk"
 	if defeated_id == target_lower or defeated_name == target_lower or defeated_name == target_lower + "s" or defeated_name.begins_with(target_lower):
 		kill_count += 1
 		if kill_count >= required_kills:

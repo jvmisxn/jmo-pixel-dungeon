@@ -1,5 +1,38 @@
 # Change Log
 
+## 2026-07-30 (senior-monk)
+
+- Tags: mobs, spawning, sprites, buffs, source-fidelity, tests
+- Dwarf Monk rewritten to upstream `Monk.java` parity: HP 70 (was 50),
+  attack/defense skill 30, damage 12-25, `drRoll super + 0-2` (armor 2),
+  EXP 11 / maxLvl 21, UNDEAD, ration loot @ 0.083, attack delay 0.5x
+  (upstream two-hits-per-turn; the port's invented 1.5x move speed and
+  the old vanilla-PD combo/disarm mechanic removed — upstream monks
+  don't disarm since 0.9.3).
+- Focus parry mechanic ported: new `MonkFocus` buff (infinite evasion
+  unless paralysed/sleeping — `modify_evasion` 1e9 over Char.hit's 1e6
+  threshold); any miss while focused is a parry that consumes the buff
+  and rolls `focus_cooldown = NormalFloat(6,7)` via
+  `MonkMob.on_focus_parried()`. Cooldown burns in `spend_turn` (time
+  spent) and an extra `_travel_focus_bonus()` 0.67 in `on_move`
+  (upstream Monk.spend/move); focus re-arms in `act()` while HUNTING
+  off-cooldown.
+- Senior monk rare alt (upstream `Senior.java`): extends MonkMob,
+  damage 16-25, guaranteed pasty, travel bonus +1.66 (2.33 total).
+  `monk -> senior` in `MobFactory.RARE_ALTS` (1/50, swap-only). Imp
+  quest counts seniors as monks (upstream `instanceof Monk`).
+- Sprite: `monk.png` 256x32 = two 15x14 rows; senior uses row 1
+  (upstream SeniorSprite offset 17-18). Real MonkSprite frame maps for
+  both (idle 1,0,1,2; run 11-16; attack 3,4,3,4; kick 5,6,5 on ZAP;
+  die 1,7,8,8,9,10) — monk was previously a static frame.
+- `test_senior_monk.gd` (swap, no-table-entry, monk+senior stats, focus
+  gain gated on HUNTING+cooldown, infinite evasion + paralysis/sleep
+  gates, parry consume + 6-7 cooldown, travel/spend burn, serialize
+  round-trip incl. buff); registered in `run_tests.gd`;
+  `test_mob_descriptions.gd` gained senior. Gotcha: fresh mobs default
+  to SLEEPING, which the focus sleep-gate correctly nullifies — tests
+  must set state HUNTING first.
+
 ## 2026-07-30 (armored-brute)
 
 - Tags: mobs, spawning, sprites, source-fidelity, tests
