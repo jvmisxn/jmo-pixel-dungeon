@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-07-30 (shuriken-instant-throw)
+
+- Tags: items, buffs, source-fidelity, tests
+- Shuriken instant first throw (upstream Shuriken.castDelay/onThrow +
+  ShurikenInstantTracker, verified against master 2026-07-30): a shuriken
+  thrown with no tracker costs 0 time and attaches the new
+  `ShurikenInstantTracker` buff at DURATION-1 = 19 turns (one less because
+  the throw itself was instant); throws inside the window cost normal
+  missile time. Attach happens in `hero._get_throw_delay` (runs once per
+  throw action, standing in for upstream onThrow).
+- Retired the 0.8 `delay_factor` quick-throw stand-in from the shuriken
+  factory; `deserialize` migrates legacy 0.8 shurikens back to 1.0 (no
+  SAVE_VERSION bump — item-local, optional-key migration). Description
+  updated to mention the instant throw.
+- Buff persists via the existing script-path buff serialization; no
+  registry change needed.
+- Tests: `test_shuriken_instant_throw.gd` (instant first throw + 19-turn
+  tracker, tracked throws cost normal delay, expiry restores instant,
+  other missiles unaffected, factory + legacy-save delay migration).
+- Checks: gdparse (python -m gdtoolkit.parser) OK on all touched files
+  incl. fragile hero.gd; godot --check-only OK; full headless suite run
+  this slice; `git diff --check` clean; gdlint unavailable.
+
 ## 2026-07-30 (sneak-surprise-damage)
 
 - Tags: items, combat, source-fidelity, tests
