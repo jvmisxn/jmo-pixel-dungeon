@@ -325,12 +325,13 @@ static func create(weapon_id: String) -> MissileWeapon:
 			w.icon_color = Color(0.5, 0.35, 0.15)
 		"shuriken":
 			w.item_name = "Shuriken"
-			w.description = "A razor-sharp throwing star. Cuts deep but wears down quickly."
+			w.description = (
+					"A razor-sharp throwing star. Cuts deep but wears down "
+					+ "quickly. Once every 20 turns, a shuriken can be thrown "
+					+ "in an instant, costing no time at all."
+				)
 			w.tier = 2
 			w.base_uses = 5
-			# Adaptation: quick throw stands in for upstream's instant
-			# first-throw-per-turn (ShurikenInstantTracker, unported).
-			w.delay_factor = 0.8
 			w.icon_color = Color(0.7, 0.7, 0.75)
 
 		# ===== TIER 3 =====
@@ -456,3 +457,7 @@ func deserialize(data: Dictionary) -> void:
 	special_effect = data.get("special_effect", "")
 	durable_tips_uses = data.get("durable_tips_uses", 0)
 	durable_wear = data.get("durable_wear", 0.0)
+	# Migrate shurikens saved with the retired 0.8 quick-throw stand-in
+	# (replaced by the upstream ShurikenInstantTracker instant first throw).
+	if item_id == "shuriken" and is_equal_approx(delay_factor, 0.8):
+		delay_factor = 1.0

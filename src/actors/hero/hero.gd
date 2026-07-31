@@ -1470,6 +1470,14 @@ func _shared_enchantment_proc(
 	return bow.enchantment.proc(missile, self, target, damage)
 
 func _get_throw_delay(item: Variant) -> float:
+	# Upstream Shuriken.castDelay/onThrow: a shuriken thrown with no
+	# ShurikenInstantTracker costs no time and starts the 19-turn window
+	# (DURATION - 1, as the instant throw itself spent nothing). This runs
+	# once per throw_item action, standing in for upstream's onThrow.
+	if item is MissileWeapon and (item as MissileWeapon).item_id == "shuriken":
+		if not has_buff("ShurikenInstantTracker"):
+			add_buff(ShurikenInstantTracker.new())
+			return 0.0
 	var delay: float = 1.0
 	if item != null and item.has_method("speed_factor"):
 		delay = item.speed_factor(self)
