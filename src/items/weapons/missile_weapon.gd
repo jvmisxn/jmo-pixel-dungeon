@@ -40,6 +40,11 @@ func can_stack_with(other: Variant) -> bool:
 # Durability
 # ---------------------------------------------------------------------------
 
+## Upstream MissileWeapon.durabilityFactor: round(base_uses * 1.2^level).
+## At level 0 this equals base_uses; each upgrade adds ~20% more durability.
+func durability_factor() -> int:
+	return roundi(base_uses * pow(1.2, buffed_lvl()))
+
 ## Called after each throw/use. Returns true if the weapon broke.
 func use_once() -> bool:
 	uses_left -= 1
@@ -51,9 +56,15 @@ func use_once() -> bool:
 func is_broken() -> bool:
 	return uses_left <= 0
 
-## Reset durability (e.g. on repair or new stack).
+## Reset durability to the level-scaled maximum.
 func reset_uses() -> void:
-	uses_left = base_uses
+	uses_left = durability_factor()
+
+## Upgrade: increment level then refresh durability to the new factor.
+func upgrade() -> Item:
+	super.upgrade()
+	reset_uses()
+	return self
 
 ## Preserve mutable missile durability/combat state when splitting a stack.
 func duplicate_item() -> Item:
