@@ -1,5 +1,22 @@
 # Change Log
 
+## 2026-08-01 (item-identified-desync-fix)
+
+- Tags: items, serialization, bugfix, audit
+- Closes [P2][audit:S12] `identified` bool desync: replaced the plain stored
+  `var identified: bool` with a computed property that derives from
+  `level_known and cursed_known`. The `get` returns `level_known and
+  cursed_known`; the `set(value)` mirrors the assignment onto both canonical
+  flags, so all existing `.identified = true` call sites continue to work
+  without changes. `identify()` was already flag-only and is unchanged.
+- Removed the redundant `"identified"` key from `serialize()`; `deserialize()`
+  keeps the old-save fallback (`data.get("level_known", data.get("identified",
+  false))`) so legacy saves without `level_known` still restore correctly.
+- Test: `test_item_identified_derived.gd` (8 checks: fresh state, single-flag,
+  both-flags, setter sync, `identify()`, direct-flag agreement, desync-impossible
+  invariant loop, serialize output, old-save compat, modern-save round-trip).
+- PR #25.
+
 ## 2026-08-01 (cause-of-death-parse-tests)
 
 - Tags: tests, run-transition, source-fidelity, audit
