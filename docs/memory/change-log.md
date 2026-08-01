@@ -1,5 +1,15 @@
 # Change Log
 
+## 2026-08-01 (cause-of-death-parse-tests)
+
+- Tags: tests, run-transition, source-fidelity, audit
+- Closes [P2][audit:S24] cause-of-death parsing gap: extracted
+  `RunTransitionCoordinator.parse_cause_of_death(hero)` as a pure static
+  helper from the inline logic inside `transition_to_death`. Covered all four
+  upstream branches — null hero (→ "the dungeon"), mob-Object with `mob_name`
+  (→ mob name), plain String (→ that string), unknown Object (→ `str(src)`) —
+  plus the empty-`mob_name` edge case. `test_cause_of_death_parsing.gd`.
+
 ## 2026-08-01 (belongings-round-trip-tests)
 
 - Tags: tests, inventory, hero, audit
