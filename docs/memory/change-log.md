@@ -1,5 +1,16 @@
 # Change Log
 
+## 2026-08-01 (belongings-round-trip-tests)
+
+- Tags: tests, inventory, hero, audit
+- Headless Belongings round-trip tests closing [P2][audit:S02]: four contracts
+  that had no headless coverage — equip→serialize→deserialize identity (weapon
+  + armor + ring slots with level preserved), quickslot rebind surviving
+  serialize/deserialize (slot index resolves back to correct item_id),
+  stack merge (two dart stacks collapse to one backpack slot with combined
+  quantity), and remove_quantity partial-and-over-removal semantics.
+  `test_belongings_round_trip.gd`.
+
 ## 2026-08-01 (scheduler-mechanics-tests)
 
 - Tags: tests, turn-manager, source-fidelity, audit
