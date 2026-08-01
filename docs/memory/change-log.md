@@ -1,5 +1,27 @@
 # Change Log
 
+## 2026-07-30 (pickup-time-cost)
+
+- Tags: items, hero, source-fidelity, tests
+- Floor-pickup time cost (upstream Item.TIME_TO_PICK_UP / Item.pickupDelay +
+  ThrowingClub/ThrowingHammer.pickupDelay overrides, verified against master
+  2026-07-30): walking onto a heap now costs the hero 1 turn on pickup —
+  previously all pickups were free, an undocumented deviation from upstream
+  turn economy. New `Item.pickup_delay()` (1.0) with a `MissileWeapon`
+  override returning 0 for `throwing_club`/`throwing_hammer` (upstream
+  instant pickup); every other missile pays the standard cost.
+- Wiring lives in `game_scene._spend_pickup_time`, called from all three
+  `_check_item_pickup` paths (gold, dewdrop, generic inventory add) only on
+  successful pickup; spends via `spend_turn` → `TurnManager.spend_energy`,
+  so speed modifiers apply per the port's global convention. Failed adds
+  (full inventory) and locked crystal chests spend nothing.
+- game_scene.gd is fragile (TRUNCATED_FILES): edits were a small helper +
+  three one-line call sites, parser-verified.
+- Tests: `test_pickup_delay.gd` (base 1-turn cost, club/hammer instant,
+  other missiles standard, scheduler cooldown actually spent / not spent).
+- [ENGINE]-adjacent feel change: pickup now consumes a turn in real play
+  (mobs get a move when you grab loot next to them) — flag for playtest.
+
 ## 2026-07-30 (shuriken-instant-throw)
 
 - Tags: items, buffs, source-fidelity, tests

@@ -2035,6 +2035,16 @@ func _on_input_actor_changed(actor_node: Variant) -> void:
 # ---------------------------------------------------------------------------
 
 ## Check for items at the given hero's position and auto-pickup.
+## Upstream Item.doPickUp: taking an item off the floor costs the hero
+## pickupDelay() (TIME_TO_PICK_UP = 1 turn; ThrowingClub/Hammer are instant).
+func _spend_pickup_time(hero_node: Variant, item: Variant) -> void:
+	var delay: float = 1.0
+	if item is Object and item.has_method("pickup_delay"):
+		delay = item.pickup_delay()
+	if delay > 0.0 and hero_node != null and hero_node.has_method("spend_turn"):
+		hero_node.spend_turn(delay)
+
+
 func _check_item_pickup(hero_node: Variant, hero_pos: int) -> void:
 	if _current_level == null or hero_node == null:
 		return
@@ -2065,6 +2075,7 @@ func _check_item_pickup(hero_node: Variant, hero_pos: int) -> void:
 			var amount: int = item.quantity if "quantity" in item else 1
 			GameManager.add_gold(amount, hero_node)
 			_current_level.pickup_item(hero_pos)
+			_spend_pickup_time(hero_node, item)
 			if MessageLog:
 				var hero_name: String = ConstantsData.get_prop(hero_node, "hero_name", "The hero")
 				MessageLog.add("%s picks up %d gold." % [hero_name, amount])
@@ -2076,6 +2087,8 @@ func _check_item_pickup(hero_node: Variant, hero_pos: int) -> void:
 			var dewdrop: Variant = _current_level.pickup_item(hero_pos)
 			if dewdrop != null and dewdrop.has_method("on_pickup"):
 				dewdrop.on_pickup(hero_node)
+			if dewdrop != null:
+				_spend_pickup_time(hero_node, dewdrop)
 			if EventBus:
 				EventBus.item_picked_up.emit("Dewdrop")
 			if _is_online_host():
@@ -2090,6 +2103,7 @@ func _check_item_pickup(hero_node: Variant, hero_pos: int) -> void:
 				if not added:
 					_current_level.drop_item(hero_pos, picked)
 					continue
+				_spend_pickup_time(hero_node, picked)
 				var item_name: String = ConstantsData.get_prop(picked, "item_name", "item") if picked is Object else "item"
 				if MessageLog:
 					var hero_name: String = ConstantsData.get_prop(hero_node, "hero_name", "The hero")

@@ -60,6 +60,11 @@ func on_unequip(_hero: Char) -> void:
 	if EventBus:
 		EventBus.item_unequipped.emit(get_display_name(), _slot_name())
 
+## Upstream Item.TIME_TO_PICK_UP / pickupDelay(): picking an item off the
+## floor costs the hero 1 turn. Subclasses override for instant pickups.
+func pickup_delay() -> float:
+	return 1.0
+
 ## Called when the item is picked up by a hero.
 func on_pickup(_hero: Char) -> void:
 	if _hero != null and _hero.has_method("on_item_picked_up"):

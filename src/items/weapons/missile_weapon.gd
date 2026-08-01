@@ -164,6 +164,13 @@ func _apply_tomahawk_bleed(attacker: Variant, defender: Variant) -> void:
 # Damage
 # ---------------------------------------------------------------------------
 
+## Upstream ThrowingClub/ThrowingHammer.pickupDelay: 0, picked up instantly;
+## every other missile pays the standard 1-turn pickup cost.
+func pickup_delay() -> float:
+	if item_id == "throwing_club" or item_id == "throwing_hammer":
+		return 0.0
+	return super.pickup_delay()
+
 ## Upstream Kunai.damageRoll: 60% toward max instead of min..max on a
 ## surprise attack.
 func surprise_toward_max() -> float:
