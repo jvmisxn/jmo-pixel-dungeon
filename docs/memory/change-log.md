@@ -1,5 +1,18 @@
 # Change Log
 
+## 2026-08-01 (scheduler-mechanics-tests)
+
+- Tags: tests, turn-manager, source-fidelity, audit
+- Headless scheduler tests closing [P2][audit:S04]: four TurnManager behaviors
+  that had no coverage — cooldown rebasing, `round_completed` once per party
+  round, `remove_actor` cleaning `_round_hero_ids_pending`, and freed-actor
+  skip. `test_scheduler_mechanics.gd`, PR #22.
+- Implementation note: GDScript lambda closures capture primitives by value,
+  so the signal-count test uses a `Dictionary` counter instead of a plain int.
+- Also confirmed [P2][audit:S04] dead-pacing-layer item is stale: source has
+  `MOB_ACTION_DELAY = 0.1` (restored in a prior slice), not 0.0 as audited.
+  Marked STALE/CLOSED in backlog.
+
 ## 2026-07-30 (pickup-time-cost)
 
 - Tags: items, hero, source-fidelity, tests
