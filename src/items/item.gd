@@ -22,7 +22,14 @@ var cursed_known: bool = false
 ## Whether the player knows the upgrade level.
 var level_known: bool = false
 ## Whether the item has been fully identified (both level_known and cursed_known).
-var identified: bool = false
+## Computed from the two canonical flags — can never desync. Setting true/false
+## directly mirrors identify()/unidentify() without triggering catalog side-effects.
+var identified: bool:
+	get:
+		return level_known and cursed_known
+	set(value):
+		level_known = value
+		cursed_known = value
 ## Whether this item can be included in hero's remains (bones).
 var bones: bool = false
 ## Preserved through lost inventory via unblessed ankh.
@@ -196,7 +203,6 @@ func is_identified() -> bool:
 func identify() -> Item:
 	level_known = true
 	cursed_known = true
-	identified = true
 	if ItemCatalog:
 		ItemCatalog.identify_item(self)
 	return self
@@ -302,7 +308,6 @@ func serialize() -> Dictionary:
 		"level_known": level_known,
 		"cursed": cursed,
 		"cursed_known": cursed_known,
-		"identified": identified,
 		"quantity": quantity,
 		"stackable": stackable,
 		"unique": unique,
@@ -317,13 +322,13 @@ func deserialize(data: Dictionary) -> void:
 	description = data.get("description", "")
 	category = data.get("category", ConstantsData.ItemCategory.MISC)
 	level = data.get("level", 0)
+	# level_known falls back to old saves that stored only "identified"
 	level_known = data.get("level_known", data.get("identified", false))
 	cursed = data.get("cursed", false)
 	cursed_known = data.get("cursed_known", false)
-	identified = data.get("identified", false)
 	quantity = data.get("quantity", 1)
 	stackable = data.get("stackable", false)
 	unique = data.get("unique", false)
 	kept_though_lost_invent = data.get("kept_lost", false)
-	if identified and ItemCatalog:
+	if is_identified() and ItemCatalog:
 		ItemCatalog.identify_item(self)
