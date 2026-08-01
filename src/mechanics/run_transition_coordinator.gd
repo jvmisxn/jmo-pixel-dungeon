@@ -72,20 +72,23 @@ static func handle_hero_died_detailed(scene: Variant, hero_node: Variant) -> voi
 			GameManager.set_local_hero_index(spectate_index)
 	handle_hero_died(scene)
 
+## Extract the cause-of-death string from a hero's last_damage_source.
+## Returns "the dungeon" when the source is absent or unrecognised.
+static func parse_cause_of_death(hero: Variant) -> String:
+	if hero == null or hero.get("last_damage_source") == null:
+		return "the dungeon"
+	var src: Variant = hero.last_damage_source
+	if src is Object and src.get("mob_name"):
+		return src.mob_name
+	if src is String:
+		return src
+	return str(src)
+
 static func transition_to_death(scene: Variant) -> void:
 	if scene == null:
 		return
 	scene._detach_persistent_actors()
-	var cause: String = "the dungeon"
-	var hero: Variant = scene._get_focused_hero()
-	if hero and hero.get("last_damage_source") != null:
-		var src: Variant = hero.last_damage_source
-		if src is Object and src.get("mob_name"):
-			cause = src.mob_name
-		elif src is String:
-			cause = src
-		else:
-			cause = str(src)
+	var cause: String = parse_cause_of_death(scene._get_focused_hero())
 	if scene._is_online_host():
 		OnlineEventCodec.broadcast_run_end(NetworkManager, false, {"cause_of_death": cause})
 	var death_script: GDScript = load("res://src/scenes/death_scene.gd") as GDScript
