@@ -32,6 +32,11 @@ var revive_persists: bool = false
 ## Whether this buff shows an icon in buff bars (upstream BuffIndicator.NONE
 ## trackers are hidden).
 var show_in_ui: bool = true
+## When true, add_buff attaches this instance alongside any existing buff of
+## the same type instead of merging into it. Ring passives use this so two
+## equipped rings of one kind each keep their own buff (upstream RingBuff is
+## one instance per ring, summed by Ring.getBuffedBonus).
+var stacks_per_source: bool = false
 
 # ---------------------------------------------------------------------------
 # Lifecycle

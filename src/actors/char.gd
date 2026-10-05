@@ -544,7 +544,8 @@ func add_buff(buff_node: Node) -> Node:
 
 	# Check for existing buff of same type
 	var existing: Node = get_buff_node(buff_type)
-	if existing != null:
+	var stacks: bool = buff_node is Buff and (buff_node as Buff).stacks_per_source
+	if existing != null and not stacks:
 		# Merge/refresh
 		if existing.has_method("merge"):
 			existing.merge(buff_node)

@@ -45,6 +45,10 @@ func _notification(what: int) -> void:
 ## Save the complete game state: hero, level, GameManager, and all caches.
 ## Returns true on success.
 func save_full_game() -> bool:
+	# An online client only mirrors the host's world. Saving it would
+	# overwrite the player's own single-player run in the one save slot.
+	if is_client_mirror():
+		return false
 	var data: Dictionary = {
 		"save_version": SAVE_VERSION,
 		"timestamp": Time.get_unix_time_from_system(),
@@ -78,6 +82,11 @@ func save_full_game() -> bool:
 	return true
 
 
+## True while this process is an online co-op client (not the host).
+func is_client_mirror() -> bool:
+	return NetworkManager != null and NetworkManager.is_client()
+
+
 func autosave_if_active() -> bool:
 	if GameManager == null or not GameManager.get("run_active"):
 		return false
@@ -97,11 +106,21 @@ func load_full_game() -> bool:
 		return false
 
 	var save: Dictionary = _read_save_dictionary(SAVE_PATH)
-	if save.is_empty() and FileAccess.file_exists(SAVE_BAK_PATH):
-		push_warning("SaveManager: Primary save is unreadable, trying backup.")
+	var missing: Array[String] = missing_save_sections(save)
+	if not missing.is_empty() and FileAccess.file_exists(SAVE_BAK_PATH):
+		push_warning(
+			"SaveManager: Primary save is unusable (missing %s), trying backup."
+			% ", ".join(missing)
+		)
 		save = _read_save_dictionary(SAVE_BAK_PATH)
-	if save.is_empty():
-		push_error("SaveManager: Save data is corrupt or unreadable.")
+		missing = missing_save_sections(save)
+	if not missing.is_empty():
+		# Validate before touching the running game, so a bad file never
+		# leaves a half-wiped run behind.
+		push_error(
+			"SaveManager: Save data is corrupt or incomplete (missing %s)."
+			% ", ".join(missing)
+		)
 		return false
 
 	# Check version for future migration
@@ -164,6 +183,26 @@ func load_full_game() -> bool:
 	return true
 
 
+## Sections a save needs before load_full_game may wipe the running game.
+## Returns the missing section names (empty when the save is usable).
+static func missing_save_sections(save: Dictionary) -> Array[String]:
+	var missing: Array[String] = []
+	if save.is_empty():
+		missing.append("everything")
+		return missing
+	for key: String in ["game_manager", "current_level"]:
+		var section: Variant = save.get(key)
+		if not (section is Dictionary) or (section as Dictionary).is_empty():
+			missing.append(key)
+	var heroes: Variant = save.get("heroes")
+	var hero: Variant = save.get("hero")
+	var has_heroes: bool = heroes is Array and not (heroes as Array).is_empty()
+	var has_hero: bool = hero is Dictionary and not (hero as Dictionary).is_empty()
+	if not has_heroes and not has_hero:
+		missing.append("hero")
+	return missing
+
+
 ## Check whether a full save file exists on disk.
 func has_save() -> bool:
 	return FileAccess.file_exists(SAVE_PATH) or FileAccess.file_exists(SAVE_BAK_PATH)
@@ -187,7 +226,7 @@ func _read_save_dictionary(path: String) -> Dictionary:
 			% [path, FileAccess.get_open_error()]
 		)
 		return {}
-	var data: Variant = file.get_var(true)
+	var data: Variant = file.get_var(false)
 	file.close()
 	if data == null or not data is Dictionary:
 		push_warning("SaveManager: Save file '%s' did not contain a Dictionary." % path)
@@ -214,9 +253,14 @@ func _write_atomic_var(
 	if file == null:
 		push_error("SaveManager: Failed to open temp save for writing: %s" % FileAccess.get_open_error())
 		return false
-	file.store_var(data, true)
+	file.store_var(data, false)
 	file.flush()
+	var write_error: Error = file.get_error()
 	file.close()
+	if write_error != OK:
+		DirAccess.remove_absolute(tmp_path)
+		push_error("SaveManager: Failed writing temp save '%s': %s" % [tmp_path, write_error])
+		return false
 
 	if FileAccess.file_exists(bak_path):
 		var bak_remove_error: Error = DirAccess.remove_absolute(bak_path)
@@ -567,7 +611,7 @@ func save_ranking(entry: Dictionary) -> void:
 	if file == null:
 		push_error("SaveManager: Failed to write rankings file.")
 		return
-	file.store_var(rankings, true)
+	file.store_var(rankings, false)
 	file.close()
 
 
@@ -579,7 +623,7 @@ func load_rankings() -> Array[Dictionary]:
 	if file == null:
 		push_error("SaveManager: Failed to read rankings file.")
 		return []
-	var data: Variant = file.get_var(true)
+	var data: Variant = file.get_var(false)
 	file.close()
 	if data == null or not data is Array:
 		push_warning("SaveManager: Rankings data is corrupt, returning empty.")
@@ -604,7 +648,7 @@ func save_settings(settings: Dictionary) -> void:
 	if file == null:
 		push_error("SaveManager: Failed to write settings file.")
 		return
-	file.store_var(settings, true)
+	file.store_var(settings, false)
 	file.close()
 
 
@@ -626,7 +670,7 @@ func load_settings() -> Dictionary:
 		push_error("SaveManager: Failed to read settings file.")
 		return defaults
 
-	var data: Variant = file.get_var(true)
+	var data: Variant = file.get_var(false)
 	file.close()
 
 	if data == null or not data is Dictionary:

@@ -94,7 +94,7 @@ func _save() -> void:
 		return
 	file.store_var({
 		"identified_items": _identified_items,
-	}, true)
+	}, false)
 	file.close()
 
 func _load() -> void:
@@ -104,7 +104,7 @@ func _load() -> void:
 	if file == null:
 		push_warning("ItemCatalog: Failed to open save file for reading.")
 		return
-	var data: Variant = file.get_var(true)
+	var data: Variant = file.get_var(false)
 	file.close()
 	if data is Dictionary:
 		_identified_items = _coerce_string_bool_dict(data.get("identified_items", {}))

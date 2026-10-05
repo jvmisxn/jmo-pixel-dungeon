@@ -362,7 +362,7 @@ func _save() -> void:
 		"unlocked": _unlocked,
 		"class_wins": _class_wins,
 	}
-	file.store_var(data, true)
+	file.store_var(data, false)
 	file.close()
 
 func _load() -> void:
@@ -372,7 +372,7 @@ func _load() -> void:
 	if file == null:
 		push_error("BadgesManager: Failed to open badges file for reading.")
 		return
-	var data: Variant = file.get_var(true)
+	var data: Variant = file.get_var(false)
 	file.close()
 	if data is Dictionary:
 		var raw_unlocked: Variant = data.get("unlocked", {})

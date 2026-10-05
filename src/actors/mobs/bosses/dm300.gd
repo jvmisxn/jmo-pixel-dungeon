@@ -31,9 +31,10 @@ func _act_hunting() -> void:
 	gas_cooldown = maxi(0, gas_cooldown - 1)
 	charge_cooldown = maxi(0, charge_cooldown - 1)
 
-	# Supercharged when pylons active (heals)
-	if pylons_active > 0:
-		heal(pylons_active)
+	# No pylon heal: the arena's pylons are plain statue terrain the hero
+	# cannot destroy yet, so healing per active pylon made DM-300 regenerate
+	# for the whole fight. Upstream pylons supercharge DM-300 rather than heal
+	# it; that mechanic arrives with real pylon actors.
 
 	var dist: int = distance_to(target.pos)
 

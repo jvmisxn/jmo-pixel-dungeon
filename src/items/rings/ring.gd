@@ -247,6 +247,8 @@ func _apply_passive(hero: Char) -> void:
 	if hero == null:
 		return
 	_passive_buff = _create_passive_buff()
+	if _passive_buff is Buff:
+		(_passive_buff as Buff).stacks_per_source = true
 	if _passive_buff != null and hero.has_method("add_buff"):
 		hero.add_buff(_passive_buff)
 

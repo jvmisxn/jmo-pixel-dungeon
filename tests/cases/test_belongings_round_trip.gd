@@ -64,8 +64,10 @@ func _test_quickslot_rebind(t: Object) -> void:
 	r.deserialize(data)
 
 	var qs: Item = r.get_quickslot(1)
-	t.check(qs != null and qs.item_id == "scroll_of_identify",
-		"quickslot: slot 1 resolves to scroll_of_identify after deserialize")
+	# create_item normalizes "scroll_of_identify" to its canonical id
+	# ("identify"), so compare against the original instance's id.
+	t.check(qs != null and qs.item_id == scroll.item_id,
+		"quickslot: slot 1 resolves to the identify scroll after deserialize")
 	t.check(r.get_quickslot(0) == null,
 		"quickslot: slot 0 is empty when only slot 1 was assigned")
 

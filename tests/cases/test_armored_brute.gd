@@ -45,20 +45,24 @@ func _test_stats_and_names(t: Object) -> void:
 
 
 func _test_dr_bonus(t: Object) -> void:
-	# Upstream drRoll = brute roll + 4, so armored minimum over many rolls
-	# must sit at least 4 above the brute minimum, and every armored roll
-	# must clear the flat +4.
+	# Upstream drRoll = brute roll + 4. Replaying the same global RNG seed for
+	# both mobs makes them draw identical brute rolls, so the armored result
+	# must be exactly 4 higher every time (comparing the minima of two
+	# independent samples was flaky).
 	var brute := Brute.new()
 	var armored := ArmoredBrute.new()
-	var brute_min: int = 1 << 30
-	var armored_min: int = 1 << 30
-	for _i: int in range(300):
-		brute_min = mini(brute_min, brute.dr_roll())
+	var always_plus_four: bool = true
+	for i: int in range(300):
+		seed(9000 + i)
+		var brute_roll: int = brute.dr_roll()
+		seed(9000 + i)
 		var roll: int = armored.dr_roll()
-		armored_min = mini(armored_min, roll)
 		t.check(roll >= 4, "Armored DR roll always >= +4 flat bonus")
-	t.check(armored_min >= brute_min + 4,
-		"Armored DR floor sits >= 4 above the brute floor")
+		if roll != brute_roll + 4:
+			always_plus_four = false
+	randomize()
+	t.check(always_plus_four,
+		"Armored DR is exactly the brute roll + 4 on the same RNG draw")
 
 
 func _test_rage_shield(t: Object) -> void:

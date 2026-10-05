@@ -84,4 +84,4 @@ func _make_fake_game_scene() -> Node:
 	scene.set_script(_FakeGameScene)
 	return scene
 
-const _FakeGameScene := preload("res://tests/cases/test_scene_transition_current_scene_stub.gd")
+const _FakeGameScene := preload("res://tests/cases/fixtures/fake_game_scene_stub.gd")

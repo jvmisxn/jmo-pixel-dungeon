@@ -1,5 +1,32 @@
 # Change Log
 
+## 2026-10-05 (safety-fixes)
+
+- Tags: ci, tests, save-load, multiplayer, bosses, rings
+- CI now fails on test failures: the test step uses `pipefail` and surfaces
+  each `FAIL:` line (the `| tee` previously swallowed the runner's exit code,
+  so only SCRIPT/Parse errors could fail CI).
+- `tests/run_tests.gd` auto-discovers `tests/cases/test_*.gd` (sorted, with
+  `test_compile.gd` first); the hand-kept CASES list had silently skipped 6
+  files. Non-test helpers belong in `tests/cases/fixtures/`.
+- Previously hidden failures fixed: cause-of-death test parse error (stub
+  `get()` overrides), flaky armored-brute DR test (now seeded replay),
+  quickslot test expected the pre-alias id, and a real ring bug: two rings of
+  the same kind merged into one buff, so the second ring did nothing and
+  unequipping could strip the other's effect. `Buff.stacks_per_source` lets
+  ring passives coexist. Single-buff lookups (`get_buff("RingOfX")` in
+  mob/gold/wand/hero/sword_dance/enhanced_rings) still read only one ring.
+- Saves, rankings, settings, badges and catalogs are read/written with
+  `allow_objects=false`; temp-save writes now check `get_error()`.
+- `SaveManager.save_full_game` refuses on online clients
+  (`is_client_mirror`), so a client no longer overwrites its own solo save.
+- `load_full_game` validates required sections (`missing_save_sections`)
+  before wiping the running game, and falls back to the backup on a
+  partial primary.
+- DM-300 no longer heals 3 HP/turn from indestructible statue "pylons".
+- Removed the floor-load debug lines posted to the player message log.
+- `test_save_safety.gd`.
+
 ## 2026-08-01 (cause-of-death-parse-tests)
 
 - Tags: tests, run-transition, source-fidelity, audit
