@@ -196,7 +196,12 @@ static func missing_save_sections(save: Dictionary) -> Array[String]:
 			missing.append(key)
 	var heroes: Variant = save.get("heroes")
 	var hero: Variant = save.get("hero")
-	var has_heroes: bool = heroes is Array and not (heroes as Array).is_empty()
+	var has_heroes: bool = false
+	if heroes is Array:
+		for entry: Variant in heroes:
+			if entry is Dictionary and not (entry as Dictionary).is_empty():
+				has_heroes = true
+				break
 	var has_hero: bool = hero is Dictionary and not (hero as Dictionary).is_empty()
 	if not has_heroes and not has_hero:
 		missing.append("hero")

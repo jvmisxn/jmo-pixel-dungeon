@@ -44,6 +44,14 @@ func _test_missing_sections(t: Object) -> void:
 	t.check("hero" in SaveManagerNode.missing_save_sections(no_hero),
 		"save without any hero is rejected")
 
+	var unusable_heroes: Dictionary = {
+		"game_manager": {"depth": 1},
+		"current_level": {"depth": 1},
+		"heroes": [null, {}],
+	}
+	t.check("hero" in SaveManagerNode.missing_save_sections(unusable_heroes),
+		"save whose heroes array has no usable hero dictionary is rejected")
+
 
 func _test_client_does_not_save(t: Object) -> void:
 	var previous_mode: int = NetworkManager.session_mode
