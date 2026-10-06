@@ -110,7 +110,7 @@ func _save() -> void:
 		"plants": _plants,
 		"enchantments": _enchantments,
 		"glyphs": _glyphs,
-	}, true)
+	}, false)
 	file.close()
 
 func _load() -> void:
@@ -120,7 +120,7 @@ func _load() -> void:
 	if file == null:
 		push_warning("DiscoveryCatalog: Failed to open save file for reading.")
 		return
-	var data: Variant = file.get_var(true)
+	var data: Variant = file.get_var(false)
 	file.close()
 	if data is Dictionary:
 		_bestiary = _coerce_string_int_dict(data.get("bestiary", {}))

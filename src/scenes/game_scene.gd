@@ -661,25 +661,8 @@ func load_level(level: Variant, region: int) -> void:
 	# Initial FOV from the locally focused hero position
 	var local_hero: Variant = _get_focused_hero()
 	if local_hero:
-		# Debug: log level state
-		var non_wall: int = 0
-		for i: int in range(Level.LEN):
-			if level.map[i] != ConstantsData.Terrain.WALL:
-				non_wall += 1
-		if MessageLog:
-			MessageLog.add("Level loaded: entrance=%d, exit=%d, hero=%d, non-wall=%d, mobs=%d" % [
-				level.entrance, level.exit_pos, local_hero.pos, non_wall, level.mobs.size()])
-
 		var _vd: int = local_hero.get_view_distance() if local_hero.has_method("get_view_distance") else ConstantsData.VIEW_DISTANCE
 		level.update_fov(local_hero.pos, _vd)
-
-		# Debug: count visible cells
-		var vis_count: int = 0
-		for i: int in range(Level.LEN):
-			if level.visible[i]:
-				vis_count += 1
-		if MessageLog:
-			MessageLog.add("FOV: %d cells visible (view_dist=%d)" % [vis_count, _vd])
 
 		fog_of_war.update_visibility()
 		tile_map.update_tile_visibility()

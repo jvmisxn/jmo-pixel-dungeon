@@ -14,17 +14,9 @@ func run(t: Object) -> void:
 
 class _StubMob extends RefCounted:
 	var mob_name: String = ""
-	func get(prop: StringName) -> Variant:
-		if prop == &"mob_name":
-			return mob_name
-		return null
 
 class _StubHero extends RefCounted:
 	var last_damage_source: Variant = null
-	func get(prop: StringName) -> Variant:
-		if prop == &"last_damage_source":
-			return last_damage_source
-		return null
 
 func _test_null_hero(t: Object) -> void:
 	t.check(

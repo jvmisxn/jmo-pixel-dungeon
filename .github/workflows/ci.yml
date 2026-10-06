@@ -55,9 +55,17 @@ jobs:
           fi
           echo "Import completed without script errors."
       - name: Run headless test suite
+        shell: bash
         run: |
-          godot --headless --path . -s res://tests/run_tests.gd 2>&1 | tee test.log
+          set -o pipefail
+          status=0
+          godot --headless --path . -s res://tests/run_tests.gd 2>&1 | tee test.log || status=$?
           if grep -qE "SCRIPT ERROR|Parse Error" test.log; then
             echo "::error::Script errors emitted during test run."
             exit 1
+          fi
+          if [ "$status" -ne 0 ]; then
+            grep -E "^  FAIL: " test.log | sed 's/^  FAIL: /::error::Test failed: /' || true
+            echo "::error::Test runner exited with status $status."
+            exit "$status"
           fi
