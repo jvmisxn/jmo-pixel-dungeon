@@ -215,6 +215,8 @@ func _instantiate_script(path: String) -> Variant:
 func _ready() -> void:
 	# Black background so areas outside the map don't show through
 	RenderingServer.set_default_clear_color(Color.BLACK)
+	if GameManager:
+		GameManager.apply_brightness(self)
 	_create_layers()
 	_connect_signals()
 	# If a level was queued before we entered the tree, load it now

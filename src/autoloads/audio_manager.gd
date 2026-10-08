@@ -202,6 +202,7 @@ func _ready() -> void:
 	_create_players()
 	_load_real_sfx()
 	_load_real_music()
+	_hook_button_clicks()
 
 
 # ---------------------------------------------------------------------------
@@ -717,3 +718,44 @@ func _gen_water() -> AudioStreamWAV:
 
 func _gen_zap() -> AudioStreamWAV:
 	return _gen_silent(0.05)
+
+
+# ---------------------------------------------------------------------------
+# UI click feedback
+# ---------------------------------------------------------------------------
+
+## Buttons tagged with this meta stay silent (e.g. ones with their own cue).
+const NO_CLICK_META: StringName = &"no_click_sfx"
+## Minimum gap between clicks so stacked buttons don't double up.
+const CLICK_MIN_INTERVAL_MS: int = 40
+
+var _last_click_ms: int = -CLICK_MIN_INTERVAL_MS
+
+
+## Upstream Button.onPointerDown plays Assets.Sounds.CLICK for every button,
+## so every BaseButton that enters the tree gets the same cue on press.
+func _hook_button_clicks() -> void:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return
+	if not tree.node_added.is_connected(_on_node_added_for_click):
+		tree.node_added.connect(_on_node_added_for_click)
+
+
+func _on_node_added_for_click(node: Node) -> void:
+	if not (node is BaseButton):
+		return
+	var button: BaseButton = node as BaseButton
+	var cb: Callable = _on_button_down_click.bind(button)
+	if not button.button_down.is_connected(cb):
+		button.button_down.connect(cb)
+
+
+func _on_button_down_click(button: BaseButton) -> void:
+	if button == null or button.disabled or button.has_meta(NO_CLICK_META):
+		return
+	var now: int = Time.get_ticks_msec()
+	if now - _last_click_ms < CLICK_MIN_INTERVAL_MS:
+		return
+	_last_click_ms = now
+	play_sfx("click")

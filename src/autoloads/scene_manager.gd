@@ -10,6 +10,17 @@ signal scene_changed(new_scene: Node)
 ## The currently active scene (top-level game screen).
 var current_scene: Node = null
 
+## Seconds the black cover takes to fade away after a scene swap. The swap
+## itself stays synchronous (current_scene updates immediately); the cover
+## only hides the hard cut while the new scene builds its first frame.
+const FADE_IN_SECONDS: float = 0.3
+## Drawn above every game layer, including HUD windows.
+const FADE_LAYER: int = 128
+
+var _fade_layer: CanvasLayer = null
+var _fade_rect: ColorRect = null
+var _fade_tween: Tween = null
+
 func _ready() -> void:
 	if current_scene == null:
 		var tree: SceneTree = get_tree()
@@ -67,4 +78,41 @@ func _finalize_transition(new_scene: Node) -> void:
 	# (which _do_transition guarantees via root.add_child before this runs).
 	if tree != null and new_scene.get_parent() == tree.root:
 		tree.set_current_scene(new_scene)
+	_play_fade_in()
 	scene_changed.emit(new_scene)
+
+# ---------------------------------------------------------------------------
+# Fade cover
+# ---------------------------------------------------------------------------
+
+func _ensure_fade_cover() -> bool:
+	if _fade_rect != null and is_instance_valid(_fade_rect):
+		return true
+	# Parent to the tree root (not this autoload) so the cover also works
+	# before autoloads have entered the tree, e.g. in headless runs.
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null:
+		return false
+	_fade_layer = CanvasLayer.new()
+	_fade_layer.name = "SceneFade"
+	_fade_layer.layer = FADE_LAYER
+	tree.root.add_child(_fade_layer)
+	_fade_rect = ColorRect.new()
+	_fade_rect.color = Color.BLACK
+	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade_rect.modulate.a = 0.0
+	_fade_layer.add_child(_fade_rect)
+	return true
+
+
+## Start fully black and fade out, so the swap reads as a fade from black.
+func _play_fade_in() -> void:
+	if not _ensure_fade_cover():
+		return
+	if _fade_tween != null and _fade_tween.is_valid():
+		_fade_tween.kill()
+	_fade_rect.modulate.a = 1.0
+	_fade_tween = _fade_rect.create_tween()
+	_fade_tween.tween_property(_fade_rect, "modulate:a", 0.0, FADE_IN_SECONDS) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)

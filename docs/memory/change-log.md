@@ -1,5 +1,33 @@
 # Change Log
 
+## 2026-10-08 (look-and-feel-pass)
+
+- Tags: ui, style, audio, settings, tools
+- Global theme `assets/ui/theme.tres` (set as `gui/theme/custom`) makes the
+  SPD `pixel_font.ttf` the default font everywhere (it was never referenced).
+  The font is drawn on a 100-unit grid at 2048 upem, so it is only pixel-exact
+  near size 20; antialiased import kept on purpose because aliased rendering
+  looked uneven at the 9-16px sizes the HUD uses.
+- `UIUtils.scaled_chrome_stylebox` / `scaled_icon` draw upstream Chrome.java
+  nine-patches (WINDOW 0,0,20,20 m6; GREY_BUTTON 38,6,6,6 m2) and
+  Icons.CLOSE (80,32,11,11) at 2x via a cached nearest-upscaled texture.
+  `WndBase` panels, the close button and `create_spd_button` use them, so all
+  windows built on WndBase get the SPD frame.
+- Every BaseButton clicks on press (upstream Button.onPointerDown CLICK) via
+  `AudioManager` listening to `SceneTree.node_added`; tag a button with the
+  `no_click_sfx` meta to silence it.
+- `SceneManager` fades in from black after every scene swap; the swap itself
+  is still synchronous.
+- Brightness was never stored (`GameManager.setting_brightness` did not
+  exist, so `set()` was a no-op) and never applied at startup. It is now a
+  real setting saved with the display settings and applied in
+  `GameScene._ready`. In-game SFX fallback default unified to 80%.
+- `tools/capture_screenshots.gd`: renders the real game under xvfb and saves
+  title/game/inventory/menu/settings screenshots for UI review.
+- Not done (deliberately): integer stretch scaling. With the 1280x720 base and
+  `expand`, integer mode floors phone/1080p screens to 1x and shrinks the HUD.
+- `test_ui_polish.gd`.
+
 ## 2026-10-05 (safety-fixes)
 
 - Tags: ci, tests, save-load, multiplayer, bosses, rings

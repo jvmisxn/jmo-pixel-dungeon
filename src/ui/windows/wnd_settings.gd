@@ -247,15 +247,14 @@ func _on_orientation_changed(index: int) -> void:
 func _on_brightness_changed(value: float) -> void:
 	_brightness_val_label.text = "%d%%" % int(value)
 	# Map 0-100 to a brightness modulation (0.5 = dim, 1.0 = normal, 1.5 = bright)
-	var brightness: float = 0.5 + (value / 100.0)
+	if GameManager == null:
+		return
+	GameManager.setting_brightness = value / 100.0
 	var env: WorldEnvironment = _find_world_environment()
 	if env and env.environment:
-		env.environment.adjustment_brightness = brightness
-	else:
-		# Fallback: modulate the game scene root
-		var game_scene: Node = get_tree().root.get_node_or_null("GameScene")
-		if game_scene and game_scene is CanvasItem:
-			(game_scene as CanvasItem).modulate = Color(brightness, brightness, brightness)
+		env.environment.adjustment_brightness = GameManager.brightness_factor()
+	elif SceneManager and SceneManager.current_scene:
+		GameManager.apply_brightness(SceneManager.current_scene)
 
 
 func _on_save_close() -> void:
@@ -307,7 +306,8 @@ func _get_sfx_volume_percent() -> float:
 		var vol: Variant = audio.get("sfx_volume")
 		if vol is float:
 			return vol * 100.0
-	return 50.0
+	# Same default as AudioManager.sfx_volume and the title-screen settings.
+	return 80.0
 
 
 func _get_music_muted() -> bool:
