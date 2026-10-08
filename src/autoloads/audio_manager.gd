@@ -314,6 +314,13 @@ func play_sfx(sfx_name: String) -> void:
 
 	# Resolve alias if one exists (e.g. "item_pickup" -> "item")
 	var resolved: String = SFX_ALIASES.get(sfx_name, sfx_name) as String
+	# One click per tap: a button's press click and the click its action plays
+	# (e.g. Equip -> item_equipped) land within the same tap, so collapse them.
+	if resolved == "click":
+		var now: int = Time.get_ticks_msec()
+		if now - _last_click_ms < CLICK_DEDUPE_MS:
+			return
+		_last_click_ms = now
 	var stream: AudioStream = _sfx_cache.get(resolved) as AudioStream
 	if stream == null:
 		# Try the original name too
@@ -726,10 +733,10 @@ func _gen_zap() -> AudioStreamWAV:
 
 ## Buttons tagged with this meta stay silent (e.g. ones with their own cue).
 const NO_CLICK_META: StringName = &"no_click_sfx"
-## Minimum gap between clicks so stacked buttons don't double up.
-const CLICK_MIN_INTERVAL_MS: int = 40
+## Window in which repeat "click" cues collapse into one (press + action).
+const CLICK_DEDUPE_MS: int = 250
 
-var _last_click_ms: int = -CLICK_MIN_INTERVAL_MS
+var _last_click_ms: int = -CLICK_DEDUPE_MS
 
 
 ## Upstream Button.onPointerDown plays Assets.Sounds.CLICK for every button,
@@ -754,8 +761,4 @@ func _on_node_added_for_click(node: Node) -> void:
 func _on_button_down_click(button: BaseButton) -> void:
 	if button == null or button.disabled or button.has_meta(NO_CLICK_META):
 		return
-	var now: int = Time.get_ticks_msec()
-	if now - _last_click_ms < CLICK_MIN_INTERVAL_MS:
-		return
-	_last_click_ms = now
 	play_sfx("click")

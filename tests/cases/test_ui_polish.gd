@@ -81,6 +81,18 @@ func _test_button_click_hook(t: Object) -> void:
 		"re-adding a button does not double the click hook")
 	btn.free()
 
+	# A button press followed by its action's own click (Equip -> item_equipped)
+	# must be heard once: the second click inside the dedupe window is dropped.
+	AudioManager._last_click_ms = -AudioManager.CLICK_DEDUPE_MS
+	var was_muted: bool = AudioManager.sfx_muted
+	AudioManager.sfx_muted = false
+	AudioManager.play_sfx("click")
+	var first_click_ms: int = AudioManager._last_click_ms
+	AudioManager.play_sfx("click")
+	t.check(AudioManager._last_click_ms == first_click_ms,
+		"a second click within one tap is collapsed")
+	AudioManager.sfx_muted = was_muted
+
 
 func _test_scene_fade_cover(t: Object) -> void:
 	SceneManager._play_fade_in()
