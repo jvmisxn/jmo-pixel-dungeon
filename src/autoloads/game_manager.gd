@@ -57,6 +57,8 @@ const MOBILE_ORIENTATION_PORTRAIT: String = "portrait"
 const MOBILE_ORIENTATION_LANDSCAPE: String = "landscape"
 var mobile_orientation_mode: String = MOBILE_ORIENTATION_AUTO
 var zoom_level: float = 1.5
+## Brightness slider position, 0.0-1.0; 0.5 is neutral (see brightness_factor).
+var setting_brightness: float = 0.5
 
 # --- Statistics ---
 var stats: Dictionary[String, int] = {}
@@ -179,6 +181,7 @@ func save_display_settings() -> void:
 	var settings: Dictionary = SaveManager.load_settings()
 	settings["mobile_orientation_mode"] = mobile_orientation_mode
 	settings["zoom_level"] = zoom_level
+	settings["brightness"] = setting_brightness
 	if SaveManager.has_method("save_settings"):
 		SaveManager.save_settings(settings)
 
@@ -190,7 +193,21 @@ func _load_display_settings() -> void:
 			str(settings.get("mobile_orientation_mode", MOBILE_ORIENTATION_AUTO))
 		)
 		zoom_level = clampf(float(settings.get("zoom_level", zoom_level)), 1.0, 10.0)
+		setting_brightness = clampf(float(settings.get("brightness", setting_brightness)), 0.0, 1.0)
 	_apply_platform_content_scale()
+
+
+## Modulate multiplier for the brightness setting: 0.5 (dim) to 1.5 (bright).
+func brightness_factor() -> float:
+	return 0.5 + clampf(setting_brightness, 0.0, 1.0)
+
+
+## Apply the brightness setting to a game scene's world. HUD CanvasLayers
+## under the scene are unaffected, so only the dungeon view changes.
+func apply_brightness(scene: Node) -> void:
+	if scene is CanvasItem:
+		var f: float = brightness_factor()
+		(scene as CanvasItem).modulate = Color(f, f, f, (scene as CanvasItem).modulate.a)
 
 
 func _is_mobile_web() -> bool:

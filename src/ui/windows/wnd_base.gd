@@ -68,15 +68,9 @@ func _setup_window() -> void:
 	set_anchors_preset(Control.PRESET_TOP_LEFT)
 	custom_minimum_size = Vector2(300, 200)
 
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.1, 0.09, 0.08, 0.97)
-	panel_style.border_color = Color(0.5, 0.45, 0.35)
-	panel_style.set_border_width_all(2)
-	panel_style.set_corner_radius_all(3)
-	panel_style.content_margin_left = 12.0
-	panel_style.content_margin_right = 12.0
-	panel_style.content_margin_top = 8.0
-	panel_style.content_margin_bottom = 12.0
+	# Upstream Chrome.Type.WINDOW nine-patch, scaled to match the tile art.
+	var panel_style: StyleBoxTexture = UIUtils.scaled_chrome_stylebox(
+		UIUtils.CHROME_WINDOW, UIUtils.CHROME_WINDOW_MARGIN, Vector4(2, 0, 2, 2))
 	add_theme_stylebox_override("panel", panel_style)
 
 	# Main vertical layout
@@ -99,32 +93,25 @@ func _setup_window() -> void:
 	_title_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6))
 	_title_bar.add_child(_title_label)
 
+	# Upstream Icons.CLOSE on a bare button, as in SPD window title bars.
 	_close_button = Button.new()
-	_close_button.text = "X"
+	_close_button.icon = UIUtils.scaled_icon(UIUtils.ICON_CLOSE)
+	_close_button.flat = true
+	_close_button.tooltip_text = "Close"
 	_close_button.custom_minimum_size = Vector2(28, 28)
-	_close_button.add_theme_font_size_override("font_size", 14)
-	_close_button.add_theme_color_override("font_color", Color(0.9, 0.6, 0.5))
-	_close_button.add_theme_color_override("font_hover_color", Color(1.0, 0.4, 0.3))
-	# SPD close button style
-	var close_normal := StyleBoxFlat.new()
-	close_normal.bg_color = Color(0.15, 0.12, 0.1)
-	close_normal.border_color = Color(0.5, 0.35, 0.3)
-	close_normal.set_border_width_all(1)
-	close_normal.set_corner_radius_all(2)
-	_close_button.add_theme_stylebox_override("normal", close_normal)
-	var close_hover := StyleBoxFlat.new()
-	close_hover.bg_color = Color(0.25, 0.15, 0.12)
-	close_hover.border_color = Color(0.7, 0.4, 0.3)
-	close_hover.set_border_width_all(1)
-	close_hover.set_corner_radius_all(2)
-	_close_button.add_theme_stylebox_override("hover", close_hover)
+	_close_button.focus_mode = Control.FOCUS_NONE
+	_close_button.add_theme_color_override("icon_hover_color", Color(1.25, 1.15, 1.0))
+	_close_button.add_theme_color_override("icon_pressed_color", Color(0.75, 0.7, 0.65))
+	var empty_style := StyleBoxEmpty.new()
+	for state: String in ["normal", "hover", "pressed", "focus"]:
+		_close_button.add_theme_stylebox_override(state, empty_style)
 	_close_button.pressed.connect(_on_close_pressed)
 	_close_button.gui_input.connect(_on_close_button_gui_input)
 	_title_bar.add_child(_close_button)
 
 	# Separator with warm stone color
 	var sep: HSeparator = HSeparator.new()
-	sep.modulate = Color(0.6, 0.5, 0.4)
+	sep.modulate = Color(0.55, 0.55, 0.45)
 	_content_container.add_child(sep)
 
 	# Build subclass content
@@ -173,25 +160,28 @@ static func create_spd_button(text: String) -> Button:
 	btn.add_theme_color_override("font_hover_color", Color(1.0, 0.95, 0.8))
 	btn.add_theme_color_override("font_pressed_color", Color(0.7, 0.65, 0.5))
 
-	var normal_style := StyleBoxFlat.new()
-	normal_style.bg_color = Color(0.15, 0.14, 0.12, 0.9)
-	normal_style.border_color = Color(0.4, 0.36, 0.30)
-	normal_style.set_border_width_all(2)
-	normal_style.set_corner_radius_all(2)
-	normal_style.content_margin_left = 12.0
-	normal_style.content_margin_right = 12.0
-	normal_style.content_margin_top = 6.0
-	normal_style.content_margin_bottom = 6.0
+	# Upstream Chrome.Type.GREY_BUTTON nine-patch (the stone grey SPD buttons).
+	# Dimmed a little so coloured labels keep contrast; SPD's white button
+	# text sits on a drop shadow, mirrored by the shadow overrides below.
+	var normal_style: StyleBoxTexture = UIUtils.scaled_chrome_stylebox(
+		UIUtils.CHROME_GREY_BUTTON, UIUtils.CHROME_BUTTON_MARGIN, Vector4(8, 2, 8, 2),
+		Color(0.72, 0.72, 0.72))
 	btn.add_theme_stylebox_override("normal", normal_style)
+	btn.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.75))
+	btn.add_theme_constant_override("shadow_offset_x", 1)
+	btn.add_theme_constant_override("shadow_offset_y", 1)
 
-	var hover_style := normal_style.duplicate() as StyleBoxFlat
-	hover_style.bg_color = Color(0.22, 0.20, 0.16, 0.95)
-	hover_style.border_color = Color(0.55, 0.50, 0.40)
+	var hover_style := normal_style.duplicate() as StyleBoxTexture
+	hover_style.modulate_color = Color(0.9, 0.9, 0.9)
 	btn.add_theme_stylebox_override("hover", hover_style)
 
-	var pressed_style := normal_style.duplicate() as StyleBoxFlat
-	pressed_style.bg_color = Color(0.10, 0.09, 0.07)
+	var pressed_style := normal_style.duplicate() as StyleBoxTexture
+	pressed_style.modulate_color = Color(0.55, 0.55, 0.55)
 	btn.add_theme_stylebox_override("pressed", pressed_style)
+
+	var disabled_style := normal_style.duplicate() as StyleBoxTexture
+	disabled_style.modulate_color = Color(0.45, 0.45, 0.45, 0.8)
+	btn.add_theme_stylebox_override("disabled", disabled_style)
 
 	return btn
 
