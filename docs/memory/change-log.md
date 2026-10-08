@@ -3,8 +3,11 @@
 ## 2026-10-08 (look-and-feel-pass)
 
 - Tags: ui, style, audio, settings, tools
-- Global theme `assets/ui/theme.tres` (set as `gui/theme/custom`) makes the
-  SPD `pixel_font.ttf` the default font everywhere (it was never referenced).
+- `UIUtils.apply_global_font()` (called from `SceneManager._ready`) sets
+  `ThemeDB.fallback_font`, making the SPD `pixel_font.ttf` the default font
+  everywhere (it was never referenced). Do NOT use `gui/theme/custom` for
+  this: the project theme loads before a fresh checkout imports the font and
+  fails CI's first `godot --import`.
   The font is drawn on a 100-unit grid at 2048 upem, so it is only pixel-exact
   near size 20; antialiased import kept on purpose because aliased rendering
   looked uneven at the 9-16px sizes the HUD uses.

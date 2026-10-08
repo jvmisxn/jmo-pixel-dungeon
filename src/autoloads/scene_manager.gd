@@ -22,6 +22,7 @@ var _fade_rect: ColorRect = null
 var _fade_tween: Tween = null
 
 func _ready() -> void:
+	UIUtils.apply_global_font()
 	if current_scene == null:
 		var tree: SceneTree = get_tree()
 		if tree != null:

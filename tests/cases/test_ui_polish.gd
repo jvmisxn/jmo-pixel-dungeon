@@ -1,5 +1,5 @@
 extends RefCounted
-## Look-and-feel wiring: the global theme uses the SPD pixel font, window
+## Look-and-feel wiring: every Control falls back to the SPD pixel font, window
 ## chrome comes from scaled SPD nine-patches, every button clicks, scene
 ## swaps fade in from black, and brightness is a real persisted setting.
 
@@ -13,15 +13,20 @@ func run(t: Object) -> void:
 
 
 func _test_global_theme(t: Object) -> void:
-	var theme_path: String = str(ProjectSettings.get_setting("gui/theme/custom", ""))
-	t.check(theme_path == "res://assets/ui/theme.tres", "project uses the shared UI theme")
-	var theme: Theme = load(theme_path) as Theme
-	t.check(theme != null, "UI theme loads")
-	if theme == null:
-		return
-	var font: Font = theme.default_font
-	t.check(font != null and font.resource_path == "res://assets/spd/fonts/pixel_font.ttf",
-		"theme default font is the SPD pixel font")
+	t.check(str(ProjectSettings.get_setting("gui/theme/custom", "")) == "",
+		"no project theme (it would load before a fresh import has the font)")
+	UIUtils.apply_global_font()
+	var font: Font = ThemeDB.fallback_font
+	t.check(font != null and font.resource_path == UIUtils.PIXEL_FONT_PATH,
+		"every Control falls back to the SPD pixel font")
+	t.check(ThemeDB.fallback_font_size == UIUtils.DEFAULT_FONT_SIZE,
+		"fallback font size is the UI default")
+	var default_theme: Theme = ThemeDB.get_default_theme()
+	t.check(default_theme != null and default_theme.default_font == font,
+		"engine default theme uses the SPD pixel font too")
+	var label := Label.new()
+	t.check(label.get_theme_default_font() == font, "a plain Label resolves the SPD pixel font")
+	label.free()
 
 
 func _test_scaled_chrome(t: Object) -> void:

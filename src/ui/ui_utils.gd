@@ -83,6 +83,8 @@ static func toolbar_stylebox(region: Rect2, margins: Vector4 = Vector4(5, 5, 5, 
 # Scaled SPD chrome (window frames and buttons)
 # ---------------------------------------------------------------------------
 
+const PIXEL_FONT_PATH: String = "res://assets/spd/fonts/pixel_font.ttf"
+const DEFAULT_FONT_SIZE: int = 16
 const CHROME_PATH: String = "res://assets/spd/interfaces/chrome.png"
 const ICONS_PATH: String = "res://assets/spd/interfaces/icons.png"
 ## Pixel scale for window chrome so frames match the zoomed tile art.
@@ -98,6 +100,24 @@ const CHROME_BUTTON_MARGIN: int = 2
 const ICON_CLOSE: Rect2 = Rect2(80, 32, 11, 11)
 
 static var _scaled_textures: Dictionary = {}
+
+
+## Make the SPD pixel font the font every Control falls back to. Done at
+## runtime rather than via gui/theme/custom: a project theme is loaded at
+## startup, before a fresh checkout has imported the font, which breaks the
+## first `godot --import` (and CI).
+static func apply_global_font() -> void:
+	var font: Font = load(PIXEL_FONT_PATH) as Font
+	if font == null:
+		return
+	# The engine's default theme carries its own font, which outranks the
+	# fallback, so set both.
+	var default_theme: Theme = ThemeDB.get_default_theme()
+	if default_theme != null:
+		default_theme.default_font = font
+		default_theme.default_font_size = DEFAULT_FONT_SIZE
+	ThemeDB.fallback_font = font
+	ThemeDB.fallback_font_size = DEFAULT_FONT_SIZE
 
 
 ## Nearest-neighbour upscale of a texture, cached per path and scale, so
